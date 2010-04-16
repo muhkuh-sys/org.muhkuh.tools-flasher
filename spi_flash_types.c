@@ -864,7 +864,39 @@ const SPIFLASH_ATTRIBUTES_T atKnownSpiFlashTypes[] =
                               .abIdMagic = {0x00, 0x20, 0x20, 0x16}                     /* id_magic                   */
         },
 
-        /* ST M25P64 */
+       /* Numonyx M45PE16 */
+        {
+                                 .acName = "M45PE16\0",                                 /* name                       */
+                                 .ulSize = 2097152,                                     /* size                       */
+                                .ulClock =  20000,                                      /* minClock                   */
+                             .ulPageSize = 256,                                         /* pageSize                   */
+                          .ulSectorPages = 256,                                         /* sectorSize                 */
+                               .tAdrMode =  SPIFLASH_ADR_LINEAR,                        /* address mode               */
+                            .bReadOpcode = 0x03,                                        /* readOpcode                 */
+                     .bReadOpcodeDCBytes = 0,                                           /* readOpcodeDCBytes          */
+                     .bWriteEnableOpcode = 0x06,                                        /* writeEnableOpcode          */
+                       .bErasePageOpcode = 0xdb,                                        /* erase page                 */
+                     .bEraseSectorOpcode = 0xd8,                                        /* eraseSectorOpcode          */
+                      .uiEraseChipCmdLen = 0,                                           /* erase chip command length  */
+                         .abEraseChipCmd = {0},                                         /* erase chip command         */
+                        .bPageProgOpcode = 0x02,                                        /* pageProgOpcode             */
+                            .bBufferFill = 0x00,                                        /* buffer fill opcode         */
+                     .bBufferWriteOpcode = 0x00,                                        /* buffer write opcode        */
+                .bEraseAndPageProgOpcode = 0x0a,                                        /* eraseAndPageProgOpcode     */
+                      .bReadStatusOpcode = 0x05,                                        /* readStatusOpcode           */
+                       .bStatusReadyMask = 0x01,                                        /* statusReadyMask            */
+                      .bStatusReadyValue = 0x00,                                        /* statusReadyValue           */
+                      .uiInitCmd0_length = 0,                                           /* initCmd0_length            */
+                             .abInitCmd0 = {0},                                         /* initCmd0                   */
+                      .uiInitCmd1_length = 0,                                           /* initCmd1_length            */
+                             .abInitCmd1 = {0},                                         /* initCmd1                   */
+                             .uiIdLength = 4,                                           /* id_length                  */
+                               .abIdSend = {0x9f, 0x00, 0x00, 0x00},                    /* id_send                    */
+                               .abIdMask = {0x00, 0xff, 0xff, 0xff},                    /* id_mask                    */
+                              .abIdMagic = {0x00, 0x20, 0x40, 0x15}                     /* id_magic                   */
+         },
+         
+       /* ST M25P64 */
         {
                                  .acName = "M25P64\0",                                  /* name                       */
                                  .ulSize = 8388608,                                     /* size                       */
