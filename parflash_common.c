@@ -275,9 +275,11 @@ NETX_CONSOLEAPP_RESULT_T parflash_erase(PFLASH_DEVICE ptFlashDev, unsigned long 
                                 ulMaxSegmentLen = ptFlashDev->atSectors[ulSectorCnt].ulSize;
                                 ulSegmentLen    = (ulSizeLeft>=ulMaxSegmentLen) ? ulMaxSegmentLen : ulSizeLeft;
                                 ulSizeLeft     -= ulSegmentLen;
+                                progress_bar_set_position(ulDataByteLen - ulSizeLeft);
 
                                 ++ulSectorCnt;
                         }
+                        progress_bar_finalize();
                         uprintf(". erase ok ...\n");
                 }
         }
