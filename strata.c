@@ -28,8 +28,12 @@
 //! \{
 // ///////////////////////////////////////////////////// 
 
-#include "strata.h"
 #include <string.h>
+
+#include "strata.h"
+
+#include "uprintf.h"
+
 
 static FLASH_ERRORS_E FlashWaitStatusDone (PFLASH_DEVICE ptFlashDev, unsigned long ulSector);
 static void           FlashWriteCommand   (PFLASH_DEVICE ptFlashDev, unsigned long ulSector, unsigned long ulOffset, unsigned long ulCmd);
@@ -150,6 +154,7 @@ static FLASH_ERRORS_E FlashProgram(PFLASH_DEVICE ptFlashDev, unsigned long ulSta
   BOOL           fFound           = FALSE;
   FLASH_ERRORS_E eRet             = eFLASH_NO_ERROR;
 
+
   /* Determine the start sector and offset inside the sector */
   for(ulCnt = 0; ulCnt < ptFlashDev->ulSectorCnt; ++ulCnt)
   {
@@ -172,9 +177,17 @@ static FLASH_ERRORS_E FlashProgram(PFLASH_DEVICE ptFlashDev, unsigned long ulSta
 
   while(ulLength > 0)
   {
-    unsigned long ulWriteSize    = 0; //Bufferwrite size this run
-    unsigned char bWriteCountCmd = 0;
-    unsigned long ulMaxBuffer    = ptFlashDev->ulMaxBufferWriteSize;
+    unsigned long ulWriteSize;
+    unsigned int  uiWriteCountCmd = 0;
+    unsigned long ulMaxBuffer;
+
+
+    /* Limit maximum buffer size to 0x20. */
+    ulMaxBuffer     = ptFlashDev->ulMaxBufferWriteSize;
+    if( ulMaxBuffer>0x20 )
+    {
+      ulMaxBuffer = 0x20;
+    }
 
     if(ptFlashDev->fPaired)
       ulMaxBuffer *= 2;
@@ -192,22 +205,26 @@ static FLASH_ERRORS_E FlashProgram(PFLASH_DEVICE ptFlashDev, unsigned long ulSta
     switch(ptFlashDev->uiWidth)
     {
     case 8:
-      bWriteCountCmd = (unsigned char)(ulWriteSize - 1);
+      uiWriteCountCmd = ulWriteSize - 1U;
       break;
 
     case 16:
-      bWriteCountCmd = (unsigned char)(ulWriteSize / 2 - 1);
+      uiWriteCountCmd = ulWriteSize/sizeof(unsigned short) - 1U;
       break;
 
     case 32:
-      bWriteCountCmd = (unsigned char)(ulWriteSize / 4 - 1);
+      uiWriteCountCmd = ulWriteSize/sizeof(unsigned long) - 1U;
       break;
     }
+/* TODO: use this to save a division.
+    // Get the number of elements to write.
+    uiWriteCountCmd = ulWriteSize>>((ptFlashDev->uiWidth>>3)-1) - 1;
+*/
 
     FlashWriteCommand(ptFlashDev, ulCurrentSector, 0, WRITE_TO_BUFFER);
     FlashWaitStatusDone(ptFlashDev, ulCurrentSector);
 
-    FlashWriteCommand(ptFlashDev, ulCurrentSector, 0, bWriteCountCmd);
+    FlashWriteCommand(ptFlashDev, ulCurrentSector, 0, uiWriteCountCmd);
 
     ulLength -= ulWriteSize;
 
