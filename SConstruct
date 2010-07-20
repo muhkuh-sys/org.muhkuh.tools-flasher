@@ -60,14 +60,14 @@ flasher_sources_common = """
 """
 
 
-flasher_sources_custom_netx500 = """
+flasher_sources_netx500 = """
 	src/netx500/flasher_header.c
 	src/netx500/hal_spi.c
 	src/netx500/netx_io_areas.c
 """
 
 
-flasher_sources_custom_netx50 = """
+flasher_sources_netx50 = """
 	src/netx50/flasher_header.c
 	src/netx50/hal_spi.c
 	src/netx50/netx_io_areas.c
@@ -104,60 +104,121 @@ if not GetOption('help'):
 	
 	#----------------------------------------------------------------------------
 	#
-	# import the compiler definitions
+	# Import the tool definitions.
 	#
 	# NOTE: it would be possible to use execfile instead of import here. This
 	gcc_arm_elf_4_3_3_3 = scons_common.get_compiler('gcc_arm_elf_4_3_3_3')
+	asciidoc_8_5_3_1 = scons_common.get_asciidoc('asciidoc_8_5_3_1')
 	
 	
 	#----------------------------------------------------------------------------
 	#
-	# create the default environment
+	# Create the default environment.
 	#
-	env_default = Environment()
-	gcc_arm_elf_4_3_3_3.ApplyToEnv(env_default)
-	env_default.Decider('MD5')
-	env_default.Append(CPPPATH = ['src'])
-	env_default.Replace(CCFLAGS = Split(default_ccflags))
-	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
-	env_default.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
+	env_def = Environment()
 	
-	build_properties.ApplyToEnv(env_default)
-	svnversion.ApplyToEnv(env_default)
+	gcc_arm_elf_4_3_3_3.ApplyToEnv(env_def)
+	asciidoc_8_5_3_1.ApplyToEnv(env_def)
+	svnversion.ApplyToEnv(env_def)
+	
+	env_def.Decider('MD5')
+	env_def.Append(CPPPATH = ['src'])
+	env_def.Replace(CCFLAGS = Split(default_ccflags))
+	env_def.Replace(LIBS = ['m', 'c', 'gcc'])
+	env_def.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
+	
+	build_properties.ApplyToEnv(env_def)
+	
+	Export('env_def')
 	
 	
 	#----------------------------------------------------------------------------
 	#
-	# Create a special filter builder which includes the svnversion command.
+	# Create the default environments for the different asics.
 	#
-	env_default.SVNVersion('src/flasher_version.h', 'templates/flasher_version.h')
+	env_def_netx500 = env_def.Clone()
+	env_def_netx500.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
+	env_def_netx500.Replace(LDFILE = File('#src/netx500/flasher_netx500.ld'))
+	env_def_netx500.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm926ej-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm926ej-s'])
+	env_def_netx500.Append(CPPDEFINES = [['ASIC_TYP', '500']])
+	env_def_netx500.Append(CPPPATH = ['#src/netx500'])
+	Export('env_def_netx500')
 	
-	# create environments for all builds
-	env_netx500 = env_default.Clone()
-	env_netx500.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
-	env_netx500.Replace(LDFILE = 'src/netx500/flasher_netx500.ld')
-	env_netx500.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm926ej-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm926ej-s'])
-	env_netx500.Append(CPPDEFINES = [['ASIC_TYP', '500']])
-	env_netx500.Append(CPPPATH = ['src/netx500'])
+	env_def_netx50 = env_def.Clone()
+	env_def_netx50.Append(CCFLAGS = ['-mcpu=arm966e-s'])
+	env_def_netx50.Replace(LDFILE = File('#src/netx50/flasher_netx50.ld'))
+	env_def_netx50.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm966e-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm966e-s'])
+	env_def_netx50.Append(CPPDEFINES = [['ASIC_TYP', '50']])
+	env_def_netx50.Append(CPPPATH = ['#src/netx50'])
+	Export('env_def_netx50')
+	
+	env_def_netx10 = env_def.Clone()
+	env_def_netx10.Append(CCFLAGS = ['-mcpu=arm966e-s'])
+	env_def_netx10.Replace(LDFILE = File('#src/netx10/flasher_netx10.ld'))
+	env_def_netx10.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm966e-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm966e-s'])
+	env_def_netx10.Append(CPPDEFINES = [['ASIC_TYP', '10']])
+	env_def_netx10.Append(CPPPATH = ['#src/netx10'])
+	Export('env_def_netx10')
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Insert the project and svn version into the template.
+	#
+	env_def.SVNVersion('src/flasher_version.h', 'templates/flasher_version.h')
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Build the netx500 version.
+	#
+	env_netx500 = env_def_netx500.Clone()
 	env_netx500.VariantDir('targets/netx500', 'src', duplicate=0)
-	
-	env_netx50 = env_default.Clone()
-	env_netx50.Append(CCFLAGS = ['-mcpu=arm966e-s'])
-	env_netx50.Replace(LDFILE = 'src/netx50/flasher_netx50.ld')
-	env_netx50.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm966e-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm966e-s'])
-	env_netx50.Append(CPPDEFINES = [['ASIC_TYP', '50']])
-	env_netx50.Append(CPPPATH = ['src/netx50'])
-	env_netx50.VariantDir('targets/netx50', 'src', duplicate=0)
+	src_netx500 = [s.replace('src', 'targets/netx500') for s in Split(flasher_sources_common+flasher_sources_netx500)]
+	env_netx500.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
+	elf_netx500 = env_netx500.Elf('targets/flasher_netx500', src_netx500)
+	bin_netx500 = env_netx500.ObjCopy('targets/flasher_netx500', elf_netx500)
 	
 	
 	#----------------------------------------------------------------------------
 	#
-	# build the files
+	# Build the netx500 debug version.
 	#
-	flasher_sources_netx500 = [src.replace('src', 'targets/netx500') for src in Split(flasher_sources_common+flasher_sources_custom_netx500)]
-	flasher_netx500_elf = env_netx500.Elf('targets/flasher_netx500', flasher_sources_netx500)
-	flasher_netx500_bin = env_netx500.ObjCopy('targets/flasher_netx500', flasher_netx500_elf)
+	env_netx500_debug = env_def_netx500.Clone()
+	env_netx500_debug.VariantDir('targets/netx500_debug', 'src', duplicate=0)
+	src_netx500_debug = [s.replace('src', 'targets/netx500_debug') for s in Split(flasher_sources_common+flasher_sources_netx500)]
+	env_netx500_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
+	elf_netx500_debug = env_netx500.Elf('targets/flasher_netx500_debug', src_netx500_debug)
+	bin_netx500_debug = env_netx500.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
 	
-	flasher_sources_netx50  = [src.replace('src', 'targets/netx50')  for src in Split(flasher_sources_common+flasher_sources_custom_netx50)]
-	flasher_netx50_elf = env_netx50.Elf('targets/flasher_netx50', flasher_sources_netx50)
-	env_netx50.ObjCopy('targets/flasher_netx50', flasher_netx50_elf)
+	
+	#----------------------------------------------------------------------------
+	#
+	# Build the netx50 version.
+	#
+	env_netx50 = env_def_netx50.Clone()
+	env_netx50.VariantDir('targets/netx50', 'src', duplicate=0)
+	src_netx50 = [s.replace('src', 'targets/netx50') for s in Split(flasher_sources_common+flasher_sources_netx50)]
+	env_netx50.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
+	elf_netx50 = env_netx50.Elf('targets/flasher_netx50', src_netx50)
+	bin_netx50 = env_netx50.ObjCopy('targets/flasher_netx50', elf_netx50)
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Build the netx50 debug version.
+	#
+	env_netx50_debug = env_def_netx50.Clone()
+	env_netx50_debug.VariantDir('targets/netx50_debug', 'src', duplicate=0)
+	src_netx50_debug = [s.replace('src', 'targets/netx50_debug') for s in Split(flasher_sources_common+flasher_sources_netx50)]
+	env_netx50_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
+	elf_netx50_debug = env_netx50.Elf('targets/flasher_netx50_debug', src_netx50_debug)
+	bin_netx50_debug = env_netx50.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Build the documentation.
+	#
+	env_def.Asciidoc('targets/doc/flasher.html', 'doc/flasher.txt')
+	
