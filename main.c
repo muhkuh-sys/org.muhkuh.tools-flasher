@@ -62,7 +62,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
         uprintf("\f\n\n\n\nFlasher v");
         uprintf(FLASHER_VERSION_ALL);
         uprintf("\n\n");
-        uprintf("Copyright (C) 2008 C.Thelen (cthelen@hilscher.com) and M.Trensch.\n");
+        uprintf("Copyright (C) 2008-2010 C.Thelen (cthelen@hilscher.com) and M.Trensch.\n");
         uprintf("There is NO warranty.  You may redistribute this software\n");
         uprintf("under the terms of the GNU Library General Public License.\n");
         uprintf("For more information about these matters, see the files named COPYING.\n");
