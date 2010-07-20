@@ -1,0 +1,325 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.sourceforge.muhkuh</groupId>
+	<artifactId>flasher</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0</version>
+	<name>Flasher</name>
+	<url>http://muhkuh.sourceforge.net/flasher</url>
+
+	<description>
+		The "flasher" is an in-system programmer for parallel and serial flash devices connected to a netX chip.
+	</description>
+
+	<licenses>
+		<license>
+			<name>GNU Lesser General Public License, version 2.1</name>
+			<url>http://www.gnu.org/licenses/lgpl-2.1.txt</url>
+			<distribution>manual</distribution>
+		</license>
+	</licenses>
+
+	<!-- TODO: Bootstrapping with just the pom would save the developers from typing the reository url.
+	     More: http://maven.apache.org/scm/plugins/examples/bootstrapping-with-pom.html
+	-->
+
+	<!--**************************************************************-->
+	<!--*                                                            *-->
+	<!--*  List all developers and contributors                      *-->
+	<!--*                                                            *-->
+	<!--**************************************************************-->
+	<organization>
+		<name>Muhkuh Team</name>
+		<url>http://muhkuh.sourceforge.net</url>
+	</organization>
+
+	<developers>
+		<developer>
+			<id>doc_bacardi</id>
+			<name>Chris</name>
+			<email>doc_bacardi@sourceforge.net</email>
+			<url>http://sourceforge.net/users/doc_bacardi</url>
+			<organization>Muhkuh</organization>
+			<organizationUrl>http://muhkuh.sourceforge.net</organizationUrl>
+			<roles>
+				<role>developer</role>
+			</roles>
+			<timezone>+1</timezone>
+			<properties>
+				<picUrl>http://tinyurl.com/prv4t</picUrl>
+			</properties>
+		</developer>
+		<developer>
+			<id>djangothebest</id>
+			<name>aj</name>
+			<email>djangothebest@sourceforge.net</email>
+			<url>http://sourceforge.net/users/djangothebest</url>
+			<organization>Muhkuh</organization>
+			<organizationUrl>http://muhkuh.sourceforge.net</organizationUrl>
+			<roles>
+				<role>developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+		<developer>
+			<id>stephan_lesch</id>
+			<name>Stephan Lesch</name>
+			<email>stephan_lesch@sourceforge.net</email>
+			<url>http://sourceforge.net/users/stephan_lesch</url>
+			<organization>Muhkuh</organization>
+			<organizationUrl>http://muhkuh.sourceforge.net</organizationUrl>
+			<roles>
+				<role>developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
+
+	<contributors>
+		<contributor>
+			<name>Michael Trensch</name>
+			<organization>Hilscher</organization>
+			<organizationUrl>http://www.hilscher.com</organizationUrl>
+			<roles>
+				<role>developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</contributor>
+	</contributors>
+
+
+	<!--**************************************************************-->
+	<!--*                                                            *-->
+	<!--*  List all services                                         *-->
+	<!--*                                                            *-->
+	<!--**************************************************************-->
+	<scm>
+		<connection>scm:svn:http://muhkuh.svn.sourceforge.net/svnroot/muhkuh</connection>
+		<developerConnection>scm:svn:https://muhkuh.svn.sourceforge.net/svnroot/muhkuh</developerConnection>
+		<tag>HEAD</tag>
+		<url>http://muhkuh.svn.sourceforge.net/viewvc/muhkuh/flasher/</url>
+	</scm>
+
+	<issueManagement>
+		<system>Trac</system>
+		<url>http://sourceforge.net/apps/trac/muhkuh/report</url>
+	</issueManagement>
+
+
+	<distributionManagement>
+		<site>
+			<id>sourceforge.muhkuh.website</id>
+			<name>Muhkuh Website on Sourceforge, Flasher section</name>
+			<url>sftp://web.sourceforge.net/home/groups/m/mu/muhkuh/htdocs/flasher</url>
+		</site>
+	</distributionManagement>
+
+
+	<repositories>
+		<repository>
+			<id>muhkuh_at_sourceforge</id>
+			<url>http://downloads.sourceforge.net/project/muhkuh/maven2</url>
+			<releases>
+				<checksumPolicy>fail</checksumPolicy>
+			</releases>
+			<snapshots>
+				<checksumPolicy>fail</checksumPolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
+
+	<properties>
+		<depack_markers_dir>${user.home}/.m2/depack</depack_markers_dir>
+		<scons_dir>${user.home}/.m2/depack/scons</scons_dir>
+		<gcc_dir>${user.home}/.m2/depack/gcc</gcc_dir>
+		<asciidoc_dir>${user.home}/.m2/depack/asciidoc</asciidoc_dir>
+		<PYTHON>python</PYTHON>
+	</properties>
+
+	<!-- This is just an emulation for the missing os.family . Argh! -->
+	<profiles>
+		<profile>
+			<id>Windows</id>
+			<activation>
+				<os>
+					<family>windows</family>
+				</os>
+			</activation>
+			<properties>
+				<os_family>windows</os_family>
+			</properties>
+		</profile>
+		<profile>
+			<id>Linux</id>
+			<activation>
+				<os>
+					<family>unix</family>
+				</os>
+			</activation>
+			<properties>
+				<os_family>linux</os_family>
+			</properties>
+		</profile>
+	</profiles>
+
+	<build>
+		<defaultGoal>compile</defaultGoal>
+		<finalName>${artifactId}-${version}</finalName>
+		<plugins>
+			<!-- This pom does not use ressource filtering, but without these lines
+			     maven keeps japping about using platform encoding to copy ressources.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+
+			<!-- This is a replacement for the ressource filtering. Maven can not
+			     resist to escape colons. This might be important for java
+			     properties, but it is pure evil for everything else: batch files,
+			     shell scripts, python includes... Whatever it is, it hates escaped
+			     colons. :-(((((
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>filter_files</id>
+						<phase>process-sources</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks>
+								<copy file="templates/site_init.py" todir="${basedir}/site_scons" filtering="true" overwrite="true">
+									<filterset>
+										<filter token="asciidoc_dir"    value="${asciidoc_dir}" />
+										<filter token="gcc_dir"         value="${gcc_dir}" />
+										<filter token="project.version" value="${project.version}" />
+									</filterset>
+								</copy>
+								<copy file="templates/scons.bat" todir="${basedir}" filtering="true" overwrite="true">
+									<filterset id="filter">
+										<filter token="scons_dir"       value="${scons_dir}" />
+										<filter token="PYTHON"          value="${PYTHON}" />
+									</filterset>
+								</copy>
+								<copy file="templates/scons.sh" todir="${basedir}" filtering="true" overwrite="true">
+									<filterset id="filter">
+										<filter token="scons_dir"       value="${scons_dir}" />
+										<filter token="PYTHON"          value="${PYTHON}" />
+									</filterset>
+								</copy>
+								<chmod file="${basedir}/scons.sh" perm="ugo+rx"/>
+							</tasks>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>unpack_tools</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>unpack</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<!-- Unpack the scons build system to a working folder. -->
+								<artifactItem>
+									<groupId>org.scons</groupId>
+									<artifactId>scons-local</artifactId>
+									<version>1.2.0.d20091224_1</version>
+									<type>tar.bz2</type>
+									<overWrite>false</overWrite>
+									<outputDirectory>${scons_dir}</outputDirectory>
+								</artifactItem>
+								<!-- Unpack the compiler to a working folder. -->
+								<artifactItem>
+									<groupId>org.gnu.gcc</groupId>
+									<artifactId>gcc-arm-elf_${os_family}_${os.arch}</artifactId>
+									<version>4.3.3_3</version>
+									<type>tar.bz2</type>
+									<overWrite>false</overWrite>
+									<outputDirectory>${gcc_dir}</outputDirectory>
+								</artifactItem>
+								<!-- Unpack the Asciidoc system to a working folder. -->
+								<artifactItem>
+									<groupId>nz.co.methods</groupId>
+									<artifactId>asciidoc</artifactId>
+									<version>8.5.3_1</version>
+									<type>tar.bz2</type>
+									<overWrite>false</overWrite>
+									<outputDirectory>${asciidoc_dir}</outputDirectory>
+								</artifactItem>
+							</artifactItems>
+							<markersDirectory>${depack_markers_dir}</markersDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- This is a fix for Maven 2.x Dependency Plugin bug MDEP-109 .
+			     See <http://jira.codehaus.org/browse/MDEP-109> for details. It seems
+			     to be quite hard to fix. The bug was filed in 2004 and it is still open. %-(
+			     
+			     Find all executable files and write them to list.txt:
+			         find . -executable -type f | sed 's/^\.\///' >list.txt
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>fix_gcc_filemodes</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks>
+								<chmod file="${gcc_dir}/gcc-arm-elf-4.3.3_3/bin/*" perm="ugo+rx"/>
+								<chmod file="${gcc_dir}/gcc-arm-elf-4.3.3_3/arm-elf/bin/*" perm="ugo+rx"/>
+								<chmod file="${gcc_dir}/gcc-arm-elf-4.3.3_3/libexec/gcc/arm-elf/4.3.3/cc1" perm="ugo+rx"/>
+								<chmod file="${gcc_dir}/gcc-arm-elf-4.3.3_3/libexec/gcc/arm-elf/4.3.3/cc1plus" perm="ugo+rx"/>
+								<chmod file="${gcc_dir}/gcc-arm-elf-4.3.3_3/libexec/gcc/arm-elf/4.3.3/collect2" perm="ugo+rx"/>
+							</tasks>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Run scons -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<id>run_scons</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>${PYTHON}</executable>
+					<arguments>
+						<argument>${scons_dir}/scons.py</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

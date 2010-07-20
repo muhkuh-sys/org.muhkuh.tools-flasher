@@ -1,117 +1,163 @@
-import netx
+# -*- coding: utf-8 -*-
+
+# TODO:
+#  * more than one system include dir (for arg parsing etc)
+#  * set a default location for the compiler dir (but where could this be?)
+#
+# Done:
+#  * print help even if the site dir for the compiler stuff is missing.
+#  * generate relocated sources from list of real locations
+#  * set compiler flags from build properties
+#  * show command line summary (e.g. "Cc blah.o") for the actions, but show complete line if the command failed.
+#  * accept 'clean' target like make
+#  * auto dependency for LDFILE
+#
+
+import scons_common
+import build_properties
+import svnversion
+
+build_properties.Read()
+
+#----------------------------------------------------------------------------
+#
+# set help text
+#
+Help("""
+	Set the compiler dir with all the gcc_*.py files with --site-dir=path .
+	Example: The compiler dir is usually in the folder '.ant' in the users home directory.
+	This expands for the user 'brunhild' to '/home/brunhild/.ant'.
+
+	Type: 'scons --site-dir=compiler_dir' to build the production program,
+	      'scons --site-dir=compiler_dir clean' to clean everything.
+""")
+
+build_properties.GenerateHelp()
 
 
-rcx_defines         = ['_NETX_HITOP_', '__RCX__', '_RCX_LIBRARY_VERSION_BUILD_', '_RX_MICRO_KERNEL_']
-flasher_defines_netx500 = ['__NETX500']
-flasher_defines_netx50  = ['__NETX50']
-#flasher_defines_silent  = ['SILENT']
-flasher_defines_debug   = ['DEBUG']
-
-flasher_includes_netx500 = Split("""
-                                 ./
-                                 ./netx500
-                                 """)
-
-flasher_includes_netx50 = Split("""
-                                ./
-                                ./netx50
-                                """)
-
-
-# ----------------------------------------------------------------
-# ------------------- Common Sources -----------------------------
-# ----------------------------------------------------------------
-
-flasher_common_c = Split("""
-                         ./cfi_flash.c
-                         ./delay.c
-                         ./spi_flash.c
-                         ./flasher_ext.c
-                         ./flasher_i2c.c
-                         ./flasher_spi.c
-                         ./flasher_srb.c
-                         ./main.c
-                         ./netx_consoleapp.c
-                         ./parflash_common.c
-                         ./progress_bar.c
-                         ./rdyrun.c
-                         ./spansion.c
-                         ./spi_flash_types.c
-                         ./strata.c
-                         ./uprintf.c
-                         """)
-
-flasher_common_s = Split("""
-                         ./init_netx_test.s
-                         ./startvector.s
-                         """)
-
-# ----------------------------------------------------------------
-# ---------------- Sources for netx500 ---------------------------
-# ----------------------------------------------------------------
-
-flasher_netx500_c = Split("""
-                          ./netx500/flasher_header.c
-                          ./netx500/hal_spi.c
-                          ./netx500/netx_io_areas.c
-                          """)
-
-# ----------------------------------------------------------------
-# ---------------- Sources for netx50 ----------------------------
-# ----------------------------------------------------------------
-
-flasher_netx50_c  = Split("""
-                          ./netx50/flasher_header.c
-                          ./netx50/hal_spi.c
-                          ./netx50/netx_io_areas.c
-                          """)
-
-# ----------------------------------------------------------------
-# ---------------- Build all flasher versions --------------------
-# ----------------------------------------------------------------
-
-flasher_nx500_r_files = netx.netx500_compile_arm(flasher_common_c + flasher_common_s + flasher_netx500_c,
-                                                 flasher_includes_netx500,
-                                                 flasher_defines_netx500,
-                                                 'output/flasher_nx500_r')
-#flasher_nx500_s_files = netx.netx500_compile_arm(flasher_common_c + flasher_common_s + flasher_netx500_c,
-#                                                 flasher_includes_netx500,
-#                                                 flasher_defines_netx500 + flasher_defines_silent,
-#                                                 'output/flasher_nx500_s')
-flasher_nx500_d_files = netx.netx500_compile_arm(flasher_common_c + flasher_common_s + flasher_netx500_c,
-                                                 flasher_includes_netx500,
-                                                 flasher_defines_netx500 + flasher_defines_debug,
-                                                 'output/flasher_nx500_d')
+#----------------------------------------------------------------------------
+# This is the list of sources. The elements must be separated with whitespace
+# (i.e. spaces, tabs, newlines). The amount of whitespace does not matter.
+flasher_sources_common = """
+	src/cfi_flash.c
+	src/delay.c
+	src/flasher_ext.c
+	src/flasher_i2c.c
+	src/flasher_spi.c
+	src/flasher_srb.c
+	src/init_netx_test.s
+	src/main.c
+	src/netx_consoleapp.c
+	src/parflash_common.c
+	src/progress_bar.c
+	src/rdyrun.c
+	src/spansion.c
+	src/spi_flash.c
+	src/spi_flash_types.c
+	src/startvector.s
+	src/strata.c
+	src/uprintf.c
+"""
 
 
-flasher_nx50_r_files  = netx.netx50_compile_arm( flasher_common_c + flasher_common_s + flasher_netx50_c,
-                                                 flasher_includes_netx50,
-                                                 flasher_defines_netx50,
-                                                 'output/flasher_nx50_r')
-#flasher_nx50_s_files  = netx.netx50_compile_arm( flasher_common_c + flasher_common_s + flasher_netx50_c,
-#                                                 flasher_includes_netx50,
-#                                                 flasher_defines_netx50 + flasher_defines_silent,
-#                                                 'output/flasher_nx50_s')
-flasher_nx50_d_files  = netx.netx50_compile_arm( flasher_common_c + flasher_common_s + flasher_netx50_c,
-                                                 flasher_includes_netx50,
-                                                 flasher_defines_netx50 + flasher_defines_debug,
-                                                 'output/flasher_nx50_d')
+flasher_sources_custom_netx500 = """
+	src/netx500/flasher_header.c
+	src/netx500/hal_spi.c
+	src/netx500/netx_io_areas.c
+"""
 
 
-
-flasher_nx500_r_elf = netx.netx500_makeelf(flasher_nx500_r_files, 'output/flasher_nx500_r', 'flasher_nx500_r.elf', '', '', 'flasher_netx500.ld')
-flasher_nx500_d_elf = netx.netx500_makeelf(flasher_nx500_d_files, 'output/flasher_nx500_d', 'flasher_nx500_d.elf', '', '', 'flasher_netx500.ld')
-
-
-flasher_nx50_r_elf  = netx.netx50_makeelf( flasher_nx50_r_files,  'output/flasher_nx50_r',  'flasher_nx50_r.elf', '', '', 'flasher_netx50.ld')
-flasher_nx50_d_elf  = netx.netx50_makeelf( flasher_nx50_d_files,  'output/flasher_nx50_d',  'flasher_nx50_d.elf', '', '', 'flasher_netx50.ld')
+flasher_sources_custom_netx50 = """
+	src/netx50/flasher_header.c
+	src/netx50/hal_spi.c
+	src/netx50/netx_io_areas.c
+"""
 
 
+default_ccflags = """
+	-ffreestanding
+	-mlong-calls
+	-Wall
+	-Wextra
+	-Wconversion
+	-Wshadow
+	-Wcast-qual
+	-Wwrite-strings
+	-Wcast-align
+	-Wpointer-arith
+	-Wmissing-prototypes
+	-Wstrict-prototypes
+	-mapcs
+	-g3
+	-gdwarf-2
+"""
 
-netx.arm_env.Oc('flasher_netx500.bin',       flasher_nx500_r_elf)
-netx.arm_env.Oc('flasher_netx500_debug.bin', flasher_nx500_d_elf)
 
-
-netx.arm_env.Oc('flasher_netx50.bin',        flasher_nx50_r_elf)
-netx.arm_env.Oc('flasher_netx50_debug.bin',  flasher_nx50_d_elf)
-
+#----------------------------------------------------------------------------
+# Only execute this part if the help text is not requested.
+# This keeps the help message functional even if no include path for the
+# compiler definitions was specified.
+if not GetOption('help'):
+	# Show summary of the build properties.
+	build_properties.PrintSummary()
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# import the compiler definitions
+	#
+	# NOTE: it would be possible to use execfile instead of import here. This
+	gcc_arm_elf_4_3_3_3 = scons_common.get_compiler('gcc_arm_elf_4_3_3_3')
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# create the default environment
+	#
+	env_default = Environment()
+	gcc_arm_elf_4_3_3_3.ApplyToEnv(env_default)
+	env_default.Decider('MD5')
+	env_default.Append(CPPPATH = ['src'])
+	env_default.Replace(CCFLAGS = Split(default_ccflags))
+	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
+	env_default.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
+	
+	build_properties.ApplyToEnv(env_default)
+	svnversion.ApplyToEnv(env_default)
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Create a special filter builder which includes the svnversion command.
+	#
+	env_default.SVNVersion('src/flasher_version.h', 'templates/flasher_version.h')
+	
+	# create environments for all builds
+	env_netx500 = env_default.Clone()
+	env_netx500.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
+	env_netx500.Replace(LDFILE = 'src/netx500/flasher_netx500.ld')
+	env_netx500.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm926ej-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm926ej-s'])
+	env_netx500.Append(CPPDEFINES = [['ASIC_TYP', '500']])
+	env_netx500.Append(CPPPATH = ['src/netx500'])
+	env_netx500.VariantDir('targets/netx500', 'src', duplicate=0)
+	
+	env_netx50 = env_default.Clone()
+	env_netx50.Append(CCFLAGS = ['-mcpu=arm966e-s'])
+	env_netx50.Replace(LDFILE = 'src/netx50/flasher_netx50.ld')
+	env_netx50.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm966e-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm966e-s'])
+	env_netx50.Append(CPPDEFINES = [['ASIC_TYP', '50']])
+	env_netx50.Append(CPPPATH = ['src/netx50'])
+	env_netx50.VariantDir('targets/netx50', 'src', duplicate=0)
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# build the files
+	#
+	flasher_sources_netx500 = [src.replace('src', 'targets/netx500') for src in Split(flasher_sources_common+flasher_sources_custom_netx500)]
+	flasher_netx500_elf = env_netx500.Elf('targets/flasher_netx500', flasher_sources_netx500)
+	flasher_netx500_bin = env_netx500.ObjCopy('targets/flasher_netx500', flasher_netx500_elf)
+	
+	flasher_sources_netx50  = [src.replace('src', 'targets/netx50')  for src in Split(flasher_sources_common+flasher_sources_custom_netx50)]
+	flasher_netx50_elf = env_netx50.Elf('targets/flasher_netx50', flasher_sources_netx50)
+	env_netx50.ObjCopy('targets/flasher_netx50', flasher_netx50_elf)

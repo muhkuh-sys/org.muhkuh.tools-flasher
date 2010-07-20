@@ -6,19 +6,27 @@ from SCons.Script import *
 
 
 def svnversion_action(target, source, env):
-	version_svn = 'unknown'
+	global PROJECT_VERSION
+	
+	# split up the project version
+	version_info = PROJECT_VERSION.split('.')
+	project_version_maj = version_info[0]
+	project_version_min = version_info[1]
+	project_version_svn = 'unknown'
 	
 	if env['SVNVERSION']:
 		# get the svn version
 		child = os.popen(env['SVNVERSION']+' -n')
-		version_svn = child.read()
+		project_version_svn = child.read()
 		err = child.close()
 		if err:
-			version_svn = 'unknown'
+			project_version_svn = 'unknown'
 	
 	# apply the project version to the environment
 	substenv = Environment()
-	substenv['VERSION_SVN'] = project_version_svn
+	substenv['PROJECT_VERSION_MAJ'] = project_version_maj
+	substenv['PROJECT_VERSION_MIN'] = project_version_min
+	substenv['PROJECT_VERSION_SVN'] = project_version_svn
 	
 	# read the template
 	src_file = open(source[0].get_path(), 'r')
@@ -43,9 +51,7 @@ def svnversion_action(target, source, env):
 
 
 def svnversion_emitter(target, source, env):
-	
-	# TODO: This must already depend on the output of svnversion.
-	# TODO: But it should not kill the performance.
+	global PROJECT_VERSION
 	
 	# Make the target depend on the parameter.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
