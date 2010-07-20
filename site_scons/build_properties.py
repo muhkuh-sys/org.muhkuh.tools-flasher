@@ -24,7 +24,6 @@ def Read():
 	# specified in the last argument, are used otherwise).
 	# See http://scons.org/doc/1.2.0.d20090919/HTML/scons-user/x2378.html for details.
 	_g_build_properties.Add(BoolVariable('build_debug', 'Build the project in debug mode.', 'False'))
-	_g_build_properties.Add(BoolVariable('ASIC_DEBUGMSG', 'Enable debug messages.', 'True'))
 
 	_g_env_help = Environment(variables=_g_build_properties)
 
@@ -49,7 +48,6 @@ def PrintSummary():
 	
 	print 'build properties:'
 	print "\tbuild_debug = %s" % _g_env_help['build_debug']
-	print "\tASIC_DEBUGMSG = %s" % _g_env_help['ASIC_DEBUGMSG']
 
 
 def ApplyToEnv(env):
@@ -61,8 +59,3 @@ def ApplyToEnv(env):
 	else:
 		# this is the debug build
 		env.Append(CCFLAGS = ['-O0'])
-	
-	if _g_env_help['ASIC_DEBUGMSG']==0:
-		env.Append(CPPDEFINES = [['ASIC_DEBUGMSG', '0']])
-	else:
-		env.Append(CPPDEFINES = [['ASIC_DEBUGMSG', '1']])
