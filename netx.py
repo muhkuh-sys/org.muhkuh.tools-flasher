@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import os.path
@@ -15,8 +16,8 @@ env_netx500_interwork = Environment()
 env_netx500_interwork16 = Environment()
 
 _buildroot = ''
-_build_options_c   = ''
-_build_options_asm = ''
+_build_options_c   = ['']
+_build_options_asm = ['']
 
 if ARGUMENTS.get('target', '0').lower() == 'debug':
   print "**********************"
@@ -24,8 +25,8 @@ if ARGUMENTS.get('target', '0').lower() == 'debug':
   print "**********************"
   _buildroot = 'debug'
 
-  _build_options_c   = '-gdwarf-2 -O0 '
-  _build_options_asm = '-gdwarf2 '
+  _build_options_c   = ['-gdwarf-2', '-O0']
+  _build_options_asm = ['-gdwarf2 ']
    
 elif ARGUMENTS.get('target', '0').lower() == 'debugrel':
   print "***********************************************"
@@ -33,15 +34,15 @@ elif ARGUMENTS.get('target', '0').lower() == 'debugrel':
   print "***********************************************"
   _buildroot = 'debugrel'
 
-  _build_options_c   = '-gdwarf-2 -Os '
-  _build_options_asm = '-gdwarf2 '
+  _build_options_c   = ['-gdwarf-2', '-Os']
+  _build_options_asm = ['-gdwarf2 ']
 else:
   print "************************"
   print "*** Release build... ***"
   print "************************"
   _buildroot = 'release'
 
-  _build_options_c = '-Os '
+  _build_options_c = ['-Os']
 
 _library_includes_netx500 = '';
 _library_includes_netx50  = '';
@@ -90,19 +91,19 @@ elif sys.platform.startswith("linux"):
   if ARGUMENTS.get('prefix'):
     prefix = ARGUMENTS.get('prefix')
   else:
-    prefix = '/home/christoph/crossgcc_4.3.2/bin/arm-elf-'
+    prefix = '/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3_3/bin/arm-elf-'
 
   if(ARGUMENTS.get('libdir_netx500')):
     _library_includes_netx500 = ARGUMENTS.get('libdir_netx500')
   else:
-    _library_includes_netx500 = ['/home/christoph/crossgcc_4.3.2/arm-elf/lib/arm926ej-s/interwork',
-                               '/home/christoph/crossgcc_4.3.2/lib/gcc/arm-elf/4.3.2/arm926ej-s/interwork']
+    _library_includes_netx500 = ['/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3_3/arm-elf/lib/arm926ej-s/interwork',
+                               '/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3_3/lib/gcc/arm-elf/4.3.3/arm926ej-s/interwork']
 
   if(ARGUMENTS.get('libdir_netx50')):
     _library_includes_netx50 = ARGUMENTS.get('libdir_netx50')
   else:
-    _library_includes_netx50  = ['/home/christoph/crossgcc_4.3.2/arm-elf/lib/arm966e-s/interwork',
-                               '/home/christoph/crossgcc_4.3.2/lib/gcc/arm-elf/4.3.2/arm966e-s/interwork']
+    _library_includes_netx50  = ['/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3_3/arm-elf/lib/arm966e-s/interwork',
+                               '/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3_3/lib/gcc/arm-elf/4.3.3/arm966e-s/interwork']
 
   print "Using Compiler \"" + prefix + "\""
 
@@ -116,11 +117,11 @@ arm_env['ARFLAGS']    = 'ru'
 arm_env['AS']         = prefix + 'as'
 arm_env['ASFLAGS']    = _build_options_asm
 arm_env['CC']         = prefix + 'gcc'
-arm_env['CCFLAGS']    += _build_options_c + ' -fno-builtin -Wall -Wextra -Wconversion -Wshadow -Wcast-qual -Wwrite-strings -Wcast-align -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes'
+arm_env['CCFLAGS']    += _build_options_c + ['-fno-builtin', '-Wall', '-Wextra', '-Wconversion', '-Wshadow', '-Wcast-qual', '-Wwrite-strings', '-Wcast-align', '-Wpointer-arith', '-Wmissing-prototypes', '-Wstrict-prototypes']
 arm_env['LD']         = prefix + 'ld' 
 arm_env['LINK']       = prefix + 'ld' 
 arm_env['LIBS']       = ['c', 'm', 'gcc']
-arm_env['LINKFLAGS']  = '-nostdlib -static'
+arm_env['LINKFLAGS']  = ['-nostdlib', '-static']
 arm_env['LINKCOM']    += ' -T$LDFILE'
 arm_env['_LIBFLAGS']  = '-\( ${_stripixes(LIBLINKPREFIX, LIBS, LIBLINKSUFFIX, LIBPREFIX, LIBSUFFIX, __env__)} -\)' 
 arm_env['PROGSUFFIX'] = '.elf' 
@@ -153,19 +154,19 @@ arm_env.Append(BUILDERS = {'Oc' : arm_oc_bld})
 # ----------------------------------------------------------
 # -------------------- NETX 500 ----------------------------
 # ----------------------------------------------------------
-env_netx500 = arm_env.Copy()
-env_netx500['CCFLAGS'] += ' -mcpu=arm926ej-s '
-env_netx500['ASFLAGS'] += ' -mcpu=arm926ej-s '
+env_netx500 = arm_env.Clone()
+env_netx500['CCFLAGS'] += ['-mcpu=arm926ej-s']
+env_netx500['ASFLAGS'] += ['-mcpu=arm926ej-s']
 
 env_netx500_interwork = env_netx500.Copy(
   LIBPATH = _library_includes_netx500
 )
-env_netx500_interwork['CCFLAGS'] += ' -mthumb-interwork'
-env_netx500_interwork['ASFLAGS'] += ' -mthumb-interwork'
+env_netx500_interwork['CCFLAGS'] += ['-mthumb-interwork']
+env_netx500_interwork['ASFLAGS'] += ['-mthumb-interwork']
 
-env_netx500_interwork16 = env_netx500_interwork.Copy()
-env_netx500_interwork16['CCFLAGS'] += ' -mthumb'
-env_netx500_interwork16['ASFLAGS'] += ' -mthumb'
+env_netx500_interwork16 = env_netx500_interwork.Clone()
+env_netx500_interwork16['CCFLAGS'] += ['-mthumb']
+env_netx500_interwork16['ASFLAGS'] += ['-mthumb']
 
 # ----------------------------------------------------------
 
@@ -173,19 +174,19 @@ env_netx500_interwork16['ASFLAGS'] += ' -mthumb'
 # ----------------------------------------------------------
 # -------------------- NETX 50 -----------------------------
 # ----------------------------------------------------------
-env_netx50 = arm_env.Copy()
-env_netx50['CCFLAGS'] += ' -mcpu=arm9e '
-env_netx50['ASFLAGS'] += ' -mcpu=arm9e '
+env_netx50 = arm_env.Clone()
+env_netx50['CCFLAGS'] += ['-mcpu=arm9e']
+env_netx50['ASFLAGS'] += ['-mcpu=arm9e']
 
-env_netx50_interwork = env_netx50.Copy(
+env_netx50_interwork = env_netx50.Clone(
   LIBPATH = _library_includes_netx50
 )
-env_netx50_interwork['CCFLAGS'] += ' -mthumb-interwork'
-env_netx50_interwork['ASFLAGS'] += ' -mthumb-interwork'
+env_netx50_interwork['CCFLAGS'] += ['-mthumb-interwork']
+env_netx50_interwork['ASFLAGS'] += ['-mthumb-interwork']
 
-env_netx50_interwork16 = env_netx50_interwork.Copy()
-env_netx50_interwork16['CCFLAGS'] += ' -mthumb'
-env_netx50_interwork16['ASFLAGS'] += ' -mthumb'
+env_netx50_interwork16 = env_netx50_interwork.Clone()
+env_netx50_interwork16['CCFLAGS'] += ['-mthumb']
+env_netx50_interwork16['ASFLAGS'] += ['-mthumb']
 
 def _generate_build_dir(build_dir_prefix, src_list, env):
   """Generate build directory prefixes for each file. This functions searches for the first invalid character (/\:..) 
