@@ -34,7 +34,7 @@
 #include "uprintf.h"
 
 
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 
 	/* show all messages by default */
 	static unsigned long s_ulCurSettings = 0xffffffff;
@@ -57,9 +57,9 @@
 	#define ZONE_VERBOSE        DEBUGZONE(DBG_ZONE_VERBOSE)
 
 	#define DEBUGMSG(cond,printf_exp) ((void)((cond)?(uprintf printf_exp),1:0))
-#else  // DEBUG
+#else  // CFG_DEBUGMSG
 	#define DEBUGMSG(cond,printf_exp) ((void)0)
-#endif // DEBUG
+#endif // CFG_DEBUGMSG
 
 
 #define READ_USHORT(ulAddress)   (*(volatile unsigned short*)ulAddress)

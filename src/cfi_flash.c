@@ -50,7 +50,7 @@
 #include <string.h>
 
 
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 	/* show all messages by default */
 	static unsigned long s_ulCurSettings = 0xffffffff;
 
@@ -72,12 +72,12 @@
 	#define ZONE_VERBOSE        DEBUGZONE(DBG_ZONE_VERBOSE)
 
 	#define DEBUGMSG(cond,printf_exp) ((void)((cond)?(uprintf printf_exp),1:0))
-#else  // DEBUG
+#else  // CFG_DEBUGMSG
 	#define DEBUGMSG(cond,printf_exp) ((void)0)
-#endif // DEBUG
+#endif // CFG_DEBUGMSG
 
 
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 static void hexdump(const unsigned char *pcData, size_t sizData)
 {
 	const unsigned char *pcDumpCnt;
@@ -424,7 +424,7 @@ static int CFI_QueryFlashLayout(FLASH_DEVICE *ptFlashDevice, PFN_FLASHSETUP pfnS
 	/* Enter Query mode */
 	CFI_FlashWriteCommand(pucFlashBase + READ_QUERY_CMD_OFFSET, 8, FALSE, READ_QUERY_CMD);
 
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 	hexdump(pucFlashBase, sizeof(CFI_QUERY_INFORMATION));
 #endif
 

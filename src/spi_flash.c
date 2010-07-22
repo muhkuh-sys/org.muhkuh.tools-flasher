@@ -52,7 +52,7 @@
 *   Defines                                                            
 ************************************************************                  
 */                                                  
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 
 	/* show all messages by default */
 	static unsigned long s_ulCurSettings = 0xffffffff;
@@ -75,9 +75,9 @@
 	#define ZONE_VERBOSE        DEBUGZONE(DBG_ZONE_VERBOSE)
 
 	#define DEBUGMSG(cond,printf_exp) ((void)((cond)?(uprintf printf_exp),1:0))
-#else  // DEBUG
+#else  // CFG_DEBUGMSG
 	#define DEBUGMSG(cond,printf_exp) ((void)0)
-#endif // DEBUG
+#endif // CFG_DEBUGMSG
 
 
 /*****************************************************************************/
@@ -219,7 +219,7 @@ static int read_status(const SPI_FLASH_T *ptFlash, unsigned int *puiStatus)
 }
 
 
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
 static int print_status(const SPI_FLASH_T *ptFlash)
 {
   unsigned int uiStatus = 0;
@@ -591,7 +591,7 @@ int Drv_SpiInitializeFlash(SPI_FLASH_T *ptFlash)
 
       if( iResult!=0 )
       {
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
         /* show initial status */
         iResult = print_status(ptFlash);
 	if( iResult!=0 )
@@ -617,7 +617,7 @@ int Drv_SpiInitializeFlash(SPI_FLASH_T *ptFlash)
             DEBUGMSG(ZONE_ERROR, ("ERROR: Drv_SpiInitializeFlash: flash addressing mode is invalid: 0x$8.\n", ptFlash->tAttributes.tAdrMode));
             iResult = 0;
           }
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
         }
 #endif
       }
@@ -740,7 +740,7 @@ int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
         }
         else
         {
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                 /* show initial status */
                 iResult = print_status(ptFlash);
                 if( iResult!=0 )
@@ -774,7 +774,7 @@ int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
                                         DEBUGMSG(ZONE_ERROR, ("ERROR: Drv_SpiEraseFlashSector: wait_for_ready failed with 0x$.\n", iResult));
                                 }
                         }
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                 }
 #endif
         }
@@ -1212,7 +1212,7 @@ static int write_single_opcode(const SPI_FLASH_T *ptFlash, unsigned long ulLinea
         }
         else
         {
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                 iResult = print_status(ptFlash);
                 if( iResult!=0 )
                 {
@@ -1267,7 +1267,7 @@ static int write_single_opcode(const SPI_FLASH_T *ptFlash, unsigned long ulLinea
                                         }
                                 }
                         }
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                 }
 #endif
         }
@@ -1337,7 +1337,7 @@ static int write_via_buffer(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
                         }
                         else
                         {
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                                 iResult = print_status(ptFlash);
                                 if( iResult!=0 )
                                 {
@@ -1380,7 +1380,7 @@ static int write_via_buffer(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
                                                         }
                                                 }
                                         }
-#ifdef DEBUG
+#if CFG_DEBUGMSG!=0
                                 }
 #endif
                         }
