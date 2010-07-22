@@ -188,8 +188,8 @@ if not GetOption('help'):
 	env_netx500_debug.VariantDir('targets/netx500_debug', 'src', duplicate=0)
 	src_netx500_debug = [s.replace('src', 'targets/netx500_debug') for s in Split(flasher_sources_common+flasher_sources_netx500)]
 	env_netx500_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
-	elf_netx500_debug = env_netx500.Elf('targets/flasher_netx500_debug', src_netx500_debug)
-	bin_netx500_debug = env_netx500.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
+	elf_netx500_debug = env_netx500_debug.Elf('targets/flasher_netx500_debug', src_netx500_debug)
+	bin_netx500_debug = env_netx500_debug.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
 	
 	
 	#----------------------------------------------------------------------------
@@ -212,8 +212,8 @@ if not GetOption('help'):
 	env_netx50_debug.VariantDir('targets/netx50_debug', 'src', duplicate=0)
 	src_netx50_debug = [s.replace('src', 'targets/netx50_debug') for s in Split(flasher_sources_common+flasher_sources_netx50)]
 	env_netx50_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
-	elf_netx50_debug = env_netx50.Elf('targets/flasher_netx50_debug', src_netx50_debug)
-	bin_netx50_debug = env_netx50.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
+	elf_netx50_debug = env_netx50_debug.Elf('targets/flasher_netx50_debug', src_netx50_debug)
+	bin_netx50_debug = env_netx50_debug.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
 	
 	
 	#----------------------------------------------------------------------------
