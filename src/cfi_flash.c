@@ -404,6 +404,8 @@ static int CFI_QueryFlashLayout(FLASH_DEVICE *ptFlashDevice, PFN_FLASHSETUP pfnS
 {
 	unsigned char *pucFlashBase;
 	PCFI_QUERY_INFORMATION ptQueryInformation;
+	CFI_EXTQUERY_HEADER_T *ptExtQuery;
+	
 	unsigned char abCfiId[3];
 	unsigned long ulFlashSize;
 	int fRet;
@@ -454,6 +456,36 @@ static int CFI_QueryFlashLayout(FLASH_DEVICE *ptFlashDevice, PFN_FLASHSETUP pfnS
 		ptFlashDevice->ulMaxBufferWriteSize = 1U << ptQueryInformation->usMaxBufferWriteSize;
 
 		fRet = cfi_read_geometry(ptFlashDevice);
+		DEBUGMSG(ZONE_VERBOSE, ("CFI_QueryFlashLayout(): usVendorCommandSet = 0x$4  ulMaxBufferWriteSize = 0x$8\n", 
+			ptFlashDevice->usVendorCommandSet, ptFlashDevice->ulMaxBufferWriteSize ));
+
+		/* check if there is an extended query entry */
+		if (ptQueryInformation->usPrimaryAlgorithmExt) 
+		{
+			ptExtQuery = (CFI_EXTQUERY_HEADER_T *) (pucFlashBase + ptQueryInformation->usPrimaryAlgorithmExt);
+			abCfiId[0] = ptExtQuery->abExtQueryIdent[0];
+			abCfiId[1] = ptExtQuery->abExtQueryIdent[1];
+			abCfiId[2] = ptExtQuery->abExtQueryIdent[2];
+			if( abCfiId[0]=='P' && abCfiId[1]=='R' && abCfiId[2]=='I' )
+			{
+				DEBUGMSG(ZONE_VERBOSE, ("CFI_QueryFlashLayout(): found extended query structure V 0x$2.0x$2\n",
+					ptExtQuery->bMajorVer, ptExtQuery->bMinorVer));
+				memcpy(&ptFlashDevice->tPriExtQuery, ptExtQuery, sizeof(ptFlashDevice->tPriExtQuery));
+				ptFlashDevice->fPriExtQueryValid = 1;
+			}
+			else
+			{
+				ptFlashDevice->fPriExtQueryValid = 0;
+				DEBUGMSG(ZONE_VERBOSE, ("CFI_QueryFlashLayout(): invalid header in extended query structure\n"));
+				
+			}
+		}
+		else
+		{
+			ptFlashDevice->fPriExtQueryValid = 0;
+			DEBUGMSG(ZONE_VERBOSE, ("CFI_QueryFlashLayout(): no extended query structure\n"));
+		}
+			
 	}
 	else
 	{

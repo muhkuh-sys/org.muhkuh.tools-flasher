@@ -763,7 +763,7 @@ int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
                         iResult = send_simple_cmd(ptFlash, abCmd, 4);
                         if( !iResult )
                         {
-                                DEBUGMSG(ZONE_ERROR, ("ERROR: Drv_SpiEraseFlashPage: send_simple_cmd failed with 0x$.\n", iResult));
+                                DEBUGMSG(ZONE_ERROR, ("ERROR: Drv_SpiEraseFlashSector: send_simple_cmd failed with 0x$.\n", iResult));
                         }
                         else
                         {
