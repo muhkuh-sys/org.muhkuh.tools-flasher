@@ -137,6 +137,13 @@ if not GetOption('help'):
 	
 	#----------------------------------------------------------------------------
 	#
+	# Insert the project and svn version into the template.
+	#
+	env_def.SVNVersion('src/flasher_version.h', 'templates/flasher_version.h')
+	
+	
+	#----------------------------------------------------------------------------
+	#
 	# Create the default environments for the different asics.
 	#
 	env_def_netx500 = env_def.Clone()
@@ -161,13 +168,6 @@ if not GetOption('help'):
 	env_def_netx10.Append(CPPDEFINES = [['ASIC_TYP', '10']])
 	env_def_netx10.Append(CPPPATH = ['#src/netx10'])
 	Export('env_def_netx10')
-	
-	
-	#----------------------------------------------------------------------------
-	#
-	# Insert the project and svn version into the template.
-	#
-	env_def.SVNVersion('src/flasher_version.h', 'templates/flasher_version.h')
 	
 	
 	#----------------------------------------------------------------------------

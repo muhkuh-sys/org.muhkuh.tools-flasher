@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------#
+#   Copyright (C) 2010 by Christoph Thelen                                #
+#   doc_bacardi@users.sourceforge.net                                     #
+#                                                                         #
+#   This program is free software; you can redistribute it and/or modify  #
+#   it under the terms of the GNU General Public License as published by  #
+#   the Free Software Foundation; either version 2 of the License, or     #
+#   (at your option) any later version.                                   #
+#                                                                         #
+#   This program is distributed in the hope that it will be useful,       #
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#   GNU General Public License for more details.                          #
+#                                                                         #
+#   You should have received a copy of the GNU General Public License     #
+#   along with this program; if not, write to the                         #
+#   Free Software Foundation, Inc.,                                       #
+#   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+#-------------------------------------------------------------------------#
+
 
 import os
 
@@ -12,15 +32,7 @@ def svnversion_action(target, source, env):
 	version_info = PROJECT_VERSION.split('.')
 	project_version_maj = version_info[0]
 	project_version_min = version_info[1]
-	project_version_svn = 'unknown'
-	
-	if env['SVNVERSION']:
-		# get the svn version
-		child = os.popen(env['SVNVERSION']+' -n')
-		project_version_svn = child.read()
-		err = child.close()
-		if err:
-			project_version_svn = 'unknown'
+	project_version_svn = env['PROJECT_VERSION_SVN']
 	
 	# apply the project version to the environment
 	substenv = Environment()
@@ -53,8 +65,27 @@ def svnversion_action(target, source, env):
 def svnversion_emitter(target, source, env):
 	global PROJECT_VERSION
 	
-	# Make the target depend on the parameter.
+	# Is the environment variable "PROJECT_VERSION_SVN" already set?
+	if not 'PROJECT_VERSION_SVN' in env:
+		# The default for the SVN version is 'unknown'.
+		project_version_svn = 'unknown'
+		
+		# Is the 'svnversion' command available?
+		if env['SVNVERSION']:
+			# Yes -> get the svn version.
+			child = os.popen(env['SVNVERSION']+' -n')
+			project_version_svn = child.read()
+			err = child.close()
+			# Do not use the output if an error occured.
+			if err:
+				project_version_svn = 'unknown'
+		
+		# Set the environment variable "PROJECT_VERSION_SVN".
+		env['PROJECT_VERSION_SVN'] = project_version_svn
+	
+	# Make the target depend on the project version and the SVN version.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
+	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_SVN']))
 	
 	return target, source
 
