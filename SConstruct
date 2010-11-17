@@ -118,7 +118,7 @@ if not GetOption('help'):
 	#
 	# Create the default environment.
 	#
-	env_def = Environment()
+	env_def = Environment(tools=['default', 'packaging'])
 	env_def.Decider('MD5')
 	
 	gcc_arm_elf.ApplyToEnv(env_def)
@@ -180,6 +180,7 @@ if not GetOption('help'):
 	env_netx500_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
 	elf_netx500_plain = env_netx500_plain.Elf('targets/flasher_netx500', src_netx500_plain)
 	bin_netx500_plain = env_netx500_plain.ObjCopy('targets/flasher_netx500', elf_netx500_plain)
+	env_netx500_plain.Install('/', bin_netx500_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -192,6 +193,7 @@ if not GetOption('help'):
 	env_netx500_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx500_debug = env_netx500_debug.Elf('targets/flasher_netx500_debug', src_netx500_debug)
 	bin_netx500_debug = env_netx500_debug.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
+	env_netx500_debug.Install('/', bin_netx500_debug)
 	
 	
 	#----------------------------------------------------------------------------
@@ -204,6 +206,7 @@ if not GetOption('help'):
 	env_netx50_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
 	elf_netx50_plain = env_netx50_plain.Elf('targets/flasher_netx50', src_netx50_plain)
 	bin_netx50_plain = env_netx50_plain.ObjCopy('targets/flasher_netx50', elf_netx50_plain)
+	env_netx50_plain.Install('/', bin_netx50_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -216,11 +219,24 @@ if not GetOption('help'):
 	env_netx50_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx50_debug = env_netx50_debug.Elf('targets/flasher_netx50_debug', src_netx50_debug)
 	bin_netx50_debug = env_netx50_debug.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
+	env_netx50_debug.Install('/', bin_netx50_debug)
 	
 	
 	#----------------------------------------------------------------------------
 	#
 	# Build the documentation.
 	#
-	env_def.Asciidoc('targets/doc/flasher.html', 'doc/flasher.txt')
+	docs = env_def.Asciidoc('targets/doc/flasher.html', 'doc/flasher.txt')
+	env_def.Install('/', docs)
+	
+	
+	#----------------------------------------------------------------------------
+	#
+	# Package all files.
+	#
+	env_def.Package(NAME           = 'flasher',
+	                VERSION        = '1.0.882',
+	                PACKAGEVERSION = 0,
+	                PACKAGETYPE    = 'zip'
+	)
 	
