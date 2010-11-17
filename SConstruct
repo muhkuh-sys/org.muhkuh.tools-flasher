@@ -235,7 +235,7 @@ if not GetOption('help'):
 	# Package all files.
 	#
 	env_def.Package(NAME           = 'flasher',
-	                VERSION        = '1.0.882',
+	                VERSION        = env_def['PROJECT_VERSION_SVN_ESCAPED'],
 	                PACKAGEVERSION = 0,
 	                PACKAGETYPE    = 'zip'
 	)

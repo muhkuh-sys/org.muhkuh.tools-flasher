@@ -82,6 +82,8 @@ def svnversion_emitter(target, source, env):
 		
 		# Set the environment variable "PROJECT_VERSION_SVN".
 		env['PROJECT_VERSION_SVN'] = project_version_svn
+		# Set the filesystem friendly variant.
+		env['PROJECT_VERSION_SVN_ESCAPED'] = project_version_svn.replace(':', '_').replace('\\', '_').replace('/', '_')
 	
 	# Make the target depend on the project version and the SVN version.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
