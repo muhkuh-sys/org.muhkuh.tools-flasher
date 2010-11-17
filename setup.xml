@@ -14,7 +14,7 @@
 	</paths>
 
 	<repositories>
-		<repository name="muhkuh@netx01">http://netx01/maven2</repository>
+		<repository name="muhkuh@sourceforge">http://downloads.sourceforge.net/project/muhkuh/maven2</repository>
 	</repositories>
 
 	<scons>
