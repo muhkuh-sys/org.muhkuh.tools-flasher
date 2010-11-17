@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------#
+#   Copyright (C) 2010 by Christoph Thelen                                #
+#   doc_bacardi@users.sourceforge.net                                     #
+#                                                                         #
+#   This program is free software; you can redistribute it and/or modify  #
+#   it under the terms of the GNU General Public License as published by  #
+#   the Free Software Foundation; either version 2 of the License, or     #
+#   (at your option) any later version.                                   #
+#                                                                         #
+#   This program is distributed in the hope that it will be useful,       #
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#   GNU General Public License for more details.                          #
+#                                                                         #
+#   You should have received a copy of the GNU General Public License     #
+#   along with this program; if not, write to the                         #
+#   Free Software Foundation, Inc.,                                       #
+#   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+#-------------------------------------------------------------------------#
+
 
 import imp
 import sys
@@ -39,30 +59,30 @@ import atexit
 atexit.register(display_build_status)
 
 
-def get_compiler(name):
-	global DEPACK_GCC_DIR
+def get_tool(strToolName):
+	global TOOLS
 	
-	mod = None
-	fp,pathname,description = imp.find_module(name, [DEPACK_GCC_DIR])
+	tMod = None
 	try:
-		mod = imp.load_module(name, fp, pathname, description)
-	finally:
-		# Since we may exit via an exception, close fp explicitly.
-		if fp:
-			fp.close()
-	return mod
+		strPath = TOOLS[strToolName]
+		strModulName = strToolName.replace('-','_').replace('.','_')
+		fp,pathname,description = imp.find_module(strModulName, [strPath])
+		try:
+			tMod = imp.load_module(strModulName, fp, pathname, description)
+		finally:
+			# Since we may exit via an exception, close fp explicitly.
+			if fp:
+				fp.close()
+	except KeyError:
+		pass
+	
+	if tMod==None:
+		raise Exception(strToolName, 'The requested tool is not part of the configuration. Add it to setup.xml and rerun setup.py')
+	
+	return tMod
 
 
-def get_asciidoc(name):
-	global DEPACK_ASCIIDOC_DIR
-	
-	mod = None
-	fp,pathname,description = imp.find_module(name, [DEPACK_ASCIIDOC_DIR])
-	
-	try:
-		mod = imp.load_module(name, fp, pathname, description)
-	finally:
-		# Since we may exit via an exception, close fp explicitly.
-		if fp:
-			fp.close()
-	return mod
+def set_build_path(env, build_path, source_path, sources):
+	env.VariantDir(build_path, source_path, duplicate=0)
+	return [src.replace(source_path, build_path) for src in sources]
+

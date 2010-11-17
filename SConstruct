@@ -74,6 +74,10 @@ flasher_sources_netx50 = """
 """
 
 
+src_netx500 = Split(flasher_sources_common + flasher_sources_netx500)
+src_netx50  = Split(flasher_sources_common + flasher_sources_netx50)
+
+
 default_ccflags = """
 	-ffreestanding
 	-mlong-calls
@@ -106,9 +110,8 @@ if not GetOption('help'):
 	#
 	# Import the tool definitions.
 	#
-	# NOTE: it would be possible to use execfile instead of import here. This
-	gcc_arm_elf_4_3_3_3 = scons_common.get_compiler('gcc_arm_elf_4_3_3_3')
-	asciidoc_8_5_3_1 = scons_common.get_asciidoc('asciidoc_8_5_3_1')
+	gcc_arm_elf = scons_common.get_tool('gcc-arm-elf-4.3.3_4')
+	asciidoc = scons_common.get_tool('asciidoc-8.5.3_1')
 	
 	
 	#----------------------------------------------------------------------------
@@ -116,12 +119,12 @@ if not GetOption('help'):
 	# Create the default environment.
 	#
 	env_def = Environment()
+	env_def.Decider('MD5')
 	
-	gcc_arm_elf_4_3_3_3.ApplyToEnv(env_def)
-	asciidoc_8_5_3_1.ApplyToEnv(env_def)
+	gcc_arm_elf.ApplyToEnv(env_def)
+	asciidoc.ApplyToEnv(env_def)
 	svnversion.ApplyToEnv(env_def)
 	
-	env_def.Decider('MD5')
 	env_def.Append(CPPPATH = ['src'])
 	env_def.Replace(CCFLAGS = Split(default_ccflags))
 	env_def.Replace(LIBS = ['m', 'c', 'gcc'])
@@ -138,7 +141,6 @@ if not GetOption('help'):
 	#
 	env_def_netx500 = env_def.Clone()
 	env_def_netx500.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
-	env_def_netx500.Replace(LDFILE = File('#src/netx500/flasher_netx500.ld'))
 	env_def_netx500.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm926ej-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm926ej-s'])
 	env_def_netx500.Append(CPPDEFINES = [['ASIC_TYP', '500']])
 	env_def_netx500.Append(CPPPATH = ['#src/netx500'])
@@ -172,12 +174,12 @@ if not GetOption('help'):
 	#
 	# Build the netx500 version.
 	#
-	env_netx500 = env_def_netx500.Clone()
-	env_netx500.VariantDir('targets/netx500', 'src', duplicate=0)
-	src_netx500 = [s.replace('src', 'targets/netx500') for s in Split(flasher_sources_common+flasher_sources_netx500)]
-	env_netx500.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
-	elf_netx500 = env_netx500.Elf('targets/flasher_netx500', src_netx500)
-	bin_netx500 = env_netx500.ObjCopy('targets/flasher_netx500', elf_netx500)
+	env_netx500_plain = env_def_netx500.Clone()
+	src_netx500_plain = scons_common.set_build_path(env_netx500_plain, 'targets/netx500', 'src', src_netx500)
+	env_netx500_plain.Replace(LDFILE = File('#src/netx500/flasher_netx500.ld'))
+	env_netx500_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
+	elf_netx500_plain = env_netx500_plain.Elf('targets/flasher_netx500', src_netx500_plain)
+	bin_netx500_plain = env_netx500_plain.ObjCopy('targets/flasher_netx500', elf_netx500_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -185,8 +187,8 @@ if not GetOption('help'):
 	# Build the netx500 debug version.
 	#
 	env_netx500_debug = env_def_netx500.Clone()
-	env_netx500_debug.VariantDir('targets/netx500_debug', 'src', duplicate=0)
-	src_netx500_debug = [s.replace('src', 'targets/netx500_debug') for s in Split(flasher_sources_common+flasher_sources_netx500)]
+	src_netx500_debug = scons_common.set_build_path(env_netx500_debug, 'targets/netx500_debug', 'src', src_netx500)
+	env_netx500_debug.Replace(LDFILE = File('#src/netx500/flasher_netx500.ld'))
 	env_netx500_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx500_debug = env_netx500_debug.Elf('targets/flasher_netx500_debug', src_netx500_debug)
 	bin_netx500_debug = env_netx500_debug.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
@@ -196,12 +198,12 @@ if not GetOption('help'):
 	#
 	# Build the netx50 version.
 	#
-	env_netx50 = env_def_netx50.Clone()
-	env_netx50.VariantDir('targets/netx50', 'src', duplicate=0)
-	src_netx50 = [s.replace('src', 'targets/netx50') for s in Split(flasher_sources_common+flasher_sources_netx50)]
-	env_netx50.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
-	elf_netx50 = env_netx50.Elf('targets/flasher_netx50', src_netx50)
-	bin_netx50 = env_netx50.ObjCopy('targets/flasher_netx50', elf_netx50)
+	env_netx50_plain = env_def_netx50.Clone()
+	src_netx50_plain = scons_common.set_build_path(env_netx50_plain, 'targets/netx50', 'src', src_netx50)
+	env_netx50_plain.Replace(LDFILE = File('#src/netx50/flasher_netx50.ld'))
+	env_netx50_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
+	elf_netx50_plain = env_netx50_plain.Elf('targets/flasher_netx50', src_netx50_plain)
+	bin_netx50_plain = env_netx50_plain.ObjCopy('targets/flasher_netx50', elf_netx50_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -209,8 +211,8 @@ if not GetOption('help'):
 	# Build the netx50 debug version.
 	#
 	env_netx50_debug = env_def_netx50.Clone()
-	env_netx50_debug.VariantDir('targets/netx50_debug', 'src', duplicate=0)
-	src_netx50_debug = [s.replace('src', 'targets/netx50_debug') for s in Split(flasher_sources_common+flasher_sources_netx50)]
+	src_netx50_debug = scons_common.set_build_path(env_netx50_debug, 'targets/netx50_debug', 'src', src_netx50)
+	env_netx50_debug.Replace(LDFILE = File('#src/netx50/flasher_netx50.ld'))
 	env_netx50_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx50_debug = env_netx50_debug.Elf('targets/flasher_netx50_debug', src_netx50_debug)
 	bin_netx50_debug = env_netx50_debug.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
