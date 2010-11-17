@@ -22,7 +22,7 @@
 #include "spi_flash_types.h"
 
 /* uncomment the next line to disable some strange flashes with byte program only */
-#define __NO_1BYTEPERPAGE_FLASHES__
+/* #define __NO_1BYTEPERPAGE_FLASHES__ */
 
 const SPIFLASH_ATTRIBUTES_T atKnownSpiFlashTypes[] =
 {
