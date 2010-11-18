@@ -230,7 +230,7 @@ def create_substitute_dict(aCfg):
 	# Get the tools.
 	aToolPaths = []
 	for aTool in aCfg['tools']:
-		strToolPath = os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'])
+		strToolPath = os.path.join(aCfg['depack_path'], aTool['group'], aTool['name']).replace('\\', '/')
 		aToolPaths.append('\'%s-%s\': \'%s\'' % (aTool['name'],aTool['version'], strToolPath))
 	
 	strTools  = 'dict({' + ','.join(aToolPaths) + '})'

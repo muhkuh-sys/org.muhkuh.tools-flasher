@@ -16,6 +16,7 @@
 import scons_common
 import build_properties
 import svnversion
+import zip_package
 
 build_properties.Read()
 
@@ -118,12 +119,13 @@ if not GetOption('help'):
 	#
 	# Create the default environment.
 	#
-	env_def = Environment(tools=['default', 'packaging'])
+	env_def = Environment()
 	env_def.Decider('MD5')
 	
 	gcc_arm_elf.ApplyToEnv(env_def)
 	asciidoc.ApplyToEnv(env_def)
 	svnversion.ApplyToEnv(env_def)
+	zip_package.ApplyToEnv(env_def)
 	
 	env_def.Append(CPPPATH = ['src'])
 	env_def.Replace(CCFLAGS = Split(default_ccflags))
@@ -180,7 +182,7 @@ if not GetOption('help'):
 	env_netx500_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
 	elf_netx500_plain = env_netx500_plain.Elf('targets/flasher_netx500', src_netx500_plain)
 	bin_netx500_plain = env_netx500_plain.ObjCopy('targets/flasher_netx500', elf_netx500_plain)
-	env_netx500_plain.Install('/', bin_netx500_plain)
+	env_netx500_plain.ZipPackageAdd('', bin_netx500_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -193,7 +195,7 @@ if not GetOption('help'):
 	env_netx500_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx500_debug = env_netx500_debug.Elf('targets/flasher_netx500_debug', src_netx500_debug)
 	bin_netx500_debug = env_netx500_debug.ObjCopy('targets/flasher_netx500_debug', elf_netx500_debug)
-	env_netx500_debug.Install('/', bin_netx500_debug)
+	env_netx500_debug.ZipPackageAdd('', bin_netx500_debug)
 	
 	
 	#----------------------------------------------------------------------------
@@ -206,7 +208,7 @@ if not GetOption('help'):
 	env_netx50_plain.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
 	elf_netx50_plain = env_netx50_plain.Elf('targets/flasher_netx50', src_netx50_plain)
 	bin_netx50_plain = env_netx50_plain.ObjCopy('targets/flasher_netx50', elf_netx50_plain)
-	env_netx50_plain.Install('/', bin_netx50_plain)
+	env_netx50_plain.ZipPackageAdd('', bin_netx50_plain)
 	
 	
 	#----------------------------------------------------------------------------
@@ -219,7 +221,7 @@ if not GetOption('help'):
 	env_netx50_debug.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
 	elf_netx50_debug = env_netx50_debug.Elf('targets/flasher_netx50_debug', src_netx50_debug)
 	bin_netx50_debug = env_netx50_debug.ObjCopy('targets/flasher_netx50_debug', elf_netx50_debug)
-	env_netx50_debug.Install('/', bin_netx50_debug)
+	env_netx50_debug.ZipPackageAdd('', bin_netx50_debug)
 	
 	
 	#----------------------------------------------------------------------------
@@ -227,16 +229,12 @@ if not GetOption('help'):
 	# Build the documentation.
 	#
 	docs = env_def.Asciidoc('targets/doc/flasher.html', 'doc/flasher.txt')
-	env_def.Install('/', docs)
+	env_def.ZipPackageAdd('docs', docs)
 	
 	
 	#----------------------------------------------------------------------------
 	#
 	# Package all files.
 	#
-	env_def.Package(NAME           = 'flasher',
-	                VERSION        = env_def['PROJECT_VERSION_SVN_ESCAPED'],
-	                PACKAGEVERSION = 0,
-	                PACKAGETYPE    = 'zip'
-	)
+	env_def.ZipPackage('targets/flasher-'+env_def.ZipPackageSuffix()+'.zip', None, PROJECT_NAME='flasher')
 	
