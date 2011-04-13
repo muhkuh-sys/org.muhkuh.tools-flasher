@@ -1,1 +1,0 @@
-"${PYTHON}" "${SCONS_DIR}" %*
