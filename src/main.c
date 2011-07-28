@@ -910,7 +910,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		{
 			uprintf(
 			"\f\n\n\n\n"
-			"netX 50 flasher and ATmega16 programming tool v 1.0 (20110727)\n\n"
+			"netX 50 flasher with ATmega16 support V" FLASHER_VERSION_ALL "\n\n"
 			"Copyright (C) 2005-2011 C.Thelen (cthelen@hilscher.com)\n"
 			"and M.Trensch.\n"
 			"ATmega extensions by S. Lesch (slesch@hilscher.com).\n"
