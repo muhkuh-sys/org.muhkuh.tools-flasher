@@ -25,6 +25,7 @@ require("muhkuh")
 
 BUS_Parflash    = 0             -- parallel flash
 BUS_Spi         = 1             -- serial flash on spi bus
+BUS_Spi_ATMega  = 2             -- ATMega on SPI bus
 
 
 OPERATION_MODE_Flash             = 0
@@ -36,6 +37,8 @@ OPERATION_MODE_Detect            = 5     -- Detect a device.
 OPERATION_MODE_IsErased          = 6     -- Check if the specified area of a device is erased.
 OPERATION_MODE_GetEraseArea      = 7     -- Expand an area to the erase block borders.
 OPERATION_MODE_GetBoardInfo      = 8     -- Get bus and unit information.
+OPERATION_MODE_WriteFuseBits     = 9
+OPERATION_MODE_WriteLockBits     = 10
 
 
 MSK_SQI_CFG_IDLE_IO1_OE          = 0x01
@@ -226,21 +229,33 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 	local ulValue
 	local aulParameter
 	local ulIdleCfg
+	local iSPIMode
+	local iSPISpeed
 	
 	ulIdleCfg = 
 	  MSK_SQI_CFG_IDLE_IO1_OE + MSK_SQI_CFG_IDLE_IO1_OUT 
 	+ MSK_SQI_CFG_IDLE_IO2_OE + MSK_SQI_CFG_IDLE_IO2_OUT 
 	+ MSK_SQI_CFG_IDLE_IO3_OE + MSK_SQI_CFG_IDLE_IO3_OUT
-
+	
+	-- settings for ATMega: Mode 0, 25 kHz
+	if tBus == BUS_Spi_ATMega then
+		iSPIMode = 0
+		iSPISpeed = 25
+	else
+	-- initial settings for SPI flashes: Mode 3, 1 MHz
+		iSPIMode = 3
+		iSPISpeed = 1000
+	end
+	
 	aulParameter = 
 	{
 		OPERATION_MODE_Detect,                -- operation mode: detect
 		tBus,                                 -- device: spi flash
 		ulUnit,                               -- unit
 		ulChipSelect,                         -- chip select: 1
-		1000,                                 -- initial speed in kHz (1000 -> 1MHz)
+		iSPISpeed,                            -- initial speed in kHz (1000 -> 1MHz)
 		ulIdleCfg,                            -- idle config
-		3,                                    -- mode
+		iSPIMode,                             -- mode
 		0xffffffff,                           -- mmio config
 		aAttr.ulDeviceDesc                    -- data block for the device description
 	}
@@ -248,6 +263,7 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
+
 
 -- read device descriptor after detect (debugging)
 function readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)
@@ -302,6 +318,41 @@ function flash(tPlugin, aAttr, ulStartAdr, ulDataByteSize, ulDataAddress, fnCall
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
+
+
+-- Write the fuse bits. 
+-- If any of iFuseBitsLow, iFuseBitsHigh and iFuseBitsExt are nil,
+-- the respective Fuse registers are not written
+function writeFuseBits(tPlugin, aAttr, iFuseBitsLow, iFuseBitsHigh, iFuseBitsExt, fnCallbackMessage, fnCallbackProgress)
+	local ulFuseValues = (iFuseBitsLow or 0)        + 256* (iFuseBitsHigh or 0)        + 65536*(iFuseBitsExt or 0)
+	local ulFuseFlags = ((iFuseBitsLow and 1) or 0) + 256*((iFuseBitsHigh and 1) or 0) + 65536*((iFuseBitsExt and 1) or 0)
+	
+	local aulParameter = 
+	{
+		OPERATION_MODE_WriteFuseBits,
+		aAttr.ulDeviceDesc,
+		ulFuseValues,
+		ulFuseFlags,
+	}
+	
+	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	return ulValue == 0
+end
+
+
+-- Write the lock bits
+function writeLockBits(tPlugin, aAttr, iLockBits, fnCallbackMessage, fnCallbackProgress)
+	local aulParameter = 
+	{
+		OPERATION_MODE_WriteLockBits,
+		aAttr.ulDeviceDesc,
+		iLockBits,
+	}
+	
+	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	return ulValue == 0
+end
+
 
 -- Reads data from flash to RAM
 function read(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage, fnCallbackProgress)

@@ -28,6 +28,7 @@
 #include "flasher_parflash.h"
 /* Serial flash on spi. */
 #include "flasher_spi.h"
+#include "spi_atmega.h"
 #include "sha1.h"
 
 #include "flasher_interface.h"
@@ -45,10 +46,12 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-	tSourceTyp = ptAppParams->uParameter.tDetect.tSourceTyp;
+	CMD_PARAMETER_DETECT_T *ptDetect;
+	ptDetect = &(ptAppParams->uParameter.tDetect);
+	tSourceTyp = ptDetect->tSourceTyp;
 
 	/* Clear the result data. */
-	memset(ptAppParams->uParameter.tDetect.ptDeviceDescription, 0, sizeof(DEVICE_DESCRIPTION_T));
+	memset(ptDetect->ptDeviceDescription, 0, sizeof(DEVICE_DESCRIPTION_T));
 
 	uprintf(". Device: ");
 	switch(tSourceTyp)
@@ -56,25 +59,32 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 	case BUS_ParFlash:
 		/*  use parallel flash */
 		uprintf("Parallel flash\n");
-		tResult = parflash_detect(&(ptAppParams->uParameter.tDetect));
+		tResult = parflash_detect(ptDetect);
 		break;
 
 	case BUS_SPI:
 		/*  use SPI flash */
 		uprintf("SPI flash\n");
-		tResult = spi_detect(&(ptAppParams->uParameter.tDetect));
+		tResult = spi_detect(ptDetect);
 		break;
-
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		uprintf("ATmega\n");
+		tResult = spi_atmega_detect(ptDetect);
+		break;
+	
 	default:
 		/*  unknown boot device */
 		uprintf("unknown\n");
-		uprintf("! illegal device id specified\n");
+		uprintf("! illegal device id specified: 0x%08x\n", tSourceTyp);
 		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 
 	return tResult;
 }
+
 
 /* ------------------------------------- */
 
@@ -118,6 +128,12 @@ static NETX_CONSOLEAPP_RESULT_T check_device_description(const DEVICE_DESCRIPTIO
 			tResult = NETX_CONSOLEAPP_RESULT_OK;
 			break;
 	
+		case BUS_SPI_ATMega:
+			/*  ATMega via SPI */
+			uprintf(". Device type: ATmega\n");
+			tResult = NETX_CONSOLEAPP_RESULT_OK;
+			break;
+		
 		default:
 			/*  unknown boot device */
 			uprintf("! Unknown device type: 0x%08x\n", tSourceTyp);
@@ -134,26 +150,88 @@ static NETX_CONSOLEAPP_RESULT_T check_device_description(const DEVICE_DESCRIPTIO
 static NETX_CONSOLEAPP_RESULT_T opMode_flash(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
+	CMD_PARAMETER_FLASH_T *ptFlashParams;
 	BUS_T tSourceTyp;
 
 	/* get the source typ */
-	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
+	ptFlashParams = &(ptAppParams->uParameter.tFlash);
+	tSourceTyp = ptFlashParams->ptDeviceDescription->tSourceTyp;
 	switch(tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
-		tResult = parflash_flash(&(ptAppParams->uParameter.tFlash));
+		tResult = parflash_flash(ptFlashParams);
 		break;
 
 	case BUS_SPI:
 		/*  use SPI flash */
-		tResult = spi_flash(&(ptAppParams->uParameter.tFlash));
+		tResult = spi_flash(ptFlashParams);
 		break;
-
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		tResult = spi_atmega_write_flash(ptFlashParams);
+		break;
 	}
 
 	return tResult;
 }
+
+/* ------------------------------------- */
+
+static NETX_CONSOLEAPP_RESULT_T opMode_writeFuseBits(tFlasherInputParameter *ptAppParams)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	CMD_PARAMETER_FUSES_T *ptParams;
+	BUS_T tSourceTyp;
+
+	/* get the source typ */
+	ptParams = &(ptAppParams->uParameter.tFuses);
+	tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	switch(tSourceTyp)
+	{
+	case BUS_ParFlash:
+	case BUS_SPI:
+		uprintf("Fuse bits are only available on ATmega\n");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
+
+	case BUS_SPI_ATMega:
+		tResult = spi_atmega_write_fuse_bits(ptParams);
+		break;
+	}
+
+	return tResult;
+}
+
+
+/* ------------------------------------- */
+
+static NETX_CONSOLEAPP_RESULT_T opMode_writeLockBits(tFlasherInputParameter *ptAppParams)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	CMD_PARAMETER_LOCK_BITS_T *ptParams;
+	BUS_T tSourceTyp;
+
+	/* get the source typ */
+	ptParams = &(ptAppParams->uParameter.tLockBits);
+	tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	switch(tSourceTyp)
+	{
+	case BUS_ParFlash:
+	case BUS_SPI:
+		uprintf("Lock bits are only available on ATmega\n");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
+
+	case BUS_SPI_ATMega:
+		tResult = spi_atmega_write_lock_bits(ptParams);
+		break;
+	}
+
+	return tResult;
+}
+
 
 
 /* ------------------------------------- */
@@ -176,6 +254,16 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_erase(&(ptAppParams->uParameter.tErase));
+		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		tResult = spi_atmega_chip_erase(&(ptAppParams->uParameter.tErase));
+		break;
+		
+	default:
+		uprintf("! Unknown device type: 0x%08x\n", tSourceTyp);
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 	return tResult;
@@ -203,10 +291,17 @@ static NETX_CONSOLEAPP_RESULT_T opMode_read(tFlasherInputParameter *ptAppParams)
 		/*  use SPI flash */
 		tResult = spi_read(&(ptAppParams->uParameter.tRead));
 		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		tResult = spi_atmega_read_flash(&(ptAppParams->uParameter.tRead));
+		break;
+		
 	}
 
 	return tResult;
 }
+
 
 
 /* ------------------------------------- */
@@ -230,6 +325,14 @@ static NETX_CONSOLEAPP_RESULT_T opMode_verify(tFlasherInputParameter *ptAppParam
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_verify(&(ptAppParams->uParameter.tVerify), ptConsoleParams);
+		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		tResult = spi_atmega_verify_flash(&(ptAppParams->uParameter.tVerify), ptConsoleParams);
+		
+		//uprintf("verify from ATMega not implemented\n");
+		//tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 
@@ -258,6 +361,12 @@ static NETX_CONSOLEAPP_RESULT_T opMode_checksum(tFlasherInputParameter *ptAppPar
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_sha1(&(ptAppParams->uParameter.tChecksum), &tShaContext);
+		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		uprintf("checksum from ATmega not implemented\n");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 
@@ -290,6 +399,12 @@ static NETX_CONSOLEAPP_RESULT_T opMode_isErased(tFlasherInputParameter *ptAppPar
 		/*  use SPI flash */
 		tResult = spi_isErased(&(ptAppParams->uParameter.tIsErased), ptConsoleParams);
 		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		uprintf("isErased not implemented for ATmega\n");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
 	}
 
 	return tResult;
@@ -311,6 +426,11 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 
 	case BUS_SPI:
 		return ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
+		break;
+		
+		
+	case BUS_SPI_ATMega:
+		return ptDeviceDescription->uInfo.tSpiAtmegaInfo.tAttributes.ulFlashSize;
 		break;
 		
 	default:
@@ -345,6 +465,12 @@ static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAp
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_getEraseArea(&(ptAppParams->uParameter.tGetEraseArea));
+		break;
+		
+	case BUS_SPI_ATMega:
+		/*  ATMega via SPI */
+		uprintf("getEraseArea not implemented for ATmega\n");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 
@@ -521,6 +647,18 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(".Mode: Get Board Info\n");
 		break;
 
+	case OPERATION_MODE_WriteFuseBits:
+		ulPars = FLAG_DEVICE;
+		ptDeviceDescription = ptAppParams->uParameter.tFlash.ptDeviceDescription;
+		uprintf(". Mode: Write Fuse Bits\n");
+		break;
+
+	case OPERATION_MODE_WriteLockBits:
+		ulPars = FLAG_DEVICE;
+		ptDeviceDescription = ptAppParams->uParameter.tFlash.ptDeviceDescription;
+		uprintf(". Mode: Write Lock Bits\n");
+		break;
+		
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -673,7 +811,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		ulPars = 0;
 		pszMode = "Get Board Info";
 		break;
-
+		
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -764,27 +902,34 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		/* switch off sys led */
 		setRdyRunLed(RDYRUN_LED_OFF);
 
+		ptAppParams = (tFlasherInputParameter*)ptTestParam->pvInitParams;
+		tOpMode = ptAppParams->tOperationMode;
+			
 		/* say hi */
-		uprintf(
-		"\f\n\n\n\nFlasher v" FLASHER_VERSION_ALL "\n\n"
-		"Copyright (C) 2005-2011 C.Thelen (cthelen@hilscher.com)\n"
-		"and M.Trensch.\n"
-		"There is NO warranty.  You may redistribute this software\n"
-		"under the terms of the GNU Library General Public License.\n"
-		"For more information about these matters, see the files\n"
-		"named COPYING.\n");
+		if (tOpMode==OPERATION_MODE_Detect)
+		{
+			uprintf(
+			"\f\n\n\n\n"
+			"netX 50 flasher and ATmega16 programming tool v 1.0 (20110727)\n\n"
+			"Copyright (C) 2005-2011 C.Thelen (cthelen@hilscher.com)\n"
+			"and M.Trensch.\n"
+			"ATmega extensions by S. Lesch (slesch@hilscher.com).\n"
+			"There is NO warranty.  You may redistribute this software\n"
+			"under the terms of the GNU Library General Public License.\n"
+			"For more information about these matters, see the files\n"
+			"named COPYING.\n");
+		}
 		
 		uprintf("\n");
 		uprintf(". Data pointer:    0x%08x\n", (unsigned long)ptTestParam);
 		uprintf(". Init parameter:  0x%08x\n", (unsigned long)ptTestParam->pvInitParams);
 		uprintf("\n");
-
+			
 		tResult = check_params(ptTestParam);
 		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{
 			/*  run operation */
-			ptAppParams = (tFlasherInputParameter*)ptTestParam->pvInitParams;
-			tOpMode = ptAppParams->tOperationMode;
+			
 			switch( tOpMode )
 			{
 			case OPERATION_MODE_Detect:
@@ -824,7 +969,14 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			case OPERATION_MODE_GetBoardInfo:
 				tResult = opMode_getBoardInfo(ptAppParams, ptTestParam);
 				break;
-
+				
+			case OPERATION_MODE_WriteFuseBits:
+				tResult = opMode_writeFuseBits(ptAppParams);
+				break;
+				
+			case OPERATION_MODE_WriteLockBits:
+				tResult = opMode_writeLockBits(ptAppParams);
+				break;
 			}
 		}
 	}

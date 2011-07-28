@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "spi_flash.h"
+#include "spi_atmega_types.h"
 #include "cfi_flash.h"
 
 /*-------------------------------------*/
@@ -35,7 +36,8 @@
 typedef enum
 {
 	BUS_ParFlash                    = 0,    /*  Parallel flash */
-	BUS_SPI                         = 1     /*  Serial flash on spi bus. */
+	BUS_SPI                         = 1,    /*  Serial flash on spi bus. */
+	BUS_SPI_ATMega                  = 2     /*  ATMega on SPI bus */
 } BUS_T;
 
 typedef enum
@@ -48,7 +50,9 @@ typedef enum
 	OPERATION_MODE_Detect           = 5,    /* detect a device */
 	OPERATION_MODE_IsErased         = 6,    /* check if the specified area of a device is erased */
 	OPERATION_MODE_GetEraseArea     = 7,    /* expand an area to the erase block borders */
-	OPERATION_MODE_GetBoardInfo     = 8     /* get bus and unit information */
+	OPERATION_MODE_GetBoardInfo     = 8,    /* get bus and unit information */
+	OPERATION_MODE_WriteFuseBits    = 9,
+	OPERATION_MODE_WriteLockBits    = 10
 } OPERATION_MODE_T;
 
 
@@ -63,6 +67,7 @@ typedef struct
 	{
 		FLASH_DEVICE_T tParFlash;
 		SPI_FLASH_T tSpiInfo;
+		SPI_ATMEGA_T tSpiAtmegaInfo;
 	} uInfo;
 } DEVICE_DESCRIPTION_T;
 
@@ -79,6 +84,7 @@ typedef struct
 	unsigned long ulDataByteSize;
 	unsigned char *pucData;
 } CMD_PARAMETER_FLASH_T;
+
 
 
 typedef struct
@@ -155,6 +161,30 @@ typedef struct
 
 typedef struct
 {
+	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	unsigned char ucFuseBitsLowVal;
+	unsigned char ucFuseBitsHighVal;
+	unsigned char ucFuseBitsExtVal;
+	unsigned char ucUnused;
+	unsigned char ucFuseBitsLowFlag;
+	unsigned char ucFuseBitsHighFlag;
+	unsigned char ucFuseBitsExtFlag;
+	unsigned char ucUnused2;
+} CMD_PARAMETER_FUSES_T;
+
+typedef struct
+{
+	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	unsigned char ucLockBitsVal;
+	unsigned char ucUnused1;
+	unsigned char ucUnused2;
+	unsigned char ucUnused3;
+} CMD_PARAMETER_LOCK_BITS_T;
+
+
+
+typedef struct
+{
 	unsigned long ulParamVersion;
 	OPERATION_MODE_T tOperationMode;
 	union
@@ -168,6 +198,8 @@ typedef struct
 		CMD_PARAMETER_ISERASED_T tIsErased;
 		CMD_PARAMETER_GETERASEAREA_T tGetEraseArea;
 		CMD_PARAMETER_GETBOARDINFO_T tGetBoardInfo;
+		CMD_PARAMETER_FUSES_T tFuses;
+		CMD_PARAMETER_LOCK_BITS_T tLockBits;
 	} uParameter;
 } tFlasherInputParameter;
 

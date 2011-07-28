@@ -37,10 +37,19 @@ static const UNIT_TABLE_T tUnitTable_BusSPI =
 	}
 };
 
+static const UNIT_TABLE_T tUnitTable_BusSPI_ATMega =
+{
+	.sizEntries = 1,
+	.atEntries =
+	{
+		{ 0,  "SPI1",    (void * const)HOSTADDR(spi1) },
+	}
+};
+
 
 static const UNIT_TABLE_T tUnitTable_BusParFlash =
 {
-	.sizEntries = 1,
+	.sizEntries = 2,
 	.atEntries =
 	{
 		{ 0,  "SRamBus",    NULL },
@@ -49,13 +58,15 @@ static const UNIT_TABLE_T tUnitTable_BusParFlash =
 };
 
 
+
 const BUS_TABLE_T tBusTable =
 {
-	.sizEntries = 2,
+	.sizEntries = 3,
 	.atEntries =
 	{
 		{ BUS_ParFlash,  "Parallel Flash",      &tUnitTable_BusParFlash },
-		{ BUS_SPI,       "Serial Flash",        &tUnitTable_BusSPI }
+		{ BUS_SPI,       "Serial Flash",        &tUnitTable_BusSPI },
+		{ BUS_SPI_ATMega,"ATMega",              &tUnitTable_BusSPI_ATMega },
 	}
 };
 

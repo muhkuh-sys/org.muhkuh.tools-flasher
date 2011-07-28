@@ -1,17 +1,12 @@
-
--- NOTE: This script uses the "bit" and "romloader_usb" lua libraries. Both
--- are part of the "Muhkuh" experimental distribution.
-
 require("romloader_usb")
+require("romloader_uart")
 require("flasher")
 require("muhkuh")
-require("tester")
 require("select_plugin")
 require("mhash")
 
 FLASHER_PATH = "../targets/"
---FLASHER_PATH = "./"
-
+FLASHER_PATH_ATMEGA = "../targets/250khz_atmega_"
 
 -- write binary file into string
 -- returns true or false, message
@@ -71,6 +66,10 @@ MODE_READ = 2
 MODE_VERIFY = 3
 MODE_HASH = 4
 MODE_DETECT = 5
+
+MODE_WRITE_FUSES = 11
+MODE_WRITE_LOCK = 12
+
 MODE_VERIFY_HASH = 42
 MODE_INFO = 8
 MODE_HELP = 255
@@ -84,6 +83,8 @@ read flash:        read        [plugin] device range filename
 verify flash:      verify      [plugin] device [offset] filename
 compute SHA1:      hash        [plugin] device range
 verify using hash: verify_hash [plugin] device [offset] filename
+write fuse bits:   write_fuses [plugin] device fuses
+write lock bits:   write_lock  [plugin] device -lb value
 get board info:    info
 detect flash:      detect      [plugin] device
 show this help:    -h
@@ -94,25 +95,37 @@ plugin: -p plugin_name
 device: -b bus -u unit -cs chip_select
         example: -b 0 -u 0 -cs 0
         unit and chip select default to 0, 0
+        ATmega: -b 2 -u 1 -cs 0/1
 
 range: -s device_start_offset -l len
        the start offset defaults to 0.
+       ATmega: use byte offsets
        
 offset: -s device_start_offset
        offset in the flash device, defaults to 0
+       
+fuses: [-fl value] [-fh value] [-fe value]
+       fl = fuse low bits
+       fh = fuse high bits
+       fe = extended fuse bits
+       values are between 00 and ff
 ]==]
 
 
 function printf(...) print(string.format(...)) end
 
 argdefs = {
-b  = {argkey = "iBus",              clkey ="-b",  name="bus number"},
-u  = {argkey = "iUnit",             clkey ="-u",  name="unit number"},
-cs = {argkey = "iChipSelect",       clkey ="-cs", name="chip select number"},
-p  = {argkey = "strPluginName",     clkey ="-p",  name="plugin name"},
-s  = {argkey = "ulStartOffset",     clkey ="-s",  name="start offset"},
-l  = {argkey = "ulLen",             clkey ="-l",  name="number of bytes to read"},
-f  = {argkey = "strDataFileName",   clkey = "",   name="file name"}
+b  = {argkey = "iBus",              clkey ="-b",   name="bus number"},
+u  = {argkey = "iUnit",             clkey ="-u",   name="unit number"},
+cs = {argkey = "iChipSelect",       clkey ="-cs",  name="chip select number"},
+p  = {argkey = "strPluginName",     clkey ="-p",   name="plugin name"},
+s  = {argkey = "ulStartOffset",     clkey ="-s",   name="start offset"},
+l  = {argkey = "ulLen",             clkey ="-l",   name="number of bytes to read"},
+f  = {argkey = "strDataFileName",   clkey = "",    name="file name"},
+fl = {argkey = "iFuseBitsLow",      clkey = "-fl", name="fuse bits low"},
+fh = {argkey = "iFuseBitsHigh",     clkey = "-fh", name="fuse bits high"},
+fe = {argkey = "iFuseBitsExt",      clkey = "-fe", name="extended fuse bits"},
+lb = {argkey = "iLockBits",         clkey = "-lb", name="lock bits"},
 }
 
 requiredargs = {
@@ -122,6 +135,8 @@ requiredargs = {
 [MODE_VERIFY_HASH]  = {"b", "u", "cs", "f"},
 [MODE_HASH]         = {"b", "u", "cs"},
 [MODE_DETECT]       = {"b", "u", "cs"},
+[MODE_WRITE_FUSES]  = {"b", "u", "cs"},
+[MODE_WRITE_LOCK]   = {"b", "u", "cs", "lb"},
 [MODE_INFO]         = {},
 [MODE_HELP]         = {}
 }
@@ -180,6 +195,10 @@ function evalArg()
 		aArgs.iMode = MODE_HASH
 	elseif nArgs>=2 and arg[1] == "detect" then
 		aArgs.iMode = MODE_DETECT
+	elseif nArgs>=2 and arg[1] == "write_fuses" then
+		aArgs.iMode = MODE_WRITE_FUSES
+	elseif nArgs>=2 and arg[1] == "write_lock" then
+		aArgs.iMode = MODE_WRITE_LOCK
 	elseif nArgs>=1 and arg[1] == "info" then
 		aArgs.iMode = MODE_INFO
 	elseif nArgs>=1 and arg[1] == "-h" then
@@ -230,6 +249,58 @@ function evalArg()
 			end
 			iArg = iArg + 2
 			
+		elseif arg[iArg] == "-fl" and iRemArgs >=2 then
+			local val = tonumber(arg[iArg+1])
+			if val then
+				if val>=0 and val<=255 then
+					aArgs.iFuseBitsLow = val
+				else
+					return nil, "fuse bits low value (-fl) out of range"
+				end
+			else
+				return nil, "Error parsing fuse bits low value (-fl)"
+			end
+			iArg = iArg + 2
+			
+		elseif arg[iArg] == "-fh" and iRemArgs >=2 then
+			local val = tonumber(arg[iArg+1])
+			if val then
+				if val>=0 and val<=255 then
+					aArgs.iFuseBitsHigh = val
+				else
+					return nil, "fuse bits high value (-fh) out of range"
+				end
+			else
+				return nil, "Error parsing fuse bits high value (-fh)"
+			end
+			iArg = iArg + 2
+			
+		elseif arg[iArg] == "-fe" and iRemArgs >=2 then
+			local val = tonumber(arg[iArg+1])
+			if val then
+				if val>=0 and val<=255 then
+					aArgs.iFuseBitsExt = val
+				else
+					return nil, "ext. fuse bits value (-fe) out of range"
+				end
+			else
+				return nil, "Error parsing ext. fuse bits value (-fé)"
+			end
+			iArg = iArg + 2
+			
+		elseif arg[iArg] == "-lb" and iRemArgs >=2 then
+			local val = tonumber(arg[iArg+1])
+			if val then
+				if val>=0 and val<=255 then
+					aArgs.iLockBits = val
+				else
+					return nil, "lock bits value (-lb) out of range"
+				end
+			else
+				return nil, "Error parsing lock bits value (-lb)"
+			end
+			iArg = iArg + 2
+			
 		elseif iRemArgs == 1 then
 			aArgs.strDataFileName = arg[iArg]
 			iArg = iArg + 1
@@ -256,7 +327,11 @@ end
 
 function show_args(aArgs)
 	for k,v in pairs(aArgs) do 
-		print(k,v)
+		if type(v)=="number" then
+			print(string.format("%-20s %d 0x%08x", k, v, v))
+		else
+			print(k,v)
+		end
 	end
 end
 
@@ -265,6 +340,7 @@ end
 --------------------------------------------------------------------------
 
 function getPluginByName(strName)
+	print("getPluginByName")
 	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
 		local iDetected
 		local aDetectedInterfaces = {}
@@ -295,6 +371,9 @@ function getPluginByName(strName)
 	return nil, "plugin not found"
 end
 
+
+
+
 function getPlugin(strPluginName)
 	local tPlugin, strError
 	if strPluginName then
@@ -302,14 +381,17 @@ function getPlugin(strPluginName)
 		tPlugin, strError = getPluginByName(strPluginName)
 	else
 		-- Ask the user to pick a plugin.
-		tPlugin = tester.getCommonPlugin()
-		if tPlugin == nil then
+		tPlugin = select_plugin.SelectPlugin(strPattern)
+		if tPlugin then
+			tPlugin:Connect()
+		else
 			strError = "No plugin selected!"
 		end
 	end
 	
 	return tPlugin, strError
 end
+
 
 
 --------------------------------------------------------------------------
@@ -320,6 +402,16 @@ end
 --   strDataFileName
 --   ulStartOffset
 --------------------------------------------------------------------------
+function swapBytes(strData)
+	print("swapBytes")
+	local chars = {}
+	for i=1, strData:len(), 2 do
+		chars[i] = string.char(strData:byte(i+1))
+		chars[i+1] = string.char(strData:byte(i))
+	end
+	return table.concat(chars)
+end
+
 
 function doFlash(tPlugin, args)
 	local strDataFileName = args.strDataFileName
@@ -346,41 +438,52 @@ function doFlash(tPlugin, args)
 		return false, "Failed to load binary '" .. strDataFileName .. "': " .. msg
 	end
 
-	-- Get the erase area.
-	print("Erasing the area")
-	local ulDataFirst, ulDataEnd, ulEraseFirst, ulEraseEnd
-	ulDataFirst = args.ulStartOffset
-	ulDataEnd = ulDataFirst + string.len(strData)
-	ulEraseFirst,ulEraseEnd = flasher.getEraseArea(tPlugin, aAttr, ulDataFirst, ulDataEnd)
-	print(string.format("Area:  [0x%08x, 0x%08x[", ulDataFirst, ulDataEnd))
-	print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseFirst, ulEraseEnd))
-
-	-- Make sure the area is erased.
-	-- TODO: for serial flashes:
-	-- if the flash has erase-and-program capability, we might skip this
-	local fIsErased = flasher.isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
-	if fIsErased==nil then
-		return false, "Failed to check if the area is erased!"
-	elseif fIsErased==true then
-		print("!ALL CLEAN! The area is erased.")
-	else
-		print("!!!DIRTY!!! The area must be erased before flashing!")
-
-		--io.write("Press enter to start erasing >") io.read()
-		
-		fIsErased = flasher.erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
+	if args.iBus==2 then
+		-- we don't have isErased and getEraseArea on ATMega
+		local fIsErased = flasher.erase(tPlugin, aAttr, 0, 0xffffffff)
 		if fIsErased~=true then
 			return false, "Failed to erase the area!"
-		else
+		end
 		
-			--io.write("Press enter to start erase check >") io.read()
-			fIsErased = flasher.isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
+		-- swap bytes in the data
+		-- strData = swapBytes(strData)
+		
+	else
+		-- Get the erase area.
+		print("Erasing the area")
+		local ulDataFirst, ulDataEnd, ulEraseFirst, ulEraseEnd
+		ulDataFirst = args.ulStartOffset
+		ulDataEnd = ulDataFirst + string.len(strData)
+		ulEraseFirst,ulEraseEnd = flasher.getEraseArea(tPlugin, aAttr, ulDataFirst, ulDataEnd)
+		print(string.format("Area:  [0x%08x, 0x%08x[", ulDataFirst, ulDataEnd))
+		print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseFirst, ulEraseEnd))
+	
+		-- Make sure the area is erased.
+		-- TODO: for serial flashes:
+		-- if the flash has erase-and-program capability, we might skip this
+		local fIsErased = flasher.isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
+		if fIsErased==nil then
+			return false, "Failed to check if the area is erased!"
+		elseif fIsErased==true then
+			print("!ALL CLEAN! The area is erased.")
+		else
+			print("!!!DIRTY!!! The area must be erased before flashing!")
+	
+			--io.write("Press enter to start erasing >") io.read()
+			
+			fIsErased = flasher.erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
 			if fIsErased~=true then
-				return false, "The flasher pretended to erase the area, but it is still dirty!"
+				return false, "Failed to erase the area!"
+			else
+			
+				--io.write("Press enter to start erase check >") io.read()
+				fIsErased = flasher.isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
+				if fIsErased~=true then
+					return false, "The flasher pretended to erase the area, but it is still dirty!"
+				end
 			end
 		end
 	end
-
 
 	--io.write("Press enter to start flashing >") io.read()
 	-- Loop over the complete data array and flash it in chunks.
@@ -416,6 +519,94 @@ function doFlash(tPlugin, args)
 end
 
 
+--------------------------------------------------------------------------
+-- write fuse bits
+--   iBus
+--   iUnit
+--   iChipSelect
+--   iFuseBitsLow (optional)
+--   iFuseBitsHigh (optional)
+--   iFuseBitsExt (optional)
+--------------------------------------------------------------------------
+
+function doWriteFuses(tPlugin, args)
+	local iFuseBitsLow = args.iFuseBitsLow
+	local iFuseBitsHigh = args.iFuseBitsHigh
+	local iFuseBitsExt = args.iFuseBitsExt
+	local fOk
+	
+	-- checks
+	if not iFuseBitsLow and not iFuseBitsHigh and not iFuseBitsExt then
+		return false, "No fuses selected"
+	end
+	
+	if args.iBus~=2 then
+		return false, "Fuse bits are only supported on ATmega"
+	end
+		
+	-- Download the flasher.
+	print("Downloading flasher binary")
+	local aAttr = flasher.download(tPlugin, FLASHER_PATH, progress)
+	if not aAttr then
+		return false, "Error while downloading flasher binary"
+	end
+
+	-- check if the selected flash is present
+	print("Detecting flash device")
+	fOk = flasher.detect(tPlugin, aAttr, args.iBus, args.iUnit, args.iChipSelect)
+	if not fOk then
+		return false, "Failed to get a device description!"
+	end
+
+	-- write 
+	local fOk = flasher.writeFuseBits(tPlugin, aAttr, iFuseBitsLow, iFuseBitsHigh, iFuseBitsExt)
+	
+	if not fOk then
+		return false, "Failed to write fuse bits"
+	else
+		return true, "Fuse bits written"
+	end
+end
+
+--------------------------------------------------------------------------
+-- write lock bits
+--   iBus
+--   iUnit
+--   iChipSelect
+--   iLockBits 
+--------------------------------------------------------------------------
+
+function doWriteLockBits(tPlugin, args)
+	local iLockBits = args.iLockBits
+	local fOk
+	
+	if args.iBus~=2 then
+		return false, "Lock bits are only supported on ATmega"
+	end
+		
+	-- Download the flasher.
+	print("Downloading flasher binary")
+	local aAttr = flasher.download(tPlugin, FLASHER_PATH, progress)
+	if not aAttr then
+		return false, "Error while downloading flasher binary"
+	end
+
+	-- check if the selected flash is present
+	print("Detecting flash device")
+	fOk = flasher.detect(tPlugin, aAttr, args.iBus, args.iUnit, args.iChipSelect)
+	if not fOk then
+		return false, "Failed to get a device description!"
+	end
+
+	-- write 
+	local fOk = flasher.writeLockBits(tPlugin, aAttr, iLockBits)
+	
+	if not fOk then
+		return false, "Failed to write lock bits"
+	else
+		return true, "Lock bits written"
+	end
+end
 
 --------------------------------------------------------------------------
 -- read
@@ -484,6 +675,7 @@ function doRead(tPlugin, args)
 	
 	return fOk, strMsg
 end
+
 
 
 --------------------------------------------------------------------------
@@ -680,6 +872,8 @@ function doDetect(tPlugin, args)
 	return true, "ok"
 end
 
+
+
 --------------------------------------------------------------------------
 --  board info
 --------------------------------------------------------------------------
@@ -752,6 +946,11 @@ elseif args.iMode == MODE_HELP then
 	os.exit(0)
 	
 else
+	
+	if args.iBus == flasher.BUS_Spi_ATMega then
+		FLASHER_PATH = FLASHER_PATH_ATMEGA
+	end
+	
 	show_args(args)
 	local fOk = false
 	local tPlugin
@@ -767,6 +966,10 @@ else
 			fOk, strMsg = doVerifyHash(tPlugin, args)
 		elseif args.iMode == MODE_HASH then
 			fOk, strMsg = doHash(tPlugin, args)
+		elseif args.iMode == MODE_WRITE_FUSES then
+			fOk, strMsg = doWriteFuses(tPlugin, args)
+		elseif args.iMode == MODE_WRITE_LOCK then
+			fOk, strMsg = doWriteLockBits(tPlugin, args)
 		elseif args.iMode == MODE_DETECT then
 			fOk, strMsg = doDetect(tPlugin, args)
 		elseif args.iMode == MODE_INFO then
@@ -786,3 +989,4 @@ else
 		os.exit(1)
 	end
 end
+
