@@ -43,6 +43,8 @@
   #define DQ7                                   0x80U
 
   #define MFGCODE_SPANSION                      0x01U
+  #define MFGCODE_EON                           0x7fU
+  #define MFGCODE_MACRONIX                      0xc2U
 
   #define SPANSION_CMD_RESET                    0xF0U
 

@@ -141,68 +141,71 @@ static FLASH_COMMAND_BLOCK_T s_atPPBExit[] =
 	{SPANSION_ADR_PPB_EXIT_CYCLE1, SPANSION_CMD_PPB_EXIT_CYCLE1}
 };
 
+/*
+Todo: the version check for the primary vendor extension table and the
+protect scheme check should be vendor-specific:
+
+Mfg Spansion, Pri < V1.5, bProtectScheme < 5 -> disable unlock procedure
+Mfg Eon,      Pri V1.4,   bProtectScheme = 3 -> unlock procedure should probably stay enabled
+*/
 
 int SpansionIdentifyFlash(PFLASH_DEVICE ptFlashDev)
 {
-	// unsigned char abDeviceId[3] = {0};
-	int           fRet          = FALSE;
-
+	int fRet = FALSE;
+	unsigned char bManufacturer;
 
 	DEBUGMSG(ZONE_FUNCTION, ("+SpansionIdentifyFlash(): ptFlashDev=0x$8\n", ptFlashDev));
 
-	/* try to identify SpansionFlash */
+	FlashReset(ptFlashDev, 0);
+	
+	/* Read manufacturer ID */
 	FlashWriteCommandSequence(ptFlashDev, 
 	                          s_atAutoSelect, 
 	                          sizeof(s_atAutoSelect) / sizeof(s_atAutoSelect[0]));
-
-	ptFlashDev->bManufacturer = ptFlashDev->pbFlashBase[0];
-
-	/*
-	// not used - remove?
-	abDeviceId[0] = ptFlashDev->pbFlashBase[2];
-	abDeviceId[1] = ptFlashDev->pbFlashBase[2];
-	abDeviceId[2] = ptFlashDev->pbFlashBase[2]; 
-	
-	// reads  01 00 F9 22 on AL032D70BF104
-	DEBUGMSG(ZONE_VERBOSE, (" SpansionIdentifyFlash(): device ID = $2 $2 $2 $2\n", 
-	ptFlashDev->pbFlashBase[0],
-	ptFlashDev->pbFlashBase[1],
-	ptFlashDev->pbFlashBase[2],
-	ptFlashDev->pbFlashBase[3]));
-	*/
+	                          
+	bManufacturer = ptFlashDev->pbFlashBase[0];
 	FlashReset(ptFlashDev, 0);
-
-	if(MFGCODE_SPANSION == ptFlashDev->bManufacturer)
+	
+	ptFlashDev->bManufacturer = bManufacturer;
+	uprintf (".SpansionIdentifyFlash(): Manufacturer 0x$2\n", bManufacturer); 
+	
+	if(MFGCODE_SPANSION == bManufacturer) 
 	{
-		/* TODO: Check Device IDs */
-
 		strcpy(ptFlashDev->szIdent, "SPANSION");
 		ptFlashDev->ptFlashFuncs = &s_tSpansionFuncs;
 		fRet = TRUE;
-		
-		if (ptFlashDev->fPriExtQueryValid)
-		{
-			SPANSION_CFI_EXTQUERY_T *ptExtQry;
-			ptExtQry = &ptFlashDev->tPriExtQuery.tSpansion;
-			uprintf (".SpansionIdentifyFlash(): ExtQuery V 0x$2.0x$2\n", ptExtQry->bMajorVer, ptExtQry->bMinorVer); 
-			
-			if (ptExtQry->bMajorVer=='1' && ptExtQry->bMinorVer<'5')
-			{
-				uprintf(".SpansionIdentifyFlash(): Sector protect scheme 0x$2 \n", ptExtQry->bProtectScheme); 
-				if (ptExtQry->bProtectScheme<5) 
-				{
-					uprintf(".SpansionIdentifyFlash(): Disabling unlock\n"); 
-					s_tSpansionFuncs.pfnUnlock = FlashUnlockDummy;
-				}
-			}
+	} 
+	else if(MFGCODE_EON == bManufacturer) 
+	{
+		strcpy(ptFlashDev->szIdent, "EON");
+		ptFlashDev->ptFlashFuncs = &s_tSpansionFuncs;
+		fRet = TRUE;
+	} 
+	else if(MFGCODE_MACRONIX == bManufacturer) 
+	{
+		strcpy(ptFlashDev->szIdent, "MACRONIX");
+		ptFlashDev->ptFlashFuncs = &s_tSpansionFuncs;
+		fRet = TRUE;
+	}
 
-			
-		}
+	if ((fRet == TRUE) && ptFlashDev->fPriExtQueryValid)
+	{
+		SPANSION_CFI_EXTQUERY_T *ptExtQry;
+		ptExtQry = &ptFlashDev->tPriExtQuery.tSpansion;
+		uprintf (".SpansionIdentifyFlash(): ExtQuery V 0x$2.0x$2\n", ptExtQry->bMajorVer, ptExtQry->bMinorVer); 
 		
+		if (ptExtQry->bMajorVer=='1' && ptExtQry->bMinorVer<'5')
+		{
+			uprintf(".SpansionIdentifyFlash(): Sector protect scheme 0x$2 \n", ptExtQry->bProtectScheme); 
+			if (ptExtQry->bProtectScheme<5) 
+			{
+				uprintf(".SpansionIdentifyFlash(): Disabling unlock\n"); 
+				s_tSpansionFuncs.pfnUnlock = FlashUnlockDummy;
+			}
+		}
 	}
 
 	DEBUGMSG(ZONE_FUNCTION, ("-SpansionIdentifyFlash(): fRet=0x$8\n", fRet));
-
 	return fRet;
 }
 
