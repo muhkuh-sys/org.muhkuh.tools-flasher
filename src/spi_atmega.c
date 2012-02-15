@@ -21,7 +21,8 @@
   -
                                                                               
  ----------------------------------------------------------------------------
- 5 jul 11    SL   initial version
+ 10 feb 12   SL   added define for SPI clock 
+ 5  jul 11   SL   initial version
  26 jul 11   SL   don't use SPI chip select lines
                   use 250 kHz SPI clock
  ***************************************************************************/ 
