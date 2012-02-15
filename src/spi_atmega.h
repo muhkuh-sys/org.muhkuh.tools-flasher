@@ -29,10 +29,12 @@
 #include "flasher_interface.h"
 #include "spi_atmega_types.h"
 
-
 void uprintHex(const char* pcName, const unsigned char* pucData, size_t sizLen);
 
 /* low level routines (SPI, command execution) */
+
+/* clock frequency in kHz */
+#define ATMEGA_SPI_CLOCK_KHZ 200
 
 typedef enum ATMEGA_CMDPARAM_Ttag
 {

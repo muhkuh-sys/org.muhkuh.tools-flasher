@@ -75,7 +75,7 @@ const SPI_ATMEGA_ATTRIBUTES_T atKnownSpiATMegaTypes[] =
 	{
 		.acName="ATMega16\0",
 		
-		.ulClock = 250, 
+		.ulClock = ATMEGA_SPI_CLOCK_KHZ, 
 		
 		.ulFlashSize = 16384,
 		.ulFlashWordSize = 2,
@@ -1318,7 +1318,7 @@ NETX_CONSOLEAPP_RESULT_T spi_atmega_read_fuses(SPI_ATMEGA_T *ptDevice)
 	}
 	else
 	{
-		uprintf("Failed to read Fuse Gigh bits\n");
+		uprintf("Failed to read Fuse High bits\n");
 		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 	}
 
