@@ -434,6 +434,124 @@ static FLASH_ERRORS_E FlashNormalWrite(const FLASH_DEVICE_T *ptFlashDev, unsigne
 	return eRet;
 }
 
+
+typedef enum FLASH_STATUS_ENUM
+{
+	FLASH_STATUS_Busy0     = 0,
+	FLASH_STATUS_Busy1     = 1,
+	FLASH_STATUS_Ok        = 2,
+	FLASH_STATUS_Failed    = 3,
+	FLASH_STATUS_Abort     = 4
+} FLASH_STATUS_T;
+
+static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
+{
+	FLASH_ERRORS_E tResult;
+	unsigned long ulValue;
+	VADR_T tStatusAdr;
+	unsigned char aucLastData[2];
+	unsigned char aucStatus[2];
+	FLASH_STATUS_T tStatus[2];
+	size_t sizDevCnt;
+	int iFinished;
+
+
+	DEBUGMSG(ZONE_FUNCTION, ("+wait_for_buffered_write_done(): ptFlashDev=0x%08x, ulSector=0x%08x, ulOffset=0x%08x, ulData=0x%08x\n", ptFlashDev, ulSector, ulOffset, ulData));
+
+	tStatusAdr.ul = (unsigned long)(FLASH_ABSADDR(ptFlashDev, ulSector, ulOffset));
+
+	/* This is a paired device. */
+
+	/* Extract the expected data. */
+	aucLastData[0] = (unsigned char)(ulData >>  8U);
+	aucLastData[0] = (unsigned char)(ulData >> 24U);
+
+	tStatus[0] = FLASH_STATUS_Busy0;
+	tStatus[1] = FLASH_STATUS_Busy0;
+
+	/* Loop while all flashes are busy. */
+	do
+	{
+		/* Get the combined status. */
+		ulValue = *(tStatusAdr.pul);
+		uprintf("Status: 0x%08x\n", ulValue);
+
+		/* Extract status fields. */
+		aucStatus[0] = (unsigned char)(ulValue >>  8U);
+		aucStatus[1] = (unsigned char)(ulValue >> 24U);
+
+		sizDevCnt = 0;
+		iFinished = (1==1);
+		do
+		{
+			uprintf("%d %d %x %x\n", sizDevCnt, tStatus[sizDevCnt], aucStatus[sizDevCnt], aucLastData[sizDevCnt]);
+
+			if( tStatus[sizDevCnt]==FLASH_STATUS_Busy0 )
+			{
+				/* Is Q7 equal to last data bit 7? */
+				if( ((aucStatus[sizDevCnt]^aucLastData[sizDevCnt])&(1U<<7U))==0 )
+				{
+					/* Yes, the bits are equal.
+					 * This means the flash operation is finished.
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
+				}
+				/* Is Q1 set? */
+				else if( (aucStatus[sizDevCnt]&(1<<1))!=0 )
+				{
+					/* Yes, the bit is set.
+					 * This means the operation was canceled.
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Abort;
+				}
+				/* Is Q5 clear? */
+				else if( (aucStatus[sizDevCnt]&(1<<5))==0 )
+				{
+					/* Yes, the bit is clear.
+					 * This means the device finished step 1.
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Busy1;
+				}
+			}
+			else if( tStatus[sizDevCnt]==FLASH_STATUS_Busy1 )
+			{
+				/* Q7 must be equal to data bit 7.
+				 * Otherwise the operation failed.
+				 */
+				if( ((aucStatus[sizDevCnt]^aucLastData[sizDevCnt])&(1U<<7U))==0 )
+				{
+					/* Yes, the bits are equal.
+					 * This means the flash operation is finished.
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
+				}
+				else
+				{
+					tStatus[sizDevCnt] = FLASH_STATUS_Failed;
+				}
+			}
+
+			iFinished &= tStatus[sizDevCnt]==FLASH_STATUS_Busy0 || tStatus[sizDevCnt]==FLASH_STATUS_Busy1;
+
+			++sizDevCnt;
+		} while( sizDevCnt<2 );
+	} while( iFinished );
+
+	/* The operation is OK if all flashes returned OK. */
+	if( tStatus[0]==FLASH_STATUS_Ok && tStatus[1]==FLASH_STATUS_Ok )
+	{
+		tResult = eFLASH_NO_ERROR;
+	}
+	else
+	{
+		tResult = eFLASH_GENERAL_ERROR;
+	}
+
+	DEBUGMSG(ZONE_FUNCTION, ("-wait_for_buffered_write_done(): tResult=%d\n", tResult));
+	return tResult;
+}
+
+
 static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const unsigned char *pucSource, unsigned long ulLength, unsigned long ulCurrentSector, unsigned long ulCurrentOffset)
 {
 	FLASH_ERRORS_E tResult;
@@ -522,7 +640,7 @@ static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const
 			} while( tDst.pus<tEnd.pus );
 			ulCurrentOffset += ulWriteSize;
 			/* Get the last location. */
-			ulLastOffset = ulCurrentOffset - 1;
+			ulLastOffset = ulCurrentOffset - 2;
 			/* Get the last data. */
 			ulLastData = *(tSrc.pus-1);
 			break;
@@ -535,7 +653,7 @@ static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const
 			} while( tDst.pul<tEnd.pul );
 			ulCurrentOffset += ulWriteSize;
 			/* Get the last location. */
-			ulLastOffset = ulCurrentOffset - 1;
+			ulLastOffset = ulCurrentOffset - 4;
 			/* Get the last data. */
 			ulLastData = *(tSrc.pul-1);
 			break;
@@ -544,7 +662,8 @@ static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const
 		FlashWriteCommand(ptFlashDev, ulCurrentSector, 0, SPANSION_CMD_BUFFERPROG);
 
 		/* Wait for Flashing complete */
-		tResult = FlashWaitWriteDone(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData, TRUE);
+//		tResult = FlashWaitWriteDone(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData, TRUE);
+		tResult = wait_for_buffered_write_done(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData);
 		if( tResult!=eFLASH_NO_ERROR )
 		{
 			if(tResult==eFLASH_ABORTED)
@@ -591,6 +710,9 @@ static FLASH_ERRORS_E FlashProgram(const FLASH_DEVICE_T *ptFlashDev, unsigned lo
 	unsigned long ulDeviceBufferSize;
 	unsigned long ulOffsetMod;
 	FLASH_ERRORS_E tResult;
+	unsigned long ulEndOffset;
+	unsigned long ulMask;
+	unsigned long ulValue;
 
 
 	DEBUGMSG(ZONE_FUNCTION, ("+FlashProgram(): ptFlashDev=0x%08x, ulStartOffset=0x%08x, ulLength=0x%08x, pvData=0x%08x\n", ptFlashDev, ulStartOffset, ulLength, pvData));
@@ -603,7 +725,39 @@ static FLASH_ERRORS_E FlashProgram(const FLASH_DEVICE_T *ptFlashDev, unsigned lo
 	/* Determine the start sector and offset inside the sector */
 	ulCurrentSector = cfi_find_matching_sector_index(ptFlashDev, ulStartOffset);
 	ulCurrentOffset = ulStartOffset - ptFlashDev->atSectors[ulCurrentSector].ulOffset;
-	
+	ulEndOffset = ulCurrentOffset + ulLength;
+
+	/*
+	 * Align the data size to the bus width.
+	 */
+	ulMask = 0;
+	switch(ptFlashDev->tBits)
+	{
+	case BUS_WIDTH_8Bit:
+		/* No alignment for 8 bit devices. Use the default value of 0. */
+		break;
+
+	case BUS_WIDTH_16Bit:
+		/* 16 bit devices must be 16 bit aligned, i.e. bit 0 of the end address must be clear. */
+		ulMask = 1;
+		break;
+
+	case BUS_WIDTH_32Bit:
+		/* 32 bit devices must be 32 bit aligned, i.e. bit 0 and 1 of the end address must be clear. */
+		ulMask = 3;
+		break;
+	}
+	ulValue = ulMask & ulEndOffset;
+	if( ulValue!=0 )
+	{
+		/* The end position is not aligned.
+		 * Pad the data.
+		 */
+		ulValue = (ulMask+1) - ulValue;
+		uprintf("WARNING: padding data by %d bytes to match bus width.\n", ulValue);
+		ulLength += ulValue;
+	}
+
 	FlashReset(ptFlashDev, 0);
 
 	if( ulCurrentSector==0xffffffffU )
@@ -648,7 +802,7 @@ static FLASH_ERRORS_E FlashProgram(const FLASH_DEVICE_T *ptFlashDev, unsigned lo
 				pucSource       += ulUnbufferedWriteSize;
 				ulLength        -= ulUnbufferedWriteSize;
 
-				/* Check for new sector wraparound */
+				/* Check for new sector wrap around */
 				if(ulCurrentOffset >= ptFlashDev->atSectors[ulCurrentSector].ulSize)
 				{
 					ulCurrentOffset = ptFlashDev->atSectors[ulCurrentSector].ulSize - ulCurrentOffset;
