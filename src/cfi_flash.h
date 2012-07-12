@@ -99,7 +99,7 @@ typedef struct tagSECTOR_INFO
 } SECTOR_INFO_T;
 
 
-/* The errorcodes. */
+/* The error codes. */
 typedef enum FLASH_ERRORS_Etag
 {
 	eFLASH_NO_ERROR = 0,
@@ -283,7 +283,7 @@ typedef struct{
 /*  
 ulFeatureSupport:
 Optional feature and command support(1=yes, 0=no) 
-bits 9–31 are reserved; undefined bits are 0. 
+bits 9-31 are reserved; undefined bits are 0.
 If bit 31 is 1 then another 31 bit field of optional features 
 follows at the end of the bit-30 field.
 
