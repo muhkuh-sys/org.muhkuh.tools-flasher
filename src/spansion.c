@@ -315,124 +315,6 @@ static FLASH_ERRORS_E FlashReset(const FLASH_DEVICE_T *ptFlashDev, unsigned long
 	return tResult;
 }
 
-/*! Erase a flash sector
-*
-*   \param   ptFlashDev       Pointer to the FLASH control Block
-*   \param   ulSector         Sector to erase
-*
-*   \return  eFLASH_NO_ERROR  on success
-*/
-static FLASH_ERRORS_E FlashErase(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector)
-{
-	FLASH_ERRORS_E tResult = eFLASH_NO_ERROR;
-
-
-	DEBUGMSG(ZONE_FUNCTION, ("+FlashErase(): ptFlashDev=0x%08x, ulSector=%d\n", ptFlashDev, ulSector));
-	FlashWriteCommandSequence(ptFlashDev, s_atErasePrefix, ARRAYSIZE(s_atErasePrefix));
-	FlashWriteCommand(ptFlashDev, ulSector, 0, SPANSION_CMD_SECTORERASE_CYCLE_5);
-	tResult = FlashWaitEraseDone(ptFlashDev, ulSector);
-
-	FlashReset(ptFlashDev, ulSector);
-
-	DEBUGMSG(ZONE_FUNCTION, ("-FlashErase(): tResult=%d\n", tResult));
-	return tResult;
-}
-
-/*! Erase whole flash
-*
-*   \param   ptFlashDev       Pointer to the FLASH control Block
-*
-*   \return  eFLASH_NO_ERROR  on success
-*/
-static FLASH_ERRORS_E FlashEraseAll(const FLASH_DEVICE_T *ptFlashDev)
-{
-	FLASH_ERRORS_E tResult = eFLASH_NO_ERROR;
-
-	DEBUGMSG(ZONE_FUNCTION, ("+FlashEraseAll(): ptFlashDev=0x%08x\n", ptFlashDev));
-
-	FlashWriteCommandSequence(ptFlashDev, s_atErasePrefix, ARRAYSIZE(s_atErasePrefix));
-	FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_CHIPERASE_CYCLE5, SPANSION_CMD_CHIPERASE_CYCLE5);
-
-	tResult = FlashWaitEraseDone(ptFlashDev, 0);
-
-	FlashReset(ptFlashDev, 0);
-
-	DEBUGMSG(ZONE_FUNCTION, ("-FlashEraseAll(): tResult=%d\n", tResult));
-
-	return tResult;
-}
-
-
-/*! Programs flash using single byte/word/dword accesses
-*
-*   \param   ptFlashDev       Pointer to the FLASH control Block
-*   \param   ulStartOffset    Offset to start writing at
-*   \param   ulLength         Length of data to write
-*   \param   pvData           Data pointer
-*
-*   \return  eFLASH_NO_ERROR  on success
-*/
-
-static FLASH_ERRORS_E FlashNormalWrite(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector, unsigned long ulOffset, const unsigned char *pucData, unsigned long ulWriteSize)
-{
-	FLASH_ERRORS_E  eRet       = eFLASH_NO_ERROR;
-	CADR_T tSrc;
-	VADR_T tDst;
-	unsigned long ulLastData;
-	unsigned long ulLastOffset;
-	unsigned long ulEndOffset;
-	
-	DEBUGMSG(ZONE_FUNCTION, ("+FlashNormalWrite(): ptFlashDev=0x%08x, ulSector=%d, ulOffset=0x%08x, pucData=0x%08x, ulWriteSize=0x%08x\n", ptFlashDev, ulSector, ulOffset, pucData, ulWriteSize));
-
-	tSrc.puc = pucData;
-	tDst.puc = FLASH_ABSADDR(ptFlashDev, ulSector, ulOffset);
-	ulEndOffset  = ulOffset + ulWriteSize;
-	ulLastData   = 0;
-	
-	while(ulOffset < ulEndOffset)
-	{
-		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE0, SPANSION_CMD_PROGRAM_CYCLE0);
-		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE1, SPANSION_CMD_PROGRAM_CYCLE1);
-		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE2, SPANSION_CMD_PROGRAM_CYCLE2);
-		
-		ulLastOffset = ulOffset;
-		
-		switch(ptFlashDev->tBits)
-		{
-		case BUS_WIDTH_8Bit:
-			*tDst.puc = *tSrc.puc;
-			ulLastData = *tSrc.puc;
-			ulOffset+=1;
-			++tDst.puc;
-			++tSrc.puc;
-			break;
-		case BUS_WIDTH_16Bit:
-			*tDst.pus = *tSrc.pus;
-			ulLastData = *tSrc.pus;
-			ulOffset+=2;
-			++tDst.pus;
-			++tSrc.pus;
-			break;
-		case BUS_WIDTH_32Bit:
-			*tDst.pul = *tSrc.pul;
-			ulLastData = *tSrc.pul;
-			ulOffset+=4;
-			++tDst.pul;
-			++tSrc.pul;
-			break;
-		}
-		
-		eRet = FlashWaitWriteDone(ptFlashDev, ulSector, ulLastOffset, ulLastData, FALSE);
-		if(eRet!=eFLASH_NO_ERROR)
-		{
-			FlashWriteCommand(ptFlashDev, ulSector, 0, SPANSION_CMD_RESET);
-			break;
-		}
-	}
-
-	DEBUGMSG(ZONE_FUNCTION, ("-FlashNormalWrite(): eRet=%d\n", eRet));
-	return eRet;
-}
 
 
 typedef enum FLASH_STATUS_ENUM
@@ -440,10 +322,11 @@ typedef enum FLASH_STATUS_ENUM
 	FLASH_STATUS_Busy0     = 0,
 	FLASH_STATUS_Busy1     = 1,
 	FLASH_STATUS_Ok        = 2,
-	FLASH_STATUS_Failed    = 3
+	FLASH_STATUS_Failed    = 3,
+	FLASH_STATUS_Abort     = 4
 } FLASH_STATUS_T;
 
-static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlashDevice, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
+static FLASH_ERRORS_E wait_for_program_or_erase_done(const FLASH_DEVICE_T *ptFlashDevice, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
 {
 	FLASH_ERRORS_E tResult;
 	unsigned long ulStatus0;
@@ -599,6 +482,7 @@ static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlash
 
 			case FLASH_STATUS_Ok:
 			case FLASH_STATUS_Failed:
+			case FLASH_STATUS_Abort:
 				break;
 			}
 
@@ -651,6 +535,338 @@ static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlash
 
 	DEBUGMSG(ZONE_FUNCTION, ("-wait_for_buffered_write_done(): tResult=%d\n", tResult));
 	return tResult;
+}
+
+
+
+static FLASH_ERRORS_E wait_for_buffered_write_done2(const FLASH_DEVICE_T *ptFlashDevice, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
+{
+	FLASH_ERRORS_E tResult;
+	unsigned long ulStatus;
+	VADR_T tStatusAdr;
+	unsigned long aulMaskQ1[2];
+	unsigned long aulMaskQ5[2];
+	unsigned long aulMaskQ7[2];
+	FLASH_STATUS_T tStatus[2];
+	size_t sizDevMax;
+	size_t sizDevCnt;
+	int iAllDevicesFinished;
+
+	/* Debug stuff. */
+	size_t sizLogCnt = 0;
+	unsigned long aulLog[2048];
+
+
+	DEBUGMSG(ZONE_FUNCTION, ("+wait_for_buffered_write_done2(): ptFlashDevice=0x%08x, ulSector=0x%08x, ulOffset=0x%08x, ulData=0x%08x\n", ptFlashDevice, ulSector, ulOffset, ulData));
+
+	tStatusAdr.ul = (unsigned long)(FLASH_ABSADDR(ptFlashDevice, ulSector, ulOffset));
+
+	/* Set the masks for the first device. */
+	aulMaskQ1[0] = 1U << 1U;
+	aulMaskQ5[0] = 1U << 5U;
+	aulMaskQ7[0] = 1U << 7U;
+
+	/* The default is a single device setup.
+	 * Do not activate the 2nd device.
+	 */
+	aulMaskQ1[1] = 0;
+	aulMaskQ5[1] = 0;
+	aulMaskQ7[1] = 0;
+	sizDevMax = 1;
+
+	/* Activate the 2nd device for a paired setup. */
+	if( ptFlashDevice->fPaired!=0 )
+	{
+		/* This is a paired device. */
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			/* An 8 Bit bus can not be build from 2 devices. */
+			break;
+
+		case BUS_WIDTH_16Bit:
+			/* This is a 16 bit setup made out of 2 8 bit devices.
+			 * The 2nd status is at bits 8..15 .
+			 */
+			aulMaskQ1[1] = 1U << (1U + 8U);
+			aulMaskQ5[1] = 1U << (5U + 8U);
+			aulMaskQ7[1] = 1U << (7U + 8U);
+			sizDevMax = 2;
+			break;
+
+		case BUS_WIDTH_32Bit:
+			/* This is a 32 bit setup made out of 2 16 bit devices.
+			 * The 2nd status is at bits 16..23 .
+			 */
+			aulMaskQ1[1] = 1U << (1U + 16U);
+			aulMaskQ5[1] = 1U << (5U + 16U);
+			aulMaskQ7[1] = 1U << (7U + 16U);
+			sizDevMax = 2;
+			break;
+		}
+	}
+
+	tStatus[0] = FLASH_STATUS_Busy0;
+	tStatus[1] = FLASH_STATUS_Busy0;
+
+	/* Loop while all flashes are busy. */
+	do
+	{
+		/* Get the combined status for all flashes. */
+		ulStatus = 0;
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			ulStatus = (unsigned long)(*(tStatusAdr.puc));
+			break;
+
+		case BUS_WIDTH_16Bit:
+			ulStatus = (unsigned long)(*(tStatusAdr.pus));
+			break;
+
+		case BUS_WIDTH_32Bit:
+			ulStatus = *(tStatusAdr.pul);
+			break;
+		}
+
+		aulLog[sizLogCnt++] = ulStatus;
+		aulLog[sizLogCnt++] = ((unsigned long)tStatus[0]) | (((unsigned long)tStatus[1]) << 16U);
+
+//		if( sizLogCnt>=2048 )
+//		{
+//			sizDevCnt = 0;
+//			while( sizDevCnt<sizLogCnt )
+//			{
+//				uprintf("%08x\n", aulLog[sizDevCnt++]);
+//			}
+//			sizLogCnt = 0;
+//		}
+
+		/* Expect all devices to be idle. */
+		iAllDevicesFinished = (1==1);
+
+		/* Check all devices. */
+		sizDevCnt = 0;
+		do
+		{
+			switch( tStatus[sizDevCnt] )
+			{
+			case FLASH_STATUS_Busy0:
+				/* Is Q7 equal to Data Q7? */
+				if( ((ulStatus^ulData)&aulMaskQ7[sizDevCnt])==0 )
+				{
+					/* Yes, Q7 is equal to Data Q7.
+					 * The operation was successful!
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
+				}
+				/* Is Q1 set? */
+				else if( (ulStatus&aulMaskQ1[sizDevCnt])!=0 )
+				{
+					/* Yes, Q1 is set. This signals an abort. */
+					tStatus[sizDevCnt] = FLASH_STATUS_Abort;
+				}
+				/* Is Q5 set? */
+				else if( (ulStatus&aulMaskQ5[sizDevCnt])!=0 )
+				{
+					/* Yes, Q5 is set. Move to the 2nd busy state. */
+					tStatus[sizDevCnt] = FLASH_STATUS_Busy1;
+				}
+				break;
+
+			case FLASH_STATUS_Busy1:
+				/* Is Q7 equal to Data Q7? */
+				if( ((ulStatus^ulData)&aulMaskQ7[sizDevCnt])==0 )
+				{
+					/* Yes, Q7 is equal to Data Q7.
+					 * The operation was successful!
+					 */
+					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
+				}
+				else
+				{
+					tStatus[sizDevCnt] = FLASH_STATUS_Failed;
+				}
+				break;
+
+			case FLASH_STATUS_Ok:
+			case FLASH_STATUS_Failed:
+			case FLASH_STATUS_Abort:
+				break;
+			}
+
+			/* The device has finished the operation if it is not in one of the busy states. */
+			iAllDevicesFinished &= (tStatus[sizDevCnt]!=FLASH_STATUS_Busy0) && (tStatus[sizDevCnt]!=FLASH_STATUS_Busy1);
+
+			++sizDevCnt;
+		} while( sizDevCnt<sizDevMax );
+	} while( iAllDevicesFinished==0 );
+
+	/* The operation is OK if all flashes returned OK. */
+	if( tStatus[0]==FLASH_STATUS_Ok && tStatus[1]==FLASH_STATUS_Ok )
+	{
+		/* Compare the data with the programmed value. */
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			ulStatus = (unsigned long)(*(tStatusAdr.puc));
+			break;
+
+		case BUS_WIDTH_16Bit:
+			ulStatus = (unsigned long)(*(tStatusAdr.pus));
+			break;
+
+		case BUS_WIDTH_32Bit:
+			ulStatus = *(tStatusAdr.pul);
+			break;
+		}
+//		uprintf("Readback: %08x - %08x\n", ulStatus, ulData);
+		if( ulStatus==ulData )
+		{
+			tResult = eFLASH_NO_ERROR;
+		}
+		else
+		{
+			tResult = eFLASH_DEVICE_FAILED;
+		}
+	}
+	else
+	{
+		uprintf("Expected Data: 0x%08x\n", ulData);
+		sizDevCnt = 0;
+		while( sizDevCnt<sizLogCnt )
+		{
+			uprintf("%08x ", aulLog[sizDevCnt++]);
+			uprintf("%08x\n", aulLog[sizDevCnt++]);
+		}
+
+		tResult = eFLASH_DEVICE_FAILED;
+	}
+
+	DEBUGMSG(ZONE_FUNCTION, ("-wait_for_buffered_write_done(): tResult=%d\n", tResult));
+	return tResult;
+}
+
+
+
+/*! Erase a flash sector
+*
+*   \param   ptFlashDev       Pointer to the FLASH control Block
+*   \param   ulSector         Sector to erase
+*
+*   \return  eFLASH_NO_ERROR  on success
+*/
+static FLASH_ERRORS_E FlashErase(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector)
+{
+	FLASH_ERRORS_E tResult = eFLASH_NO_ERROR;
+
+
+	DEBUGMSG(ZONE_FUNCTION, ("+FlashErase(): ptFlashDev=0x%08x, ulSector=%d\n", ptFlashDev, ulSector));
+	FlashWriteCommandSequence(ptFlashDev, s_atErasePrefix, ARRAYSIZE(s_atErasePrefix));
+	FlashWriteCommand(ptFlashDev, ulSector, 0, SPANSION_CMD_SECTORERASE_CYCLE_5);
+	tResult = FlashWaitEraseDone(ptFlashDev, ulSector);
+
+	FlashReset(ptFlashDev, ulSector);
+
+	DEBUGMSG(ZONE_FUNCTION, ("-FlashErase(): tResult=%d\n", tResult));
+	return tResult;
+}
+
+/*! Erase whole flash
+*
+*   \param   ptFlashDev       Pointer to the FLASH control Block
+*
+*   \return  eFLASH_NO_ERROR  on success
+*/
+static FLASH_ERRORS_E FlashEraseAll(const FLASH_DEVICE_T *ptFlashDev)
+{
+	FLASH_ERRORS_E tResult = eFLASH_NO_ERROR;
+
+	DEBUGMSG(ZONE_FUNCTION, ("+FlashEraseAll(): ptFlashDev=0x%08x\n", ptFlashDev));
+
+	FlashWriteCommandSequence(ptFlashDev, s_atErasePrefix, ARRAYSIZE(s_atErasePrefix));
+	FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_CHIPERASE_CYCLE5, SPANSION_CMD_CHIPERASE_CYCLE5);
+
+	tResult = FlashWaitEraseDone(ptFlashDev, 0);
+
+	FlashReset(ptFlashDev, 0);
+
+	DEBUGMSG(ZONE_FUNCTION, ("-FlashEraseAll(): tResult=%d\n", tResult));
+
+	return tResult;
+}
+
+
+/*! Programs flash using single byte/word/dword accesses
+*
+*   \param   ptFlashDev       Pointer to the FLASH control Block
+*   \param   ulStartOffset    Offset to start writing at
+*   \param   ulLength         Length of data to write
+*   \param   pvData           Data pointer
+*
+*   \return  eFLASH_NO_ERROR  on success
+*/
+
+static FLASH_ERRORS_E FlashNormalWrite(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector, unsigned long ulOffset, const unsigned char *pucData, unsigned long ulWriteSize)
+{
+	FLASH_ERRORS_E  eRet       = eFLASH_NO_ERROR;
+	CADR_T tSrc;
+	VADR_T tDst;
+	unsigned long ulLastData;
+	unsigned long ulLastOffset;
+	unsigned long ulEndOffset;
+
+	DEBUGMSG(ZONE_FUNCTION, ("+FlashNormalWrite(): ptFlashDev=0x%08x, ulSector=%d, ulOffset=0x%08x, pucData=0x%08x, ulWriteSize=0x%08x\n", ptFlashDev, ulSector, ulOffset, pucData, ulWriteSize));
+
+	tSrc.puc = pucData;
+	tDst.puc = FLASH_ABSADDR(ptFlashDev, ulSector, ulOffset);
+	ulEndOffset  = ulOffset + ulWriteSize;
+	ulLastData   = 0;
+
+	while(ulOffset < ulEndOffset)
+	{
+		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE0, SPANSION_CMD_PROGRAM_CYCLE0);
+		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE1, SPANSION_CMD_PROGRAM_CYCLE1);
+		FlashWriteCommand(ptFlashDev, 0, SPANSION_ADR_PROGRAM_CYCLE2, SPANSION_CMD_PROGRAM_CYCLE2);
+
+		ulLastOffset = ulOffset;
+
+		switch(ptFlashDev->tBits)
+		{
+		case BUS_WIDTH_8Bit:
+			*tDst.puc = *tSrc.puc;
+			ulLastData = *tSrc.puc;
+			ulOffset+=1;
+			++tDst.puc;
+			++tSrc.puc;
+			break;
+		case BUS_WIDTH_16Bit:
+			*tDst.pus = *tSrc.pus;
+			ulLastData = *tSrc.pus;
+			ulOffset+=2;
+			++tDst.pus;
+			++tSrc.pus;
+			break;
+		case BUS_WIDTH_32Bit:
+			*tDst.pul = *tSrc.pul;
+			ulLastData = *tSrc.pul;
+			ulOffset+=4;
+			++tDst.pul;
+			++tSrc.pul;
+			break;
+		}
+
+//		eRet = FlashWaitWriteDone(ptFlashDev, ulSector, ulLastOffset, ulLastData, FALSE);
+		eRet = wait_for_program_or_erase_done(ptFlashDev, ulSector, ulLastOffset, ulLastData);
+		if(eRet!=eFLASH_NO_ERROR)
+		{
+			FlashWriteCommand(ptFlashDev, ulSector, 0, SPANSION_CMD_RESET);
+			break;
+		}
+	}
+
+	DEBUGMSG(ZONE_FUNCTION, ("-FlashNormalWrite(): eRet=%d\n", eRet));
+	return eRet;
 }
 
 
@@ -766,7 +982,8 @@ static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const
 
 		/* Wait for Flashing complete */
 //		tResult = FlashWaitWriteDone(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData, TRUE);
-		tResult = wait_for_buffered_write_done(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData);
+		tResult = wait_for_program_or_erase_done(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData);
+//		tResult = wait_for_buffered_write_done2(ptFlashDev, ulCurrentSector, ulLastOffset, ulLastData);
 		if( tResult!=eFLASH_NO_ERROR )
 		{
 			if(tResult==eFLASH_ABORTED)
