@@ -1026,6 +1026,10 @@ void FlashWriteCommand(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector,
 {
 	unsigned long ulValue;
 	VADR_T tWriteAddr;
+
+
+	DEBUGMSG(ZONE_FUNCTION, ("+FlashWriteCommand(): ptFlashDev=0x%08x, ulSector=%d, ulOffset=0x%08x, uiCmd=%08x\n", ptFlashDev, ulSector, ulOffset, uiCmd));
+
 	tWriteAddr.puc = FLASH_ABSADDR(ptFlashDev, ulSector, 0);
 	
 	switch(ptFlashDev->tBits)
