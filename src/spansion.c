@@ -440,31 +440,74 @@ typedef enum FLASH_STATUS_ENUM
 	FLASH_STATUS_Busy0     = 0,
 	FLASH_STATUS_Busy1     = 1,
 	FLASH_STATUS_Ok        = 2,
-	FLASH_STATUS_Failed    = 3,
-	FLASH_STATUS_Abort     = 4
+	FLASH_STATUS_Failed    = 3
 } FLASH_STATUS_T;
 
-static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlashDev, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
+static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlashDevice, unsigned long ulSector, unsigned long ulOffset, unsigned long ulData)
 {
 	FLASH_ERRORS_E tResult;
-	unsigned long ulValue;
+	unsigned long ulStatus0;
+	unsigned long ulStatus1;
 	VADR_T tStatusAdr;
-	unsigned char aucLastData[2];
-	unsigned char aucStatus[2];
+	unsigned long aulMaskQ5[2];
+	unsigned long aulMaskQ6[2];
 	FLASH_STATUS_T tStatus[2];
+	size_t sizDevMax;
 	size_t sizDevCnt;
-	int iFinished;
+	int iAllDevicesFinished;
+	unsigned long ulToggleBits;
+	unsigned long ulBothSetBits;
+
+	/* Debug stuff. */
+//	size_t sizLogCnt = 0;
+//	unsigned long aulLog[2048];
 
 
-	DEBUGMSG(ZONE_FUNCTION, ("+wait_for_buffered_write_done(): ptFlashDev=0x%08x, ulSector=0x%08x, ulOffset=0x%08x, ulData=0x%08x\n", ptFlashDev, ulSector, ulOffset, ulData));
+	DEBUGMSG(ZONE_FUNCTION, ("+wait_for_buffered_write_done(): ptFlashDevice=0x%08x, ulSector=0x%08x, ulOffset=0x%08x, ulData=0x%08x\n", ptFlashDevice, ulSector, ulOffset, ulData));
 
-	tStatusAdr.ul = (unsigned long)(FLASH_ABSADDR(ptFlashDev, ulSector, ulOffset));
+	tStatusAdr.ul = (unsigned long)(FLASH_ABSADDR(ptFlashDevice, ulSector, ulOffset));
 
-	/* This is a paired device. */
+	/* Set the masks for the first device. */
+	aulMaskQ5[0] = 1U << 5U;
+	aulMaskQ6[0] = 1U << 6U;
 
-	/* Extract the expected data. */
-	aucLastData[0] = (unsigned char)(ulData >>  8U);
-	aucLastData[0] = (unsigned char)(ulData >> 24U);
+	/* The default is a single device setup.
+	 * Do not activate the 2nd device.
+	 */
+	aulMaskQ5[1] = 0;
+	aulMaskQ6[1] = 0;
+	sizDevMax = 1;
+
+	/* Activate the 2nd device for a paired setup. */
+	if( ptFlashDevice->fPaired!=0 )
+	{
+		/* This is a paired device. */
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			/* An 8 Bit bus can not be build from 2 devices. */
+			break;
+
+		case BUS_WIDTH_16Bit:
+			/* This is a 16 bit setup made out of 2 8 bit devices.
+			 * The 2nd status is at bits 8..15 .
+			 */
+			aulMaskQ5[1] = 1U << (5U + 8U);
+			aulMaskQ6[1] = 1U << (6U + 8U);
+			sizDevMax = 2;
+			break;
+
+		case BUS_WIDTH_32Bit:
+			/* This is a 32 bit setup made out of 2 16 bit devices.
+			 * The 2nd status is at bits 16..23 .
+			 */
+			aulMaskQ5[1] = 1U << (5U + 16U);
+			aulMaskQ6[1] = 1U << (6U + 16U);
+			sizDevMax = 2;
+			break;
+		}
+	}
+
 
 	tStatus[0] = FLASH_STATUS_Busy0;
 	tStatus[1] = FLASH_STATUS_Busy0;
@@ -472,56 +515,79 @@ static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlash
 	/* Loop while all flashes are busy. */
 	do
 	{
-		/* Get the combined status. */
-		ulValue = *(tStatusAdr.pul);
-		uprintf("Status: 0x%08x\n", ulValue);
+		/* Get the combined status for all flashes. */
+		ulStatus0 = 0;
+		ulStatus1 = 0;
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			ulStatus0 = (unsigned long)(*(tStatusAdr.puc));
+			ulStatus1 = (unsigned long)(*(tStatusAdr.puc));
+			break;
 
-		/* Extract status fields. */
-		aucStatus[0] = (unsigned char)(ulValue >>  8U);
-		aucStatus[1] = (unsigned char)(ulValue >> 24U);
+		case BUS_WIDTH_16Bit:
+			ulStatus0 = (unsigned long)(*(tStatusAdr.pus));
+			ulStatus1 = (unsigned long)(*(tStatusAdr.pus));
+			break;
 
+		case BUS_WIDTH_32Bit:
+			ulStatus0 = *(tStatusAdr.pul);
+			ulStatus1 = *(tStatusAdr.pul);
+			break;
+		}
+
+//		aulLog[sizLogCnt++] = ulStatus0;
+//		aulLog[sizLogCnt++] = ulStatus1;
+//		if( sizLogCnt>=2048 )
+//		{
+//			sizDevCnt = 0;
+//			while( sizDevCnt<sizLogCnt )
+//			{
+//				uprintf("%08x ", aulLog[sizDevCnt++]);
+//				uprintf("%08x\n", aulLog[sizDevCnt++]);
+//			}
+//			sizLogCnt = 0;
+//		}
+
+		/* Expect all devices to be idle. */
+		iAllDevicesFinished = (1==1);
+
+		/* Extract all toggling and set bits. */
+		ulToggleBits = ulStatus0 ^ ulStatus1;
+		ulBothSetBits = ulStatus0 & ulStatus1;
+
+		/* Check all devices. */
 		sizDevCnt = 0;
-		iFinished = (1==1);
 		do
 		{
-			uprintf("%d %d %x %x\n", sizDevCnt, tStatus[sizDevCnt], aucStatus[sizDevCnt], aucLastData[sizDevCnt]);
-
-			if( tStatus[sizDevCnt]==FLASH_STATUS_Busy0 )
+			switch( tStatus[sizDevCnt] )
 			{
-				/* Is Q7 equal to last data bit 7? */
-				if( ((aucStatus[sizDevCnt]^aucLastData[sizDevCnt])&(1U<<7U))==0 )
+			case FLASH_STATUS_Busy0:
+				/* Does Q6 toggle? */
+				if( (ulToggleBits&aulMaskQ6[sizDevCnt])==0 )
 				{
-					/* Yes, the bits are equal.
-					 * This means the flash operation is finished.
+					/* No, Q6 does not toggle.
+					 * The program or erase cycle is finished.
 					 */
 					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
 				}
-				/* Is Q1 set? */
-				else if( (aucStatus[sizDevCnt]&(1<<1))!=0 )
+				/* Is Q5 set in both reads? */
+				else
 				{
-					/* Yes, the bit is set.
-					 * This means the operation was canceled.
-					 */
-					tStatus[sizDevCnt] = FLASH_STATUS_Abort;
+					if( (ulBothSetBits&aulMaskQ5[sizDevCnt])!=0 )
+					{
+						/* Yes, Q5 is set. Move to the next state. */
+						tStatus[sizDevCnt] = FLASH_STATUS_Busy1;
+					}
 				}
-				/* Is Q5 clear? */
-				else if( (aucStatus[sizDevCnt]&(1<<5))==0 )
+				break;
+
+			case FLASH_STATUS_Busy1:
+				/* Does Q6 toggle? */
+				if( (ulToggleBits&aulMaskQ6[sizDevCnt])==0 )
 				{
-					/* Yes, the bit is clear.
-					 * This means the device finished step 1.
-					 */
-					tStatus[sizDevCnt] = FLASH_STATUS_Busy1;
-				}
-			}
-			else if( tStatus[sizDevCnt]==FLASH_STATUS_Busy1 )
-			{
-				/* Q7 must be equal to data bit 7.
-				 * Otherwise the operation failed.
-				 */
-				if( ((aucStatus[sizDevCnt]^aucLastData[sizDevCnt])&(1U<<7U))==0 )
-				{
-					/* Yes, the bits are equal.
-					 * This means the flash operation is finished.
+					/* No, Q6 does not toggle.
+					 * The program or erase cycle is finished.
 					 */
 					tStatus[sizDevCnt] = FLASH_STATUS_Ok;
 				}
@@ -529,27 +595,64 @@ static FLASH_ERRORS_E wait_for_buffered_write_done(const FLASH_DEVICE_T *ptFlash
 				{
 					tStatus[sizDevCnt] = FLASH_STATUS_Failed;
 				}
+				break;
+
+			case FLASH_STATUS_Ok:
+			case FLASH_STATUS_Failed:
+				break;
 			}
 
-			iFinished &= tStatus[sizDevCnt]==FLASH_STATUS_Busy0 || tStatus[sizDevCnt]==FLASH_STATUS_Busy1;
+			/* The device has finished the operation if it is not in one of the busy states. */
+			iAllDevicesFinished &= (tStatus[sizDevCnt]!=FLASH_STATUS_Busy0) && (tStatus[sizDevCnt]!=FLASH_STATUS_Busy1);
 
 			++sizDevCnt;
-		} while( sizDevCnt<2 );
-	} while( iFinished );
+		} while( sizDevCnt<sizDevMax );
+	} while( iAllDevicesFinished==0 );
+
+//	sizDevCnt = 0;
+//	while( sizDevCnt<sizLogCnt )
+//	{
+//		uprintf("%08x ", aulLog[sizDevCnt++]);
+//		uprintf("%08x\n", aulLog[sizDevCnt++]);
+//	}
 
 	/* The operation is OK if all flashes returned OK. */
 	if( tStatus[0]==FLASH_STATUS_Ok && tStatus[1]==FLASH_STATUS_Ok )
 	{
-		tResult = eFLASH_NO_ERROR;
+		/* Compare the data with the programmed value. */
+		switch( ptFlashDevice->tBits )
+		{
+		case BUS_WIDTH_8Bit:
+			ulStatus0 = (unsigned long)(*(tStatusAdr.puc));
+			break;
+
+		case BUS_WIDTH_16Bit:
+			ulStatus0 = (unsigned long)(*(tStatusAdr.pus));
+			break;
+
+		case BUS_WIDTH_32Bit:
+			ulStatus0 = *(tStatusAdr.pul);
+			break;
+		}
+//		uprintf("Readback: %08x - %08x\n", ulStatus0, ulData);
+		if( ulStatus0==ulData )
+		{
+			tResult = eFLASH_NO_ERROR;
+		}
+		else
+		{
+			tResult = eFLASH_DEVICE_FAILED;
+		}
 	}
 	else
 	{
-		tResult = eFLASH_GENERAL_ERROR;
+		tResult = eFLASH_DEVICE_FAILED;
 	}
 
 	DEBUGMSG(ZONE_FUNCTION, ("-wait_for_buffered_write_done(): tResult=%d\n", tResult));
 	return tResult;
 }
+
 
 
 static FLASH_ERRORS_E FlashBufferedWrite(const FLASH_DEVICE_T *ptFlashDev, const unsigned char *pucSource, unsigned long ulLength, unsigned long ulCurrentSector, unsigned long ulCurrentOffset)
