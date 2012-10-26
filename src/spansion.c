@@ -1106,9 +1106,15 @@ static FLASH_ERRORS_E FlashProgram(const FLASH_DEVICE_T *ptFlashDev, unsigned lo
 	{
 		/* check if the offset is aligned to the write buffer size (a power of 2) */
 		ulDeviceBufferSize = ptFlashDev->ulMaxBufferWriteSize;
-		ulOffsetMod = ulCurrentOffset & (ulDeviceBufferSize - 1);
-
 		DEBUGMSG(ZONE_VERBOSE, (". ulDeviceBufferSize = 0x%08x\n", ulDeviceBufferSize));
+
+		if(ptFlashDev->fPaired)
+		{
+			ulDeviceBufferSize *= 2;
+			DEBUGMSG(ZONE_FUNCTION, (". write buffer size for all devices: 0x%08x bytes\n", ulDeviceBufferSize));
+		}
+
+		ulOffsetMod = ulCurrentOffset & (ulDeviceBufferSize - 1);
 		DEBUGMSG(ZONE_VERBOSE, (". ulOffsetMod        = 0x%08x\n", ulOffsetMod));
 		
 		if( ulOffsetMod!=0 )
