@@ -338,6 +338,7 @@ static FLASH_ERRORS_E wait_for_program_or_erase_done(const FLASH_DEVICE_T *ptFla
 	size_t sizDevMax;
 	size_t sizDevCnt;
 	int iAllDevicesFinished;
+	int iAllDevicesOk;
 	unsigned long ulToggleBits;
 	unsigned long ulBothSetBits;
 
@@ -432,8 +433,9 @@ static FLASH_ERRORS_E wait_for_program_or_erase_done(const FLASH_DEVICE_T *ptFla
 //			sizLogCnt = 0;
 //		}
 
-		/* Expect all devices to be idle. */
+		/* Expect all devices to be idle and ok. */
 		iAllDevicesFinished = (1==1);
+		iAllDevicesOk = (1==1);
 
 		/* Extract all toggling and set bits. */
 		ulToggleBits = ulStatus0 ^ ulStatus1;
@@ -488,6 +490,7 @@ static FLASH_ERRORS_E wait_for_program_or_erase_done(const FLASH_DEVICE_T *ptFla
 
 			/* The device has finished the operation if it is not in one of the busy states. */
 			iAllDevicesFinished &= (tStatus[sizDevCnt]!=FLASH_STATUS_Busy0) && (tStatus[sizDevCnt]!=FLASH_STATUS_Busy1);
+			iAllDevicesOk = iAllDevicesOk && (tStatus[sizDevCnt]==FLASH_STATUS_Ok);
 
 			++sizDevCnt;
 		} while( sizDevCnt<sizDevMax );
@@ -501,7 +504,7 @@ static FLASH_ERRORS_E wait_for_program_or_erase_done(const FLASH_DEVICE_T *ptFla
 //	}
 
 	/* The operation is OK if all flashes returned OK. */
-	if( tStatus[0]==FLASH_STATUS_Ok && tStatus[1]==FLASH_STATUS_Ok )
+	if( iAllDevicesOk )
 	{
 		/* Compare the data with the programmed value. */
 		switch( ptFlashDevice->tBits )
