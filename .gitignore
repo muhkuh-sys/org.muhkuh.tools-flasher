@@ -8,5 +8,8 @@
 # Ignore all files in the targets folders.
 /targets/
 
+# Ignore the generated version file.
+src/flasher_version.h
+
 # Ignore all compiled python modules.
 *.pyc
