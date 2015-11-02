@@ -51,7 +51,9 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_GetEraseArea     = 7,    /* expand an area to the erase block borders */
 	OPERATION_MODE_GetBoardInfo     = 8,    /* get bus and unit information */
 	OPERATION_MODE_EasyErase        = 9,    /* A combination of GetEraseArea, IsErased and Erase. */
-	OPERATION_MODE_SpiMacroPlayer   = 10    /* Play an SPI macro. */
+	OPERATION_MODE_SpiMacroPlayer   = 10,   /* Play an SPI macro. */
+	OPERATION_MODE_FlashRandom      = 11    /* Play an SPI macro. */
+
 } OPERATION_MODE_T;
 
 
@@ -83,6 +85,13 @@ typedef struct CMD_PARAMETER_FLASH_STRUCT
 	unsigned char *pucData;
 } CMD_PARAMETER_FLASH_T;
 
+typedef struct CMD_PARAMETER_FLASH_RANDOM_STRUCT
+{
+	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	unsigned long ulStartAdr;
+	unsigned long ulDataByteSize;
+	unsigned char *pucData;
+} CMD_PARAMETER_FLASH_RANDOM_T;
 
 typedef struct CMD_PARAMETER_ERASE_STRUCT
 {
@@ -163,6 +172,7 @@ typedef struct tFlasherInputParameter_STRUCT
 	union
 	{
 		CMD_PARAMETER_FLASH_T tFlash;
+		CMD_PARAMETER_FLASH_RANDOM_T tFlashRandom;
 		CMD_PARAMETER_ERASE_T tErase;
 		CMD_PARAMETER_READ_T tRead;
 		CMD_PARAMETER_VERIFY_T tVerify;

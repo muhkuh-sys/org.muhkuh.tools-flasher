@@ -34,5 +34,10 @@ NETX_CONSOLEAPP_RESULT_T parflash_erase(const CMD_PARAMETER_ERASE_T *ptParameter
 NETX_CONSOLEAPP_RESULT_T parflash_read(const CMD_PARAMETER_READ_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T parflash_verify(const CMD_PARAMETER_VERIFY_T *ptParameter, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams);
 NETX_CONSOLEAPP_RESULT_T parflash_sha1(const CMD_PARAMETER_CHECKSUM_T *ptParameter, SHA_CTX *ptSha1Context);
+NETX_CONSOLEAPP_RESULT_T parflash_flash_pseudorandom(const CMD_PARAMETER_FLASH_RANDOM_T *ptParameter);
+NETX_CONSOLEAPP_RESULT_T parflash_verify_pseudorandom(const FLASH_DEVICE_T *ptFlashDescription, unsigned long ulStartAdr, unsigned long ulEndAdr, unsigned long ulPrngState);
+unsigned long pseudo_generator(unsigned long number);
+unsigned long memfill_pseudorandom(unsigned long ulPrngState, unsigned char* pucAddr, unsigned long ulSize);
+
 
 #endif	/* __FLASHER_PARFLASH_H__ */

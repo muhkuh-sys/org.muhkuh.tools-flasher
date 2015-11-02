@@ -162,6 +162,32 @@ static NETX_CONSOLEAPP_RESULT_T opMode_flash(tFlasherInputParameter *ptAppParams
 }
 
 
+static NETX_CONSOLEAPP_RESULT_T opMode_flash_pseudorandom(tFlasherInputParameter *ptAppParams)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	BUS_T tSourceTyp;
+
+
+	/* Be pessimistic. */
+	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+
+	/* get the source type */
+	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
+	switch(tSourceTyp)
+	{
+	case BUS_ParFlash:
+		/*  use parallel flash */
+		tResult = parflash_flash_pseudorandom(&(ptAppParams->uParameter.tFlashRandom));
+		break;
+
+	case BUS_SPI:
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
+	}
+
+	return tResult;
+}
+
 /* ------------------------------------- */
 
 
@@ -516,7 +542,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Detect\n");
 		break;
 
-	case OPERATION_MODE_Flash:
+	case OPERATION_MODE_FlashRandom:
 		ulPars = FLAG_STARTADR + FLAG_SIZE + FLAG_BUFFERADR + FLAG_DEVICE;
 		ulStartAdr          = ptAppParams->uParameter.tFlash.ulStartAdr;
 		ulDataByteSize      = ptAppParams->uParameter.tFlash.ulDataByteSize;
@@ -528,6 +554,18 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Buffer address:        0x%08x\n", pucData);
 		break;
 
+	case OPERATION_MODE_Flash:
+		ulPars = FLAG_STARTADR + FLAG_SIZE + FLAG_BUFFERADR + FLAG_DEVICE;
+		ulStartAdr          = ptAppParams->uParameter.tFlash.ulStartAdr;
+		ulDataByteSize      = ptAppParams->uParameter.tFlash.ulDataByteSize;
+		pucData             = ptAppParams->uParameter.tFlash.pucData;
+		ptDeviceDescription = ptAppParams->uParameter.tFlash.ptDeviceDescription;
+		uprintf(". Mode: Write to flash\n");
+		uprintf(". Start offset in flash: 0x%08x\n", ulStartAdr);
+		uprintf(". Data size:             0x%08x\n", ulDataByteSize);
+		uprintf(". Buffer address:        0x%08x\n", pucData);
+		break;
+	
 	case OPERATION_MODE_Erase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
 		ulStartAdr          = ptAppParams->uParameter.tErase.ulStartAdr;
@@ -883,6 +921,10 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 			case OPERATION_MODE_Flash:
 				tResult = opMode_flash(ptAppParams);
+				break;
+				
+			case OPERATION_MODE_FlashRandom:
+				tResult = opMode_flash_pseudorandom(ptAppParams);
 				break;
 
 			case OPERATION_MODE_Erase:

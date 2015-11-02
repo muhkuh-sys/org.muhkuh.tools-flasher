@@ -52,7 +52,6 @@
 #endif /* CFG_DEBUGMSG!=0 */
 
 
-
 #if ASIC_TYP==500 || ASIC_TYP==100 || ASIC_TYP==50
 /* in: ptCfg->uiChipSelect
    out: -
@@ -697,6 +696,137 @@ NETX_CONSOLEAPP_RESULT_T parflash_flash(const CMD_PARAMETER_FLASH_T *ptParameter
 	return tResult;
 }
 
+
+
+/* 
+	Seed values used in ram test:
+	414505433  64 bit: 9004440025
+	4101696611 64 bit: 300454440035
+	314159265 
+	1215752195 64 bit: 100000000003
+	99989     
+	7271477   
+*/
+
+unsigned long pseudo_generator(unsigned long number)
+{
+	/* Works with a LFSR (linear feedback left shift register)
+	 * with 32 Bits with MLS (Max Length sequence)
+	 * which reproduces only after 2^32-1 generations
+	 */
+
+	unsigned long seed = number;
+
+	seed =     ((((seed >> 31)
+	            ^ (seed >> 6)
+	            ^ (seed >> 4)
+	            ^ (seed >> 1)
+	            ^  seed)
+	            &  0x00000001)
+	            << 31)
+	            | (seed>>1);
+
+	return seed;
+}
+
+unsigned long memfill_pseudorandom(unsigned long ulPrngState, unsigned char* pucAddr, unsigned long ulSize)
+{
+	unsigned char *pucCnt = pucAddr;
+	unsigned char *pucEnd = pucAddr + ulSize;
+	while (pucCnt<pucEnd) 
+	{
+		ulPrngState = pseudo_generator(ulPrngState);
+		*pucCnt = (unsigned char) (ulPrngState & 0xffU);
+		++pucCnt;
+	}
+	return ulPrngState;
+}
+
+NETX_CONSOLEAPP_RESULT_T parflash_flash_pseudorandom(const CMD_PARAMETER_FLASH_RANDOM_T *ptParameter)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	
+	unsigned char *pucDataStartAdr; /* used as a buffer for random data */
+	unsigned long ulFlashStartAdr;
+	unsigned long ulDataByteSize;
+	
+	unsigned long ulProgressBarPosition;
+	
+	const FLASH_DEVICE_T *ptFlashDescription;
+	const SECTOR_INFO_T *ptSector;
+	unsigned long ulSectorOffset;
+	
+	unsigned long ulChunkSize;
+	FLASH_ERRORS_E tFlashError;
+
+	unsigned long ulRandomSeed = 0x12345678;
+	unsigned long ulPrngState;
+	
+	ulFlashStartAdr = ptParameter->ulStartAdr;
+	ulDataByteSize  = ptParameter->ulDataByteSize;
+	pucDataStartAdr = ptParameter->pucData;
+	ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tParFlash);
+
+	tResult = parflash_unlock(ptFlashDescription);
+	if (tResult == NETX_CONSOLEAPP_RESULT_OK)
+	{
+		uprintf("#Writing...\n");
+		progress_bar_init(ulDataByteSize);
+		ulProgressBarPosition = 0;
+		
+		ulPrngState = ulRandomSeed;
+
+		while( ulDataByteSize!=0 )
+		{
+			/* Split the data by erase sectors. */
+			ptSector = cfi_find_matching_sector(ptFlashDescription, ulFlashStartAdr);
+			if( ptSector==NULL )
+			{
+				uprintf("Can not find sector in table!\n");
+				tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+				break;
+			}
+			ulSectorOffset = ulFlashStartAdr - ptSector->ulOffset;
+			ulChunkSize = ptSector->ulSize - ulSectorOffset;
+			if( ulChunkSize>ulDataByteSize )
+			{
+				ulChunkSize = ulDataByteSize;
+			}
+	
+			DEBUGMSG(ZONE_VERBOSE, ("Flashing [0x%08x, 0x%08x[\n", ulFlashStartAdr, ulFlashStartAdr+ulChunkSize));
+			ulPrngState = memfill_pseudorandom(ulPrngState, pucDataStartAdr, ulChunkSize);
+			tFlashError = ptFlashDescription->tFlashFunctions.pfnProgram(ptFlashDescription, ulFlashStartAdr, ulChunkSize, pucDataStartAdr);
+			if( tFlashError!=eFLASH_NO_ERROR )
+			{
+				/* failed to program the sector */
+				uprintf("Failed to program flash sector!\n");
+				/* showPflashError(tFlashError); */
+				tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+				break;
+			}
+			
+			ulFlashStartAdr += ulChunkSize;
+			/* pucDataStartAdr += ulChunkSize; */
+			ulDataByteSize -= ulChunkSize;
+			ulProgressBarPosition += ulChunkSize;
+			
+			progress_bar_set_position(ulProgressBarPosition);
+		}
+		progress_bar_finalize();
+	}
+		
+	if (tResult == NETX_CONSOLEAPP_RESULT_OK)
+	{
+		ulFlashStartAdr = ptParameter->ulStartAdr;
+		ulDataByteSize  = ptParameter->ulDataByteSize;
+		/*pucDataStartAdr = ptParameter->pucData;*/
+
+		tResult = parflash_verify_pseudorandom(ptFlashDescription, ulFlashStartAdr, ulFlashStartAdr + ulDataByteSize, ulRandomSeed);
+	}
+	return tResult;
+}
+
+
 NETX_CONSOLEAPP_RESULT_T parflash_erase(const CMD_PARAMETER_ERASE_T *ptParameter)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -916,6 +1046,69 @@ static NETX_CONSOLEAPP_RESULT_T parflash_compare(const FLASH_DEVICE_T *ptFlashDe
 	uprintf(". verify ok\n");
 	return NETX_CONSOLEAPP_RESULT_OK;
 }
+
+
+NETX_CONSOLEAPP_RESULT_T parflash_verify_pseudorandom(const FLASH_DEVICE_T *ptFlashDescription, unsigned long ulStartAdr, unsigned long ulEndAdr, unsigned long ulPrngState)
+{
+	/* src/srcEnd point to Flash; dst, points to RAM */
+	CADR_T tSrc;
+	/*CADR_T tDst;*/
+	CADR_T tSrcEnd;
+	
+	unsigned long ulProgressBarPosition;
+	unsigned char ucRandom;
+	
+	uprintf("# Verifying random data...\n");
+
+	/* Get the source start address. */
+	tSrc.puc  = ptFlashDescription->pucFlashBase;
+	tSrc.puc += ulStartAdr;
+
+	/* Get the source end address. */
+	tSrcEnd.puc  = ptFlashDescription->pucFlashBase;
+	tSrcEnd.puc += ulEndAdr;
+
+	/* Get the dest address */
+	/* tDst.puc = (const unsigned char*) pucDataStartAdr; */
+
+	progress_bar_init(ulEndAdr-ulStartAdr);
+	ulProgressBarPosition = 0;
+	
+	/* Loop over the complete area. */
+	while( tSrc.puc<tSrcEnd.puc )
+	{
+		ulPrngState = pseudo_generator(ulPrngState);
+		ucRandom = (unsigned char) (ulPrngState & 0xffU);
+		
+		/* test: simulate an error */
+		/*
+		if (tSrc.puc == ptFlashDescription->pucFlashBase + ulStartAdr + 0xfce2) 
+		{
+			ucRandom = 0x42;
+		}
+		*/
+		
+		if (ucRandom != *tSrc.puc) 
+		{
+			uprintf("! verify error at address 0x%08x. random byte: 0x%02x, flash: 0x%02x.\n", tSrc.ul, ucRandom, *tSrc.puc);
+			return NETX_CONSOLEAPP_RESULT_ERROR;
+		}
+		/* ++tDst.puc;*/
+		++tSrc.puc;
+		++ulProgressBarPosition;
+
+		/* Show progress every 64K bytes. */
+		if( (ulProgressBarPosition&0xffff)==0 )
+		{
+			progress_bar_set_position(ulProgressBarPosition);
+		}
+	}
+	progress_bar_finalize();
+	
+	uprintf(". verify ok\n");
+	return NETX_CONSOLEAPP_RESULT_OK;
+}
+
 
 /* if return value is NETX_CONSOLEAPP_RESULT_OK, 
    the value stored in ptConsoleParams->pvReturnMessage is the result of the comparison.

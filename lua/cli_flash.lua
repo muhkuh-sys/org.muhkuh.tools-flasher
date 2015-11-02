@@ -52,6 +52,7 @@ verify_hash [p] dev [offset]      file   Quick compare using checksums
 hash        [p] dev [offset] size        Compute SHA1
 info        [p]                          Show busses/units/chip selects
 detect      [p] dev                      Check if flash is recognized
+random_test [p] dev [offset] size        Write random data to flash
 test        [p] dev                      Test flasher      
 testcli     [p] dev                      Test cli flasher  
 -h                                       Show this help    
@@ -192,6 +193,7 @@ end
 --------------------------------------------------------------------------
 
 MODE_FLASH = 0
+MODE_FLASH_RANDOM = 1
 MODE_READ = 2
 MODE_VERIFY = 3
 MODE_ERASE = 4
@@ -212,6 +214,7 @@ MODE_GET_DEVICE_SIZE = 14
 
 arg2Mode = {
 	flash       = MODE_FLASH,
+	random_test = MODE_FLASH_RANDOM,
 	read        = MODE_READ,
 	erase       = MODE_ERASE,
 	verify      = MODE_VERIFY,
@@ -244,6 +247,7 @@ requiredargs = {
 [MODE_HASH]         = {"b", "u", "cs"},
 [MODE_DETECT]       = {"b", "u", "cs"},
 [MODE_INFO]         = {},
+[MODE_FLASH_RANDOM] = {"b", "u", "cs", "l"},
 [MODE_TEST]         = {"b", "u", "cs"},
 [MODE_TEST_CLI]     = {"b", "u", "cs"},
 [MODE_HELP]         = {}
@@ -415,16 +419,17 @@ end
 ---------------------------------------------------------------------------------------
 
 
---                  info   detect   flash   verify   erase   read   hash   verify_hash
----------------------------------------------------------------------------------------
--- open plugin        x       x       x       x        x      x       x         x     
--- load flasher       x       x       x       x        x      x       x         x     
--- download flasher   x       x       x       x        x      x       x         x     
+--                  info   detect   flash   verify   erase   read   hash   verify_hash  random
+-----------------------------------------------------------------------------------------------
+-- open plugin        x       x       x       x        x      x       x         x          x
+-- load flasher       x       x       x       x        x      x       x         x          x
+-- download flasher   x       x       x       x        x      x       x         x          x
 -- info               x
--- detect                     x       x       x        x      x       x         x
+-- detect                     x       x       x        x      x       x         x          x
 -- load data file                     x       x                                 x
 -- eraseArea                          x                x
 -- flashArea                          x
+-- flashRandom                                                                             x
 -- verifyArea                                 x
 -- readArea                                                   x
 -- SHA over data file                                                           x
@@ -507,6 +512,11 @@ function exec(aArgs)
 		-- flash: flash the data
 		if fOk and iMode == MODE_FLASH then
 			fOk, strMsg = flasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
+		end
+		
+		-- flash random data
+		if fOk and iMode == MODE_FLASH_RANDOM then
+			fOk, strMsg = flasher.flashAreaRandom(tPlugin, aAttr, ulStartOffset, ulLen)
 		end
 		
 		-- verify
