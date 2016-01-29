@@ -38,10 +38,7 @@
 
 #include "main.h"
 
-
 /* ------------------------------------- */
-
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParams)
 {
@@ -53,7 +50,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 	memset(ptAppParams->uParameter.tDetect.ptDeviceDescription, 0, sizeof(DEVICE_DESCRIPTION_T));
 
 	uprintf(". Device: ");
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
@@ -84,42 +81,42 @@ static NETX_CONSOLEAPP_RESULT_T check_device_description(const DEVICE_DESCRIPTIO
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-	
+
 	/* expect error */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
-	if( ptDeviceDescription==NULL )
+	if (ptDeviceDescription == NULL)
 	{
 		uprintf("! Missing device description!\n");
 	}
-	else if( ptDeviceDescription->fIsValid==0 )
+	else if (ptDeviceDescription->fIsValid == 0)
 	{
 		uprintf("! The device description is not valid!\n");
 	}
-	else if( ptDeviceDescription->sizThis!=sizeof(DEVICE_DESCRIPTION_T) )
+	else if (ptDeviceDescription->sizThis != sizeof(DEVICE_DESCRIPTION_T))
 	{
 		uprintf("! The size of the device description differs from the internal representation!\n");
 	}
-	else if( ptDeviceDescription->ulVersion!=FLASHER_INTERFACE_VERSION )
+	else if (ptDeviceDescription->ulVersion != FLASHER_INTERFACE_VERSION)
 	{
 		uprintf("! The device description has an invalid version!\n");
 	}
 	else
 	{
 		tSourceTyp = ptDeviceDescription->tSourceTyp;
-		switch(tSourceTyp)
+		switch (tSourceTyp)
 		{
 		case BUS_ParFlash:
 			uprintf(". Device type: Parallel flash\n");
 			tResult = NETX_CONSOLEAPP_RESULT_OK;
 			break;
-	
+
 		case BUS_SPI:
 			/*  use SPI flash */
 			uprintf(". Device type: SPI flash\n");
 			tResult = NETX_CONSOLEAPP_RESULT_OK;
 			break;
-	
+
 		default:
 			/*  unknown boot device */
 			uprintf("! Unknown device type: 0x%08x\n", tSourceTyp);
@@ -132,19 +129,17 @@ static NETX_CONSOLEAPP_RESULT_T check_device_description(const DEVICE_DESCRIPTIO
 
 /* ------------------------------------- */
 
-
 static NETX_CONSOLEAPP_RESULT_T opMode_flash(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-
 
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	/* get the source type */
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
@@ -161,22 +156,19 @@ static NETX_CONSOLEAPP_RESULT_T opMode_flash(tFlasherInputParameter *ptAppParams
 	return tResult;
 }
 
-
 /* ------------------------------------- */
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
 
-
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	/* get the source type */
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
@@ -222,7 +214,6 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smart_erase(tFlasherInputParameter *ptApp
 
 		// DEBUG INFO: funktioniert nicht
 		//tResult = spi_read(&(ptAppParams->uParameter.tRead));
-
 		// DEBUG INFO: funktioniert nicht
 		tResult = spi_smart_erase(&(ptAppParams->uParameter.tSmart_Erase));
 		break;
@@ -232,25 +223,23 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smart_erase(tFlasherInputParameter *ptApp
 
 /* ------------------------------------- */
 
-
 static NETX_CONSOLEAPP_RESULT_T opMode_read(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-
 
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	/* get the source type */
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
 		tResult = parflash_read(&(ptAppParams->uParameter.tRead));
 		break;
-		
+
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_read(&(ptAppParams->uParameter.tRead));
@@ -260,15 +249,12 @@ static NETX_CONSOLEAPP_RESULT_T opMode_read(tFlasherInputParameter *ptAppParams)
 	return tResult;
 }
 
-
 /* ------------------------------------- */
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_verify(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-
 
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
@@ -276,13 +262,13 @@ static NETX_CONSOLEAPP_RESULT_T opMode_verify(tFlasherInputParameter *ptAppParam
 	/* get the source type */
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
 
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
 		tResult = parflash_verify(&(ptAppParams->uParameter.tVerify), ptConsoleParams);
 		break;
-		
+
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_verify(&(ptAppParams->uParameter.tVerify), ptConsoleParams);
@@ -298,24 +284,23 @@ static NETX_CONSOLEAPP_RESULT_T opMode_checksum(tFlasherInputParameter *ptAppPar
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
 	SHA_CTX tShaContext;
-	
 
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	SHA1_Init(&tShaContext);
-	
+
 	/* get the source type */
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
 
 	switch(tSourceTyp)
 	{
-	case BUS_ParFlash:
+		case BUS_ParFlash:
 		/*  use parallel flash */
 		tResult = parflash_sha1(&(ptAppParams->uParameter.tChecksum), &tShaContext);
 		break;
-		
-	case BUS_SPI:
+
+		case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_sha1(&(ptAppParams->uParameter.tChecksum), &tShaContext);
 		break;
@@ -326,24 +311,21 @@ static NETX_CONSOLEAPP_RESULT_T opMode_checksum(tFlasherInputParameter *ptAppPar
 	{
 		SHA1_Final(&ptAppParams->uParameter.tChecksum.aucSha1[0], &tShaContext);
 	}
-	
+
 	return tResult;
 }
 #endif
-
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_isErased(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
 
-
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch(tSourceTyp)
+	switch (tSourceTyp)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
@@ -359,7 +341,6 @@ static NETX_CONSOLEAPP_RESULT_T opMode_isErased(tFlasherInputParameter *ptAppPar
 	return tResult;
 }
 
-
 /* ------------------------------------- */
 
 static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription)
@@ -367,13 +348,12 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	BUS_T tSrcType;
 	unsigned long ulFlashSize;
 
-
 	tSrcType = ptDeviceDescription->tSourceTyp;
-	
+
 	/* This is the default value for the error case. */
 	ulFlashSize = 0;
 
-	switch(tSrcType)
+	switch (tSrcType)
 	{
 	case BUS_ParFlash:
 		ulFlashSize = ptDeviceDescription->uInfo.tParFlash.ulFlashSize;
@@ -387,12 +367,10 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	return ulFlashSize;
 }
 
-
 static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSrcType;
-
 
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
@@ -403,8 +381,8 @@ static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAp
 	{
 		ptAppParams->uParameter.tGetEraseArea.ulEndAdr = getFlashSize(ptAppParams->uParameter.tGetEraseArea.ptDeviceDescription);
 	}
-	
-	switch(tSrcType)
+
+	switch (tSrcType)
 	{
 	case BUS_ParFlash:
 		/*  use parallel flash */
@@ -417,13 +395,10 @@ static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAp
 		break;
 	}
 
-
 	return tResult;
 }
 
-
 /* ------------------------------------- */
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_getBoardInfo(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
@@ -435,26 +410,24 @@ static NETX_CONSOLEAPP_RESULT_T opMode_getBoardInfo(tFlasherInputParameter *ptAp
 	BUS_T tBusId;
 	size_t sizData;
 
-
-
 	ulBusId = ptAppParams->uParameter.tGetBoardInfo.ulBusId;
 	ulUnitId = ptAppParams->uParameter.tGetBoardInfo.ulUnitId;
 
 	pucBuffer = ptAppParams->uParameter.tGetBoardInfo.pucBuffer;
 	sizBuffer = ptAppParams->uParameter.tGetBoardInfo.sizBuffer;
 
-	if( ulBusId==0xffffffffU )
+	if (ulBusId == 0xffffffffU)
 	{
 		sizData = units_make_bus_table(pucBuffer, sizBuffer);
-		ptConsoleParams->pvReturnMessage = (void*)sizData;
+		ptConsoleParams->pvReturnMessage = (void*) sizData;
 
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 	}
-	else if( ulUnitId==0xffffffffU )
+	else if (ulUnitId == 0xffffffffU)
 	{
-		tBusId = (BUS_T)ulBusId;
+		tBusId = (BUS_T) ulBusId;
 		sizData = units_make_unit_table(tBusId, pucBuffer, sizBuffer);
-		ptConsoleParams->pvReturnMessage = (void*)sizData;
+		ptConsoleParams->pvReturnMessage = (void*) sizData;
 
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 	}
@@ -469,25 +442,22 @@ static NETX_CONSOLEAPP_RESULT_T opMode_getBoardInfo(tFlasherInputParameter *ptAp
 	return tResult;
 }
 
-
 /* ------------------------------------- */
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_easyErase(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 
-
 	/* Adapt the erase area to the sector boundaries. */
 	tResult = opMode_getEraseArea(ptAppParams);
-	if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+	if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 	{
 		/* Is the erase area already clean? */
 		tResult = opMode_isErased(ptAppParams, ptConsoleParams);
-		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{
 			/* The erase area is not clean. Erase it now. */
-			if( ptConsoleParams->pvReturnMessage!=((void*)0xff) )
+			if (ptConsoleParams->pvReturnMessage != ((void*) 0xff))
 			{
 				tResult = opMode_erase(ptAppParams);
 			}
@@ -497,9 +467,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_easyErase(tFlasherInputParameter *ptAppPa
 	return tResult;
 }
 
-
 /* ------------------------------------- */
-
 
 static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
@@ -509,7 +477,6 @@ static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *pt
 	tResult = spi_macro_player(&(ptAppParams->uParameter.tSpiMacroPlayer));
 	return tResult;
 }
-
 
 /* ------------------------------------- */
 
@@ -531,26 +498,26 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 	OPERATION_MODE_T tOpMode;
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
 	unsigned long ulStartAdr;
-	unsigned long ulEndAdr       = 0; /* avoid 'uninitialized' warning */
+	unsigned long ulEndAdr = 0; /* avoid 'uninitialized' warning */
 	unsigned long ulDataByteSize = 0; /* dito */
 	unsigned char *pucData;
 	unsigned long ulFlashSize;
 	unsigned long ulPars;
-	
+
 	/*  get application parameters */
-	ptAppParams = (tFlasherInputParameter*)ptConsoleParams->pvInitParams;
+	ptAppParams = (tFlasherInputParameter*) ptConsoleParams->pvInitParams;
 
 	/*  check parameter version */
 	ulParamVersion = ptAppParams->ulParamVersion;
-	if( ulParamVersion!=FLASHER_INTERFACE_VERSION )
+	if (ulParamVersion != FLASHER_INTERFACE_VERSION)
 	{
-		uprintf("! unknown parameter version: %04x.%04x. Expected 0002.0000!\n", ulParamVersion>>16, ulParamVersion&0xffff);
+		uprintf("! unknown parameter version: %04x.%04x. Expected 0002.0000!\n", ulParamVersion >> 16, ulParamVersion & 0xffff);
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 	}
-	
+
 	/* Extract and print the parameters for each mode */
 	tOpMode = ptAppParams->tOperationMode;
-	switch( tOpMode )
+	switch (tOpMode)
 	{
 	case OPERATION_MODE_Detect:
 		ulPars = 0;
@@ -559,9 +526,9 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 	case OPERATION_MODE_Flash:
 		ulPars = FLAG_STARTADR + FLAG_SIZE + FLAG_BUFFERADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tFlash.ulStartAdr;
-		ulDataByteSize      = ptAppParams->uParameter.tFlash.ulDataByteSize;
-		pucData             = ptAppParams->uParameter.tFlash.pucData;
+		ulStartAdr = ptAppParams->uParameter.tFlash.ulStartAdr;
+		ulDataByteSize = ptAppParams->uParameter.tFlash.ulDataByteSize;
+		pucData = ptAppParams->uParameter.tFlash.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tFlash.ptDeviceDescription;
 		uprintf(". Mode: Write to flash\n");
 		uprintf(". Start offset in flash: 0x%08x\n", ulStartAdr);
@@ -571,8 +538,8 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 	case OPERATION_MODE_Erase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tErase.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tErase.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tErase.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tErase.ptDeviceDescription;
 		uprintf(". Mode: Erase\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
@@ -580,41 +547,41 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 	case OPERATION_MODE_Read:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_BUFFERADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tRead.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tRead.ulEndAdr;
-		pucData             = ptAppParams->uParameter.tRead.pucData;
+		ulStartAdr = ptAppParams->uParameter.tRead.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tRead.ulEndAdr;
+		pucData = ptAppParams->uParameter.tRead.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tRead.ptDeviceDescription;
 		uprintf(". Mode: Read\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		uprintf(". Buffer address: 0x%08x\n", pucData);
 		break;
-		
+
 	case OPERATION_MODE_Verify:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_BUFFERADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tVerify.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tVerify.ulEndAdr;
-		pucData             = ptAppParams->uParameter.tVerify.pucData;
+		ulStartAdr = ptAppParams->uParameter.tVerify.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tVerify.ulEndAdr;
+		pucData = ptAppParams->uParameter.tVerify.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tVerify.ptDeviceDescription;
 		uprintf(". Mode: Verify\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		uprintf(". Buffer address: 0x%08x\n", pucData);
 		break;
-		
+
 #if CFG_INCLUDE_SHA1!=0
-	case OPERATION_MODE_Checksum:
+		case OPERATION_MODE_Checksum:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tChecksum.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tChecksum.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tChecksum.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tChecksum.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tChecksum.ptDeviceDescription;
 		uprintf(". Mode: Checksum (SHA1)\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		break;
 #endif
-		
+
 	case OPERATION_MODE_IsErased:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tIsErased.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tIsErased.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tIsErased.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tIsErased.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tIsErased.ptDeviceDescription;
 		uprintf(". Mode: IsErased\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
@@ -622,8 +589,8 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 	case OPERATION_MODE_GetEraseArea:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tGetEraseArea.ptDeviceDescription;
 		uprintf(". Mode: Get Erase Area\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
@@ -636,8 +603,8 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 	case OPERATION_MODE_EasyErase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr          = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tGetEraseArea.ptDeviceDescription;
 		uprintf(". Mode: Get Erase Area\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
@@ -664,9 +631,9 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
-	
+
 	/* If the mode requires a device description, check if it is correct
-		and if the offsets are within the size */
+	 and if the offsets are within the size */
 	if (ulPars & FLAG_DEVICE)
 	{
 		tResult = check_device_description(ptDeviceDescription);
@@ -678,20 +645,19 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
-			
+
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
 				uprintf("! Start offset exceeds flash size.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
-			
-			if ((ulPars & FLAG_ENDADR) && ulEndAdr > ulFlashSize
-				&& ( tOpMode != OPERATION_MODE_GetEraseArea && ulEndAdr != 0xffffffffU))
+
+			if ((ulPars & FLAG_ENDADR) && ulEndAdr > ulFlashSize && (tOpMode != OPERATION_MODE_GetEraseArea && ulEndAdr != 0xffffffffU))
 			{
 				uprintf("! End offset exceeds flash size.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
-			
+
 			if ((ulPars & FLAG_SIZE) && ulDataByteSize > ulFlashSize)
 			{
 				uprintf("! Data size exceeds flash size.\n");
@@ -699,13 +665,13 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 			}
 		}
 	}
-	
+
 	if ((ulPars & FLAG_STARTADR) && (ulPars & FLAG_ENDADR) && (ulStartAdr > ulEndAdr))
 	{
 		uprintf("! Start offset is larger than end offset.\n");
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 	}
-	
+
 	return NETX_CONSOLEAPP_RESULT_OK;
 }
 
@@ -724,7 +690,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 	unsigned long ulFlashSize;
 	unsigned long ulPars;
 	const char *pszMode;
-	
+
 	/*  get application parameters */
 	ptAppParams = (tFlasherInputParameter*)ptConsoleParams->pvInitParams;
 
@@ -735,89 +701,89 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf("! unknown parameter version: %04x.%04x. Expected 0002.0000!\n", ulParamVersion>>16, ulParamVersion&0xffff);
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 	}
-	
+
 	/* Extract the parameters for each mode */
 	tOpMode = ptAppParams->tOperationMode;
 	switch( tOpMode )
 	{
-	case OPERATION_MODE_Detect:
+		case OPERATION_MODE_Detect:
 		ulPars = 0;
 		pszMode = "Detect";
 		break;
 
-	case OPERATION_MODE_Flash:
+		case OPERATION_MODE_Flash:
 		ulPars = FLAG_STARTADR + FLAG_SIZE + FLAG_BUFFERADR + FLAG_DEVICE;
 		pszMode = "Write to flash";
-		ulStartAdr          = ptAppParams->uParameter.tFlash.ulStartAdr;
-		ulDataByteSize      = ptAppParams->uParameter.tFlash.ulDataByteSize;
-		pucData             = ptAppParams->uParameter.tFlash.pucData;
+		ulStartAdr = ptAppParams->uParameter.tFlash.ulStartAdr;
+		ulDataByteSize = ptAppParams->uParameter.tFlash.ulDataByteSize;
+		pucData = ptAppParams->uParameter.tFlash.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tFlash.ptDeviceDescription;
 		break;
 
-	case OPERATION_MODE_Erase:
+		case OPERATION_MODE_Erase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
 		pszMode = "Erase";
-		ulStartAdr          = ptAppParams->uParameter.tErase.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tErase.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tErase.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tErase.ptDeviceDescription;
 		break;
 
-	case OPERATION_MODE_Read:
+		case OPERATION_MODE_Read:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_BUFFERADR + FLAG_DEVICE;
 		pszMode = "Read from flash";
-		ulStartAdr          = ptAppParams->uParameter.tRead.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tRead.ulEndAdr;
-		pucData             = ptAppParams->uParameter.tRead.pucData;
+		ulStartAdr = ptAppParams->uParameter.tRead.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tRead.ulEndAdr;
+		pucData = ptAppParams->uParameter.tRead.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tRead.ptDeviceDescription;
 		break;
-		
-	case OPERATION_MODE_Verify:
+
+		case OPERATION_MODE_Verify:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_BUFFERADR + FLAG_DEVICE;
 		pszMode = "Verify";
-		ulStartAdr          = ptAppParams->uParameter.tVerify.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tVerify.ulEndAdr;
-		pucData             = ptAppParams->uParameter.tVerify.pucData;
+		ulStartAdr = ptAppParams->uParameter.tVerify.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tVerify.ulEndAdr;
+		pucData = ptAppParams->uParameter.tVerify.pucData;
 		ptDeviceDescription = ptAppParams->uParameter.tVerify.ptDeviceDescription;
 		break;
-		
+
 #if CFG_INCLUDE_SHA1!=0
-	case OPERATION_MODE_Checksum:
+		case OPERATION_MODE_Checksum:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
 		pszMode = "Calculate SHA1 checksum";
-		ulStartAdr          = ptAppParams->uParameter.tChecksum.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tChecksum.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tChecksum.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tChecksum.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tChecksum.ptDeviceDescription;
 		break;
 #endif
-		
-	case OPERATION_MODE_IsErased:
+
+		case OPERATION_MODE_IsErased:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
 		pszMode = "IsErased";
-		ulStartAdr          = ptAppParams->uParameter.tIsErased.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tIsErased.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tIsErased.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tIsErased.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tIsErased.ptDeviceDescription;
 		break;
 
-	case OPERATION_MODE_GetEraseArea:
+		case OPERATION_MODE_GetEraseArea:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
 		pszMode = "Get Erase Area";
-		ulStartAdr          = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
-		ulEndAdr            = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
+		ulStartAdr = ptAppParams->uParameter.tGetEraseArea.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tGetEraseArea.ptDeviceDescription;
 		break;
 
-	case OPERATION_MODE_GetBoardInfo:
+		case OPERATION_MODE_GetBoardInfo:
 		ulPars = 0;
 		pszMode = "Get Board Info";
 		break;
 
-	default:
+		default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
-	
+
 	/* print the parameters */
 	uprintf(". Mode: %s\n", pszMode);
 	if ((ulPars & FLAG_STARTADR) && (ulPars & FLAG_ENDADR))
@@ -829,14 +795,14 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Start offset in flash: 0x%08x\n", ulStartAdr);
 		uprintf(". Data size:             0x%08x\n", ulDataByteSize);
 	}
-	
+
 	if (ulPars & FLAG_BUFFERADR)
 	{
 		uprintf(". Buffer address: 0x%08x\n", pucData);
 	}
-	
+
 	/* If the mode requires a device description, check if it is correct
-		and if the offsets are within the size */
+	 and if the offsets are within the size */
 	if (ulPars & FLAG_DEVICE)
 	{
 		tResult = check_device_description(ptDeviceDescription);
@@ -848,20 +814,20 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
-			
+
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
 				uprintf("! Start offset exceeds flash size.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
-			
+
 			if ((ulPars & FLAG_ENDADR) && ulEndAdr > ulFlashSize
-				&& ( tOpMode != OPERATION_MODE_GetEraseArea && ulEndAdr != 0xffffffffU))
+					&& ( tOpMode != OPERATION_MODE_GetEraseArea && ulEndAdr != 0xffffffffU))
 			{
 				uprintf("! End offset exceeds flash size.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
-			
+
 			if ((ulPars & FLAG_SIZE) && ulDataByteSize > ulFlashSize)
 			{
 				uprintf("! Data size exceeds flash size.\n");
@@ -869,16 +835,15 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 			}
 		}
 	}
-	
+
 	if ((ulPars & FLAG_STARTADR) && (ulPars & FLAG_ENDADR) && (ulStartAdr > ulEndAdr))
 	{
 		uprintf("! Start offset is larger than end offset.\n");
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 	}
-	
+
 	return NETX_CONSOLEAPP_RESULT_OK;
 }
-
 
 #endif
 
@@ -887,13 +852,13 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	tFlasherInputParameter *ptAppParams;
 	OPERATION_MODE_T tOpMode;
-	
-	ptAppParams = (tFlasherInputParameter*)ptTestParam->pvInitParams;
+
+	ptAppParams = (tFlasherInputParameter*) ptTestParam->pvInitParams;
 	tOpMode = ptAppParams->tOperationMode;
-	
+
 	/* Initialize the board. */
 	tResult = board_init();
-	if( tResult!=NETX_CONSOLEAPP_RESULT_OK )
+	if (tResult != NETX_CONSOLEAPP_RESULT_OK)
 	{
 		/* Failed to initialize board, can not continue! */
 		rdy_run_setLEDs(RDYRUN_YELLOW);
@@ -902,24 +867,24 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	{
 		/* Switch off the SYS led. */
 		rdy_run_setLEDs(RDYRUN_OFF);
-		
-		/* Configure the systime, used by progress functions. */
-		systime_init();  
 
-		if (tOpMode == OPERATION_MODE_Detect || tOpMode == OPERATION_MODE_GetBoardInfo) {
-		/* say hi if mode is Detect or GetBoardInfo*/
-			uprintf(
-			"\f\n\n\n\nFlasher v" FLASHER_VERSION_ALL " " FLASHER_VERSION_VCS "\n\n"
+		/* Configure the systime, used by progress functions. */
+		systime_init();
+
+		if (tOpMode == OPERATION_MODE_Detect || tOpMode == OPERATION_MODE_GetBoardInfo)
+		{
+			/* say hi if mode is Detect or GetBoardInfo*/
+			uprintf("\f\n\n\n\nFlasher v" FLASHER_VERSION_ALL " " FLASHER_VERSION_VCS "\n\n"
 			"Copyright (C) 2005-2013 C.Thelen (cthelen@hilscher.com)\n"
 			"and M.Trensch.\n"
 			"There is NO warranty.  You may redistribute this software\n"
 			"under the terms of the GNU Library General Public License.\n"
 			"For more information about these matters, see the files\n"
 			"named COPYING.\n");
-			
+
 			uprintf("\n");
-			uprintf(". Data pointer:    0x%08x\n", (unsigned long)ptTestParam);
-			uprintf(". Init parameter:  0x%08x\n", (unsigned long)ptTestParam->pvInitParams);
+			uprintf(". Data pointer:    0x%08x\n", (unsigned long) ptTestParam);
+			uprintf(". Init parameter:  0x%08x\n", (unsigned long) ptTestParam->pvInitParams);
 			uprintf("\n");
 		}
 		tResult = check_params(ptTestParam);
@@ -928,7 +893,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{
 			/*  run operation */
-			switch( tOpMode )
+			switch (tOpMode)
 			{
 			case OPERATION_MODE_Detect:
 				tResult = opMode_detect(ptAppParams);
@@ -945,17 +910,17 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			case OPERATION_MODE_Read:
 				tResult = opMode_read(ptAppParams);
 				break;
-				
+
 			case OPERATION_MODE_Verify:
 				tResult = opMode_verify(ptAppParams, ptTestParam);
 				break;
-				
+
 #if CFG_INCLUDE_SHA1!=0
-			case OPERATION_MODE_Checksum:
+				case OPERATION_MODE_Checksum:
 				tResult = opMode_checksum(ptAppParams);
 				break;
 #endif
-				
+
 			case OPERATION_MODE_IsErased:
 				tResult = opMode_isErased(ptAppParams, ptTestParam);
 				break;
@@ -986,7 +951,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		}
 	}
 
-	if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+	if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 	{
 		/*  Operation OK! */
 		uprintf("* OK *\n");
@@ -997,7 +962,6 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		/*  Operation failed. */
 		rdy_run_setLEDs(RDYRUN_YELLOW);
 	}
-
 
 	return tResult;
 }

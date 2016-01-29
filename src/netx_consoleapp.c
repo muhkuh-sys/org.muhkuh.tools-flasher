@@ -26,22 +26,21 @@ extern unsigned int NetxConsoleParameter_Init;
 
 void netx_consoleapp_init(void)
 {
-  NETX_CONSOLEAPP_PARAMETER_T *ptNetxConsoleParam;
-  NETX_CONSOLEAPP_RESULT_T tNetxConsoleResult;
+	NETX_CONSOLEAPP_PARAMETER_T *ptNetxConsoleParam;
+	NETX_CONSOLEAPP_RESULT_T tNetxConsoleResult;
 
+	/*  get pointer to the test parameters */
+	ptNetxConsoleParam = netx_consoleapp_getParameters();
 
-  /*  get pointer to the test parameters */
-  ptNetxConsoleParam = netx_consoleapp_getParameters();
-
-  tNetxConsoleResult = netx_consoleapp_main(ptNetxConsoleParam);
-  ptNetxConsoleParam->ulReturnValue = (unsigned int)tNetxConsoleResult;
+	tNetxConsoleResult = netx_consoleapp_main(ptNetxConsoleParam);
+	ptNetxConsoleParam->ulReturnValue = (unsigned int) tNetxConsoleResult;
 }
 
 /* ------------------------------------- */
 
 NETX_CONSOLEAPP_PARAMETER_T *netx_consoleapp_getParameters(void)
 {
-  return (NETX_CONSOLEAPP_PARAMETER_T*)NetxConsoleParameter_Init;
+	return (NETX_CONSOLEAPP_PARAMETER_T*) NetxConsoleParameter_Init;
 }
 
 /* ------------------------------------- */
