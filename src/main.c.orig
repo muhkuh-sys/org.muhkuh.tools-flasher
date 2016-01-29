@@ -191,44 +191,6 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 	return tResult;
 }
 
-/* ------------------------------------- */
-/**
- * added opMode Smart Erase here
- */
-static NETX_CONSOLEAPP_RESULT_T opMode_smart_erase(tFlasherInputParameter *ptAppParams)
-{
-	NETX_CONSOLEAPP_RESULT_T tResult;
-	BUS_T tSourceTyp;
-
-	/* Be pessimistic. */
-	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
-
-	/* get the source type */
-	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch (tSourceTyp)
-	{
-	case BUS_ParFlash:
-		/*  use parallel flash - not yet implemented.  */
-
-		//tResult = parflash_erase(&(ptAppParams->uParameter.tErase));
-		break;
-
-	case BUS_SPI:
-		/*  use SPI flash */
-		uprintf("DEBUG: ulEndAdr from Main: %0x08x\n", ptAppParams->uParameter.tSmart_Erase.ulEndAdr);
-		/** IMPORTANT HINT: We are *NOT* giving an tErase Param but a tRead param to tSmartErase beacause we have to read the mem again
-		 *  tRead contains the same data as tErase but also contains: unsigned char *pucData;
-		 */
-
-		// DEBUG INFO: funktioniert nicht
-		//tResult = spi_read(&(ptAppParams->uParameter.tRead));
-
-		// DEBUG INFO: funktioniert nicht
-		tResult = spi_smart_erase(&(ptAppParams->uParameter.tSmart_Erase));
-		break;
-	}
-	return tResult;
-}
 
 /* ------------------------------------- */
 
@@ -520,9 +482,6 @@ static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *pt
 #define FLAG_DEVICE 16
 
 #if 1
-/**
- * Added SMART ERASE OPMODE HERE
- */
 static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -640,16 +599,6 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		ulEndAdr            = ptAppParams->uParameter.tGetEraseArea.ulEndAdr;
 		ptDeviceDescription = ptAppParams->uParameter.tGetEraseArea.ptDeviceDescription;
 		uprintf(". Mode: Get Erase Area\n");
-		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
-		break;
-
-		//This is new go on here
-	case OPERATION_MODE_SmartErase:
-		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr = ptAppParams->uParameter.tErase.ulStartAdr;
-		ulEndAdr = ptAppParams->uParameter.tErase.ulEndAdr;
-		ptDeviceDescription = ptAppParams->uParameter.tErase.ptDeviceDescription;
-		uprintf(". Mode: Smart Erase\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		break;
 
@@ -923,8 +872,6 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			uprintf("\n");
 		}
 		tResult = check_params(ptTestParam);
-		uprintf(". OpMode %i\n\n", tOpMode);
-
 		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{
 			/*  run operation */
@@ -970,13 +917,6 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 			case OPERATION_MODE_EasyErase:
 				tResult = opMode_easyErase(ptAppParams, ptTestParam);
-				break;
-
-			case OPERATION_MODE_SmartErase:
-				//DEBUG INFO: funktioniert mit anpassungen in LUA
-//				tResult = opMode_read(ptAppParams);
-
-				tResult = opMode_smart_erase(ptAppParams);
 				break;
 
 			case OPERATION_MODE_SpiMacroPlayer:

@@ -855,6 +855,7 @@ int Drv_SpiEraseFlashPage(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddr
 *   \return     RX_OK                           Erasure successful
 *               Drv_SpiS_ERASURE_NOT_SUPPORTED  Erase function not supported or configured
 */
+
 int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress)
 {
 	int iResult;

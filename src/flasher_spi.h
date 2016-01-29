@@ -25,10 +25,16 @@
 #include "netx_consoleapp.h"
 #include "flasher_interface.h"
 #include "sha1.h"
+#include <stdbool.h>
 
 
 NETX_CONSOLEAPP_RESULT_T spi_flash(CMD_PARAMETER_FLASH_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter);
+NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+
+
 NETX_CONSOLEAPP_RESULT_T spi_read(CMD_PARAMETER_READ_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_sha1(CMD_PARAMETER_CHECKSUM_T *ptParameter, SHA_CTX *ptSha1Context);
 NETX_CONSOLEAPP_RESULT_T spi_verify(CMD_PARAMETER_VERIFY_T *ptParameter, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams);

@@ -51,7 +51,8 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_GetEraseArea     = 7,    /* expand an area to the erase block borders */
 	OPERATION_MODE_GetBoardInfo     = 8,    /* get bus and unit information */
 	OPERATION_MODE_EasyErase        = 9,    /* A combination of GetEraseArea, IsErased and Erase. */
-	OPERATION_MODE_SpiMacroPlayer   = 10    /* Play an SPI macro. */
+	OPERATION_MODE_SmartErase       = 10,    /* TBC */
+	OPERATION_MODE_SpiMacroPlayer   = 11    /* Play an SPI macro. */
 } OPERATION_MODE_T;
 
 
@@ -90,6 +91,18 @@ typedef struct CMD_PARAMETER_ERASE_STRUCT
 	unsigned long ulStartAdr;
 	unsigned long ulEndAdr;
 } CMD_PARAMETER_ERASE_T;
+
+/**
+ * Added Smart Erase struct
+ * Is not equal to erase struct but equal to read strucz
+ */
+typedef struct CMD_PARAMETER_SMART_ERASE_STRUCT
+{
+	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	unsigned long ulStartAdr;
+	unsigned long ulEndAdr;
+	unsigned char *pucData;
+} CMD_PARAMETER_SMART_ERASE_T;
 
 
 typedef struct CMD_PARAMETER_READ_STRUCT
@@ -164,6 +177,7 @@ typedef struct tFlasherInputParameter_STRUCT
 	{
 		CMD_PARAMETER_FLASH_T tFlash;
 		CMD_PARAMETER_ERASE_T tErase;
+		CMD_PARAMETER_SMART_ERASE_T tSmart_Erase; // added Smart Erase here
 		CMD_PARAMETER_READ_T tRead;
 		CMD_PARAMETER_VERIFY_T tVerify;
 		CMD_PARAMETER_CHECKSUM_T tChecksum;
