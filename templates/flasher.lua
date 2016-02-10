@@ -40,46 +40,47 @@ require("romloader")
 --                           Definitions
 -----------------------------------------------------------------------------
 
-BUS_Parflash    = ${BUS_ParFlash}             -- parallel flash
-BUS_Spi         = ${BUS_SPI}             -- serial flash on spi bus
+BUS_Parflash    = 0             -- parallel flash
+BUS_Spi         = 1             -- serial flash on spi bus
 
 
-OPERATION_MODE_Flash             = ${OPERATION_MODE_Flash}
-OPERATION_MODE_Erase             = ${OPERATION_MODE_Erase}
-OPERATION_MODE_Read              = ${OPERATION_MODE_Read}
-OPERATION_MODE_Verify            = ${OPERATION_MODE_Verify}
-OPERATION_MODE_Checksum          = ${OPERATION_MODE_Checksum}     -- Build a checksum over the contents of a specified area of a device.
-OPERATION_MODE_Detect            = ${OPERATION_MODE_Detect}     -- Detect a device.
-OPERATION_MODE_IsErased          = ${OPERATION_MODE_IsErased}     -- Check if the specified area of a device is erased.
-OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- Expand an area to the erase block borders.
-OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
-OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
-OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
+OPERATION_MODE_Flash             = 0
+OPERATION_MODE_Erase             = 1
+OPERATION_MODE_Read              = 2
+OPERATION_MODE_Verify            = 3
+OPERATION_MODE_Checksum          = 4     -- Build a checksum over the contents of a specified area of a device.
+OPERATION_MODE_Detect            = 5     -- Detect a device.
+OPERATION_MODE_IsErased          = 6     -- Check if the specified area of a device is erased.
+OPERATION_MODE_GetEraseArea      = 7     -- Expand an area to the erase block borders.
+OPERATION_MODE_GetBoardInfo      = 8     -- Get bus and unit information.
+OPERATION_MODE_EasyErase         = 9     -- A combination of GetEraseArea, IsErased and Erase.
+OPERATION_MODE_SmartErase        = 10    -- TBC
+OPERATION_MODE_SpiMacroPlayer    = 11    -- A debug mode to send commands to a SPI flash.
 
 
-MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
-SRT_SQI_CFG_IDLE_IO1_OE          = ${SRT_SQI_CFG_IDLE_IO1_OE}
-MSK_SQI_CFG_IDLE_IO1_OUT         = ${MSK_SQI_CFG_IDLE_IO1_OUT}
-SRT_SQI_CFG_IDLE_IO1_OUT         = ${SRT_SQI_CFG_IDLE_IO1_OUT}
-MSK_SQI_CFG_IDLE_IO2_OE          = ${MSK_SQI_CFG_IDLE_IO2_OE}
-SRT_SQI_CFG_IDLE_IO2_OE          = ${SRT_SQI_CFG_IDLE_IO2_OE}
-MSK_SQI_CFG_IDLE_IO2_OUT         = ${MSK_SQI_CFG_IDLE_IO2_OUT}
-SRT_SQI_CFG_IDLE_IO2_OUT         = ${SRT_SQI_CFG_IDLE_IO2_OUT}
-MSK_SQI_CFG_IDLE_IO3_OE          = ${MSK_SQI_CFG_IDLE_IO3_OE}
-SRT_SQI_CFG_IDLE_IO3_OE          = ${SRT_SQI_CFG_IDLE_IO3_OE}
-MSK_SQI_CFG_IDLE_IO3_OUT         = ${MSK_SQI_CFG_IDLE_IO3_OUT}
-SRT_SQI_CFG_IDLE_IO3_OUT         = ${SRT_SQI_CFG_IDLE_IO3_OUT}
+MSK_SQI_CFG_IDLE_IO1_OE          = 0x01
+SRT_SQI_CFG_IDLE_IO1_OE          = 0
+MSK_SQI_CFG_IDLE_IO1_OUT         = 0x02
+SRT_SQI_CFG_IDLE_IO1_OUT         = 1
+MSK_SQI_CFG_IDLE_IO2_OE          = 0x04
+SRT_SQI_CFG_IDLE_IO2_OE          = 2
+MSK_SQI_CFG_IDLE_IO2_OUT         = 0x08
+SRT_SQI_CFG_IDLE_IO2_OUT         = 3
+MSK_SQI_CFG_IDLE_IO3_OE          = 0x10
+SRT_SQI_CFG_IDLE_IO3_OE          = 4
+MSK_SQI_CFG_IDLE_IO3_OUT         = 0x20
+SRT_SQI_CFG_IDLE_IO3_OUT         = 5
 
 
-SMC_INITIALIZE                   = ${SMC_INITIALIZE}
-SMC_CHIP_SELECT                  = ${SMC_CHIP_SELECT}
-SMC_EXCHANGE_DATA                = ${SMC_EXCHANGE_DATA}
-SMC_SEND_DATA                    = ${SMC_SEND_DATA}
-SMC_RECEIVE_DATA                 = ${SMC_RECEIVE_DATA}
-SMC_SEND_IDLE_BYTES              = ${SMC_SEND_IDLE_BYTES}
+SMC_INITIALIZE                   = 0
+SMC_CHIP_SELECT                  = 1
+SMC_EXCHANGE_DATA                = 2
+SMC_SEND_DATA                    = 3
+SMC_RECEIVE_DATA                 = 4
+SMC_SEND_IDLE_BYTES              = 5
 
 
-FLASHER_INTERFACE_VERSION        = ${FLASHER_INTERFACE_VERSION}
+FLASHER_INTERFACE_VERSION        = 0x00030000
 
 
 --------------------------------------------------------------------------
@@ -184,12 +185,12 @@ function get_flasher_binary_attributes(strData)
 	local aAttr = {}
 	
 	-- Get the load and exec address from the binary.
-	aAttr.ulLoadAddress = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pulLoadAddress} + 1)
-	aAttr.ulExecAddress = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pfnExecutionAddress} + 1)
-	aAttr.ulParameter   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_Parameter} + 1)
-	aAttr.ulDeviceDesc  = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_DeviceDescription} + 1)
-	aAttr.ulBufferAdr   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_Data} + 1)
-	aAttr.ulBufferEnd   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_End} + 1)
+	aAttr.ulLoadAddress = get_dword(strData, 32 + 1)
+	aAttr.ulExecAddress = get_dword(strData, 36 + 1)
+	aAttr.ulParameter   = get_dword(strData, 40 + 1)
+	aAttr.ulDeviceDesc  = get_dword(strData, 44 + 1)
+	aAttr.ulBufferAdr   = get_dword(strData, 48 + 1)
+	aAttr.ulBufferEnd   = get_dword(strData, 52 + 1)
 	aAttr.ulBufferLen   = aAttr.ulBufferEnd - aAttr.ulBufferAdr
 
 	-- Show the information:
@@ -364,77 +365,34 @@ function getBoardInfo(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 	return aBoardInfo
 end
 
-
-
 -- check if a device is available on tBus/ulUnit/ulChipSelect
-function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter)
+function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress)
+	local ulValue
 	local aulParameter
-	atParameter = atParameter or {}
+	local ulIdleCfg
 	
+	ulIdleCfg = 
+	  MSK_SQI_CFG_IDLE_IO1_OE + MSK_SQI_CFG_IDLE_IO1_OUT 
+	+ MSK_SQI_CFG_IDLE_IO2_OE + MSK_SQI_CFG_IDLE_IO2_OUT 
+	+ MSK_SQI_CFG_IDLE_IO3_OE + MSK_SQI_CFG_IDLE_IO3_OUT
+
+	aulParameter = 
+	{
+		OPERATION_MODE_Detect,                -- operation mode: detect
+		tBus,                                 -- device: SPI flash
+		ulUnit,                               -- unit
+		ulChipSelect,                         -- chip select: 1
+		1000,                                 -- initial speed in kHz (1000 -> 1MHz)
+		25000,                                -- maximum allowed speed (25000 -> 25MHz)
+		ulIdleCfg,                            -- idle configuration
+		3,                                    -- mode
+		0xffffffff,                           -- MMIO configuration
+		aAttr.ulDeviceDesc                    -- data block for the device description
+	}
 	
-	if tBus==BUS_Spi then
-		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
-		local ulInitialSpeed = atParameter.ulInitialSpeed
-		ulInitialSpeed = ulInitialSpeed or 1000
-		
-		-- Set the maximum SPI speed. The default is 25000kHz (25MHz).
-		local ulMaximumSpeed = atParameter.ulMaximumSpeed
-		ulMaximumSpeed = ulMaximumSpeed or 25000
-		
-		-- Set the idle configuration. The default is all lines driving 1.
-		local ulIdleCfg = atParameter.ulIdleCfg
-		ulIdleCfg = ulIdleCfg or (MSK_SQI_CFG_IDLE_IO1_OE + MSK_SQI_CFG_IDLE_IO1_OUT
-		                        + MSK_SQI_CFG_IDLE_IO2_OE + MSK_SQI_CFG_IDLE_IO2_OUT
-		                        + MSK_SQI_CFG_IDLE_IO3_OE + MSK_SQI_CFG_IDLE_IO3_OUT)
-		
-		-- Set the SPI mode. The default is 3.
-		local ulSpiMode = atParameter.ulSpiMode
-		ulSpiMode = ulSpiMode or 3
-		
-		-- Set the MMIO configuration. The default is 0xffffffff (no MMIO pins).
-		local ulMmioConfiguration = atParameter.ulMmioConfiguration
-		ulMmioConfiguration = ulMmioConfiguration or 0xffffffff
-		
-		aulParameter =
-		{
-			OPERATION_MODE_Detect,                -- operation mode: detect
-			tBus,                                 -- the bus
-			ulUnit,                               -- unit
-			ulChipSelect,                         -- chip select
-			ulInitialSpeed,                       -- initial speed in kHz
-			ulMaximumSpeed,                       -- maximum allowed speed in kHz
-			ulIdleCfg,                            -- idle configuration
-			ulSpiMode,                            -- mode
-			ulMmioConfiguration,                  -- MMIO configuration
-			aAttr.ulDeviceDesc                    -- data block for the device description
-		}
-	elseif tBus==BUS_Parflash then
-		-- Set the allowed bus widths. This parameter is not used yet.
-		local ulAllowedBusWidths = atParameter.ulAllowedBusWidths
-		ulAllowedBusWidths = ulAllowedBusWidths or 0
-		
-		aulParameter =
-		{
-			OPERATION_MODE_Detect,                -- operation mode: detect
-			tBus,                                 -- the bus
-			ulUnit,                               -- unit
-			ulChipSelect,                         -- chip select
-			ulAllowedBusWidths,                   -- the allowed bus widths
-			0,                                    -- reserved
-			0,                                    -- reserved
-			0,                                    -- reserved
-			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
-		}
-	else
-		error("Unknown bus: " .. tostring(tBus))
-	end
-	
-	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
-
-
 
 -- read device descriptor after detect (debugging)
 function readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)
@@ -468,37 +426,8 @@ function readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)
 	return strDevDesc
 end
 
-
-function getDeviceId(tPlugin, aAttr, fnCallbackProgress)
-	-- Read the flash device descriptor.
-	local strDeviceDescriptor = readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)
-	if strDeviceDescriptor==nil then
-		error("Failed to read the flash device descriptor!")
-	end
-	
-	strDeviceId = nil
-	if tBus==BUS_Spi then
-		-- Extract the flash ID.
-		local iIdxStart = ${OFFSETOF_DEVICE_DESCRIPTION_STRUCT_uInfo}+${OFFSETOF_SPI_FLASH_Ttag_tAttributes}+${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_acName} + 1
-		local iIdxEnd = iIdxStart
-		local iIdxMax = iIdxStart + ${SPIFLASH_NAME_SIZE} + 1
-		while iIdxEnd<iIdxMax and string.byte(strDeviceDescriptor, iIdxEnd)~=0 do
-			iIdxEnd = iIdxEnd + 1
-		end
-		if iIdxEnd>iIdxStart then
-			strDeviceId = string.sub(strDeviceDescriptor, iIdxStart, iIdxEnd-1)
-		end
-	else
-		error("The device ID can not yet be retrieved for parallel flashes.")
-	end
-	
-	return strDeviceId
-end
-
-
-
 ---------------------------------------------------------------------------------
--- The following functions assume that detect has been run and there is a
+-- The following functions assume that detect has been run and there is a 
 -- valid device description in the memory.
 
 -- ulStartAddr, ulEndAddr are offsets in the flash device.
@@ -507,7 +436,7 @@ end
 
 -- Writes data which has been loaded into the buffer at ulDataAddress to ulStartAddr in the flash.
 function flash(tPlugin, aAttr, ulStartAdr, ulDataByteSize, ulDataAddress, fnCallbackMessage, fnCallbackProgress)
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_Flash,
 		aAttr.ulDeviceDesc,
@@ -521,7 +450,7 @@ end
 
 -- Reads data from flash to RAM
 function read(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage, fnCallbackProgress)
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_Read,
 		aAttr.ulDeviceDesc,
@@ -537,7 +466,7 @@ end
 -- Compares data in flash to RAM
 function verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage, fnCallbackProgress)
 	local fEqual = false
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_Verify,
 		aAttr.ulDeviceDesc,
@@ -586,7 +515,7 @@ function getEraseArea(tPlugin, aAttr, ulStartAdr, ulEndAdr, fnCallbackMessage, f
 	local ulEraseStart
 	local ulEraseEnd
 
-	aulParameter =
+	aulParameter = 
 	{
 		OPERATION_MODE_GetEraseArea,           -- operation mode: get erase area
 		aAttr.ulDeviceDesc,                    -- data block for the device description
@@ -619,7 +548,7 @@ end
 function isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	local fIsErased = false
 
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_IsErased,               -- operation mode: isErased
 		aAttr.ulDeviceDesc,                    -- data block for the device description
@@ -642,7 +571,7 @@ end
 -- The start and end addresses must be aligned to sector boundaries as
 -- set by getEraseArea.
 function erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_Erase,                          -- operation mode: erase
 		aAttr.ulDeviceDesc,                            -- data block for the device description
@@ -661,7 +590,7 @@ end
 --       environments without scripting capabilities. This function exists
 --       just for the sake of a complete API.
 function easy_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
-	local aulParameter =
+	local aulParameter = 
 	{
 		OPERATION_MODE_EasyErase,                      -- operation mode: easy erase
 		aAttr.ulDeviceDesc,                            -- data block for the device description
@@ -674,16 +603,32 @@ end
 
 
 
+-- Smart Erase
+-- The start and end addresses must be aligned to sector boundaries as
+-- set by getEraseArea.
+function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+  local aulParameter = 
+  {
+    OPERATION_MODE_SmartErase,                          -- operation mode: erase
+    aAttr.ulDeviceDesc,                            -- data block for the device description
+    ulEraseStart,
+    ulEraseEnd
+  }
+  local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+  return ulValue == 0
+end
+
+
 
 -----------------------------------------------------------------------------
--- erase an area:
+-- erase an area: 
 -- check if the area is already erased and erase only if it isn't empty.
 -- ulSize = 0xffffffff to erase from ulDeviceOffset to end of chip
---
+
 -- OK:
 -- The area is empty, no erase necessary.
 -- Area erased
---
+-- 
 -- Error messages:
 -- getEraseArea failed!
 -- Failed to check if the area is erased!
@@ -698,7 +643,7 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 	local ulEraseStart,ulEraseEnd
 	
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
-	if ulSize == 0xffffffff then
+	if ulSize == 0xffffffff then 
 		ulEndOffset = ulSize
 		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 		if not (ulEraseStart and ulEraseEnd) then
@@ -801,7 +746,7 @@ end
 -- Differences were found.
 
 function verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, fnCallbackProgress)
-	local fOk
+	local fOk 
 	local ulDataByteSize = strData:len()
 	local ulDataOffset = 0
 	local ulBufferAdr = aAttr.ulBufferAdr
