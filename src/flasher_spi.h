@@ -31,8 +31,10 @@
 NETX_CONSOLEAPP_RESULT_T spi_flash(CMD_PARAMETER_FLASH_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter);
-void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+void analyzeMap(unsigned char * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+
+
 
 
 NETX_CONSOLEAPP_RESULT_T spi_read(CMD_PARAMETER_READ_T *ptParameter);
@@ -42,5 +44,19 @@ NETX_CONSOLEAPP_RESULT_T spi_verify(CMD_PARAMETER_VERIFY_T *ptParameter, NETX_CO
 NETX_CONSOLEAPP_RESULT_T spi_detect(CMD_PARAMETER_DETECT_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_isErased(CMD_PARAMETER_ISERASED_T *ptParameter, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams);
 NETX_CONSOLEAPP_RESULT_T spi_getEraseArea(CMD_PARAMETER_GETERASEAREA_T *ptParameter);
+
+
+void newArray(unsigned char ** boolArray, long long int dimension);
+int setValue(unsigned char * array, long long index, unsigned char val);
+unsigned char getValue(unsigned char * array, long long index);
+void dumpBoolArray16(unsigned char * map, int len, const char * description);
+
+void initMemory(void);
+unsigned char * getMemory(long long int sizeByte);
+long long int totalMemory;
+unsigned char * memStarPtr;
+unsigned char * memCurrentPtr;
+unsigned char * memEndPtr;
+long long int freeMem;
 
 #endif	/* __FLASHER_SPI_H__ */

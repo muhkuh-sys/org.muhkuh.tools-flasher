@@ -23,7 +23,7 @@
 
 #include "flasher_spi.h"
 #include "spi_flash.h"
-
+#include "flasher_header.h"
 #include "flasher_interface.h"
 #include "progress_bar.h"
 #include "uprintf.h"
@@ -567,7 +567,7 @@ NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter)
 	unsigned long ulEndAdr;
 
 	systime_init();
-	unsigned long start = systime_get_ms();
+	unsigned long tstart = systime_get_ms();
 	uprintf("SYSTIME: %d", start);
 
 	ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
@@ -582,7 +582,7 @@ NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter)
 	}
 
 	unsigned long end = systime_get_ms();
-	uprintf("\n\nThe alg took %d time. \n\n\n", end - start);
+	uprintf("\n\nThe alg took %d time. \n\n\n", end - tstart);
 
 	return tResult;
 }
@@ -598,6 +598,7 @@ NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter)
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 {
 
+	initMemory();
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	const SPI_FLASH_T *ptFlashDescription;
 	unsigned long ulStartAdr;
@@ -611,12 +612,16 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 	unsigned long ulErased;
 
 	systime_init();
-	unsigned long start = systime_get_ms();
-	uprintf("SYSTIME: %d", start);
+	unsigned long tstart = systime_get_ms();
+	uprintf("SYSTIME: %d", tstart);
 
-	bool cHexMapByte[MAP_LENGTH]; // muss int werden
+	unsigned char * cHexMapByte = NULL; //newArray(MAP_LENGTH);
+	newArray(&cHexMapByte, MAP_LENGTH);
 
-	memset(cHexMapByte, 0, MAP_LENGTH);
+	dumpBoolArray16(cHexMapByte, MAP_LENGTH, "Fresh Map");
+
+	//bool cHexMapByte[MAP_LENGTH]; // muss int werden
+	//memset(cHexMapByte, 0, MAP_LENGTH);
 
 	/* expect success */
 	tResult = NETX_CONSOLEAPP_RESULT_OK;
@@ -674,7 +679,8 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 
 		if (ulErased != 0xff)
 		{
-			cHexMapByte[counter] = 1;
+			//cHexMapByte[counter] = 1;
+			setValue(cHexMapByte, counter, 1);
 			uprintf("Seg: %d is Dirty", counter);
 		}
 
@@ -690,19 +696,20 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 
 	progress_bar_finalize();
 
-	uprintf("\n\nHEXMap:\n");
-	for (unsigned int i = 0; i < MAP_LENGTH; i++)
-	{
-		//DEBUG-print of one chung
-		uprintf("%d", cHexMapByte[i]);
-		if (i % 32 == 31)
-			uprintf("\n%d: ", i);
-	}
+//	uprintf("\n\nHEXMap:\n");
+//	for (unsigned int i = 0; i < MAP_LENGTH; i++)
+//	{
+//		//DEBUG-print of one chunk
+//		unsigned char tmp = getValue(cHexMapByte, i);
+//		uprintf("%d", tmp);
+//		if (i % 32 == 31)
+//			uprintf("\n%d: ", i);
+//	}
 
 	analyzeMap(cHexMapByte, ptParameter);
 
 	unsigned long end = systime_get_ms();
-	uprintf("\n\nThe alg took %d time. \n\n\n", end - start);
+	uprintf("\n\nThe alg took %d mSecs. \n\n\n", end - tstart);
 	return tResult;
 
 }
@@ -841,8 +848,8 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(CMD_PARAMETER_ISERASED_T *ptParameter, NET
 	unsigned long ulErased;
 
 	systime_init();
-	unsigned long start = systime_get_ms();
-	uprintf("SYSTIME: %d", start);
+	unsigned long tstart = systime_get_ms();
+	uprintf("SYSTIME: %d", tstart);
 
 	/* expect success */
 	tResult = NETX_CONSOLEAPP_RESULT_OK;
@@ -916,7 +923,7 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(CMD_PARAMETER_ISERASED_T *ptParameter, NET
 	}
 
 	unsigned long end = systime_get_ms();
-	uprintf("\n\nThe isErsed took %d ms. \n\n\n", end - start);
+	uprintf("\n\nThe isErsed took %d ms. \n\n\n", end - tstart);
 	return tResult;
 }
 
@@ -963,10 +970,14 @@ NETX_CONSOLEAPP_RESULT_T spi_getEraseArea(CMD_PARAMETER_GETERASEAREA_T *ptParame
 /**
  * first stupid approach:
  */
-void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
+void analyzeMap(unsigned char * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 {
-	bool c64KMap[FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB]; // = malloc(FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
-	memset(c64KMap, 0, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
+//	bool c64KMap[FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB]; // = malloc(FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
+//	memset(c64KMap, 0, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
+	unsigned char * c64KMap = NULL;
+	newArray(&c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
+	dumpBoolArray16(c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB, "FRESH Map:");
+
 	int iCounter = 0;
 	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
 	{
@@ -979,10 +990,12 @@ void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 			}
 			if (iCounter > 8)
 			{ // than its better to perform sec err
-				c64KMap[i] = 1;
+//				c64KMap[i] = 1;
+				setValue(c64KMap, i, 1);
 				for (int k = 0; k < 16; k++)
 				{
-					cHexMap[k + i * 16] = 0;
+//					cHexMap[k + i * 16] = 0;
+					setValue(cHexMap, k + i * 16, 0);
 				}
 
 				iCounter = 0;
@@ -992,32 +1005,39 @@ void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 		iCounter = 0;
 	}
 
-	uprintf("\n4KMap\n");
-	for (int i = 0; i < MAP_LENGTH; i++)
-	{
-		bool * tmp = cHexMap + i;
-		uprintf("%d ", *tmp);
-		if (i % 16 == 15)
-		{
-			uprintf("\n");
-		}
-	}
+	/* UNTESTED --> WATCH WARNING*/
 
-	uprintf("\n64KMap\n");
-	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
-	{
-		uprintf("%d ", c64KMap[i]);
-		if (i % 16 == 15)
-		{
-			uprintf("\n");
-		}
+	dumpBoolArray16(cHexMap, MAP_LENGTH, "4KMap");
+	uprintf("\n-----------------------------\n");
+	dumpBoolArray16(c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB, "64KMap");
 
-	}
-
+//	uprintf("\n4KMap\n");
+//	for (int i = 0; i < MAP_LENGTH; i++)
+//	{
+////		bool * tmp = cHexMap + i;
+//		unsigned char tmp = getValue(cHexMap, i); //????
+//		uprintf("%d ", tmp);
+//		if (i % 16 == 15)
+//		{
+//			uprintf("\n");
+//		}
+//	}
+//
+//	uprintf("\n64KMap\n");
+//	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
+//	{
+//		unsigned char tmp = getValue(c64KMap, i);
+//		uprintf("%d ", tmp);
+//		if (i % 16 == 15)
+//		{
+//			uprintf("\n");
+//		}
+//
+//	}
 	//perform erase
 	for (int i = 0; i < MAP_LENGTH; i++)
 	{
-		if (cHexMap[i] == 1)
+		if (/*cHexMap[i] == 1*/1 == getValue(cHexMap, i))
 		{
 			performErase(BLOCK_ERASE_4K, (unsigned long) i, ptParameter);
 		}
@@ -1025,7 +1045,7 @@ void analyzeMap(bool * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 
 	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
 	{
-		if (c64KMap[i] == 1)
+		if (/*c64KMap[i] == 1*/1 == getValue(c64KMap, i))
 		{
 			performErase(SECTOR_ERASE_64K, (unsigned long) i, ptParameter);
 		}
@@ -1118,7 +1138,6 @@ void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_
 			ulAddress += ulSectorSize;
 		}
 
-		/***************/
 		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
 		{
 			uprintf("! erase error\n");
@@ -1216,4 +1235,107 @@ void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_
 	default:
 		break;
 	}
+}
+
+void initMemory()
+{
+	totalMemory = flasher_version.pucBuffer_End - flasher_version.pucBuffer_Data;
+	memStarPtr = flasher_version.pucBuffer_Data;
+	memCurrentPtr = memStarPtr;
+	freeMem = totalMemory;
+	memEndPtr = flasher_version.pucBuffer_End;
+	uprintf("---\n- DEBUGGING: \n- Total Mem: %d\n- StartPtr: %d", totalMemory, memStarPtr);
+
+}
+
+unsigned char * getMemory(long long int sizeByte)
+{
+	unsigned char * retPtr;
+	if (sizeByte > freeMem)
+	{
+		uprintf("out of mem "); // do some error handling here
+		return 0;
+	}
+	else
+	{
+		retPtr = memCurrentPtr;
+		memCurrentPtr = memCurrentPtr + sizeByte;
+		freeMem = freeMem - sizeByte;
+	}
+	uprintf("---\n- DEBUGGING: \n- Allocated Mem size: %d\n- Free Mem size: %d\n- StartPtr: %d", memCurrentPtr - retPtr, freeMem, retPtr);
+	return retPtr;
+}
+
+void newArray(unsigned char ** boolArray, long long int dimension)
+{
+	if (dimension % 8 != 0)
+		dimension = dimension + 8;
+
+	*boolArray = getMemory(dimension); // = (unsigned char*) malloc(dimension / 8);
+	//memset(boolArray, 0, ((size_t) dimension) / 8);
+	for (int i = 0; i < dimension; i++)
+	{
+		setValue(*boolArray, i, 0);
+	}
+}
+
+/*
+ * some sanaty checking should be done
+ */
+int setValue(unsigned char * array, long long int index, unsigned char val)
+{
+	long long int indexByte = index / 8;
+	long long int indexBit = index % 8;
+	long long int x = array[indexByte]; //??? needed
+
+	if (val == 0)
+	{
+		x = x & ~(1 << indexBit);
+	}
+	else if (val == 1)
+	{
+		x = x | val << indexBit;
+	}
+	else
+	{
+		return -1;
+	}
+
+	array[indexByte] = (char) x;
+	return 0;
+}
+
+unsigned char getValue(unsigned char * array, long long int index)
+{
+	long long int indexByte = index / 8;
+	long long int indexBit = index % 8;
+	long long int a = array[indexByte];
+	long long int b = a & (1 << indexBit);
+	long long int c = b >> indexBit;
+	unsigned char yx = (unsigned char) c;
+
+	return yx;
+}
+
+void dumpBoolArray16(unsigned char * map, int len, const char * description)
+{
+	uprintf("\n%s\n0 \t", description);
+
+	for (int i = 0; i < len; i++)
+	{
+		uprintf("0x%02x ", getValue(map, i));
+		if (i % 16 == 15)
+		{
+			if (i % 16 == 16 - 1)
+			{
+				uprintf("\n%02x\t", i + 1);
+
+			}
+			else
+			{
+				uprintf("\n\t");
+			}
+		}
+	}
+	uprintf("\n");
 }
