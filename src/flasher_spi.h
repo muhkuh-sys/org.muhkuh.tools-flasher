@@ -25,7 +25,6 @@
 #include "netx_consoleapp.h"
 #include "flasher_interface.h"
 #include "sha1.h"
-#include <stdbool.h>
 
 
 NETX_CONSOLEAPP_RESULT_T spi_flash(CMD_PARAMETER_FLASH_T *ptParameter);
@@ -33,8 +32,6 @@ NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 void analyzeMap(unsigned char * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
-
-
 
 
 NETX_CONSOLEAPP_RESULT_T spi_read(CMD_PARAMETER_READ_T *ptParameter);
@@ -58,5 +55,21 @@ unsigned char * memStarPtr;
 unsigned char * memCurrentPtr;
 unsigned char * memEndPtr;
 long long int freeMem;
+
+
+void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4);
+
+// some init things?
+struct SFDP_Data{
+	char isValid;
+	char eraseOperation1;
+	char eraseInstruction1;
+	char eraseOperation2;
+	char eraseInstruction2;
+	char eraseOperation3;
+	char eraseInstruction3;
+	char eraseOperation4;
+	char eraseInstruction4;
+}sfdp_Data;
 
 #endif	/* __FLASHER_SPI_H__ */

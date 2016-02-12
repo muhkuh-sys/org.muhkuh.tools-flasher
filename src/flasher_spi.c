@@ -18,9 +18,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-//#include <string.h>
-#include <stdbool.h>
-
 #include "flasher_spi.h"
 #include "spi_flash.h"
 #include "flasher_header.h"
@@ -28,6 +25,7 @@
 #include "progress_bar.h"
 #include "uprintf.h"
 #include "systime.h"
+#include "sfdp.h"
 
 /*-----------------------------------*/
 
@@ -1338,4 +1336,35 @@ void dumpBoolArray16(unsigned char * map, int len, const char * description)
 		}
 	}
 	uprintf("\n");
+}
+
+/*
+ * Goal: get structured information about the erase operations supported by the connected memory.
+ */
+void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4)
+{
+	sfdp_Data.isValid = isValid;
+
+	sfdp_Data.eraseOperation1 = eraseOperation1;
+	sfdp_Data.eraseInstruction1 = eraseInstruction1;
+	sfdp_Data.eraseOperation2 = eraseOperation2;
+	sfdp_Data.eraseInstruction2 = eraseInstruction2;
+	sfdp_Data.eraseOperation3 = eraseOperation3;
+	sfdp_Data.eraseInstruction3 = eraseInstruction3;
+	sfdp_Data.eraseOperation4 = eraseOperation4;
+	sfdp_Data.eraseInstruction4 = eraseInstruction4;
+
+	uprintf("\n------- Received SFDP Data -------");
+	if (1 == isValid)
+	{
+		uprintf("\n| SFDP Data is valid:\t\t|");
+		uprintf("\n| ERASE OP1: %02x\t| INST: %02x\t|", sfdp_Data.eraseOperation1, sfdp_Data.eraseInstruction1);
+		uprintf("\n| ERASE OP2: %02x\t| INST: %02x\t|", sfdp_Data.eraseOperation2, sfdp_Data.eraseInstruction2);
+		uprintf("\n| ERASE OP3: %02x\t| INST: %02x\t|", sfdp_Data.eraseOperation3, sfdp_Data.eraseInstruction3);
+		uprintf("\n| ERASE OP4: %02x\t| INST: %02x\t|", sfdp_Data.eraseOperation4, sfdp_Data.eraseInstruction4);
+	}
+	else
+		uprintf("\n| SFDP Data is invalid performing normal erase\t|");
+
+	uprintf("\n----------------------------------\n\n");
 }
