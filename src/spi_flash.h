@@ -57,7 +57,16 @@ typedef struct SPI_FLASH_Ttag
 
 int Drv_SpiInitializeFlash(const SPI_CONFIGURATION_T *ptSpiCfg, SPI_FLASH_T *ptFlash);
 int Drv_SpiEraseFlashPage(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashPage256(const unsigned char opcodeErrPage256 /*new param */, const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashPage512(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashBlock4k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashBlock32k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+
+int Drv_SpiEraseFlashArea(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
 int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+
+
+
 int Drv_SpiEraseFlashMultiSectors(const SPI_FLASH_T *ptFlash, unsigned long ulLinearStartAddress, unsigned long ulLinearEndAddress);
 int Drv_SpiEraseFlashComplete(const SPI_FLASH_T *ptFlash);
 int Drv_SpiWriteFlashPages(const SPI_FLASH_T *ptFlash, unsigned long ulOffs, const unsigned char *pabSrc, unsigned long ulNum);

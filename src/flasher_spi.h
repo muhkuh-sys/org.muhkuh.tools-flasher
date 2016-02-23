@@ -30,7 +30,7 @@
 NETX_CONSOLEAPP_RESULT_T spi_flash(CMD_PARAMETER_FLASH_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter);
-void analyzeMap(unsigned char * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 
 
@@ -59,17 +59,20 @@ long long int freeMem;
 
 void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4);
 
+
 // some init things?
 struct SFDP_Data{
 	char isValid;
-	char eraseOperation1;
+	int eraseOperation1;
 	char eraseInstruction1;
-	char eraseOperation2;
+	int eraseOperation2;
 	char eraseInstruction2;
-	char eraseOperation3;
+	int eraseOperation3;
 	char eraseInstruction3;
-	char eraseOperation4;
+	int eraseOperation4;
 	char eraseInstruction4;
-}sfdp_Data;
+};
+
+struct SFDP_Data * myData;
 
 #endif	/* __FLASHER_SPI_H__ */

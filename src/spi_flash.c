@@ -823,6 +823,80 @@ int Drv_SpiEraseFlashPage(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddr
 	return iResult;
 }
 #endif
+
+
+/*! Drv_SpiEraseFlashBlock32k
+ *   Erases a 32k Block in the specified serial FLASH
+ *
+ *   \param      ptFls                           Pointer to FLASH Control Block
+ *   \param      ulLinearAddress                 linear address of the sector to be erased
+ *
+ *   \return     RX_OK                           Erasure successful
+ *               Drv_SpiS_ERASURE_NOT_SUPPORTED  Erase function not supported or configured
+ */
+int Drv_SpiEraseFlashArea(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode /*new param */)
+{
+	int iResult;
+	unsigned char abCmd[4];
+	unsigned long ulDeviceAddress;
+
+	DEBUGMSG(ZONE_FUNCTION, ("+Drv_SpiEraseFlashSector(): ptFlash=0x%08x, ulLinearAddress=0x%08x\n", ptFlash, ulLinearAddress));
+
+	/* unlock write operations */
+	iResult = write_enable(ptFlash);
+	if (iResult != 0)
+	{
+		//uprintf("ERROR: Drv_SpiEraseFlashSector: DrvSflWriteEnable failed with %d.\n", iResult);
+		DBG_CALL_FAILED_VAL("write_enable", iResult)
+	}
+	else
+	{
+#if CFG_DEBUGMSG!=0
+		/* show initial status */
+		iResult = print_status(ptFlash);
+		if( iResult==0 )
+		{
+#endif
+		/* convert linear address to device address */
+		ulDeviceAddress = getDeviceAddress(ptFlash, ulLinearAddress);
+
+		/* cut off the byteoffset */
+		ulDeviceAddress &= ~((1U << ptFlash->uiSectorAdrShift) - 1U);
+
+		/* set the sector erase opcode */
+		abCmd[0] = eraseOpcode; //ptFlash->tAttributes.ucEraseSectorOpcode;
+		/* byte 1-3 is the sector address */
+		abCmd[1] = (unsigned char) ((ulDeviceAddress >> 16) & 0xff);
+		abCmd[2] = (unsigned char) ((ulDeviceAddress >> 8) & 0xff);
+		abCmd[3] = (unsigned char) (ulDeviceAddress & 0xff);
+
+		/* send command */
+		iResult = send_simple_cmd(ptFlash, abCmd, 4);
+		if (iResult != 0)
+		{
+			//uprintf("ERROR: Drv_SpiEraseFlashPage: send_simple_cmd failed with %d.\n", iResult);
+			DBG_CALL_FAILED_VAL("send_simple_cmd", iResult)
+		}
+		else
+		{
+			/* wait for operation finish */
+			iResult = wait_for_ready(ptFlash);
+			if (iResult != 0)
+			{
+				//uprintf("ERROR: Drv_SpiEraseFlashSector: wait_for_ready failed with %d.\n", iResult);
+				DBG_CALL_FAILED_VAL("wait_for_ready", iResult)
+			}
+		}
+#if CFG_DEBUGMSG!=0
+	}
+#endif
+	}
+
+	DEBUGMSG(ZONE_FUNCTION, ("-Drv_SpiEraseFlashSector(): iResult=%d.\n", iResult));
+	return iResult;
+}
+
+
 /*! Drv_SpiEraseFlashSector
  *   Erases a Sector in the specified serial FLASH
  *
@@ -894,6 +968,7 @@ int Drv_SpiEraseFlashSector(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAd
 	DEBUGMSG(ZONE_FUNCTION, ("-Drv_SpiEraseFlashSector(): iResult=%d.\n", iResult));
 	return iResult;
 }
+
 
 #if 0
 /*! Drv_SpiEraseFlashMultiSectors
