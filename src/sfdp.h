@@ -26,6 +26,24 @@
 #ifndef __SFDP_H__
 #define __SFDP_H__
 
+
+// some init things?
+typedef struct SFDP_Data{
+	char isValid;
+	int eraseOperation1;
+	char eraseInstruction1;
+	int eraseOperation2;
+	char eraseInstruction2;
+	int eraseOperation3;
+	char eraseInstruction3;
+	int eraseOperation4;
+	char eraseInstruction4;
+}SFDP_Data_t;
+
+
+extern SFDP_Data_t myData __attribute__ ((section (".data")));
+static const int testvar = 10;
+
 const SPIFLASH_ATTRIBUTES_T *sfdp_detect(SPI_FLASH_T *ptFlash);
 
 #endif  /* __SFDP_H__ */

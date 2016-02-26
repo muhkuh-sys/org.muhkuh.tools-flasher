@@ -25,6 +25,7 @@
 #include "spi_flash_types.h"
 #include "spi_flash.h"
 #include "uprintf.h"
+#include "flasher_spi.h"
 
 #if CFG_DEBUGMSG!=0
 
@@ -52,6 +53,8 @@ static unsigned long s_ulCurSettings = 0xffffffff;
 #endif /* CFG_DEBUGMSG!=0 */
 
 SPIFLASH_ATTRIBUTES_T tSfdpAttributes;
+
+SFDP_Data_t myData;
 
 static int read_sfdp(const SPI_FLASH_T *ptFlash, unsigned long ulAddress, unsigned char *pucData, size_t sizData)
 {

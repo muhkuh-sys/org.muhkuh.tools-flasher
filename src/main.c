@@ -37,6 +37,8 @@
 #include "systime.h"
 
 #include "main.h"
+#include "sfdp.h"
+
 
 /* ------------------------------------- */
 
@@ -847,12 +849,17 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 #endif
 
+
 NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTestParam)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	tFlasherInputParameter *ptAppParams;
 	OPERATION_MODE_T tOpMode;
 
+	if (!myData.isValid)
+	{
+		setSFDPData(0, 0, 0, 0, 0, 0, 0, 0, 0);
+	}
 	ptAppParams = (tFlasherInputParameter*) ptTestParam->pvInitParams;
 	tOpMode = ptAppParams->tOperationMode;
 
@@ -964,5 +971,5 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	}
 
 	return tResult;
-}
 
+}

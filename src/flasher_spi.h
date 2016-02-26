@@ -30,8 +30,13 @@
 NETX_CONSOLEAPP_RESULT_T spi_flash(CMD_PARAMETER_FLASH_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter);
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+
+
+
+
+
 void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
-void performErase(int EraseMode, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
+void performErase(int eraseMode, int eraseInstruction, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter);
 
 
 NETX_CONSOLEAPP_RESULT_T spi_read(CMD_PARAMETER_READ_T *ptParameter);
@@ -43,6 +48,9 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(CMD_PARAMETER_ISERASED_T *ptParameter, NET
 NETX_CONSOLEAPP_RESULT_T spi_getEraseArea(CMD_PARAMETER_GETERASEAREA_T *ptParameter);
 
 
+
+void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4);
+
 void newArray(unsigned char ** boolArray, long long int dimension);
 int setValue(unsigned char * array, long long index, unsigned char val);
 unsigned char getValue(unsigned char * array, long long index);
@@ -50,29 +58,10 @@ void dumpBoolArray16(unsigned char * map, int len, const char * description);
 
 void initMemory(void);
 unsigned char * getMemory(long long int sizeByte);
-long long int totalMemory;
-unsigned char * memStarPtr;
-unsigned char * memCurrentPtr;
-unsigned char * memEndPtr;
-long long int freeMem;
-
-
-void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4);
-
-
-// some init things?
-struct SFDP_Data{
-	char isValid;
-	int eraseOperation1;
-	char eraseInstruction1;
-	int eraseOperation2;
-	char eraseInstruction2;
-	int eraseOperation3;
-	char eraseInstruction3;
-	int eraseOperation4;
-	char eraseInstruction4;
-};
-
-struct SFDP_Data * myData;
+extern long long int totalMemory;
+extern unsigned char * memStarPtr;
+extern unsigned char * memCurrentPtr;
+extern unsigned char * memEndPtr;
+extern long long int freeMem;
 
 #endif	/* __FLASHER_SPI_H__ */

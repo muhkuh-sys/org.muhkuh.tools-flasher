@@ -188,11 +188,11 @@ src_netx56_nodbg = env_netx56_nodbg.SetBuildPath('targets/netx56_nodbg', 'src', 
 elf_netx56_nodbg = env_netx56_nodbg.Elf('targets/netx56_nodbg/flasher_netx56.elf', src_netx56_nodbg + objExoSpiFlashes)
 bin_netx56_nodbg = env_netx56_nodbg.ObjCopy('targets/flasher_netx56.bin', elf_netx56_nodbg)
 
-env_netx50_nodbg = env_netx50_default.Clone()
-env_netx50_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
-src_netx50_nodbg = env_netx50_nodbg.SetBuildPath('targets/netx50_nodbg', 'src', src_netx50)
-elf_netx50_nodbg = env_netx50_nodbg.Elf('targets/netx50_nodbg/flasher_netx50.elf', src_netx50_nodbg + objExoSpiFlashes)
-bin_netx50_nodbg = env_netx50_nodbg.ObjCopy('targets/flasher_netx50.bin', elf_netx50_nodbg)
+#env_netx50_nodbg = env_netx50_default.Clone()
+#env_netx50_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
+#src_netx50_nodbg = env_netx50_nodbg.SetBuildPath('targets/netx50_nodbg', 'src', src_netx50)
+#elf_netx50_nodbg = env_netx50_nodbg.Elf('targets/netx50_nodbg/flasher_netx50.elf', src_netx50_nodbg + objExoSpiFlashes)
+#bin_netx50_nodbg = env_netx50_nodbg.ObjCopy('targets/flasher_netx50.bin', elf_netx50_nodbg)
 
 env_netx10_nodbg = env_netx10_default.Clone()
 env_netx10_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
@@ -218,11 +218,11 @@ src_netx56_dbg = env_netx56_dbg.SetBuildPath('targets/netx56_dbg', 'src', src_ne
 elf_netx56_dbg = env_netx56_dbg.Elf('targets/netx56_dbg/flasher_netx56_debug.elf', src_netx56_dbg + objExoSpiFlashes)
 bin_netx56_dbg = env_netx56_dbg.ObjCopy('targets/flasher_netx56_debug.bin', elf_netx56_dbg)
 
-env_netx50_dbg = env_netx50_default.Clone()
-env_netx50_dbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
-src_netx50_dbg = env_netx50_dbg.SetBuildPath('targets/netx50_dbg', 'src', src_netx50)
-elf_netx50_dbg = env_netx50_dbg.Elf('targets/netx50_dbg/flasher_netx50_debug.elf', src_netx50_dbg + objExoSpiFlashes)
-bin_netx50_dbg = env_netx50_dbg.ObjCopy('targets/flasher_netx50_debug.bin', elf_netx50_dbg)
+#env_netx50_dbg = env_netx50_default.Clone()
+#env_netx50_dbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
+#src_netx50_dbg = env_netx50_dbg.SetBuildPath('targets/netx50_dbg', 'src', src_netx50)
+#elf_netx50_dbg = env_netx50_dbg.Elf('targets/netx50_dbg/flasher_netx50_debug.elf', src_netx50_dbg + objExoSpiFlashes)
+#bin_netx50_dbg = env_netx50_dbg.ObjCopy('targets/flasher_netx50_debug.bin', elf_netx50_dbg)
 
 env_netx10_dbg = env_netx10_default.Clone()
 env_netx10_dbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1']])
@@ -304,13 +304,13 @@ tArcList0 = env_default.ArchiveList('zip')
 tArcList0.AddFiles('netx/',
 	bin_netx500_nodbg,
 	bin_netx56_nodbg,
-	bin_netx50_nodbg,
+#	bin_netx50_nodbg,
 	bin_netx10_nodbg)
 
 tArcList0.AddFiles('netx/debug/',
 	bin_netx500_dbg,
 	bin_netx56_dbg,
-	bin_netx50_dbg,
+#	bin_netx50_dbg,
 	bin_netx10_dbg)
 
 tArcList0.AddFiles('doc/',
@@ -377,13 +377,13 @@ env_default.Version('targets/artifacts_flasher_cli.xml', 'ivy/flasher_cli/artifa
 # Copy all binaries.
 Command('targets/testbench/netx/flasher_netx500.bin', bin_netx500_nodbg, Copy("$TARGET", "$SOURCE"))
 Command('targets/testbench/netx/flasher_netx56.bin',  bin_netx56_nodbg,  Copy("$TARGET", "$SOURCE"))
-Command('targets/testbench/netx/flasher_netx50.bin',  bin_netx50_nodbg,  Copy("$TARGET", "$SOURCE"))
+#Command('targets/testbench/netx/flasher_netx50.bin',  bin_netx50_nodbg,  Copy("$TARGET", "$SOURCE"))
 Command('targets/testbench/netx/flasher_netx10.bin',  bin_netx10_nodbg,  Copy("$TARGET", "$SOURCE"))
 
 # Copy all debug binaries.
 Command('targets/testbench/netx/debug/flasher_netx500_debug.bin', bin_netx500_dbg, Copy("$TARGET", "$SOURCE"))
 Command('targets/testbench/netx/debug/flasher_netx56_debug.bin',  bin_netx56_dbg,  Copy("$TARGET", "$SOURCE"))
-Command('targets/testbench/netx/debug/flasher_netx50_debug.bin',  bin_netx50_dbg,  Copy("$TARGET", "$SOURCE"))
+#Command('targets/testbench/netx/debug/flasher_netx50_debug.bin',  bin_netx50_dbg,  Copy("$TARGET", "$SOURCE"))
 Command('targets/testbench/netx/debug/flasher_netx10_debug.bin',  bin_netx10_dbg,  Copy("$TARGET", "$SOURCE"))
 
 # Copy all LUA modules.
