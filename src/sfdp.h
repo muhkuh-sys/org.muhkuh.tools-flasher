@@ -29,15 +29,16 @@
 
 // some init things?
 typedef struct SFDP_Data{
-	char isValid;
-	int eraseOperation1;
-	char eraseInstruction1;
-	int eraseOperation2;
-	char eraseInstruction2;
-	int eraseOperation3;
-	char eraseInstruction3;
-	int eraseOperation4;
-	char eraseInstruction4;
+	unsigned char isValid;
+	unsigned int eraseOperation1;
+	unsigned char eraseInstruction1;
+	unsigned int eraseOperation2;
+	unsigned char eraseInstruction2;
+	unsigned int eraseOperation3;
+	unsigned char eraseInstruction3;
+	unsigned int eraseOperation4;
+	unsigned char eraseInstruction4;
+	SPIFLASH_ATTRIBUTES_T * pFlashDeviceInfo;
 }SFDP_Data_t;
 
 

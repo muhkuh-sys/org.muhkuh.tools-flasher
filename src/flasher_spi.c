@@ -20,6 +20,7 @@
 
 #include "flasher_spi.h"
 #include "spi_flash.h"
+
 #include "flasher_header.h"
 #include "flasher_interface.h"
 #include "progress_bar.h"
@@ -34,10 +35,11 @@ unsigned char pucSpiBuffer[SPI_BUFFER_SIZE];
 
 /*-----------MY DEFINES--------------*/
 
-#define ZERO 0xFF
-
 #define SIMULATION 0 // No real erase just simulating the algorithm
+#define DEBUG 1 // Debugging output
+#define PARANOIAMODE 0 // Checks _everything_ NOT FULLY IMPLEMENTED YET
 
+#define ZERO 0xFF
 #define FLASH_SIZE_KB 4096
 #define FLASH_SIZE_BYTE FLASH_SIZE_KB * 1024
 
@@ -47,21 +49,15 @@ unsigned char pucSpiBuffer[SPI_BUFFER_SIZE];
 #define ERASE_SECTOR_SIZE_KB 64
 #define ERASE_SECTOR_SIZE_BYTE ERASE_SECTOR_SIZE_KB * 1024
 
-#define CHUNKSIZE_BYTE 32 // How much data should be red in one turn --> must be a power of 2.
 #define BLOCKSIZE_BYTE ERASE_BLOCK_MIN_BYTE // the as Erase_min_byte because the smallest eraseoperation defines the pagesize (for my purposes)
-#define BLOCKSIZE_KB ERASE_BLOCK_MIN_KB
-#define BLOCK_COUNT FLASH_SIZE_KB / BLOCKSIZE_KB
-#define CHUNKS_PER_BLOCK BLOCKSIZE_BYTE / CHUNKSIZE_BYTE
 
 #define MAP_LENGTH FLASH_SIZE_KB / ERASE_BLOCK_MIN_KB
 
-
-
-long long int totalMemory __attribute__ ((section (".data")));
+unsigned long long int totalMemory __attribute__ ((section (".data")));
 unsigned char * memStarPtr __attribute__ ((section (".data")));
 unsigned char * memCurrentPtr __attribute__ ((section (".data")));
 unsigned char * memEndPtr __attribute__ ((section (".data")));
-long long int freeMem __attribute__ ((section (".data")));
+unsigned long long int freeMem __attribute__ ((section (".data")));
 
 // NOTE: Enum maps on eraseblock size in byte
 enum eraseOperations
@@ -601,19 +597,19 @@ NETX_CONSOLEAPP_RESULT_T spi_erase(CMD_PARAMETER_ERASE_T *ptParameter)
  */
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 {
-
-	CMD_PARAMETER_ERASE_T *x;
-	x->ptDeviceDescription = ptParameter->ptDeviceDescription;
-	x->ulEndAdr = ptParameter->ulEndAdr;
-	x->ulStartAdr = ptParameter->ulStartAdr;
-	uprintf("\n\n !!!!!BLUB!!!\n\n");
-
 	if (myData.isValid == 0)
 	{
+#if DEBUG
 		uprintf("\n\n !!!!!Ok we didn't get any SFDP information so we have to perform simple erase.!!!\n\n");
-		spi_erase(x);
+#endif
+		/**
+		 * here we can cast from frem smart_erase to erase because in fact it's the same
+		 * but watch if pucData is needed.
+		 */
+		spi_erase((CMD_PARAMETER_ERASE_T*) ptParameter);
 		return 0;
 	}
+
 	initMemory();
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	const SPI_FLASH_T *ptFlashDescription;
@@ -630,20 +626,12 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 	systime_init();
 	unsigned long tstart = systime_get_ms();
 	uprintf("SYSTIME: %d", tstart);
+
 	unsigned char * cHexMapByte = 0;
-//	if (0 != myData->eraseOperation1)
-//	{
-//		newArray(&cHexMapByte, FLASH_SIZE_BYTE / myData->eraseOperation1);
-//	}
-//	else
-//	{
-//		uprintf("\nsome bad happened\n");
-//		return 0;
-//	}
+	newArray(&cHexMapByte, FLASH_SIZE_BYTE / myData.eraseOperation1);
 
 	/* expect success */
 	tResult = NETX_CONSOLEAPP_RESULT_OK;
-
 	ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
 	ulStartAdr = ptParameter->ulStartAdr;
 	ulEndAdr = ptParameter->ulEndAdr;
@@ -652,14 +640,14 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 
 	uprintf("# Checking data...\n");
 
-	ulMaxSegSize = ERASE_BLOCK_MIN_BYTE; //???? read and analyze 4k: 1 chunk = 1 bit in matrix
+	ulMaxSegSize = ERASE_BLOCK_MIN_BYTE;
 
 	/* loop over all data */
 	ulCnt = ulStartAdr;
 	ulProgressCnt = 0;
 	progress_bar_init(ulEndAdr - ulStartAdr);
 
-	int counter = 0;
+	unsigned int counter = 0;
 	while (ulCnt < ulEndAdr)
 	{
 		/* get the next segment, limit it to 'ulMaxSegSize' */
@@ -677,15 +665,9 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 			break;
 		}
 
+#if DEBUG
 		uprintf("\n\n Reading Segment: %d\n", ulCnt);
-
-//		for (unsigned int i = 0; i < ulSegSize; i++) {
-//			//DEBUG-print of one chunk
-//			uprintf("0x%02x ", pucSpiBuffer[i]);
-//			if (i % 32 == 31)
-//				uprintf("\n");
-//		}
-
+#endif
 		ulErased = 0xffU;
 
 		pucCnt = pucSpiBuffer;
@@ -693,14 +675,14 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 		while (pucCnt < pucEnd)
 		{
 			ulErased &= *(pucCnt++);
-//			uprintf("%d = %d", pucCnt, ulErased);
 		}
 
 		if (ulErased != 0xff)
 		{
-			//cHexMapByte[counter] = 1;
-			setValue(cHexMapByte, counter, 1); //BUG
+			setValue(cHexMapByte, counter, 1);
+#if DEBUG
 			uprintf("Seg: %d is Dirty\n", counter);
+#endif
 		}
 
 		/* next segment */
@@ -714,20 +696,10 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(CMD_PARAMETER_SMART_ERASE_T *ptParamete
 	}
 
 	progress_bar_finalize();
-
-//	uprintf("\n\nHEXMap:\n");
-//	for (unsigned int i = 0; i < MAP_LENGTH; i++)
-//	{
-//		//DEBUG-print of one chunk
-//		unsigned char tmp = getValue(cHexMapByte, i);
-//		uprintf("%d", tmp);
-//		if (i % 32 == 31)
-//			uprintf("\n%d: ", i);
-//	}
-
-	dumpBoolArray16(cHexMapByte, FLASH_SIZE_BYTE / myData.eraseOperation1, "First Map");
-
-	analyzeMap(cHexMapByte, FLASH_SIZE_BYTE / myData.eraseOperation1, ptParameter);
+#if DEBUG
+	dumpBoolArray2(cHexMapByte, FLASH_SIZE_BYTE / myData.eraseOperation1, "First Map");
+#endif
+	analyzeMap(cHexMapByte, ptParameter);
 
 	unsigned long end = systime_get_ms();
 	uprintf("\n\nThe alg took %d mSecs. \n\n\n", end - tstart);
@@ -991,52 +963,34 @@ NETX_CONSOLEAPP_RESULT_T spi_getEraseArea(CMD_PARAMETER_GETERASEAREA_T *ptParame
 /**
  * first stupid approach:
  */
-void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
+void analyzeMap(unsigned char * cHexMap, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 {
-//	bool c64KMap[FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB]; // = malloc(FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
-//	memset(c64KMap, 0, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
-
-//	done above
-//	if (myData.eraseOperation1 != 0)
-//	{
-//		unsigned char * eraseMap1 = 0;
-//		newArray(&eraseMap1, FLASH_SIZE_BYTE / sfdp_Data.eraseInstruction1);
-//	}
-//	else
-//	{
-//		uprintf("\nsome bad happend\n");
-//		return;
-//	}
-
 	unsigned char * eraseMap2 = 0;
 	unsigned char * eraseMap3 = 0;
 	unsigned char * eraseMap4 = 0;
-	int iCounter = 0;
+	unsigned int iCounter = 0;
 
 	if (myData.eraseOperation2 != 0)
 	{
+		//assume flash space is dividable by eraseOperation
 		newArray(&eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2);
-//		iCounter = 0;
 
-		int multiplicator = myData.eraseOperation2 / myData.eraseOperation1;
+		unsigned int multiplicator = myData.eraseOperation2 / myData.eraseOperation1;
 
-		for (int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation2; i++)
+		for (unsigned int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation2; i++)
 		{
 			/* Check the first 16 4K Blocks (= 64k Sector) if set*/
-			for (int j = 0; j < multiplicator; j++)
+			for (unsigned int j = 0; j < multiplicator; j++)
 			{
-//				if (cHexMap[j + i * multiplicator] == 1)
 				if (getValue(cHexMap, j + i * multiplicator) == 1)
 				{
 					iCounter++;
 				}
-				if (iCounter > multiplicator / 2) // this must be more dynamic
-				{ // than its better to perform sec err
-				  //				c64KMap[i] = 1;
+				if (iCounter > multiplicator / 2) // todo comment
+				{ // then its better to perform sec erase
 					setValue(eraseMap2, i, 1);
-					for (int k = 0; k < multiplicator; k++)
+					for (unsigned int k = 0; k < multiplicator; k++)
 					{
-						//					cHexMap[k + i * 16] = 0;
 						setValue(cHexMap, k + i * multiplicator, 0);
 					}
 
@@ -1046,39 +1000,34 @@ void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERA
 			}
 			iCounter = 0;
 		}
-		dumpBoolArray16(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Adapted second Map: ");
-		dumpBoolArray16(cHexMap, cHexMapLen, "Adapted first map: ");
-
+#if DEBUG == 1
+		dumpBoolArray2(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Adapted second Map: ");
+		dumpBoolArray2(cHexMap, FLASH_SIZE_BYTE / myData.eraseOperation1, "Adapted first map: ");
+#endif
 	}
-//	else
-//	{
-//		return;
-//	}
-	int iCounter2 = 0;
+
+	unsigned int iCounter2 = 0;
 
 	if (myData.eraseOperation3 != 0)
 	{
 		newArray(&eraseMap3, FLASH_SIZE_BYTE / myData.eraseOperation3);
 
-		int multiplicator = myData.eraseOperation3 / myData.eraseOperation2;
+		unsigned int multiplicator = myData.eraseOperation3 / myData.eraseOperation2;
 
-//		iCounter = 0;
-		for (int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation3; i++)
+		for (unsigned int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation3; i++)
 		{
 			/* Check the first 16 4K Blocks (= 64k Sector) if set*/
-			for (int j = 0; j < multiplicator; j++)
+			for (unsigned int j = 0; j < multiplicator; j++)
 			{
 				if (getValue(eraseMap2, j + i * multiplicator) == 1)
 				{
 					iCounter2++;
 				}
-				if (iCounter2 > multiplicator / 2) // this must be more dynamic
-				{ // than its better to perform sec err
-				  //				c64KMap[i] = 1;
+				if (iCounter2 > multiplicator / 2U) // this must be more dynamic
+				{ // then its better to perform sec err
 					setValue(eraseMap3, i, 1);
-					for (int k = 0; k < multiplicator; k++)
+					for (unsigned int k = 0; k < multiplicator; k++)
 					{
-						//					cHexMap[k + i * 16] = 0;
 						setValue(eraseMap2, k + i * multiplicator, 0);
 					}
 
@@ -1089,26 +1038,23 @@ void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERA
 			iCounter2 = 0;
 
 		}
-		dumpBoolArray16(eraseMap3, FLASH_SIZE_BYTE / myData.eraseOperation3, "Third Map: ");
-		dumpBoolArray16(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Adapted second Map: ");
-		dumpBoolArray16(cHexMap, cHexMapLen, "Adapted first map: ");
+#if DEBUG == 1
+		dumpBoolArray2(eraseMap3, FLASH_SIZE_BYTE / myData.eraseOperation3, "Third Map: ");
+		dumpBoolArray2(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Adapted second Map: ");
+		dumpBoolArray2(cHexMap, FLASH_SIZE_BYTE / myData.eraseOperation1, "Adapted first map: ");
+#endif
 	}
-//	else
-//	{
-//		return;
-//	}
 
 	if (myData.eraseOperation4 != 0)
 	{
 		newArray(&eraseMap4, FLASH_SIZE_BYTE / myData.eraseOperation4);
 
-		int multiplicator = myData.eraseOperation3 / myData.eraseOperation2;
+		unsigned int multiplicator = myData.eraseOperation3 / myData.eraseOperation2;
 
-//		iCounter = 0;
-		for (int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation4; i++)
+		for (unsigned int i = 0; i < FLASH_SIZE_BYTE / myData.eraseOperation4; i++)
 		{
 			/* Check the first 16 4K Blocks (= 64k Sector) if set*/
-			for (int j = 0; j < multiplicator; j++)
+			for (unsigned int j = 0; j < multiplicator; j++)
 			{
 				if (getValue(eraseMap3, j + i * multiplicator) == 1)
 				{
@@ -1116,117 +1062,52 @@ void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERA
 				}
 				if (iCounter > 8) // this must be more dynamic
 				{ // than its better to perform sec err
-				  //				c64KMap[i] = 1;
 					setValue(eraseMap4, i, 1);
-					for (int k = 0; k < multiplicator; k++)
+					for (unsigned int k = 0; k < multiplicator; k++)
 					{
-						//					cHexMap[k + i * 16] = 0;
 						setValue(eraseMap3, k + i * multiplicator, 0);
 					}
-
 					iCounter = 0;
 					break;
 				}
 			}
 			iCounter = 0;
-
 		}
-		dumpBoolArray16(eraseMap4, FLASH_SIZE_BYTE / myData.eraseOperation4, "Fourth Map: ");
-		dumpBoolArray16(eraseMap3, FLASH_SIZE_BYTE / myData.eraseOperation3, "Third Map: ");
-		dumpBoolArray16(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Second Map: ");
-		dumpBoolArray16(cHexMap, cHexMapLen, "First Map 2: ");
+#if DEBUG == 1
+		dumpBoolArray2(eraseMap4, FLASH_SIZE_BYTE / myData.eraseOperation4, "Fourth Map: ");
+		dumpBoolArray2(eraseMap3, FLASH_SIZE_BYTE / myData.eraseOperation3, "Third Map: ");
+		dumpBoolArray2(eraseMap2, FLASH_SIZE_BYTE / myData.eraseOperation2, "Second Map: ");
+		dumpBoolArray2(cHexMap, FLASH_SIZE_BYTE / myData.eraseOperation1, "First Map 2: ");
+#endif
 	}
-//	else
-//	{
-//		return;
-//	}
 
-//	unsigned char * c64KMap = NULL;
-//	newArray(&c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB);
-//	dumpBoolArray16(c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB, "FRESH Map:");
-//
-//	int iCounter = 0;
-//	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
-//	{
-//		/* Check the first 16 4K Blocks (= 64k Sector) if set*/
-//		for (int j = 0; j < 16; j++)
-//		{
-//			if (cHexMap[j + i * 16] == 1)
-//			{
-//				iCounter++;
-//			}
-//			if (iCounter > 8)
-//			{ // than its better to perform sec err
-////				c64KMap[i] = 1;
-//				setValue(c64KMap, i, 1);
-//				for (int k = 0; k < 16; k++)
-//				{
-////					cHexMap[k + i * 16] = 0;
-//					setValue(cHexMap, k + i * 16, 0);
-//				}
-//
-//				iCounter = 0;
-//				break;
-//			}
-//		}
-//		iCounter = 0;
-//	}
-
-	/* UNTESTED --> WATCH WARNING*/
-
-//	dumpBoolArray16(cHexMap, MAP_LENGTH, "4KMap");
-//	uprintf("\n-----------------------------\n");
-//	dumpBoolArray16(c64KMap, FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB, "64KMap");
-//	uprintf("\n4KMap\n");
-//	for (int i = 0; i < MAP_LENGTH; i++)
-//	{
-////		bool * tmp = cHexMap + i;
-//		unsigned char tmp = getValue(cHexMap, i); //????
-//		uprintf("%d ", tmp);
-//		if (i % 16 == 15)
-//		{
-//			uprintf("\n");
-//		}
-//	}
-//
-//	uprintf("\n64KMap\n");
-//	for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
-//	{
-//		unsigned char tmp = getValue(c64KMap, i);
-//		uprintf("%d ", tmp);
-//		if (i % 16 == 15)
-//		{
-//			uprintf("\n");
-//		}
-//
-//	}
 //perform erase
 	if (myData.eraseOperation1 != 0)
 	{
 
-		for (int i = 0; i < MAP_LENGTH; i++)
+		for (unsigned long i = 0; i < MAP_LENGTH; i++)
 		{
-			if (1 == getValue(cHexMap, i))
+			if (1U == getValue(cHexMap, i))
 			{
-				performErase(myData.eraseOperation1, myData.eraseInstruction1, (unsigned long) i, ptParameter);
+				performErase(myData.eraseOperation1, myData.eraseInstruction1, i, ptParameter);
 			}
 		}
 	}
 	if (myData.eraseOperation2 != 0)
 	{
-		for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
+		for (unsigned long i = 0; i < myData.pFlashDeviceInfo->ulSize / myData.eraseOperation2; i++)
 		{
-			if (1 == getValue(eraseMap2, i))
+			if (1U == getValue(eraseMap2, i))
 			{
-				performErase(myData.eraseOperation2, myData.eraseInstruction2, (unsigned long) i, ptParameter);
+				performErase(myData.eraseOperation2, myData.eraseInstruction2, i, ptParameter);
 			}
 		}
 	}
 	if (myData.eraseOperation3 != 0)
 	{
-		for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
+		for (unsigned long i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
 		{
-			if (1 == getValue(eraseMap3, i))
+			if (1U == getValue(eraseMap3, i))
 			{
 				performErase(myData.eraseOperation3, myData.eraseInstruction3, (unsigned long) i, ptParameter);
 			}
@@ -1234,9 +1115,9 @@ void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERA
 	}
 	if (myData.eraseOperation4 != 0)
 	{
-		for (int i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
+		for (unsigned long i = 0; i < FLASH_SIZE_KB / ERASE_SECTOR_SIZE_KB; i++)
 		{
-			if (1 == getValue(eraseMap4, i))
+			if (1U == getValue(eraseMap4, i))
 			{
 				performErase(myData.eraseOperation4, myData.eraseInstruction4, (unsigned long) i, ptParameter);
 			}
@@ -1247,7 +1128,7 @@ void analyzeMap(unsigned char * cHexMap, int cHexMapLen, CMD_PARAMETER_SMART_ERA
 /**
  *
  */
-void performErase(int eraseMode, int eraseInstruction, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
+void performErase(unsigned int eraseMode, unsigned char eraseInstruction, unsigned long startSector, CMD_PARAMETER_SMART_ERASE_T *ptParameter)
 {
 	unsigned long errMem = 0;
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -1255,24 +1136,19 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 	const SPI_FLASH_T *ptFlashDescription;
 	unsigned long ulStartAdr;
 	unsigned long ulEndAdr;
-//	unsigned long ulCnt;
-//	unsigned char *pucCnt;
-//	unsigned char *pucEnd;
-//	unsigned long ulSegSize, ulMaxSegSize;
-//	unsigned long ulProgressCnt;
 	int iResult;
-//	unsigned long ulErased;
 
 	/* erase the block */
 	unsigned long ulSectorSize;
-	unsigned long ulSectorOffset;
 	unsigned long ulAddress;
 
 	switch (eraseMode)
 	{
 	case PAGE_ERASE_256:
+#if DEBUG
 		uprintf("\nok we're asked to erase 256B at block %d ", startSector);
 		uprintf("this block starts at %d in real mem", errMem);
+#endif
 		errMem = startSector * BLOCKSIZE_BYTE;
 
 		uprintf("Erase at: %d", errMem);
@@ -1281,8 +1157,8 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-		ulEndAdr = errMem + ERASE_BLOCK_MIN_BYTE; //ptParameter->ulEndAdr;
+		ulStartAdr = errMem;
+		ulEndAdr = errMem + ERASE_BLOCK_MIN_BYTE;
 
 		/* Assume success. */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
@@ -1291,29 +1167,9 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		ulSectorSize = ptFlashDescription->ulSectorSize;
 		/* Get the offset in the first sector. */
 
-		//	THIS MUST BE AVOIDED BY INPUT DATA
-		ulSectorOffset = ulStartAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the start address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-		//		ulStartAdr -= ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulStartAdr);
-		//	}
-		//	/* Get the offset in the last sector. */
-		ulSectorOffset = ulEndAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the end address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-		//		ulEndAdr += ulSectorSize - ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulEndAdr);
-		//	}
-
 		/* Show the start and the end address of the erase area. */
 		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
 
-		/* Erase the complete area. Should be one iteration if 4k erase is supported. */
 		ulAddress = ulStartAdr;
 		while (ulAddress < ulEndAdr)
 		{
@@ -1340,8 +1196,10 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 
 		break;
 	case PAGE_ERASE_512:
+#if DEBUG
 		uprintf("\nok we're asked to erase 512B at block %d ", startSector);
 		uprintf("this block starts at %d in real mem", errMem);
+#endif
 		errMem = startSector * BLOCKSIZE_BYTE;
 
 		uprintf("Erase at: %d", errMem);
@@ -1350,8 +1208,8 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-		ulEndAdr = errMem + ERASE_BLOCK_MIN_BYTE; //ptParameter->ulEndAdr;
+		ulStartAdr = errMem;
+		ulEndAdr = errMem + ERASE_BLOCK_MIN_BYTE;
 
 		/* Assume success. */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
@@ -1359,25 +1217,6 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		/* Get the sector size. */
 		ulSectorSize = ptFlashDescription->ulSectorSize;
 		/* Get the offset in the first sector. */
-
-		//	THIS MUST BE AVOIDED BY INPUT DATA
-		ulSectorOffset = ulStartAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the start address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-		//		ulStartAdr -= ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulStartAdr);
-		//	}
-		//	/* Get the offset in the last sector. */
-		ulSectorOffset = ulEndAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the end address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-		//		ulEndAdr += ulSectorSize - ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulEndAdr);
-		//	}
 
 		/* Show the start and the end address of the erase area. */
 		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
@@ -1399,7 +1238,7 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 			}
 
 			/* Move to the next segment. */
-			ulAddress += PAGE_ERASE_512; //ulSectorSize;
+			ulAddress += PAGE_ERASE_512;
 		}
 
 		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
@@ -1408,62 +1247,36 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		}
 
 		break;
-		//this is old but working
 	case BLOCK_ERASE_4K:
+#if DEBUG
 		uprintf("\nok we're asked to erase 4k at block %d ", startSector);
 		uprintf("this block starts at %d in real mem", errMem);
+#endif
 		errMem = startSector * BLOCKSIZE_BYTE;
 
 		uprintf("Erase at: %d", errMem);
 
-		//--->
 		/* expect success */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-		ulEndAdr = errMem + BLOCK_ERASE_4K; //this comes out of enum ok???
+		ulStartAdr = errMem;
+		ulEndAdr = errMem + BLOCK_ERASE_4K;
 
-		/* erase the block */
-		//		unsigned long ulSectorSize;
-		//		unsigned long ulSectorOffset;
-		//		unsigned long ulAddress;
 		/* Assume success. */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		/* Get the sector size. */
 		ulSectorSize = ptFlashDescription->ulSectorSize;
-		/* Get the offset in the first sector. */
-
-		//	THIS MUST BE AVOIDED BY INPUT DATA <--- NO IT ISN'T???
-		ulSectorOffset = ulStartAdr % ulSectorSize;
-		if (ulSectorOffset != 0)
-		{
-			uprintf("Warning: the start address is not aligned to a sector border!\n");
-			uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-			ulStartAdr -= ulSectorOffset;
-			uprintf(" to 0x%08x.\n", ulStartAdr);
-		}
-		/* Get the offset in the last sector. */
-		ulSectorOffset = ulEndAdr % ulSectorSize;
-		if (ulSectorOffset != 0)
-		{
-			uprintf("Warning: the end address is not aligned to a sector border!\n");
-			uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-			ulEndAdr += ulSectorSize - ulSectorOffset;
-			uprintf(" to 0x%08x.\n", ulEndAdr);
-		}
-
 		/* Show the start and the end address of the erase area. */
+#if DEBUG
 		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
-
+#endif
 		/* Erase the complete area. Should be 1 iterations*/
 		ulAddress = ulStartAdr;
 		while (ulAddress < ulEndAdr)
 		{
-			/**
-			 * Here we have to change to Drv_SpiEraseFlashPage which is declared but not implemented resp. defined out
-			 */
+
 #if SIMULATION == 0
 			iResult = Drv_SpiEraseFlashSector(ptFlashDescription, ulAddress);
 #elif SIMULATION == 1
@@ -1480,82 +1293,18 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 			ulAddress += ulSectorSize;
 		}
 
-		/***************/
 		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
 		{
 			uprintf("! erase error\n");
 		}
 
-		//<---
-//		uprintf("\nok we're asked to erase 4k at block %d ", startSector);
-//		uprintf("this block starts at %d in real mem", errMem);
-//		errMem = startSector * BLOCKSIZE_BYTE;
-//
-//		uprintf("Erase at: %d", errMem);
-//
-//		/* expect success */
-//		tResult = NETX_CONSOLEAPP_RESULT_OK;
-//
-//		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-//		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-//		ulEndAdr = errMem + ERASE_BLOCK_MIN_BYTE; //ptParameter->ulEndAdr;
-//
-//		/* Assume success. */
-//		tResult = NETX_CONSOLEAPP_RESULT_OK;
-//
-//		/* Get the sector size. */
-//		ulSectorSize = ptFlashDescription->ulSectorSize;
-//		/* Get the offset in the first sector. */
-//
-//		//	THIS MUST BE AVOIDED BY INPUT DATA
-//		ulSectorOffset = ulStartAdr % ulSectorSize;
-//		//	if (ulSectorOffset != 0) {
-//		//		uprintf(
-//		//				"Warning: the start address is not aligned to a sector border!\n");
-//		//		uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-//		//		ulStartAdr -= ulSectorOffset;
-//		//		uprintf(" to 0x%08x.\n", ulStartAdr);
-//		//	}
-//		//	/* Get the offset in the last sector. */
-//		ulSectorOffset = ulEndAdr % ulSectorSize;
-//		//	if (ulSectorOffset != 0) {
-//		//		uprintf(
-//		//				"Warning: the end address is not aligned to a sector border!\n");
-//		//		uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-//		//		ulEndAdr += ulSectorSize - ulSectorOffset;
-//		//		uprintf(" to 0x%08x.\n", ulEndAdr);
-//		//	}
-//
-//		/* Show the start and the end address of the erase area. */
-//		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
-//
-//		/* Erase the complete area. Should be one iteration if 4k erase is supported. */
-//		ulAddress = ulStartAdr;
-//		while (ulAddress < ulEndAdr)
-//		{
-//			iResult = 0; //Drv_SpiEraseFlashArea(/*opcode*/, ptFlashDescription, ulAddress);
-//			if (iResult != 0)
-//			{
-//				uprintf("! erase failed at address 0x%08x\n", ulAddress);
-//				tResult = NETX_CONSOLEAPP_RESULT_ERROR;
-//				break;
-//			}
-//
-//			/* Move to the next segment. */
-//			ulAddress += ulSectorSize;
-//		}
-//
-//		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
-//		{
-//			uprintf("! erase error\n");
-//		}
-//
-//		//<---
 		break;
 	case BLOCK_ERASE_32K:
+#if DEBUG
 		uprintf("\nok we're asked to erase 32K at block %d ", startSector);
 		uprintf("this block starts at %d in real mem", errMem);
-		errMem = startSector * 32 * 1024;
+#endif
+		errMem = startSector * BLOCK_ERASE_32K;
 
 		uprintf("Erase at: %d", errMem);
 
@@ -1563,38 +1312,16 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-		ulEndAdr = errMem + 32 * 1024; //ptParameter->ulEndAdr;
+		ulStartAdr = errMem;
+		ulEndAdr = errMem + BLOCK_ERASE_32K;
 
 		/* Assume success. */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
-		/* Get the sector size. */
-		ulSectorSize = ptFlashDescription->ulSectorSize;
-		/* Get the offset in the first sector. */
-
-		//	THIS MUST BE AVOIDED BY INPUT DATA
-		ulSectorOffset = ulStartAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the start address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-		//		ulStartAdr -= ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulStartAdr);
-		//	}
-		//	/* Get the offset in the last sector. */
-		ulSectorOffset = ulEndAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the end address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-		//		ulEndAdr += ulSectorSize - ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulEndAdr);
-		//	}
-
 		/* Show the start and the end address of the erase area. */
+#if DEBUG
 		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
-
+#endif
 		/* Erase the complete area. Should be one iteration if 4k erase is supported. */
 		ulAddress = ulStartAdr;
 		while (ulAddress < ulEndAdr)
@@ -1612,7 +1339,7 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 			}
 
 			/* Move to the next segment. */
-			ulAddress += BLOCK_ERASE_32K;		//ulSectorSize;
+			ulAddress += BLOCK_ERASE_32K;
 		}
 
 		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
@@ -1622,60 +1349,35 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 
 		break;
 	case SECTOR_ERASE_64K:
-
+#if DEBUG
 		uprintf("\nok we're asked to erase 64k at block %d ", startSector);
 		uprintf("this block starts at %d in real mem", errMem);
-		errMem = startSector * ERASE_SECTOR_SIZE_BYTE;
-//		uprintf("Erase at: %d\n\n!!!NOTE THAT THIS IS NOT WORKING CORRECTLY AT THE MOMENT!!!", errMem);
+#endif
+		errMem = startSector * ERASE_SECTOR_SIZE_BYTE; // UND DAS HIER ist redundant
 
-		//--->
 		/* expect success */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		ptFlashDescription = &(ptParameter->ptDeviceDescription->uInfo.tSpiInfo);
-		ulStartAdr = errMem; //ptParameter->ulStartAdr;
-		ulEndAdr = errMem + ERASE_SECTOR_SIZE_BYTE; //ptParameter->ulEndAdr;
+		ulStartAdr = errMem;
+		ulEndAdr = errMem + ERASE_SECTOR_SIZE_BYTE;
 
-		/* erase the block */
-//		unsigned long ulSectorSize;
-//		unsigned long ulSectorOffset;
-//		unsigned long ulAddress;
 		/* Assume success. */
 		tResult = NETX_CONSOLEAPP_RESULT_OK;
 
 		/* Get the sector size. */
 		ulSectorSize = ptFlashDescription->ulSectorSize;
-		/* Get the offset in the first sector. */
-
-		//	THIS MUST BE AVOIDED BY INPUT DATA
-		ulSectorOffset = ulStartAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the start address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the start address from 0x%08x", ulStartAdr);
-		//		ulStartAdr -= ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulStartAdr);
-		//	}
-		//	/* Get the offset in the last sector. */
-		ulSectorOffset = ulEndAdr % ulSectorSize;
-		//	if (ulSectorOffset != 0) {
-		//		uprintf(
-		//				"Warning: the end address is not aligned to a sector border!\n");
-		//		uprintf("Warning: changing the end address from 0x%08x", ulEndAdr);
-		//		ulEndAdr += ulSectorSize - ulSectorOffset;
-		//		uprintf(" to 0x%08x.\n", ulEndAdr);
-		//	}
 
 		/* Show the start and the end address of the erase area. */
+#if DEBUG
 		uprintf(". erase 0x%08x - 0x%08x\n", ulStartAdr, ulEndAdr);
+#endif
 
-		/* Erase the complete area. Should be 1 iterations*/
+		/* Erase the complete area.*/
 		ulAddress = ulStartAdr;
 		while (ulAddress < ulEndAdr)
 		{
-			/**
-			 * Here we have to change to Drv_SpiEraseFlashPage which is declared but not implemented resp. defined out
-			 */
+
 #if SIMULATION == 0
 			iResult = Drv_SpiEraseFlashArea(ptFlashDescription, ulAddress, (unsigned char) eraseInstruction);
 #elif SIMULATION == 1
@@ -1689,28 +1391,22 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 			}
 
 			/* Move to the next segment. */
-			ulAddress += SECTOR_ERASE_64K; //ulSectorSize;
+			ulAddress += SECTOR_ERASE_64K;
 		}
 
-		/***************/
 		if (tResult != NETX_CONSOLEAPP_RESULT_OK)
 		{
 			uprintf("! erase error\n");
 		}
 
-		//<---
-
 		break;
 	case CHIP_ERASE:
+#if DEBUG
 		uprintf("\nok we're asked to erase the whole chip");
 		uprintf("Erase at: %d", errMem);
+#endif
 		uprintf("\n\n\n!!!!!!!!!!!!!!!!!!!!!\n!!! NOT SUPPORTED !!!\n!!!!!!!!!!!!!!!!!!!!!\n\n\n", errMem);
 
-//
-//		for (int i = 0; i < FLASH_SIZE_BYTE; i++) {
-////			printf("\nStep: %d: Erasing: %d\n", i, errMem + i);
-////			cDummyMapByte[i] = ZERO;
-//		}
 		break;
 	default:
 		break;
@@ -1719,16 +1415,18 @@ void performErase(int eraseMode, int eraseInstruction, unsigned long startSector
 
 void initMemory()
 {
-	totalMemory = flasher_version.pucBuffer_End - flasher_version.pucBuffer_Data;
+	totalMemory = (unsigned) (flasher_version.pucBuffer_End - flasher_version.pucBuffer_Data); //THIS MUST (!) BE UNSIGNED --> SANATY CHECKING?
 	memStarPtr = flasher_version.pucBuffer_Data;
 	memCurrentPtr = memStarPtr;
 	freeMem = totalMemory;
 	memEndPtr = flasher_version.pucBuffer_End;
+#if DEBUG
 	uprintf("---\n- DEBUGGING: \n- Total Mem: %d\n- StartPtr: %d", totalMemory, memStarPtr);
+#endif
 
 }
 
-unsigned char * getMemory(long long int sizeByte)
+unsigned char * getMemory(unsigned long long int sizeByte)
 {
 	unsigned char * retPtr;
 	if (sizeByte > freeMem)
@@ -1742,35 +1440,45 @@ unsigned char * getMemory(long long int sizeByte)
 		memCurrentPtr = memCurrentPtr + sizeByte;
 		freeMem = freeMem - sizeByte;
 	}
+#if DEBUG
 	uprintf("---\n- DEBUGGING: \n- Allocated Mem size: %d\n- Free Mem size: %d\n- StartPtr: %d", memCurrentPtr - retPtr, freeMem, retPtr);
+#endif
 	return retPtr;
 }
 
-void newArray(unsigned char ** boolArray, long long int dimension)
+void newArray(unsigned char ** boolArray, unsigned long long int dimension)
 {
 	if (dimension % 8 != 0)
 		dimension = dimension + 8;
 
-	*boolArray = getMemory(dimension); // = (unsigned char*) malloc(dimension / 8);
-//memset(boolArray, 0, ((size_t) dimension) / 8);
-	for (int i = 0; i < dimension; i++)
+	*boolArray = getMemory(dimension);
+
+	for (unsigned int i = 0; i < dimension; i++)
 	{
 		setValue(*boolArray, i, 0);
 	}
+
+#if PARANOIAMODE
+	for (unsigned int i = 0; i < dimension; i++)
+	{
+		if(getValue(*boolArray, i) != 0)
+		uprintf("\n\n!!!Mem Dirty!!!\n\n");
+	}
+#endif
 }
 
 /*
  * some sanaty checking should be done
  */
-int setValue(unsigned char * array, long long int index, unsigned char val)
+int setValue(unsigned char * array, unsigned long long int index, unsigned char val)
 {
-	long long int indexByte = index / 8;
-	long long int indexBit = index % 8;
-	long long int x = array[indexByte]; //??? needed
+	unsigned long long int indexByte = index / 8U;
+	unsigned long long int indexBit = index % 8U;
+	unsigned long long int x = array[indexByte]; //??? needed
 
 	if (val == 0)
 	{
-		x = x & ~(1 << indexBit);
+		x = x & ~(1U << indexBit);
 	}
 	else if (val == 1)
 	{
@@ -1785,30 +1493,30 @@ int setValue(unsigned char * array, long long int index, unsigned char val)
 	return 0;
 }
 
-unsigned char getValue(unsigned char * array, long long int index)
+unsigned char getValue(unsigned char * array, unsigned long long int index)
 {
-	long long int indexByte = index / 8;
-	long long int indexBit = index % 8;
-	long long int a = array[indexByte];
-	long long int b = a & (1 << indexBit);
-	long long int c = b >> indexBit;
+	unsigned long long int indexByte = index / 8;
+	unsigned long long int indexBit = index % 8;
+	unsigned long long int a = array[indexByte];
+	unsigned long long int b = a & (1 << indexBit);
+	unsigned long long int c = b >> indexBit;
 	unsigned char yx = (unsigned char) c;
 
 	return yx;
 }
 
-void dumpBoolArray16(unsigned char * map, int len, const char * description)
+void dumpBoolArray16(unsigned char * map, unsigned int len, const char * description)
 {
 	uprintf("\n%s\n0 \t", description);
 
-	for (int i = 0; i < len; i++)
+	for (unsigned int i = 0; i < len / 8; i++)
 	{
-		uprintf("0x%02x ", getValue(map, i));
+		uprintf("0x%02x ", map[i]);
 		if (i % 16 == 15)
 		{
 			if (i % 16 == 16 - 1)
 			{
-				uprintf("\n%02x\t", i + 1);
+				uprintf("\n%02x\t", (i + 1) * 8);
 
 			}
 			else
@@ -1820,15 +1528,27 @@ void dumpBoolArray16(unsigned char * map, int len, const char * description)
 	uprintf("\n");
 }
 
+void dumpBoolArray2(unsigned char * map, unsigned int len, const char * description)
+{
+	uprintf("\n%s\n", description);
+
+	for (unsigned int i = 0; i < len; i++)
+	{
+		uprintf("%d", getValue(map, i));
+		if (i % 16 == 15)
+		{
+			uprintf("\n");
+		}
+	}
+	uprintf("\n");
+}
+
 /*
  * Goal: get structured information about the erase operations supported by the connected memory.
  */
-void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, char eraseOperation2, char eraseInstruction2, char eraseOperation3, char eraseInstruction3, char eraseOperation4, char eraseInstruction4)
+void setSFDPData(unsigned char isValid, unsigned int eraseOperation1, unsigned char eraseInstruction1, unsigned int eraseOperation2, unsigned char eraseInstruction2, unsigned int eraseOperation3, unsigned char eraseInstruction3,
+		unsigned int eraseOperation4, unsigned char eraseInstruction4, SPIFLASH_ATTRIBUTES_T * flashAttributes)
 {
-//	if(myData == 0){
-//		struct SFDP_Data * myData;
-//
-//	}
 	myData.isValid = isValid;
 
 	myData.eraseOperation1 = 0;
@@ -1840,25 +1560,24 @@ void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, cha
 	myData.eraseOperation4 = 0;
 	myData.eraseInstruction4 = 0;
 
-
 	if (eraseOperation1 != 0)
 	{
-		myData.eraseOperation1 = 1 << eraseOperation1;
+		myData.eraseOperation1 = 1U << eraseOperation1;
 		myData.eraseInstruction1 = eraseInstruction1;
 	}
 	if (eraseOperation2 != 0)
 	{
-		myData.eraseOperation2 = 1 << eraseOperation2;
+		myData.eraseOperation2 = 1U << eraseOperation2;
 		myData.eraseInstruction2 = eraseInstruction2;
 	}
 	if (eraseOperation3 != 0)
 	{
-		myData.eraseOperation3 = 1 << eraseOperation3;
+		myData.eraseOperation3 = 1U << eraseOperation3;
 		myData.eraseInstruction3 = eraseInstruction3;
 	}
 	if (eraseOperation4 != 0)
 	{
-		myData.eraseOperation4 = 1 << eraseOperation4;
+		myData.eraseOperation4 = 1U << eraseOperation4;
 		myData.eraseInstruction4 = eraseInstruction4;
 	}
 
@@ -1874,9 +1593,9 @@ void setSFDPData(char isValid, char eraseOperation1, char eraseInstruction1, cha
 	else
 	{
 		uprintf("\n| SFDP Data is invalid performing normal erase\t|");
-		//...
 	}
 	uprintf("\n----------------------------------\n\n");
-}
 
+	myData.pFlashDeviceInfo = flashAttributes;
+}
 

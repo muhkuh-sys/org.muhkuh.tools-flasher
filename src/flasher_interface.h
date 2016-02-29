@@ -92,16 +92,13 @@ typedef struct CMD_PARAMETER_ERASE_STRUCT
 	unsigned long ulEndAdr;
 } CMD_PARAMETER_ERASE_T;
 
-/**
- * Added Smart Erase struct
- * Is not equal to erase struct but equal to read strucz
- */
+/* Actually we don't need the pucData buffer */
 typedef struct CMD_PARAMETER_SMART_ERASE_STRUCT
 {
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
 	unsigned long ulStartAdr;
 	unsigned long ulEndAdr;
-	unsigned char *pucData;
+//	unsigned char *pucData;
 } CMD_PARAMETER_SMART_ERASE_T;
 
 

@@ -137,22 +137,10 @@ static int read_jedec_flash_parameter(SPI_FLASH_T *ptFlash, unsigned long ulAddr
 	}
 	else
 	{
-		// debuggging things get out later
-//		uprintf("\n\n\n***************************************");
-//		uprintf("\n***  HERE IT'S GETTING INTERESTING  ***");
-//		uprintf("\n***************************************\n\n");
+
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
-//
-//		uprintf("\n***  DWORD 7: %d                    ***", uSfdpData.aul[7]);
-//
-//		uprintf("\n***  DWORD 8: %d                    ***", uSfdpData.aul[8]);
-//
-//		uprintf("\n***  ERASE OP1: %x, INST: %x        ***", uSfdpData.auc[28], uSfdpData.auc[29]);
-//		uprintf("\n***  ERASE OP2: %x, INST: %x        ***", uSfdpData.auc[30], uSfdpData.auc[31]);
-//		uprintf("\n***  ERASE OP3: %x, INST: %x        ***", uSfdpData.auc[32], uSfdpData.auc[33]);
-//		uprintf("\n***  ERASE OP4: %x, INST: %x        ***\n\n", uSfdpData.auc[34], uSfdpData.auc[35]);
-		// flasherSPI.setEraseTable(valid?, information);
-		setSFDPData(1, uSfdpData.auc[28], uSfdpData.auc[29], uSfdpData.auc[30], uSfdpData.auc[31], uSfdpData.auc[32], uSfdpData.auc[33], uSfdpData.auc[34], uSfdpData.auc[35]);
+
+		setSFDPData(1, uSfdpData.auc[28], uSfdpData.auc[29], uSfdpData.auc[30], uSfdpData.auc[31], uSfdpData.auc[32], uSfdpData.auc[33], uSfdpData.auc[34], uSfdpData.auc[35], &(ptFlash->tAttributes));
 		/* Clear the complete structure. */
 		memset(&tSfdpAttributes, 0, sizeof(tSfdpAttributes));
 

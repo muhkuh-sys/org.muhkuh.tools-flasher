@@ -858,7 +858,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 	if (!myData.isValid)
 	{
-		setSFDPData(0, 0, 0, 0, 0, 0, 0, 0, 0);
+		setSFDPData(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
 	ptAppParams = (tFlasherInputParameter*) ptTestParam->pvInitParams;
 	tOpMode = ptAppParams->tOperationMode;
