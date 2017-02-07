@@ -50,10 +50,11 @@ erase       [p] dev [offset] size        Erase area or whole flash
 verify      [p] dev [offset]      file   Byte-by-byte compare
 verify_hash [p] dev [offset]      file   Quick compare using checksums
 hash        [p] dev [offset] size        Compute SHA1
-info        [p]                          Show busses/units/chip selects
+info        [p]                          Show busses/units/chip selectsr
 detect      [p] dev                      Check if flash is recognized
 test        [p] dev                      Test flasher      
 testcli     [p] dev                      Test cli flasher  
+list_interfaces							 List all usable interfaces
 -h                                       Show this help    
         
 p:    -p plugin_name
@@ -166,6 +167,33 @@ function getPlugin(strPluginName)
 	return tPlugin, strError
 end
 
+
+function printf(...) print(string.format(...)) end
+function list_interfaces()
+
+	local aDetectedInterfaces = {}
+	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+		tPluginClass:DetectInterfaces(aDetectedInterfaces)
+	end
+	
+	local aUnusedInterfaces = {}
+	for i,v in ipairs(aDetectedInterfaces) do
+		if v:IsUsed() == false then
+			table.insert(aUnusedInterfaces, v)
+		end
+	end
+	
+	print()
+	printf("START LIST NOT USED INTERFACES (%d Interfaces found)", #aUnusedInterfaces)
+	print()
+	for i, v in ipairs(aUnusedInterfaces) do
+		printf("%d : Name:%-30s Typ: %-25s", i, v:GetName(), v:GetTyp())
+	end
+	print()
+	print("END LIST INTERFACES")
+end
+
+
 --[[
 function getPlugin(strPluginName)
 	local tPlugin, strError
@@ -200,6 +228,7 @@ MODE_DETECT = 6
 MODE_VERIFY_HASH = 7
 MODE_INFO = 8
 MODE_HELP = 10
+MODE_LIST_INTERFACES = 15
 
 -- test modes
 MODE_TEST = 11
@@ -211,17 +240,18 @@ MODE_GET_DEVICE_SIZE = 14
 
 
 arg2Mode = {
-	flash       = MODE_FLASH,
-	read        = MODE_READ,
-	erase       = MODE_ERASE,
-	verify      = MODE_VERIFY,
-	verify_hash = MODE_VERIFY_HASH,
-	hash        = MODE_HASH,
-	detect      = MODE_DETECT,
-	test        = MODE_TEST,
-	testcli     = MODE_TEST_CLI,
-	info        = MODE_INFO,
-	["-h"]      = MODE_HELP
+	flash       	= MODE_FLASH,
+	read        	= MODE_READ,
+	erase      		= MODE_ERASE,
+	verify      	= MODE_VERIFY,
+	verify_hash 	= MODE_VERIFY_HASH,
+	hash        	= MODE_HASH,
+	detect      	= MODE_DETECT,
+	test        	= MODE_TEST,
+	testcli     	= MODE_TEST_CLI,
+	info        	= MODE_INFO,
+	list_interfaces = MODE_LIST_INTERFACES,
+	["-h"]      	= MODE_HELP
 }
 
 
@@ -231,7 +261,7 @@ u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit nu
 cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number"},
 p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
 s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset"},
-l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
+l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read"},
 f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"}
 }
 
@@ -246,7 +276,8 @@ requiredargs = {
 [MODE_INFO]         = {},
 [MODE_TEST]         = {"b", "u", "cs"},
 [MODE_TEST_CLI]     = {"b", "u", "cs"},
-[MODE_HELP]         = {}
+[MODE_HELP]         = {},
+[MODE_LIST_INTERFACES] = {}
 }
 
 function checkArgs(aArgs)
@@ -749,6 +780,10 @@ elseif aArgs.iMode == MODE_HELP then
 	print(strUsage)
 	os.exit(0)
 	
+elseif aArgs.iMode == MODE_LIST_INTERFACES then
+	list_interfaces()
+	os.exit(0)
+
 elseif aArgs.iMode == MODE_TEST_CLI then
 	flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
 	fOk, strMsg = flasher_test.testFlasher(flasher_interface)
@@ -770,4 +805,3 @@ else
 		os.exit(1)
 	end
 end
-
