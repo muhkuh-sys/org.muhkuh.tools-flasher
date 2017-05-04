@@ -156,8 +156,8 @@ local chiptyp2name = {
 	[romloader.ROMLOADER_CHIPTYP_NETX10]           = "netx10",
 	[romloader.ROMLOADER_CHIPTYP_NETX56]           = "netx56",
 	[romloader.ROMLOADER_CHIPTYP_NETX56B]          = "netx56",
-	[romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = "netx4000_relaxed",
-	[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = "netx90_mpw",
+	[romloader.ROMLOADER_CHIPTYP_NETX4000RELAXED] = "netx4000_relaxed",
+	[romloader.ROMLOADER_CHIPTYP_NETX90MPW]       = "netx90_mpw",
 }
 
 -- prefix must include a trailing backslash if it's a directory
@@ -396,6 +396,10 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 		-- Set the MMIO configuration. The default is 0xffffffff (no MMIO pins).
 		local ulMmioConfiguration = atParameter.ulMmioConfiguration
 		ulMmioConfiguration = ulMmioConfiguration or 0xffffffff
+		
+		local function printf(...) print(string.format(...)) end
+		printf("atParameter.ulMaximumSpeed = %d", atParameter.ulMaximumSpeed)
+		printf("ulMaximumSpeed = %d", ulMaximumSpeed)
 		
 		aulParameter =
 		{
