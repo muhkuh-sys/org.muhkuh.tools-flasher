@@ -661,6 +661,22 @@
 		    magic="0x00, 0xef, 0x40, 0x16" />
 	</SerialFlash>
 
+	<!-- Testing -->
+	<SerialFlash name="W25Q64" size="8388608" clock="80000">
+		<Description>Winbond W25Q64</Description>
+		<Note></Note>
+		<Layout pageSize="256" sectorPages="16" mode="linear" />
+		<Read readArrayCommand="0x03" ignoreBytes="0" />
+		<Write writeEnableCommand="0x06" pageProgramCommand="0x02" bufferFillCommand="" bufferWriteCommand="" eraseAndPageProgramCommand="" />
+		<Erase erasePageCommand="" eraseSectorCommand="0x20" eraseChipCommand="0xc7" />
+		<Status readStatusCommand="0x05" statusReadyMask="0x01" statusReadyValue="0x00" />
+		<Init0 command="" />
+		<Init1 command="" />
+		<Id send="0x9f, 0x00, 0x00, 0x00"
+		    mask="0x00, 0xff, 0xff, 0xff"
+		    magic="0x00, 0xef, 0x40, 0x17" />
+	</SerialFlash>
+
 	<SerialFlash name="W25Q128" size="16777216" clock="33000">
 		<Description>Winbond W25Q128</Description>
 		<Note></Note>
