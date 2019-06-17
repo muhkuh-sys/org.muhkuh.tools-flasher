@@ -1,0 +1,12 @@
+
+Change log/Release notes
+=========================
+
+V 1.5.5
+========
+
+* Build a netX4000 version instead of the netX4000 RELAXED version. Update the MMIO defines to the new platform version.
+* Update the underlying infrastructure (Muhkuh/Romloader) to v2.4.2:
+  * Fix the chip type detection of the netX 90 MPW, Rev. 0 and Rev. 1 when using the UART or ethernet interfaces.
+  * Change the name string for the netX90 Rev. 0 from "netX90" to "netX90 Rev0".
+  * Fix structure packing (caused errors in Windows builds)
