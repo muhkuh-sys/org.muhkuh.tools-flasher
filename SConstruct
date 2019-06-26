@@ -128,7 +128,7 @@ flasher_sources_main_netx4000 = """
 flasher_sources_lib_netx4000 = """
 	src/netx4000/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -156,7 +156,7 @@ flasher_sources_main_netx500 = """
 flasher_sources_lib_netx500 = """
 	src/netx500/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v1.c
 """
 
@@ -168,7 +168,7 @@ flasher_sources_main_netx56 = """
 flasher_sources_lib_netx56 = """
 	src/netx56/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -182,7 +182,7 @@ flasher_sources_main_netx50 = """
 flasher_sources_lib_netx50 = """
 	src/netx50/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/mmio.c
 """
@@ -195,7 +195,7 @@ flasher_sources_main_netx10 = """
 flasher_sources_lib_netx10 = """
 	src/netx10/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
