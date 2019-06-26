@@ -1237,35 +1237,27 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 	ulOffsetStart = ptParameter->ulStartAdr;
 	ulOffsetEnd = ptParameter->ulEndAdr;
 
-	/* Silently ignore read requests with a size of 0 bytes. */
-	if( ulOffsetStart==ulOffsetEnd )
-	{
-		tResult = NETX_CONSOLEAPP_RESULT_OK;
-	}
-	else
-	{
-		/* Get a pointer to the flash attributes. */
-		ptAttr = &(ptParameter->ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0);
+	/* Get a pointer to the flash attributes. */
+	ptAttr = &(ptParameter->ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0);
 
-		tResult = check_command_area(ptAttr, ulOffsetStart, ulOffsetEnd);
+	tResult = check_command_area(ptAttr, ulOffsetStart, ulOffsetEnd);
+	if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+	{
+		/* Get the pointer to the controller and the offset in the memory map. */
+		tResult = iflash_get_controller(ptAttr, ulOffsetStart, &tFlashBlock);
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
-			/* Get the pointer to the controller and the offset in the memory map. */
-			tResult = iflash_get_controller(ptAttr, ulOffsetStart, &tFlashBlock);
-			if( tResult==NETX_CONSOLEAPP_RESULT_OK )
-			{
-				pucFlashArea = (const unsigned char*)(HOSTADDR(intflash0) + tFlashBlock.ulUnitOffsetInBytes);
+			pucFlashArea = (const unsigned char*)(HOSTADDR(intflash0) + tFlashBlock.ulUnitOffsetInBytes);
 
-				/* Get the start and size of the data area. */
-				pucFlashStart = pucFlashArea + ulOffsetStart;
+			/* Get the start and size of the data area. */
+			pucFlashStart = pucFlashArea + ulOffsetStart;
 
-				/* Set the flash to read mode. */
-				internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
+			/* Set the flash to read mode. */
+			internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 
-				ulLength = ulOffsetEnd - ulOffsetStart;
+			ulLength = ulOffsetEnd - ulOffsetStart;
 
-				SHA1_Update(ptSha1Context, pucFlashStart, ulLength);
-			}
+			SHA1_Update(ptSha1Context, pucFlashStart, ulLength);
 		}
 	}
 
