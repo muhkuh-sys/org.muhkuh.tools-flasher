@@ -1224,8 +1224,44 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 #       if CFG_INCLUDE_SHA1!=0
 NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *ptParameter, SHA_CTX *ptSha1Context)
 {
-	uprintf("! not yet....\n");
-	return NETX_CONSOLEAPP_RESULT_ERROR;
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr;
+	unsigned long ulOffsetStart;
+	unsigned long ulOffsetEnd;
+	const unsigned char *pucFlashArea;
+	const unsigned char *pucFlashStart;
+	unsigned long ulLength;
+	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
+
+
+	ulOffsetStart = ptParameter->ulStartAdr;
+	ulOffsetEnd = ptParameter->ulEndAdr;
+
+	/* Get a pointer to the flash attributes. */
+	ptAttr = &(ptParameter->ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0);
+
+	tResult = check_command_area(ptAttr, ulOffsetStart, ulOffsetEnd);
+	if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+	{
+		/* Get the pointer to the controller and the offset in the memory map. */
+		tResult = iflash_get_controller(ptAttr, ulOffsetStart, &tFlashBlock);
+		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+		{
+			pucFlashArea = (const unsigned char*)(HOSTADDR(intflash0) + tFlashBlock.ulUnitOffsetInBytes);
+
+			/* Get the start and size of the data area. */
+			pucFlashStart = pucFlashArea + ulOffsetStart;
+
+			/* Set the flash to read mode. */
+			internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
+
+			ulLength = ulOffsetEnd - ulOffsetStart;
+
+			SHA1_Update(ptSha1Context, pucFlashStart, ulLength);
+		}
+	}
+
+	return tResult;
 }
 #       endif
 

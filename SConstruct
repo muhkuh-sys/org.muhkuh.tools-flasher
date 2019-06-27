@@ -128,7 +128,7 @@ flasher_sources_main_netx4000 = """
 flasher_sources_lib_netx4000 = """
 	src/netx4000/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -143,6 +143,8 @@ flasher_sources_main_netx90 = """
 flasher_sources_lib_netx90 = """
 	src/netx90/board.c
 	src/netx90/cortexm_systick.c
+	src/sha1_arm/sha1.c
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -156,7 +158,7 @@ flasher_sources_main_netx500 = """
 flasher_sources_lib_netx500 = """
 	src/netx500/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v1.c
 """
 
@@ -168,7 +170,7 @@ flasher_sources_main_netx56 = """
 flasher_sources_lib_netx56 = """
 	src/netx56/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -182,7 +184,7 @@ flasher_sources_main_netx50 = """
 flasher_sources_lib_netx50 = """
 	src/netx50/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/mmio.c
 """
@@ -195,7 +197,7 @@ flasher_sources_main_netx10 = """
 flasher_sources_lib_netx10 = """
 	src/netx10/board.c
 	src/sha1_arm/sha1.c
-	src/sha1_arm/sha1_arm.S
+	src/sha1_arm/sha1_transform.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -264,7 +266,7 @@ if 'NETX90' in atPickNetxForBuild:
     env_netx90_default  = atEnv.NETX90.Clone()
     env_netx90_default.Replace(LDFILE = File('src/netx90/netx90.ld'))
     env_netx90_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx90'])
-    env_netx90_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '0']])
+    env_netx90_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1']])
 
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_default  = atEnv.NETX56.Clone()
