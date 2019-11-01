@@ -12,14 +12,7 @@ SVN_VERSION="$Revision$"
 SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
-FLASHER_PATH = "netx/"
-
-require("muhkuh_cli_init")
-
--- flasher-related
-require("mhash")
-require("flasher")
-require("flasher_test")
+-- Requires are below, because they cause a lot of text to be printed.
 
 
 --------------------------------------------------------------------------
@@ -42,7 +35,8 @@ test        [p] dev                      Test flasher
 testcli     [p] dev                      Test cli flasher  
 list_interfaces                          List all usable interfaces
 detect_netx [p]                          Detect the netx chip type
--h                                       Show this help    
+-h                                       Show this help   
+-version                                 Show flasher version 
         
 p:    -p plugin_name
       select plugin
@@ -77,8 +71,32 @@ lua cli_flash.lua erase -b 0 -l 4
 -- helpers
 --------------------------------------------------------------------------
 
+-- strData, strMsg loadBin(strFilePath)
+-- Load a binary file.
+-- returns 
+--   data if successful 
+--   nil, message if an error occurred
+function loadBin(strFilePath)
+	local strData
+	local tFile
+	local strMsg
+	
+	tFile, strMsg = io.open(strFilePath, "rb")
+	if tFile then
+		strData = tFile:read("*a")
+		tFile:close()
+		if strData == nil then
+			strMsg = string.format("Could not read from file %s", strFilePath)
+		end
+	else
+		strMsg = string.format("Could not open file %s: %s", strFilePath, strMsg or "Unknown error")
+	end
+	return strData, strMsg
+end
+
+
 -- fOk, strMsg writeBin(strName, strBin)
--- write binary file into string
+-- Write string to binary file.
 -- returns true or false, message
 function writeBin(strName, bin)
 	local f, msg = io.open(strName, "wb")
@@ -222,178 +240,234 @@ MODE_INFO = 8
 MODE_HELP = 10
 MODE_LIST_INTERFACES = 15
 MODE_DETECT_CHIPTYPE = 16
-
+MODE_VERSION = 17
 -- test modes
 MODE_TEST = 11
 MODE_TEST_CLI = 12
-
 -- used by test modes
 MODE_IS_ERASED = 13
 MODE_GET_DEVICE_SIZE = 14
 
 
-arg2Mode = {
-	flash       	= MODE_FLASH,
-	read        	= MODE_READ,
-	erase      		= MODE_ERASE,
-	verify      	= MODE_VERIFY,
-	verify_hash 	= MODE_VERIFY_HASH,
-	hash        	= MODE_HASH,
-	detect      	= MODE_DETECT,
-	test        	= MODE_TEST,
-	testcli     	= MODE_TEST_CLI,
-	info        	= MODE_INFO,
-	list_interfaces = MODE_LIST_INTERFACES,
-	detect_netx     = MODE_DETECT_CHIPTYPE,
-	["-h"]      	= MODE_HELP
+atModeArgs = {
+	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
+	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p"}},
+	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p"}},
+	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
+	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
+	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p"}},
+	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p"}},
+	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p"}},
+	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p"}},
+	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p"}},
+	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {}},
+	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p"}},
+	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
+	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }
 
 
 argdefs = {
 b  = {type = "number", clkey ="-b",  argkey = "iBus",              name="bus number"},
-u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number"},
-cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number"},
+u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number",        default=0},
+cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number", default=0},
 p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
-s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset"},
+s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
 l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
 f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"}
 }
 
-requiredargs = {
-[MODE_FLASH]        = {"b", "u", "cs", "f"},
-[MODE_READ]         = {"b", "u", "cs", "f", "l"},
-[MODE_VERIFY]       = {"b", "u", "cs", "f"},
-[MODE_ERASE]        = {"b", "u", "cs", "l"},
-[MODE_VERIFY_HASH]  = {"b", "u", "cs", "f"},
-[MODE_HASH]         = {"b", "u", "cs"},
-[MODE_DETECT]       = {"b", "u", "cs"},
-[MODE_INFO]         = {},
-[MODE_TEST]         = {"b", "u", "cs"},
-[MODE_TEST_CLI]     = {"b", "u", "cs"},
-[MODE_HELP]         = {},
-[MODE_LIST_INTERFACES] = {},
-[MODE_DETECT_CHIPTYPE] = {}
-}
 
-function checkArgs(aArgs)
-	-- get the list of required/optional args for mode
-	local required = requiredargs[aArgs.iMode]
-	if not required then
-		print("unknown mode!")
-		return false
-	end
-	
-	local fOk = true
-	
-	for i, strKey in pairs(required) do
-		local argdef = argdefs[strKey]
-		if not aArgs[argdef.argkey] then
-			printf("please specify %s (%s)", argdef.name, argdef.clkey)
-			fOk = false
+
+-- return true if list l contains element e 
+function list_contains(l, e)
+	for _k, v in ipairs(l) do
+		if v==e then 
+			return true
 		end
 	end
-		
-	return fOk
+	return false
 end
 
-
-function parseArg(aArgs, strKey, strVal)
+-- strKey and strVal are the argument key and value given on the command line.
+-- strArgKey is the internal key, e.g. "b" for bus and "f" for file name.
+function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
+	local fOk
+	local strMsg
+	
 	local iVal
+	local strArgKey
 	local tArgdef
 	
-	for k,argdef in pairs(argdefs) do
+	for k, argdef in pairs(argdefs) do
 		if strKey == argdef.clkey then
+			strArgKey = k
 			tArgdef = argdef
 			break
 		end
 	end
 	
 	if not tArgdef then
-		return false, string.format("Unknown argument: %s", strKey)
-		
+		fOk = false
+		strMsg = string.format("Unknown argument: %s", strKey)
+	
+	elseif not list_contains(tModeArgs.required_args, strArgKey) and not list_contains(tModeArgs.optional_args, strArgKey) then
+		fOk = false
+		if strKey=="" then
+			strMsg = string.format("Mode %s does not require argument %s", strMode, tArgdef.name)
+		else
+			strMsg = string.format("Mode %s does not require argument %s", strMode, strKey)
+		end
+	
 	elseif strVal == nil then
-		return false, string.format("argument to %s is missing", strKey)
+		fOk = false
+		strMsg = string.format("Value for argument %s is missing", strKey)
 		
 	elseif tArgdef.type == "string" then
 		aArgs[tArgdef.argkey] = strVal
-		return true
+		fOk = true
 		
 	elseif tArgdef.type == "number" then
 		iVal = tonumber(strVal)
 		if iVal then
 			aArgs[tArgdef.argkey] = iVal
-			return true
+			fOk = true
 		else
-			return false, string.format("Error parsing %s (%s)", tArgdef.name, tArgdef.clkey)
+			fOk = false
+			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
 		end
 	end
+	
+	return fOk, strMsg
 end
 
 
--- Evaluate command line arguments.
--- returns list of arguments or nil and error message.
--- Entries returned in aArgs:
--- iMode              MODE_FLASH etc.
--- strPluginName      plugin name
--- iBus               bus number
--- iUnit              unit number 
--- iChipSelect        chip selet number
--- ulStartOffset      start offset for read
--- ulLen              number of bytes to read
--- strDataFileName    input/output file name
+-- Check if all required args are present 
+-- If a required arg is not specified but has a default value, set the default.
+-- If it does not have a default, return an error.
+function checkRequiredArgs(aArgs, astrRequiredArgs)
+	-- get the list of required/optional args for mode
+	local fOk = true
+	local strMsg 
+	
+	local astrMissingArgs = {}
+	
+	for _k, strArg in ipairs(astrRequiredArgs) do
+		local tArgdef = argdefs[strArg]
+		local tArgTableKey = tArgdef.argkey -- key in the argument table
+		
+		if aArgs[tArgTableKey] == nil then
+			if tArgdef.default then
+				aArgs[tArgTableKey] = tArgdef.default
+				printf("Setting default value for argument %s (%s): %s", tArgdef.clkey, tArgdef.name, tostring(tArgdef.default))
+			else
+				table.insert(astrMissingArgs, tArgdef.name)
+			end
+		end
+	end
+	
+	if #astrMissingArgs >0 then
+		fOk = false
+		strMsg = "Please specify the following arguments: " .. table.concat(astrMissingArgs, ", ")
+	end
+	
+	return fOk, strMsg
+end
 
 
-function evalArg()
-	local aArgs = {}
-	local nArgs = #arg
-	local iArg = 2
+-- Checks during argument parsing: Return an error if 
+-- - the mode name is unknown
+-- - an argument key ("-b") is unknown
+-- - an argument key is known but neither required nor optional for the given mode
+
+-- After argument parsing: Check if all required args are present 
+-- If a required arg is not specified but has a default value, set the default.
+-- If it does not have a default, return an error.
+
+function parseArgs()
+	local fOk
+	local strMsg
+	
+	local aArgs
+	local strMode
+	local tModeArgs
+
+	local iArg
+	local nArgs
+	
+	fOk = true
+	aArgs = {}
+	nArgs = #arg
 	
 	-- First arg is the mode.
 	-- If no args are given, set help mode
 	if nArgs == 0 then
 		aArgs.iMode = MODE_HELP
-		return aArgs
-	elseif arg[1] and arg2Mode[arg[1]] then 
-		aArgs.iMode = arg2Mode[arg[1]]
-	else
-		return nil
-	end
-
-	-- Parse the arguments.
-	-- The last argument may be the file name and has no key.
-	while (iArg <= nArgs) do
-		local strKey = arg[iArg]
-		local strVal = arg[iArg+1]
-		local fOk, strMsg = parseArg(aArgs, strKey, strVal)
 		
-		if fOk then
-			iArg = iArg + 2
-		elseif iArg == nArgs then
-			aArgs.strDataFileName = arg[iArg]
-			iArg = iArg + 1
+	else
+		strMode = arg[1]
+		tModeArgs = atModeArgs[strMode]
+		
+		if tModeArgs == nil then
+			fOk = false
+			strMsg = string.format("Unknown mode: %s", strMode)
 		else
-			return nil, strMsg
+			aArgs.iMode = tModeArgs.mode
+			
+			iArg = 2
+			-- Parse the arguments.
+			-- The last argument may be the file name and has no key.
+			while (iArg <= nArgs and fOk == true) do
+				if iArg == nArgs then
+					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, "", arg[iArg])
+					iArg = iArg + 1
+				else
+					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, arg[iArg], arg[iArg+1])
+					iArg = iArg + 2
+				end
+			end
+			
+			-- check required arguments
+			if fOk == true then
+				fOk, strMsg = checkRequiredArgs(aArgs, tModeArgs.required_args)
+			end
 		end
 	end
-		
-	-- Add defaults
-	aArgs.iUnit = aArgs.iUnit or 0
-	aArgs.iChipSelect = aArgs.iChipSelect or 0
-	aArgs.ulStartOffset = aArgs.ulStartOffset or 0
 	
-	-- Check if all necessary args for the mode are present.
-	if checkArgs(aArgs) then
-		return aArgs
-	else
-		return nil
-	end
+	return fOk, aArgs, strMsg
 end
 
 
-function show_args(aArgs)
-	for k,v in pairs(aArgs) do 
-		print(k,v)
+function showArgs(aArgs)
+	local arg_order = {"p", "b", "u", "cs", "s", "l", "f"}
+	local astrArgLines = {}
+		
+	for i, k in ipairs(arg_order) do
+		local tArgdef = argdefs[k]
+		local tVal = aArgs[tArgdef.argkey]
+		local strVal 
+		local strLine
+		if tVal ~= nil then
+			if type(tVal) == "number" then 
+				strVal = string.format("0x%x", tVal)
+			else
+				strVal = tostring(tVal)
+			end
+			strLine = string.format("%-40s %-s", tArgdef.name, strVal)
+			table.insert(astrArgLines, strLine)
+		end
 	end
+	
+	if #astrArgLines == 0 then
+		table.insert(astrArgLines, "none")
+	end
+	
+	print("")
+	print("Arguments:")
+	for i, strLine in ipairs(astrArgLines) do
+		print(strLine)
+	end
+	print("")
 end
 
 --------------------------------------------------------------------------
@@ -473,6 +547,8 @@ function exec(aArgs)
 	local fOk
 	local strMsg
 	
+	local ulDeviceSize
+	
 	local strFileHashBin, strFlashHashBin
 	local strFileHash , strFlashHash
 	
@@ -482,13 +558,26 @@ function exec(aArgs)
 		tPlugin:Connect()
 		fOk = true
 		
+		-- On netx 4000, there may be a boot image in intram that makes it
+		-- impossible to boot a firmware from flash by resetting the hardware.
+		-- Therefore we clear the start of the intram boot image.
+		local iChiptype = tPlugin:GetChiptyp()
+		if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
+			print("Clear intram image on netx 4000")
+			for i=0, 3 do
+				local ulAddr = 0x05100000 + i*4
+				tPlugin:write_data32(ulAddr, 0)
+			end
+		end
+		
 		-- load input file  strDataFileName --> strData
 		if fOk and (iMode == MODE_FLASH or iMode == MODE_VERIFY or iMode == MODE_VERIFY_HASH) then
 			print("Loading data file")
-			strData, strMsg = muhkuh.load(strDataFileName)
+			strData, strMsg = loadBin(strDataFileName)
 			if not strData then
 				fOk = false
-				strMsg = "Failed to load binary '" .. strDataFileName .. "': " .. (strMsg or "Unknown error")
 			else
 				ulLen = strData:len()
 			end
@@ -504,24 +593,42 @@ function exec(aArgs)
 			end
 		end
 		
-		if fOk and iMode == MODE_INFO then
-			-- Get the board info table.
-			aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
-			if aBoardInfo then
-				printBoardInfo(aBoardInfo)
-				fOk = true
+		if fOk then 
+			if iMode == MODE_INFO then
+				-- Get the board info table.
+				aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+				if aBoardInfo then
+					printBoardInfo(aBoardInfo)
+					fOk = true
+				else
+					fOk = false
+					strMsg = "Failed to read board info"
+				end
+	
 			else
-				fOk = false
-				strMsg = "Failed to read board info"
-			end
-
-		else
-			-- check if the selected flash is present
-			print("Detecting flash device")
-			fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
-			if not fOk then
-				fOk = false
-				strMsg = "Failed to get a device description!"
+				-- check if the selected flash is present
+				print("Detecting flash device")
+				fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+				if fOk ~= true then
+					fOk = false
+					strMsg = "Failed to get a device description!"
+				else
+					ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
+					if ulDeviceSize == nil then
+						fOk = false
+						strMsg = "Failed to get the device size!"
+					else 
+						-- if offset/len are set, we require that offset+len is less than or equal the device size
+						if ulStartOffset~= nil and ulLen~= nil and ulStartOffset+ulLen > ulDeviceSize and ulLen ~= 0xffffffff then
+							fOk = false
+							strMsg = string.format("Offset+size exceeds flash device size: 0x%08x bytes", ulDeviceSize)
+						else
+							fOk = true
+							strMsg = string.format("Flash device size: %d/0x%08x bytes", ulDeviceSize, ulDeviceSize)
+						end
+						
+					end
+				end
 			end
 		end
 		
@@ -575,7 +682,7 @@ function exec(aArgs)
 		
 		-- hash, verify_hash: compute the SHA1 of the data in the flash
 		if fOk and (iMode == MODE_HASH or iMode == MODE_VERIFY_HASH) then
-			strFlashHashBin, strMsg = flasher. hashArea(tPlugin, aAttr, ulStartOffset, ulLen)
+			strFlashHashBin, strMsg = flasher.hashArea(tPlugin, aAttr, ulStartOffset, ulLen)
 			if strFlashHashBin then
 				fOk = true
 				strFlashHash = getHexString(strFlashHashBin)
@@ -665,9 +772,22 @@ function flasher_interface.getBusWidth(self)
 		return 1
 	elseif self.aArgs.iBus==flasher.BUS_IFlash then
 		return 4
+	elseif self.aArgs.iBus == flasher.BUS_SDIO then
+		return 1
 	end
 end
 
+function flasher_interface.getEmptyByte(self)
+	if self.aArgs.iBus == flasher.BUS_Parflash then
+		return 0xff
+	elseif self.aArgs.iBus == flasher.BUS_Spi then
+		return 0xff
+	elseif self.aArgs.iBus == flasher.BUS_IFlash then
+		return 0xff
+	elseif self.aArgs.iBus == flasher.BUS_SDIO then
+		return 0x00
+	end
+end
 
 function flasher_interface.flash(self, ulOffset, strData)
 	local fOk, strMsg = writeBin(self.aArgs.strDataFileName, strData)
@@ -694,7 +814,6 @@ function flasher_interface.verify(self, ulOffset, strData)
 	return exec(self.aArgs)
 end
 
-
 function flasher_interface.read(self, ulOffset, ulSize)
 	self.aArgs.iMode = MODE_READ
 	self.aArgs.ulStartOffset = ulOffset
@@ -705,27 +824,10 @@ function flasher_interface.read(self, ulOffset, ulSize)
 	if not fOk then
 		return nil, strMsg
 	else
-		local strData = muhkuh.load(self.aArgs.strDataFileName)
-		if not strData then
-			return nil, "Could not read file " .. self.aArgs.strDataFileName
-		else
-			return strData
-		end
+		strData, strMsg = loadBin(self.aArgs.strDataFileName)
 	end
 	
-	--[[
-	if fOk then
-		local fd = io.open(self.aArgs.strDataFileName, "rb")
-		if not fd then
-			return nil, "Could not open file " .. self.aArgs.strDataFileName
-		end
-		strData = fd:read("*a")
-		if not strData then 
-			return nil, "Could not read file " .. self.aArgs.strDataFileName
-		end
-	end
-	return strData
-	--]]
+	return strData, strMsg
 end
 
 
@@ -763,58 +865,79 @@ end
 -- main
 --------------------------------------------------------------------------
 
+FLASHER_PATH = "netx/"
+
 local aArgs
 local fOk
 local strMsg
 
 io.output():setvbuf("no")
 
-aArgs, strMsg = evalArg()
+fOk, aArgs, strMsg = parseArgs()
 
-if aArgs == nil then
+if fOk ~= true then
 	if strMsg then
 		print(strMsg)
+		print("-h for help")
+	else 
+		print(strUsage)
 	end
 	os.exit(1)
 	
 elseif aArgs.iMode == MODE_HELP then
+	require("flasher_version")
+	print(FLASHER_VERSION_STRING)
+	print()
 	print(strUsage)
 	os.exit(0)
 	
-elseif aArgs.iMode == MODE_LIST_INTERFACES then
-	list_interfaces()
+elseif aArgs.iMode == MODE_VERSION then
+	require("flasher_version")
+	print(FLASHER_VERSION_STRING)
 	os.exit(0)
-
-elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
-	fOk, strMsg = detect_chiptype(aArgs)
-	if fOk then
-		if strMsg then 
-			print(strMsg)
-		end
-		os.exit(0)
-	else
-		printf("Error: %s", strMsg or "unknown error")
-		os.exit(1)
-	end
-	
-elseif aArgs.iMode == MODE_TEST_CLI then
-	flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
-	fOk, strMsg = flasher_test.testFlasher(flasher_interface)
-	print(fOk, strMsg)
-	os.exit(0)
-	
+    
 else
-	show_args(aArgs)
+	showArgs(aArgs)
+		
+	require("muhkuh_cli_init")
+	require("mhash")
+	require("flasher")
+	require("flasher_test")
 	
-	fOk, strMsg = exec(aArgs)
-	
-	if fOk then
-		if strMsg then 
-			print(strMsg)
-		end
+	if aArgs.iMode == MODE_LIST_INTERFACES then
+		list_interfaces()
 		os.exit(0)
+	
+	elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
+		fOk, strMsg = detect_chiptype(aArgs)
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			os.exit(0)
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			os.exit(1)
+		end
+		
+	elseif aArgs.iMode == MODE_TEST_CLI then
+		flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
+		fOk, strMsg = flasher_test.testFlasher(flasher_interface)
+		print(fOk, strMsg)
+		os.exit(0)
+		
 	else
-		print(strMsg or "an unknown error occurred")
-		os.exit(1)
+		fOk, strMsg = exec(aArgs)
+		
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			os.exit(0)
+		else
+			print(strMsg or "an unknown error occurred")
+			os.exit(1)
+		end
 	end
 end
+
