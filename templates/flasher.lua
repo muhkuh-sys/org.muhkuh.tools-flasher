@@ -26,7 +26,6 @@ module("flasher", package.seeall)
 -----------------------------------------------------------------------------
 
 require("bit")
-require("muhkuh")
 require("romloader")
 
 
@@ -205,7 +204,8 @@ function get_flasher_binary_attributes(strData)
 	print(string.format("device description: 0x%08x", aAttr.ulDeviceDesc))
 	print(string.format("buffer start:       0x%08x", aAttr.ulBufferAdr))
 	print(string.format("buffer end:         0x%08x", aAttr.ulBufferEnd))
-
+	print(string.format("buffer size:        0x%08x", aAttr.ulBufferLen))
+	
 	return aAttr
 end
 
@@ -249,8 +249,12 @@ function download(tPlugin, strPrefix, fnCallbackProgress)
 	local iChiptype = tPlugin:GetChiptyp()
 	local fDebug = false
 	local strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
-	local strFlasherBin, strMsg = muhkuh.load(strPath)
-	assert(strFlasherBin, strMsg)
+	local tFile, strMsg = io.open(strPath, 'rb')
+	if tFile==nil then
+		error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
+	end
+	local strFlasherBin = tFile:read('*a')
+	tFile:close()
 
 	local aAttr = get_flasher_binary_attributes(strFlasherBin)
 	aAttr.strBinaryName = strFlasherBin
@@ -807,7 +811,14 @@ function flashArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, f
 	
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
-		strChunk = strData:sub(ulDataOffset+1, ulDataOffset+ulBufferLen)
+		-- Required for netx 90 Intflash, does not hurt in other cases:
+		-- Align the end of the chunk to a 16 byte boundary, unless this is the last chunk.
+		-- Note: Additionally, ulDeviceOffset must also be a multiple of 16 bytes.
+		local ulEnd = ulDataOffset+ulBufferLen
+		if ulEnd < strData:len() then
+			ulEnd = ulEnd - (ulEnd % 16) 
+		end
+		strChunk = strData:sub(ulDataOffset+1, ulEnd)
 		ulChunkSize = strChunk:len()
 
 		-- Download the chunk to the buffer.
@@ -972,7 +983,7 @@ function hashArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 	
 	fOk, strFlashHashBin = hash(tPlugin, aAttr, ulDeviceOffset, ulDeviceEndOffset, fnCallbackMessage, fnCallbackProgress)
 
-	if fOk == nil then
+	if fOk~=true then
 		return nil, "Error while calculating SHA1 hash."
 	else
 		return strFlashHashBin, "Checksum calculated."
@@ -1046,16 +1057,14 @@ end
 --------------------------------------------------------------------------
 
 function simple_flasher(tPlugin, strDataFileName, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
-	local strMsg
-	local strData
-
-
 	-- Load the data.
-	strData, strMsg = muhkuh.load(strDataFileName)
-	if not strData then
-		error("Failed to load binary '" .. strDataFileName .. "': " .. strMsg)
+	local tFile, strMsg = io.open(strDataFileName, 'rb')
+	if tFile==nil then
+		error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
 	end
-	
+	local strData = tFile:read('*a')
+	tFile:close()
+
 	simple_flasher_string(tPlugin, strData, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
 end
 
