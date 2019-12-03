@@ -54,12 +54,16 @@ class UnitTestFlasherTest(unittest.TestCase):
                 # for local debugging, a quick check.
                 maintained_archive = '/home/aballmert/Downloads/ptbt_0.1.291-1.6.0_rc2_betabuild'
 
+        # todo: provide path to flasher here!
+        # todo: logfiles
+        # todo: configfile for flasher path
+
         log_path = os.path.join(maintained_archive, 'logfiles')
         # todo: this is the most ugliest way of fixing redundant logfile folders...
         # clear archived
         archived_dir = 'zip path'
 
-        path_file_version_json = os.path.join(maintained_archive, 'version.json')
+        path_file_version_json = os.path.join(maintained_archive, 'version.json') # if not found, local searched
 
         # logfile_manager is created inside flasher.
         # it's now passed into all other files.
