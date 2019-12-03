@@ -1,5 +1,7 @@
 import os, sys, uuid, json
 
+from typing import Union
+
 file_dir = os.path.dirname(os.path.realpath(__file__))  # xxx/src/
 project_root_path = os.path.dirname(file_dir)  # xxx/helper_platform_detect
 
@@ -172,19 +174,36 @@ class EnvFlasher(PTBEnv):
         # print(args)
 
     def load_version_json(self):
+        """
+        Retrieves version infos about the flasher to test.
+        This is ment for extracting a downloaded zip file and automate some testing.
+        For experimental use here a version.json is provided, to get the program running.
+        :return: the version info as a dict
+        """
 
         try:
             if os.path.isfile(self.path_json_version):
                 l.info('Found config file at: %s' % self.path_json_version)
             else:
                 l.error('Expected configfile at: %s' % self.path_json_version)
-                raise (BaseException("No logfile found at: %s" % self.path_json_version))
+                # look for local file
+                dirty_version_path = os.path.join(
+                    os.path.dirname(base_root),
+                    os.path.basename(self.path_json_version)
+                )  # type: Union[str, unicode]
+
+                if os.path.isfile( dirty_version_path):
+                    l.info("Found sample file at: %s"%dirty_version_path)
+                    self.path_json_version = dirty_version_path
+                else:
+                    l.error("Did not found sample file at local folder: %s"%dirty_version_path)
+                    raise (BaseException("No sample config file found at: %s" % self.path_json_version))
             json_data = open(self.path_json_version)
-            jason_version_info = json.load(json_data)
+            jason_version_info = json.load(json_data)  # type:dict
             json_data.close()
         except Exception as e:
             l.error('Tried to retrieve version info from %s: %s' % (self.path_json_version, e))
-            raise (e)
+            raise e
         return jason_version_info
 
     # Todo: control functions from here downwards!
