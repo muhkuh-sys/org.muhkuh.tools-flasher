@@ -1,0 +1,22 @@
+{
+    "USE_FLASHER_FROM_REPO":1,
+    "USE_ROMLOADER_FROM_REPO":0,
+    "APPLY_ROMLOADER_PATCH":0,
+    "APPLY_ROMLOADER_TEST":1,   
+    "RENEW_MBS":1,
+    "COMMIT_ID_PYTHON_REPO":"f83aea0eea8916b9120bd71087fe456d930784cd",
+    "NAME_TMP_FINAL_ROMLOADER_PLUGIN_TAR_GZ":"",
+    "VERSION_DRIVER_WIN_BOOTLOADER":"2.4.7",
+    "VERSION_DRIVER_WIN_NETRAPID":"3.0.0.0",
+    "VERSION_ROMLOADER_SINE":"2.4.4",
+    "LINK_JENKINS_ROMLOADER_PLUGIN_ARTIFAKT":"90",
+    "VERSION_FLASHER":"1.6.0",
+    "LINK_JENKINS_FLASHER_ARTIFAKT":"106",
+    "LINK_GIT_ROMLOADER":"https://github.com/muhkuh-sys/org.muhkuh.lua-romloader.git",
+    "LINK_JENKINS_ROMLOADER_PLUGIN":"http://jenkins.netx01/job/org.muhkuh.lua-romloader/90//artifact/*zip*/jenkins_romloader_artifakt_.zip",
+    "LINK_JENKINS_FLASHER":"http://jenkins.netx01/job/org.muhkuh.tools-flasher/106/artifact/*zip*/jenkins_flasher_artifakt_106.zip",
+    "NAME_TARFILE":"ptbt_0.1.313-1.6.0_final.tar.gz",
+    "TAR_SOURCES":"-C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/output/ version.json     -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/build/ mbs.log     -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/output/ jenkins_build_infos     -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/ test_romloader.lua     -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/build/ netxbins        -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/build/flasher_extract flasher_cli-1.6.0.tar.gz     -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/input/flasher/ addon     -C /home/SambaShare/SoftwareTests/package_generator/software_source//scripts/python/eclipseWB simpelTools    -C /home/SambaShare/SoftwareTests/package_generator/software_source//scripts/python/eclipseWB SW_Test_flasher    -C /home/SambaShare/SoftwareTests/package_generator/software_source//scripts/python/eclipseWB org.muhkuh.tools-flasher    -C /home/SambaShare/SoftwareTests/package_generator/software_source//scripts/python/eclipseWB ptb_framework    -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/input/driver_romloader/ bootloader_windows_driver-2.4.7.zip    -C /home/SambaShare/SoftwareTests/package_generator/test/flasher_test/input/driver_romloader/ netX_USB_FTDI_driver_installation_V3.0.0.0.zip",
+    "PATH_TMP_ROMLOADER_SOURCE_ARCHIVES":"",
+    "COMMENT_PACKAGE":"Test package for regression"
+}
