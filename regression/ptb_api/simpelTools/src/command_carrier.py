@@ -1,9 +1,8 @@
 # coding=utf-8
-import subprocess, sys, datetime, os, copy, time, re
+import datetime, copy, time
 
 from simpelTools.src.logging_default import *
-import platform as lPl  # pip
-from Selector_OS_Platform.platform_detect import *
+from simpelTools.src.platform_detect import *
 from simpelTools.src.magic_strings import strip_command_arguments, helper_type_conversion
 
 '''
@@ -16,7 +15,7 @@ This version favours the storage of the output to stdout direct,
 to a python variable or to a file.
 '''
 
-
+# todo: move to simple tools
 def slugify(value):
   """
   Normalizes string, converts to lowercase, removes non-alpha characters,
@@ -24,6 +23,8 @@ def slugify(value):
   https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
   """
   import unicodedata
+  if type(value) is str:
+      value = u'%s'%value
   value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
   value = unicode(re.sub('[^\w\s-]', '', value).strip().lower())
   value = unicode(re.sub('[-\s]+', '-', value))
@@ -31,13 +32,11 @@ def slugify(value):
 
 
 class command_carrier:
+  # todo: add a possebilety to run from any location!
   ID = None # a ID used for the command to be executed.
   time_start = None
   time_end = None
   time_execute = None
-
-  def __init__(self):
-    self.bool_interrupt_batch = False  # stop execution of batch in case of an error
 
   def time_calc(self):
     self.time_execute = self.time_end - self.time_start
@@ -77,7 +76,6 @@ class command_carrier:
   stream_stderr = None  # stream to used for communication. may be default stdx or a file to write to.
 
 
-
 def helper_gen_headder(cmd_carry, form):
   tmp = "%s\n[pirate][file][%s][cmd]: %s\n\n---BEGIN LOG---\n" % (
   datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), form, cmd_carry.cmd)
@@ -93,7 +91,7 @@ def helper_gen_footer(cmd_carry, form):
 
 def runCommandBase(cmd_carry):
   '''
-  Basic function for executing an external program.
+  Basic function for executing a externl programm.
 
   This does not alter a thing, justrun end return all values
   :param cmd_carry: Structure carrying several infos around the executed programm
@@ -172,29 +170,7 @@ def runCommandBase(cmd_carry):
   return cmd_carry.ret_val
 
 
-def helper_logfile_gen_path(path_logfile,strem,idx,logfile_prefix,cmd):
-  """
-  Takes a base path and several parameters for the logfilename.
-  Returns a finnished path.
-  slugify() is used to reduce the given string by non conform characters of filesystems
-  :param path_logfile: Path to folder where logfile should reside
-  :param strem: stderr or stdout
-  :param idx: some index UUID or waht ever
-  :param logfile_prefix: some specific name you want to share too
-  :param cmd: command beeing executed. (will be stripped in file name)
-  :return: Generated path to from a logfile.
-  """
-  # ---
 
-  Name, vLinux, bin = lPl.dist()
-  cOS, cPL, cThePlatform, cTheMachine = GetPlatformMatrixEntry()
-  # ___
-  if vLinux:
-    version_string =  "%s_%s_%s"%(Name,vLinux,cTheMachine)
-  else:
-    version_string = "%s_%s"%(platform.platform(),cTheMachine)
-  full_path = os.path.join(path_logfile, "%s.log" % slugify(u"%s_%d_%s" % (logfile_prefix, idx, strem)))
-  return full_path
 
 def batch_command_base(cmd_carry_default, array_command, path_logfile = '.', logfile_prefix = 'log'):
   """
@@ -214,6 +190,7 @@ def batch_command_base(cmd_carry_default, array_command, path_logfile = '.', log
     l.error("Provided path for logfiles does not exist. exit cause of error!")
     return 42
 
+
   result = []
   l.info("Representation of executed commands are reduced by the absoulte path. Only filename and binary are displayed!")
   for idx, cmd in enumerate(array_command):
@@ -225,18 +202,16 @@ def batch_command_base(cmd_carry_default, array_command, path_logfile = '.', log
 
 
     command_representation = strip_command_arguments (tmp_batch_cpy.cmd).replace(' ','_')
-    tmp_batch_cpy.path_stdout = helper_logfile_gen_path(path_logfile, 'stdout', idx, logfile_prefix, command_representation)
-    tmp_batch_cpy.path_stderr = helper_logfile_gen_path(path_logfile, 'stderr', idx, logfile_prefix, command_representation)
+    tmp_batch_cpy.path_stdout = os.path.join(path_logfile, '%s_%d_stdout.txt'%(logfile_prefix,idx))
+    tmp_batch_cpy.path_stderr = os.path.join(path_logfile, '%s_%d_stderr.txt'%(logfile_prefix,idx))
     runCommandBase(tmp_batch_cpy)
     result.append(tmp_batch_cpy)
     l.info("[% 2d]    return value: %s" % (idx, tmp_batch_cpy.ret_val))
 
-    # integer != 0 => True
-    if tmp_batch_cpy.bool_interrupt_batch and tmp_batch_cpy.ret_val:
-      l.error("Abort batch because of an error")
-      break
-
   return result
+
+
+
 
 
 def eval_batch_result(array_command_carry,path_logfile=None,logfile_prefix=None,additional_info=None):
@@ -250,7 +225,7 @@ def eval_batch_result(array_command_carry,path_logfile=None,logfile_prefix=None,
   # open summary
   if path_logfile:
     if os.path.isdir(path_logfile):
-      summary_file = helper_logfile_gen_path(path_logfile,'sumary',0,logfile_prefix,'')
+      summary_file = os.path.join(path_logfile, '%s_00_summary'%(logfile_prefix))
       l.info("write summary to %s"%summary_file)
       # open lo
       h_summary = open(summary_file, 'wb', 0)

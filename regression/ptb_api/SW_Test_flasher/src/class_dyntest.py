@@ -3,10 +3,17 @@ from abc import abstractmethod
 import uuid
 import shutil
 
-from simpelTools.src.logging_default import *
-from simpelTools.src.command_carrier import command_carrier, batch_command_base, eval_batch_result
+file_dir = os.path.dirname(os.path.realpath(__file__))  # xxx/src/
+base_root = os.path.dirname(file_dir)  # location where all projects reside
+
+print("dyntest bast path %s"%base_root)
+sys.path.append(base_root)
+
+
+from simpelTools.src.command_carrier import command_carrier, batch_command_base, eval_batch_result, slugify
 from simpelTools.src.filetools import *
-from Selector_OS_Platform.platform_detect import *
+from simpelTools.src.class_logfilemanager import LogfileManager
+from simpelTools.src.platform_detect import *
 # todo: write batch command base into class off comman carrier, e.g. write a class "command_crrier"
 
 
@@ -35,13 +42,10 @@ print(sys.executable)
 print(sys.version)
 
 
-# to be exported to some more useful place:
-
-
-
 class Dyntest:
     """
     todo: set UUID from the outside world
+    todo: inherit logfile manager from external instance, or create own. temporarly logfile support removed from class and integrated in upper logfile manager.
 
     Behaviour:
     create object, "prepare", run the test, leave the test result as the purpose of this class.
@@ -59,28 +63,38 @@ class Dyntest:
         path_folder_test_env (string): A working directory for test binaries
     """
 
-
     additional_info_to_logfile = ""     # some logfile info more
-    bool_logfiles_init = False
-    bool_logfile_location_init = False
 
-    # arround test config
+    # around test config
     # testintensety = 'quick'
 
     # generated psth
     path_folder_test_env = None
-    logfiles_last_run = None
-    logfiles_archived = None
-    logfiles_working_dir = None
     numErrors = 0
     numErrors_a = []
+    uuid_test = ""
+    # todo: move to this to logfile manager
+    iteration_index = 0 # index of class, for every new test, there should be an increment (done from extern unit test)
 
-    def __init__(self):
+    def __init__(self, lfm_instance=None):
 
+        assert lfm_instance  # todo: alter remove and gen auto-gen. but for now ist should crash if log is overwritten!
+        self.lfm = lfm_instance  # type: LogfileManager
         self.logfile_prefix = ""  # for normal the UUID of he test
-        self.uuid_test = str(uuid.uuid4())
-        self.dict_add_params = None
+        self.last_comment = ""  # comment for next zip-archie, attached to the end. used for a memory name
         pass
+
+    def set_last_comment(self, value):
+        self.last_comment = slugify(value)
+
+    def get_last_comment_rease(self):
+        ret = self.last_comment
+        self.last_comment = ""
+        return ret
+
+    @classmethod
+    def set_random_uuid(cls):
+        cls.uuid_test = str(uuid.uuid4())
 
     @abstractmethod
     def run_test(self):
@@ -95,72 +109,20 @@ class Dyntest:
         # todo: probably move down
         pass
 
-    @classmethod
-    def init_logfiles(cls, path_folder_test_env):
-        """
-        Run this method to init the logfile folders. this is creating those folders as given in the parameter.
-        will create 3 directories in path_folder_test_env_
-        - last_run (place for all logffiles from the latest started run)
-        - archived (for all older runs. The zipped last run folder)
-        - working_dir ( the place where to generate e.g. binary files )
-        :param path_folder_test_env: Root path for creating the logfiles
-        :return: nothing
-        """
-        cls.path_folder_test_env = path_folder_test_env
-        cls.bool_logfiles_init = True
-
-        # generate path of sub folders
-        cls.logfiles_last_run = os.path.join(cls.path_folder_test_env, 'last_run')
-        cls.logfiles_archived = os.path.join(cls.path_folder_test_env, 'archived')
-        cls.logfiles_working_dir = os.path.join(cls.path_folder_test_env, 'working_dir')  # for testfiles etc.
-
-        # checking log files possibilities
-        create_a_folder_if_not_existing(cls.path_folder_test_env)
-        create_a_folder_if_not_existing(cls.logfiles_last_run, "last_run")
-        create_a_folder_if_not_existing(cls.logfiles_archived, "archived")
-        create_a_folder_if_not_existing(cls.logfiles_working_dir, "logfiles_working_dir")
-
-        # now check if they are empty.^^ (what ever works, there might be a more easy way outside...)
-        delete_all_files_in_folder(cls.logfiles_last_run)
-        delete_all_files_in_folder(cls.logfiles_working_dir)
-
-        # todo: this does not work, because the file is in use, while it will be read in for zip file generation
-        # if not cls.bool_logfile_location_init:
-        #     # Add a file logger
-        #     f = logging.FileHandler(os.path.join(cls.logfiles_last_run, "test.log"))
-        #     f.setFormatter(formatter_file)
-        #     l.addHandler(f)
-        #     cls.bool_logfile_location_init = True
-
-    def set_additional_logfile_info(self, additional_info_to_logfile):
-        self.logfile_prefix = self.__class__.__name__
-        self.additional_info_to_logfile = additional_info_to_logfile
-
     def archive_logs(self):
-        cOS, cPL, cThePlatform, cTheMachine = GetPlatformMatrixEntry()
-        Name, vLinux, bin = platform.dist()
-        iErr = -1
-        # generate path
-        if cOS is enLin:
-            name_logfile_archive = 'log_%s_%s_%s_%s' % (self.__class__.__name__, self.uuid_test, vLinux, cTheMachine)
-        else:
-            name_logfile_archive = 'log_%s_%s_%s' % (self.__class__.__name__, self.uuid_test, cTheMachine)
-        path_logfile_archive = os.path.join(self.logfiles_archived, name_logfile_archive)
+        l.info("archiving logs")
+        self.lfm.wrap_archive_logs_and_clear(
+            self.uuid_test,
+            self.__class__.__name__,
+            self.get_iteration_index_inc(),
+            comment=self.get_last_comment_rease()
+        )
 
-        # compressing...
-        if os.path.exists(self.logfiles_archived):
-            l.info('Compress to archive: %s' % name_logfile_archive)
-            l.info("Compressing logfiles to %s(.zip)" % path_logfile_archive)
-            # remove files which a zipped, when no error occured during compressing!
-            try:
-                shutil.make_archive(path_logfile_archive, 'zip', self.logfiles_last_run)
-                iErr = 0
-            except BaseException as e:
-                l.error("Compressing files from %s to %s failed" % (self.logfiles_last_run, path_logfile_archive))
-                l.error("Reason: >%s<" % e)
-        else:
-            l.error("Path to logfiles does not exist, cant archive logfiles! %s" % self.logfiles_last_run)
-        return iErr
+
+    def get_iteration_index_inc(self):
+        ret =  self.iteration_index
+        self.iteration_index += 1
+        return ret
 
 
 class Flashertest(Dyntest):
@@ -176,15 +138,11 @@ class Flashertest(Dyntest):
     flasher_binary = None
     path_lua_files = None
 
-
-
-
-
     # Handling command path
     command_structure = None  # representing parameters
 
-    def __init__(self):
-        Dyntest.__init__(self)
+    def __init__(self, lfm):
+        Dyntest.__init__(self, lfm)
         self.test_binary_size = None
         self.command_strings = []  # strings generated from command array abouve
         self.bool_interrupt_batch_f = False
@@ -192,12 +150,12 @@ class Flashertest(Dyntest):
     def run_test(self):
         l.info("# run %s with uuid: %s" % (self.__class__.__name__, self.uuid_test))
         assert self.bool_params_init
-        assert self.bool_logfiles_init
         self.pre_test_step()
         self.init_command_array()
         self.convert_final_command_entries_to_commands()
         self.run_batch_commands()
         self.archive_logs()
+
         l.info("# finished %s with uuid: %s" % (self.__class__.__name__, self.uuid_test))
         l.info("# Return for PyCharm")
 
@@ -205,6 +163,7 @@ class Flashertest(Dyntest):
     def init_params(self, plugin_name, memory_to_test, test_binary_size, path_lua_files, flasher_binary, dict_add_params):
 
         # todo: should be more a temporary solution for debugging, not for testing
+        # todo: use output from jasonixer here!
         self.plugin_name = "-p %s" % plugin_name["plugin_name"]
         self.bus_port_parameters_flasher = "-b %s -u %s -cs %s" % (memory_to_test["b"], memory_to_test["u"], memory_to_test["cs"])
 
@@ -255,6 +214,33 @@ class Flashertest(Dyntest):
     #         #todo: later: this should be also a json tolerant structure, combining input and output.
     #         l.info(self.command_strings[-1])
 
+    def verify_version_of_flasher(self, mandatory_version, version_string):
+        """
+        netX Flasher v1.6.0_RC2 2019-November-01-T15:21
+            GITv1.6.0_RC2-0-g0d3fca292224
+
+        command: ./lua5.1.sh cli_flash.lua -version
+        If every entry from array mandatory_version is in version_string, then this returns true,
+        otherwise it raises the error.
+
+        For this eature nothing else is implemented.
+
+        :return:
+        """
+
+        #important, you iterate oer chars and they will propably match, but you are supposed to iterate over strings.
+        assert type(mandatory_version) is not list
+        # todo: this test is weak,
+
+
+
+
+
+
+
+
+
+
     def convert_final_command_entries_to_commands(self):
         if self.command_strings:
             assert True
@@ -303,9 +289,18 @@ class Flashertest(Dyntest):
         l.info("Execute generated commands above!")
         # todo: rework the command carrier, this is kind of not cool. (redundant code)
         # inert here final commands!
-        carrier_result = batch_command_base(default_carrier, self.command_strings, self.logfiles_last_run, self.logfile_prefix)
-        self.numErrors += eval_batch_result(carrier_result, self.logfiles_last_run, self.logfile_prefix, self.additional_info_to_logfile)
-        self.numErrors_a.append([self.uuid_test, self.numErrors, self.__class__.__name__,len(self.command_strings)])
+        # todo: integrate the logfiles more?
+        carrier_result = batch_command_base(
+            default_carrier,
+            self.command_strings,
+            self.lfm.get_dir_tmp_logfiles(),
+            self.uuid_test)
+        self.numErrors += eval_batch_result(
+            carrier_result,
+            self.lfm.get_dir_tmp_logfiles(),
+            self.logfile_prefix,
+            "%s %s" % (self.uuid_test, self.__class__.__name__))
+        self.numErrors_a.append([self.uuid_test, self.numErrors, self.__class__.__name__, len(self.command_strings)])
 
     @abstractmethod
     def check_additional_command(self):

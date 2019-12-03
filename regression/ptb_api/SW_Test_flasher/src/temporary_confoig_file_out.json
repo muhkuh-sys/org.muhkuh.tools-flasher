@@ -1,0 +1,199 @@
+{
+  "test_config": [
+    {
+      "board_id_maj_first": [
+        "board_manufacture_number", 
+        "revision", 
+        "serial_number"
+      ], 
+      "board_name": "NXHX-Board123", 
+      "chip": {
+        "chip_name": "c_1: netX90", 
+        "chip_type_identifyer": "c_4_netx90_rev0", 
+        "chip_type_name": "c_3_netX 90 Rev0", 
+        "chip_type_value": -42, 
+        "chip_type_value_": "number from flasher (c5)", 
+        "flasher_name": "c_2: netX90 Rev0", 
+        "interfaces": [
+          {
+            "netx_port": "xJTAG", 
+            "netx_protocol": "yJTAG"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUSB"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUART"
+          }
+        ]
+      }, 
+      "memory_available": [
+        {
+          "manufacture": "future Technologies0", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 2048, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies1", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 4096, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies2", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 6144, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }
+      ]
+    }, 
+    {
+      "board_id_maj_first": [
+        "123234", 
+        "2", 
+        "123dsdf2431"
+      ], 
+      "board_name": "NXHX-Added", 
+      "chip": {
+        "chip_name": "c_1: netX90", 
+        "chip_type_identifyer": "c_4_netx90_rev0", 
+        "chip_type_name": "c_3_netX 90 Rev0", 
+        "chip_type_value": -42, 
+        "chip_type_value_": "number from flasher (c5)", 
+        "flasher_name": "c_2: netX90 Rev0", 
+        "interfaces": [
+          {
+            "netx_port": "xJTAG", 
+            "netx_protocol": "yJTAG"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUSB"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUART"
+          }
+        ]
+      }, 
+      "memory_available": [
+        {
+          "manufacture": "future Technologies0", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 2048, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies1", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 4096, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }
+      ]
+    }, 
+    {
+      "board_id_maj_first": [
+        "123234", 
+        "2", 
+        "123dsdf2431"
+      ], 
+      "board_name": "NXHX-Added", 
+      "chip": {
+        "chip_name": "c_1: netX90", 
+        "chip_type_identifyer": "c_4_netx90_rev0", 
+        "chip_type_name": "c_3_netX 90 Rev0", 
+        "chip_type_value": -42, 
+        "chip_type_value_": "number from flasher (c5)", 
+        "flasher_name": "c_2: netX90 Rev0", 
+        "interfaces": [
+          {
+            "netx_port": "xJTAG", 
+            "netx_protocol": "yJTAG"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUSB"
+          }, 
+          {
+            "netx_port": "xUSB", 
+            "netx_protocol": "yUART"
+          }
+        ]
+      }, 
+      "memory_available": [
+        {
+          "manufacture": "future Technologies0", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 2048, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies1", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 4096, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies2", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 6144, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }, 
+        {
+          "manufacture": "future Technologies3", 
+          "memory_name_bus": "read_dyn_from info ( bus_name )", 
+          "memory_name_unit": "read_dyn_from info ( unit_name )", 
+          "memory_size_byte": 8192, 
+          "order_number": "S12345_from_amaonte c s---2", 
+          "select_code_memory": {
+            "b": 42, 
+            "u": 69
+          }
+        }
+      ]
+    }
+  ]
+}

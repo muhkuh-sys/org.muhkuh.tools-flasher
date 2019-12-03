@@ -219,6 +219,20 @@ def UsePlatformMatrixExample():
             print ("[pirate] No installation for %s on %s due to no command given"%(ThePlatform,theMachine))
             exit(12)
 
+
+def platform_deliver():
+    """
+    Returns lots of useful infos about the plattform and the os running on!
+    todo: there must be a nicer way to archive the enWin, enLin thing.
+    :return: dictionary
+    """
+    os = {}
+    os["Name"], os["os_vLinux"], os["os_bin"] = platform.dist()
+    os["os_cOS"], os["os_cPL"], os["os_cThePlatform"], os[
+        "os_cTheMachine"] = GetPlatformMatrixEntry()
+    return os
+
 if __name__ == "__main__":
+    print(platform_deliver())
     UsePlatformMatrixExample()
 
