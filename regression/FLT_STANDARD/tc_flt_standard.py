@@ -7,8 +7,10 @@ base_root = os.path.dirname(file_dir)  # location where all projects reside
 # print base_root
 sys.path.append(base_root)
 
-from ptb_api.SW_Test_flasher.src.class_dyntest import *
-from ptb_api.simpelTools.src.filetools import *
+# from ptb_api.SW_Test_flasher.src.class_dyntest import *
+from SW_Test_flasher.src.class_dyntest import *
+# from ptb_api.simpelTools.src.filetools import *
+from simpelTools.src.filetools import *
 
 
 class FltStandardSqiFlash(Flashertest):
@@ -21,18 +23,18 @@ class FltStandardSqiFlash(Flashertest):
     binary_file_read_from_netx = None
     binary_file_write_to_netx = None
 
-    def __init__(self):
-        Flashertest.__init__(self)
+    def __init__(self, lfm):
+        Flashertest.__init__(self, lfm)
         self.test_binary_size = 5*1024
 
     def pre_test_step(self):
         # Generate test-binary-files
-        assert self.bool_logfiles_init
-        self.binary_file_read_from_netx = os.path.realpath(os.path.join(self.logfiles_working_dir,
+        self.binary_file_read_from_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_read_file_from_netx.bin" % self.__class__.__name__))
-        self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.logfiles_working_dir,
+        self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_writefile_to_netx.bin" % self.__class__.__name__))
         generate_randome_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
+        shutil.copy(self.binary_file_write_to_netx, self.lfm.get_dir_tmp_logfiles())
 
     def init_command_array(self):
         enable_flasher = {"flasher": True}
@@ -61,13 +63,13 @@ class FltTestcliSqiFlash(Flashertest):
     binary_file_read_from_netx = None
     binary_file_write_to_netx = None
 
-    def __init__(self):
-        Flashertest.__init__(self)
+    def __init__(self, lfm):
+        Flashertest.__init__(self, lfm)
         self.test_binary_size = 4*1024*1024
 
     def pre_test_step(self):
         # Generate test-binary-files
-        assert self.bool_logfiles_init
+        pass
 
     def init_command_array(self):
         enable_flasher = {"flasher": True}
@@ -86,19 +88,18 @@ class FltStandardOtherFlash(Flashertest):
     binary_file_read_from_netx = None
     binary_file_write_to_netx = None
 
-    def __init__(self):
-        Flashertest.__init__(self)
+    def __init__(self, lfm):
+        Flashertest.__init__(self, lfm)
         self.test_binary_size = 5*1024
 
     def pre_test_step(self):
         # Generate test-binary-files
-        assert self.bool_logfiles_init
-        self.binary_file_read_from_netx = os.path.realpath(os.path.join(self.logfiles_working_dir,
+        self.binary_file_read_from_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_read_file_from_netx.bin" % self.__class__.__name__))
-        self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.logfiles_working_dir,
+        self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_writefile_to_netx.bin" % self.__class__.__name__))
         generate_randome_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
-        shutil.copy(self.binary_file_write_to_netx, self.logfiles_last_run)
+        shutil.copy(self.binary_file_write_to_netx, self.lfm.get_dir_tmp_logfiles())
 
     def init_command_array(self):
        enable_flasher = {"flasher": True}

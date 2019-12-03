@@ -6,7 +6,10 @@ base_root = os.path.dirname(file_dir)  # location where all projects reside
 
 sys.path.append(base_root)
 
-from ptb_api.SW_Test_flasher.src.class_dyntest import *
+# from ptb_api.SW_Test_flasher.src.class_dyntest import *
+from SW_Test_flasher.src.class_dyntest import *
+# from ptb_api.simpelTools.src.filetools import *
+from simpelTools.src.filetools import *
 
 
 class NxtFlasher_55(Flashertest):
@@ -22,8 +25,8 @@ class NxtFlasher_55(Flashertest):
     binary_file_read_from_netx = None
     binary_file_write_to_netx = None
 
-    def __init__(self):
-        Flashertest.__init__(self)
+    def __init__(self, lfm):
+        Flashertest.__init__(self, lfm)
         self.bool_interrupt_batch_f = True
 
     def pre_test_step(self):
@@ -31,11 +34,11 @@ class NxtFlasher_55(Flashertest):
 
     def init_command_array(self):
         iflash0_secure_cal_info_page_ref = os.path.join(file_dir, "test_files", "iflash0_info.bin_ref")
-        iflash0_secure_cal_info_page_readback = os.path.join(self.logfiles_working_dir, "iflash0_info.bin_readback")
+        iflash0_secure_cal_info_page_readback = os.path.join(self.lfm.get_dir_work(), "iflash0_info.bin_readback")
         iflash1_secure_com_info_page_ref = os.path.join(file_dir, "test_files", "iflash1_info.bin_ref")
-        iflash1_secure_com_info_page_readback = os.path.join(self.logfiles_working_dir, "iflash1_info.bin_readback")
+        iflash1_secure_com_info_page_readback = os.path.join(self.lfm.get_dir_work(), "iflash1_info.bin_readback")
         iflash2_secure_app_info_page_ref = os.path.join(file_dir, "test_files", "iflash2_info.bin_ref")
-        iflash2_secure_app_info_page_readback = os.path.join(self.logfiles_working_dir, "iflash2_info.bin_readback")
+        iflash2_secure_app_info_page_readback = os.path.join(self.lfm.get_dir_work(), "iflash2_info.bin_readback")
         iflash_com = os.path.join(file_dir, "test_files", "COM_iflash.bin")
         iflash_app = os.path.join(file_dir, "test_files", "APP_iflash.bin")
         openocd_bin_path = os.path.realpath("C:\\Daten_local_only\\Tools\\openocd\\openocd-0.10.0\\bin\\openocd.exe")
