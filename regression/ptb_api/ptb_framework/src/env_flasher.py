@@ -99,9 +99,9 @@ class EnvFlasher(PTBEnv):
         """
         In this monstrum we init all necessay variables for futher path an binary files.
         there might be a better way to do so, e.g. with a single json, which is acutally containing the relevant data.
-        But this also does not change the fact that tere a several lines to be read. Ok, you could also hardcode
+        But this also does not change the fact that there are several lines to be read. Ok, you could also hardcode
         everything in place and skip all the init stuff, but the benefit of the init stuff is, that it easy to
-        manipulate and to be extended.
+        manipulate and to extend.
         :param path_folder_logfiles: Logfiles are createt for every test run. the location provides the root dir to them
         :param path_file_version_json: Ther version json is for information purpose and for transmitting the version
         of the flasher. the flasher version is contained in the folder to the flasher, which makes it mandatory to
@@ -136,6 +136,11 @@ class EnvFlasher(PTBEnv):
         self.set_path_flasher_binary()
 
     def init_parse_args(self):
+        """
+        Command line interface for enable the regressin tests in ptb.
+        Can also beused for other testing purpose.
+        :return: basically init several vars which influence the test. use -h for more info.
+        """
         l.info("init parser")
 
         subparsers = self.parser.add_subparsers(help="subparser of class %s" % self.__class__.__name__)

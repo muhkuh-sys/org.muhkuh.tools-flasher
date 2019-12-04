@@ -40,36 +40,25 @@ class UnitTestFlasherTest(unittest.TestCase):
             - set up drag&drop package (unzipping flasher, eventually installng romloader)
             - prepare all variables, flasher path etc for following tests
 
+        This function is the local head of the internal test environment. A redesign will enable the user to invoke the tests
+        without the test environment.
+
         This uses arg-parse of the flasherEnv. Use help of it for future advice
-        :return:
         """
 
         l.info("Enter Setup Class!")
 
-        compare_path = '/home/SambaShare/gitScript/scripts/python/eclipseWB/org.muhkuh.tools-flasher/regression'
 
-        maintained_archive = package_root
-        if os.path.exists(compare_path):
-            if realpath(compare_path) == realpath(dirname(__file__)):
-                # for local debugging, a quick check.
-                maintained_archive = '/home/aballmert/Downloads/ptbt_0.1.291-1.6.0_rc2_betabuild'
 
-        # todo: provide path to flasher here!
-        # todo: logfiles
-        # todo: configfile for flasher path
 
-        log_path = os.path.join(maintained_archive, 'logfiles')
-        # todo: this is the most ugliest way of fixing redundant logfile folders...
-        # clear archived
-        archived_dir = 'zip path'
 
-        path_file_version_json = os.path.join(maintained_archive, 'version.json') # if not found, local searched
-
-        # logfile_manager is created inside flasher.
-        # it's now passed into all other files.
+        path_file_version_json = "path/to/version/file"  # mandatory predefined
+        log_path = "/from/version.json"
         cls.flasher_env = EnvFlasher(log_path, path_file_version_json, maintained_archive)
         cls.lfm = cls.flasher_env.lfm
 
+        # was kommt hier her? => add to version json
+        #  - set regression deep
         loc_list_black, loc_list_white = cls.execute_argparse()
 
         list_connected_netx = \
@@ -77,6 +66,9 @@ class UnitTestFlasherTest(unittest.TestCase):
                 list_white=loc_list_white,
                 list_black=loc_list_black)
 
+        # todo: compare desired interface with netx interfaces in list
+
+        # refrase, with abouve netX
         if len(list_connected_netx) == 0:
             raise Exception("no netX connected!")
         elif len(list_connected_netx) > 1:
@@ -129,7 +121,6 @@ class UnitTestFlasherTest(unittest.TestCase):
                    ]
                    ]
         select_list.append(netx500)
-
         netX50 = [3, {"USB": "UART"},
                   [
                       {"b": 0, "u": 0, "cs": 0, "name": "S29GL128P90", "size": 16 * 1024 * 1024},
@@ -137,7 +128,6 @@ class UnitTestFlasherTest(unittest.TestCase):
                   ]
                   ]
         select_list.append(netX50)
-
         netX10 = [5, {},
                   [
                       {"b": 0, "u": 0, "cs": 0, "name": "S29GL128P90", "size": 16 * 1024 * 1024},
@@ -146,7 +136,6 @@ class UnitTestFlasherTest(unittest.TestCase):
                   ]
                   ]
         select_list.append(netX10)
-
         netX51_52_A = [6, {"USB": "UART"},
                        [
                            {"b": 1, "u": 0, "cs": 0, "name": "W25Q32", "size": 4 * 1024 * 1024},
@@ -156,7 +145,6 @@ class UnitTestFlasherTest(unittest.TestCase):
         netX51_52_B[en_id] = 7
         select_list.append(netX51_52_A)
         select_list.append(netX51_52_B)
-
         netx4000 = [11, {"USB": "UART"},
                     [
                         {"b": 1, "u": 0, "cs": 0, "name": "MX25L12835FM2I", "size": 16 * 1024 * 1024},
@@ -165,9 +153,7 @@ class UnitTestFlasherTest(unittest.TestCase):
                         # {"b": 3, "u": 0, "cs": 0, "name": "eMMC_512MB", "size": 512 * 1024 * 1024},
                     ]
                     ]
-
         select_list.append(netx4000)
-
         netX90rev0 = [13, {"USB": "UART"},
                       [
                           {"b": 1, "u": 0, "cs": 0, "name": "W25Q32", "size": 4 * 1024 * 1024},  # netIOL
