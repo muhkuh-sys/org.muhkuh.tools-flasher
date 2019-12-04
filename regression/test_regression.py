@@ -75,7 +75,43 @@ class UnitTestFlasherTest(unittest.TestCase):
             raise Exception("more then one netX connected!")
         connected_netx = list_connected_netx[0]
 
-        pass
+
+
+        # todo: this is the part where the iteration of SEVERAL netX must be integrated. something like a loop.
+        #  probably use the unit test internal pattern loop.
+
+        loc_plugin_name = connected_netx[Jasonixer.json_chip_if_port]
+        loc_netx_chip_type = int(connected_netx[Jasonixer.json_chip_type_number])
+        loc_netx_chip_type_id = connected_netx[Jasonixer.json_chip_type_identifyer]
+        loc_protocol = connected_netx[Jasonixer.json_chip_flasher_name]
+
+        loc_protocol_alias = cls.set_correct_protocol_to_netx(loc_plugin_name, loc_protocol)
+
+        # todo: all infos are already in the class list_connected_netx available.
+
+        # todo: exclude in json, loaded ad runtime from working dir or so.
+        # todo: pull this into jasonixer
+        # todo: make use of fash_env
+        # select for netX500
+        cls.set_test_parameters_to_netx(loc_netx_chip_type, loc_netx_chip_type_id, loc_plugin_name, loc_protocol_alias)
+
+        # Set the binary path for lua for executing the flasher. retrieved from flasher_env
+        # todo: one of those fields is redundant. Find usage in tedst, reduce the chain.
+        # can't discard, we have the detect routine, which retrieves onfos about the netX as json, depens on path.
+        cls.path_flasher_binary = cls.flasher_env.ref_flash.gPath_lua_binary
+        cls.path_flasher_files = cls.flasher_env.ref_flash.gpathAbs_flasher
+        # todo: manage logfile directory creation ans so on. probably run every test in a subdir
+
+    @classmethod
+    def set_correct_protocol_to_netx(cls, loc_plugin_name, loc_protocol):
+        """
+        Some netX have e.g a usb-port, but the actual protocol the use is UART which is used as
+        virtual com port. Some other speak real usb over it. The function first sets default parameters
+        ans from given list an other parameter is selected if necessary.
+        :param loc_plugin_name: the plugin name like romloader_usb
+        :param loc_protocol: necessary for the error message.
+        :return:
+        """
         # assignment dict
         # List for setting default helpers
         # they can be overwritten by the dicts in the memory description.
@@ -86,12 +122,6 @@ class UnitTestFlasherTest(unittest.TestCase):
             ['romloader_jtag', 'JTAG'],
             ['romloader_eth', 'ETHERNET']
         ]
-
-        loc_plugin_name = connected_netx[Jasonixer.json_chip_if_port]
-        loc_netx_chip_type = int(connected_netx[Jasonixer.json_chip_type_number])
-        loc_netx_chip_type_id = connected_netx[Jasonixer.json_chip_type_identifyer]
-        loc_protocol = connected_netx[Jasonixer.json_chip_flasher_name]
-
         # interate over default assignment list
         for ele in assignment_list:
             if ele[0] == loc_protocol:
@@ -102,13 +132,68 @@ class UnitTestFlasherTest(unittest.TestCase):
             msg = "could not determine port: %s" % loc_plugin_name
             l.error(msg)
             raise (BaseException(msg))
+        return loc_protocol_alias
 
-        # todo: all infos are already in the class list_connected_netx available.
+    @classmethod
+    def set_test_parameters_to_netx(cls, loc_netx_chip_type, loc_netx_chip_type_id, loc_plugin_name, loc_protocol_alias):
+        # returned are enumeratores for the positions of values in the array, ugly but effective.
+        en_ass, en_flash, en_id, select_list = cls.set_flashes_to_netx()
 
-        # todo: select
-        # todo: pull this into jasonixer
-        # todo: make use of fash_env
-        # select for netX500
+        # set up transfare structures
+        # Todo: Later use Janonixer structures for it
+        for ele in select_list:
+            # check netX ID against registered ID's in list generated above
+            if ele[en_id] == loc_netx_chip_type:
+                dict_tabl = ele[en_ass]
+                # If there is a translation dict inside, use the key from the translation dict.
+                # if not, use the default one. assigned in the short table
+                for key in dict_tabl:
+                    if dict_tabl[key] == loc_protocol_alias:
+                        loc_connected_port_type = key
+                        break
+                else:
+                    loc_connected_port_type = loc_protocol_alias
+                # todo: transfare into jasonixer
+                cls.plugin_name = {
+                    "plugin_name": loc_plugin_name,
+                    "netx_port": loc_connected_port_type,
+                    "netx_protocol": loc_protocol_alias,
+                    "netx_chip_type": loc_netx_chip_type,
+                    "netx_chip_type_id": loc_netx_chip_type_id}
+                cls.memories_to_test = ele[en_flash]
+                break
+        else:
+            raise (BaseException("No flash found according to ID"))
+
+    @classmethod
+    def assign_names_to_netx(cls):
+        """
+        for whom it concerns, this is a list of ID's assigned to real netX names and lua internal #defines
+        :return:
+        """
+        enx_name = 0  # flasher internal description of netX as assumed
+        enx_ct_val = 1  # flasher internal constant value
+        enx_ct_id = 2  # flasher internal constant (enum name)
+        # https://kb.hilscher.com/x/KYBOBQ
+        # this is unused, but was intended to be used. hold it here for later purpose.
+        x = [["unknown chip", 0, "ROMLOADER_CHIPTYP_UNKNOWN"],
+             ["netX500	", 1, "ROMLOADER_CHIPTYP_NETX500"],
+             ["netX100	", 2, "ROMLOADER_CHIPTYP_NETX100"],
+             ["netX50	", 3, "ROMLOADER_CHIPTYP_NETX50"],
+             ["netX10	", 5, "ROMLOADER_CHIPTYP_NETX10"],
+             ["netX51/52 Step A", 6, "ROMLOADER_CHIPTYP_NETX56"],
+             ["netX51/52 Step B", 7, "ROMLOADER_CHIPTYP_NETX56B"],
+             ["netX4000 RLXD", 8, "ROMLOADER_CHIPTYP_NETX4000_RELAXED"],
+             ["netX4000 Full", 11, "ROMLOADER_CHIPTYP_NETX4000_FULL"],
+             ["netX4100 Small", 12, "ROMLOADER_CHIPTYP_NETX4100_SMALL"],
+             ["netX90MPW", 10, "ROMLOADER_CHIPTYP_NETX90_MPW"],
+             ["netX90 Rev0", 13, "ROMLOADER_CHIPTYP_NETX90"],
+             ["netX90 Rev1", 14, "ROMLOADER_CHIPTYP_NETX90B"],
+             ["netIOL MPW", 15, "ROMLOADER_CHIPTYP_NETIOLA"],
+             ["netIOL Rev0", 16, "ROMLOADER_CHIPTYP_NETIOLB"]]
+
+    @classmethod
+    def set_flashes_to_netx(cls):
         select_list = []
         en_id = 0
         en_ass = 1  # assignment dict  input: port, output: protocol, available if diverges from upper list.
@@ -167,80 +252,16 @@ class UnitTestFlasherTest(unittest.TestCase):
         netx90rev1[en_id] = 14
         select_list.append(netX90rev0)
         select_list.append(netx90rev1)
-
         netiol_MPW = [15, {"USB": "UART"},
                       [
                           {"b": 1, "u": 0, "cs": 0, "name": "W25Q32", "size": 4 * 1024 * 1024},  # netIOL
                       ]
                       ]
-
         netiol_rev0 = copy.deepcopy(netiol_MPW)
         netiol_rev0[en_id] = 16
-
         select_list.append(netiol_MPW)
         select_list.append(netiol_rev0)
-
-        enx_name = 0  # flasher internal description of netX as assumed
-        enx_ct_val = 1  # flasher internal constant value
-        enx_ct_id = 2  # flasher internal constant (enum name)
-        # https://kb.hilscher.com/x/KYBOBQ
-
-        # this is unused, but was intended to be used. hold it here for later purpose.
-        x = [["unknown chip", 0, "ROMLOADER_CHIPTYP_UNKNOWN"],
-             ["netX500	", 1, "ROMLOADER_CHIPTYP_NETX500"],
-             ["netX100	", 2, "ROMLOADER_CHIPTYP_NETX100"],
-             ["netX50	", 3, "ROMLOADER_CHIPTYP_NETX50"],
-             ["netX10	", 5, "ROMLOADER_CHIPTYP_NETX10"],
-             ["netX51/52 Step A", 6, "ROMLOADER_CHIPTYP_NETX56"],
-             ["netX51/52 Step B", 7, "ROMLOADER_CHIPTYP_NETX56B"],
-             ["netX4000 RLXD", 8, "ROMLOADER_CHIPTYP_NETX4000_RELAXED"],
-             ["netX4000 Full", 11, "ROMLOADER_CHIPTYP_NETX4000_FULL"],
-             ["netX4100 Small", 12, "ROMLOADER_CHIPTYP_NETX4100_SMALL"],
-             ["netX90MPW", 10, "ROMLOADER_CHIPTYP_NETX90_MPW"],
-             ["netX90 Rev0", 13, "ROMLOADER_CHIPTYP_NETX90"],
-             ["netX90 Rev1", 14, "ROMLOADER_CHIPTYP_NETX90B"],
-             ["netIOL MPW", 15, "ROMLOADER_CHIPTYP_NETIOLA"],
-             ["netIOL Rev0", 16, "ROMLOADER_CHIPTYP_NETIOLB"]]
-
-        # set up transfare structures
-        # Todo: Later use Janonixer structures for it
-        for ele in select_list:
-            # check netX ID against registered ID's in list generated above
-            if ele[en_id] == loc_netx_chip_type:
-                dict_tabl = ele[en_ass]
-                # If there is a translation dict inside, use the key from the translation dict.
-                # if not, use the default one. assigned in the short table
-                for key in dict_tabl:
-                    if dict_tabl[key] == loc_protocol_alias:
-                        loc_connected_port_type = key
-                        break
-                else:
-                    loc_connected_port_type = loc_protocol_alias
-        # todo: transfare into jasonixer
-                cls.plugin_name = {
-                    "plugin_name": loc_plugin_name,
-                    "netx_port": loc_connected_port_type,
-                    "netx_protocol": loc_protocol_alias,
-                    "netx_chip_type": loc_netx_chip_type,
-                    "netx_chip_type_id": loc_netx_chip_type_id}
-                cls.memories_to_test = ele[en_flash]
-                break
-        else:
-            raise (BaseException("No flash found according to ID"))
-
-        # Set the binary path for lua for executing the flasher. retrieved from flasher_env
-        cls.path_flasher_binary = cls.flasher_env.ref_flash.gPath_lua_binary
-        cls.path_flasher_files = cls.flasher_env.ref_flash.gpathAbs_flasher
-        # todo: manage logfile directory creation ans so on. probably run every test in a subdir
-        #cls.path_logfiles = log_path
-
-        # test group
-        # * short
-        # * standard
-        # * extended
-        # * detailed
-        # * special
-        # self.testGroupInternal = ["short", "special"]
+        return en_ass, en_flash, en_id, select_list
 
     @classmethod
     def execute_argparse(cls):
@@ -600,41 +621,53 @@ class UnitTestFlasherTest(unittest.TestCase):
         self.assertEqual(0, test_result[1])
 
 
+def evaluate_test_result(resulting_test_class):
+    """
+    This is a evaluation function working with separate unit test runner togeter
+    Input is the result class of this test runner.
+    The retun rvalue complies with the ptb. 1 indicates, that a failure in the test was published. 2 indicates,
+    that the auto detection had issues to find a single netX.
+    todo: move this out of scop of test. The Test should be based on pure unit test for externals.
+    :param resulting_test_class: return value of unittest.TextTestRunner().run()
+    :return: 0 inc case of success, 1 in case of failure, 2 in case of error
+    """
+    hard_errors = len(resulting_test_class.errors)
+    test_errors = len(resulting_test_class.failures)
+    if (resulting_test_class.skipped):
+        l.info("display skipped:")
+        for entry in resulting_test_class.skipped:
+            test_name = entry[0]._testMethodName
+            skipping_reason = entry[1]
+            l.info("\t[%s]: %s" % (test_name, skipping_reason))
+    if (hard_errors):
+        l.error("several errors in the sourrounding of the test have occured")
+        for entry in resulting_test_class.errors:
+            test_name = "Framework Error"
+            skipping_reason = entry[1]
+            l.info("\t[%s]: %s" % (test_name, skipping_reason))
+        exit(2)
+    if (test_errors):
+        l.error("Some test failed. (%d)" % test_errors)
+        l.error("several errors in the sourrounding of the test have occured")
+        for entry in resulting_test_class.failures:
+            test_name = entry[0]._testMethodName
+            skipping_reason = entry[1]
+            l.info("\t[%s]: %s" % (test_name, skipping_reason))
+        exit(1)
+
+
 if __name__ == '__main__':
     # umgehen des strikten Verhaltens des Unit tests!
     local_path = os.path.dirname(__file__)
     # runner = HtmlTestRunner.HTMLTestRunner(output='/tmp') # for htmlreport
     runner = unittest.TextTestRunner()  # insert result class here...
-    runner.verbosity = 2
+    runner.verbosity = 2  # 2 for print skipped chunks.
     loader = unittest.TestLoader()
     test = loader.discover(local_path, pattern="test_regression.py", top_level_dir=local_path)
     test_suit = unittest.TestSuite(test)
     result_class = runner.run(test_suit)
     print("")  # BKP
     result_class.printErrors()
-    l.info("End of test, result: %s"%result_class)
+    l.info("End of test, result: %s" % result_class)
     # eval errors:
-    hard_errors = len(result_class.errors)
-    test_errors = len(result_class.failures)
-
-    if(result_class.skipped):
-        l.info("display skipped:")
-        for entry in result_class.skipped:
-            test_name = entry[0]._testMethodName
-            skipping_reason = entry[1]
-            l.info("\t[%s]: %s"% (test_name, skipping_reason))
-    if(hard_errors):
-        l.error("several errors in the sourrounding of the test have occured")
-        for entry in result_class.errors:
-            test_name = "Framework Error"
-            skipping_reason = entry[1]
-            l.info("\t[%s]: %s"% (test_name, skipping_reason))
-        exit(2)
-    if(test_errors):
-        l.error("Some test failed. (%d)"%test_errors)
-        l.error("several errors in the sourrounding of the test have occured")
-        for entry in result_class.failures:
-            test_name = entry[0]._testMethodName
-            skipping_reason = entry[1]
-            l.info("\t[%s]: %s"% (test_name, skipping_reason))
-        exit(1)
+    evaluate_test_result(result_class)
