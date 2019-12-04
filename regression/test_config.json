@@ -1,0 +1,33 @@
+{
+    "binary_sources":{
+        "flasher_default":{
+            "name":"lua5.1",
+            "path":"/path/to/your/location/lua.exe",
+            "comment":"Used for all default applications",
+            "change_to_bin_dir":true
+        },
+        "flasher_special":{
+            "name":"lua5.3",
+            "path":"/path/to/your/special/location/lua.exe",
+            "change_to_bin_dir":true
+        },
+        "open_ocd":{
+            "name":"Open on cip compiler",
+            "path":"/to/the/open/OCD/bin.exe",
+            "change_to_bin_dir":false
+        }
+    },
+    "special_flasher_parmas":{
+        "#plugin":"if no plugin is provided search a plugin according to parameters below",
+        "plugin":"romloader_uart",
+        "#masks":"Used to prevent the scan to detect interfaces you don't want to touch",
+        "#mask_black":"Tells to use ignore interfaces which start with hilscher global IP",
+        "mask_black":["@10."],
+        "#mask_white":["Only allows eth interfaces"],
+        "mask_white":"romloader_eth",
+        "mandatory_chip_id":[42]
+    },
+    "special_open_ocd_parameters":{
+        "cephalopoid":"endoplasmatisches retikulum"
+    }
+}
