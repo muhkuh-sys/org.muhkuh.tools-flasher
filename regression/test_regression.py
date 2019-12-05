@@ -43,6 +43,18 @@ class UnitTestFlasherTest(unittest.TestCase):
         This function is the local head of the internal test environment. A redesign will enable the user to invoke the tests
         without the test environment.
 
+        todo:
+         This setup-function is based on command line options. There is a second idea of how to start this up.
+         In file test_config.json
+         Find the argparse from flasher_env, see where the values are stored. Write a function which
+         is able to read the test_config.json and start the test.
+         Two options should be possible:
+          - look for a interface with the exact description and bypass the interfacescan in total
+          - use the autoscanfunction with black and white list. ( only one netX may be the resut )
+         this feature should then be able to support compfortable local testing.
+
+
+
         This uses arg-parse of the flasherEnv. Use help of it for future advice
         """
 
