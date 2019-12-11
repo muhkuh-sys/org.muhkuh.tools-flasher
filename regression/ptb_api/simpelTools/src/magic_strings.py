@@ -36,7 +36,12 @@ def helper_type_conversion(input_string):
   l.debug("type: %s\n message:%s" % (type(input_string), input_string))
   if type(input_string) is not unicode:
     # i don't need to decode unicode. because it already is!
-    output_string = input_string.decode("utf-8")  # converts bytes to unicode
+    output_string = input_string.decode('utf-8', errors='replace') # https://www.tutorialspoint.com/python/string_decode.htm
+    # output_string = input_string.decode('utf-8', 'ignore') # working
+    # line = bytes(line, 'utf-8').decode('utf-8', 'ignore') # for python 3
+    # source: https://stackoverflow.com/questions/26541968/delete-every-non-utf-8-symbols-from-string
+    # which had not worked: y = helper_type_conversion(b'\xe4')
+    # old: output_string = input_string.decode("utf-8")  # converts bytes to unicode
   else:
     output_string = input_string
   return output_string
