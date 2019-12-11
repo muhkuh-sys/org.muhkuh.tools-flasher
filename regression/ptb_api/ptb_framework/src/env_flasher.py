@@ -24,7 +24,7 @@ class EnvFlasher(PTBEnv):
         this class can be included in a test to handle tests on netX level instead of dealing with the flasher and the
         detecion stuff.
 
-        It's main purpoe is to support the install package of the ptb. So it includes the control of the flasher as a
+        It's former purpose was to support the install package of the ptb. So it includes the control of the flasher as a
         side effect.
         """
 
@@ -214,6 +214,7 @@ class EnvFlasher(PTBEnv):
     # Todo: control functions from here downwards!
 
     def main(self):
+        #todo: deprecadet?, should be in the unit test!
         '''
         Executing test, un with install32 and instead with the version related to the plattform of the host the
         installation will be forced to generate the 32bit flasher.
@@ -344,6 +345,7 @@ class EnvFlasher(PTBEnv):
         return i_err
 
     def gen_name_flasher_archive(self, force32):
+        # todo: actually this is test environment, not a tool env
         if (force32):
             flasher_version_to_install = 'x86'
         else:
@@ -458,6 +460,7 @@ class EnvFlasher(PTBEnv):
 
     @staticmethod
     def apply_whitemask_blacklist(list_possible_netx, list_black=None, list_white=None):
+        # todo: rename
         """
         Helper identify netX
         If the black/white-string is part of the interface, the interface the list takes action.
@@ -711,6 +714,7 @@ class EnvFlasher(PTBEnv):
     # ------------------------ below this line is only tradition. if used, integrate, if not, discard
 
     def ptbt_flasher_v1(self):
+        # todo: unused? -- discard
         '''
         Generates and runns command able to test the flasher.
         A full series of tests is executed, without abortiang after a failed test.
@@ -748,6 +752,7 @@ class EnvFlasher(PTBEnv):
         return numErrors
 
     def apply_test_romloader(self):
+        # todo: keep! - usage?
         """
         Patch flasher with files necessary for the test_romloader.lua.
         :return: 0 in case of success
@@ -770,6 +775,7 @@ class EnvFlasher(PTBEnv):
                 raise e
 
     def install_flasher_version_unpack(self, path_tmp_zip_os_flasher):
+	#todo: used?
         # unpack correct version of the flasher
         l.info("[pirate][install][extract]: OS-Flasher")
         l.info("[pirate][install][extract]: TarFlasher: <%s> to <%s>" % (path_tmp_zip_os_flasher, self.gPath_base_root))
@@ -779,6 +785,7 @@ class EnvFlasher(PTBEnv):
             iErr = extractZip(path_tmp_zip_os_flasher, self.gPath_base_root)
 
     def install_romloader_plugin(self):
+        # todo: no longer supported, expect compplete tool from jenkins
         """
         Patches a old flasher with new romloader files.
         This procedure can be necessary when a new romloader is out, but no new flasher release.
@@ -833,21 +840,7 @@ class EnvFlasher(PTBEnv):
         return iErr
 
 
-def test_black_white():
-    test_netx = []
 
-    test_netx.append(Jasonixer.generate_desc_empty_chip(tmp_port='romloader_uart'))
-    test_netx.append(Jasonixer.generate_desc_empty_chip(tmp_port='romloader_jtag'))
-    test_netx.append(Jasonixer.generate_desc_empty_chip(tmp_port='romloader_eth'))
-    x = EnvFlasher.apply_whitemask_blacklist(test_netx, list_black=['jtag'])  # OK
-    # x = EnvFlasher.apply_whitemask_blacklist(test_netx, list_black=['jtag','jtag']) #OK
-    # x = EnvFlasher.apply_whitemask_blacklist(test_netx, list_white=['jtag']) #OK
-    # x = EnvFlasher.apply_whitemask_blacklist(test_netx, list_white=['jtag','eth']) #ok
-    # x = EnvFlasher.apply_whitemask_blacklist(test_netx, list_white=['jtag','eth'],list_black=['eth']) #ok
-    print(len(x))
-    print("iteration:")
-    for lx in x:
-        print(" - %s" % lx["netx_port"])
 
 
 def demo():
@@ -872,4 +865,3 @@ if __name__ == "__main__":
     # args = flasher_env.parser.parse_args(['test','flasher','-m','mid'])
     # pass
 
-    # test_black_white()

@@ -30,7 +30,7 @@ from simpelTools.src.platform_detect import *
 #  build in binary file match
 #  find os-dependend build path from flasher relativ to file location
 #  - result as a json document, stating with a dictionary
-## later totos:
+## later todos:
 #   - logfiles are archived together with all other tests at the end.
 #    - subfolder with enumerator and cclassname for every run
 #    - Probably total result log?
@@ -44,6 +44,17 @@ print(sys.version)
 
 class Dyntest:
     """
+
+    Dyntest is a support for the unit test. Aim is to keep the unit test functions as small and transparent as possible.
+    This class takes a lot of abstraction away from the developer.
+    Inherit from this all tests are.
+    this class can hold a instance of the logfilemanager or create a own one and also holds a instance of the ptb_env.
+    The logfile manager handles the logfiles, it's creation and the folder sourrounding.
+    The ptb_env was formly intended to interface the pirate test bay. Now wee'll see how it works.
+    This class and it's descendantes interface the test as core. It is desireable to keep most other stuff out of the way, do not make this class overfull.
+
+    todo: Add a function which reads a configfile for global use
+    todo: add a configure functin. something like searching for netX, store them, edit  them and then run the test with new parameters. Such a function can be run before a unit test. 
     todo: set UUID from the outside world
     todo: inherit logfile manager from external instance, or create own. temporarly logfile support removed from class and integrated in upper logfile manager.
 
@@ -51,8 +62,6 @@ class Dyntest:
     create object, "prepare", run the test, leave the test result as the purpose of this class.
     not intended to repeat a single step. only intended to encapsulate the tests and make them more readable!
 
-    Note:
-        Do not include the `self` parameter in the ``Args`` section.
 
     Args:
         msg (str): Human readable string describing the exception.
@@ -123,6 +132,27 @@ class Dyntest:
         ret =  self.iteration_index
         self.iteration_index += 1
         return ret
+
+    def run_batch_commands(self):
+        default_carrier = command_carrier()
+        default_carrier.bool_interrupt_batch = self.bool_interrupt_batch_f
+
+        default_carrier.change_dir_to_bin = True  # relevant for executing flasher with linux correct
+        l.info("Execute generated commands above!")
+        # todo: rework the command carrier, this is kind of not cool. (redundant code)
+        # inert here final commands!
+        # todo: integrate the logfiles more?
+        carrier_result = batch_command_base(
+            default_carrier,
+            self.command_strings,
+            self.lfm.get_dir_tmp_logfiles(),
+            self.uuid_test)
+        self.numErrors += eval_batch_result(
+            carrier_result,
+            self.lfm.get_dir_tmp_logfiles(),
+            self.logfile_prefix,
+            "%s %s" % (self.uuid_test, self.__class__.__name__))
+        self.numErrors_a.append([self.uuid_test, self.numErrors, self.__class__.__name__, len(self.command_strings)])
 
 
 class Flashertest(Dyntest):
@@ -232,15 +262,6 @@ class Flashertest(Dyntest):
         assert type(mandatory_version) is not list
         # todo: this test is weak,
 
-
-
-
-
-
-
-
-
-
     def convert_final_command_entries_to_commands(self):
         if self.command_strings:
             assert True
@@ -281,26 +302,7 @@ class Flashertest(Dyntest):
             #todo: later: this should be also a json tolerant structure, combining input and output.
             l.info(self.command_strings[-1])
 
-    def run_batch_commands(self):
-        default_carrier = command_carrier()
-        default_carrier.bool_interrupt_batch = self.bool_interrupt_batch_f
 
-        default_carrier.change_dir_to_bin = True  # relevant for executing flasher with linux correct
-        l.info("Execute generated commands above!")
-        # todo: rework the command carrier, this is kind of not cool. (redundant code)
-        # inert here final commands!
-        # todo: integrate the logfiles more?
-        carrier_result = batch_command_base(
-            default_carrier,
-            self.command_strings,
-            self.lfm.get_dir_tmp_logfiles(),
-            self.uuid_test)
-        self.numErrors += eval_batch_result(
-            carrier_result,
-            self.lfm.get_dir_tmp_logfiles(),
-            self.logfile_prefix,
-            "%s %s" % (self.uuid_test, self.__class__.__name__))
-        self.numErrors_a.append([self.uuid_test, self.numErrors, self.__class__.__name__, len(self.command_strings)])
 
     @abstractmethod
     def check_additional_command(self):

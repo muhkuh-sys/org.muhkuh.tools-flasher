@@ -60,6 +60,8 @@ class UnitTestFlasherTest(unittest.TestCase):
 
         l.info("Enter Setup Class!")
 
+        # todo: load config from configure script.
+
 
 
 
