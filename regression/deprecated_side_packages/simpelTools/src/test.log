@@ -1,0 +1,185 @@
+[pirate][CRITICAL][2019-06-14 12:32:10,240]test log 'critical'
+[pirate][INFO    ][2019-06-14 12:32:10,241]test log 'info'
+[pirate][CRITICAL][2019-06-14 12:34:54,806]test log 'critical'
+[pirate][INFO    ][2019-06-14 12:34:54,806]test log 'info'
+[pirate][ERROR   ][2019-06-14 12:34:54,806]Provided path for logfiles does not exist. exit cause of error!
+[pirate][CRITICAL][2019-06-14 12:38:05,668]test log 'critical'
+[pirate][INFO    ][2019-06-14 12:38:05,668]test log 'info'
+[pirate][INFO    ][2019-06-14 12:38:05,711][0][R:0][  OK    ](t:0.005473): uname
+[pirate][INFO    ][2019-06-14 12:38:05,711][1][R:0][  OK    ](t:0.007060): sleep 0.001
+[pirate][INFO    ][2019-06-14 12:38:05,711][2][R:1][Err: 001](t:0.004927): rm hallo
+[pirate][INFO    ][2019-06-14 12:38:05,712][3][R:2][Err: 002](t:0.004392): ls hallo
+[pirate][INFO    ][2019-06-14 12:38:05,712][4][R:0][  OK    ](t:0.004639): touch hallo
+[pirate][INFO    ][2019-06-14 12:38:05,712][5][R:0][  OK    ](t:0.005339): ls hallo
+[pirate][INFO    ][2019-06-14 12:38:05,712]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 12:50:40,078]test log 'critical'
+[pirate][INFO    ][2019-06-14 12:50:40,078]test log 'info'
+[pirate][INFO    ][2019-06-14 12:50:40,079]logging to /tmp/log_42_stream_the_command-param1-log123.log
+[pirate][INFO    ][2019-06-14 12:50:40,123][0][R:0][  OK    ](t:0.006215): uname
+[pirate][INFO    ][2019-06-14 12:50:40,123][1][R:0][  OK    ](t:0.008416): sleep 0.001
+[pirate][INFO    ][2019-06-14 12:50:40,123][2][R:0][  OK    ](t:0.008221): rm hallo
+[pirate][INFO    ][2019-06-14 12:50:40,123][3][R:2][Err: 002](t:0.005604): ls hallo
+[pirate][INFO    ][2019-06-14 12:50:40,123][4][R:0][  OK    ](t:0.005110): touch hallo
+[pirate][INFO    ][2019-06-14 12:50:40,123][5][R:0][  OK    ](t:0.006635): ls hallo
+[pirate][INFO    ][2019-06-14 12:50:40,123]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 12:53:12,863]test log 'critical'
+[pirate][INFO    ][2019-06-14 12:53:12,863]test log 'info'
+[pirate][INFO    ][2019-06-14 12:53:12,863]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][INFO    ][2019-06-14 12:53:12,900][0][R:0][  OK    ](t:0.006315): uname
+[pirate][INFO    ][2019-06-14 12:53:12,901][1][R:0][  OK    ](t:0.007405): sleep 0.001
+[pirate][INFO    ][2019-06-14 12:53:12,901][2][R:0][  OK    ](t:0.004215): rm hallo
+[pirate][INFO    ][2019-06-14 12:53:12,901][3][R:2][Err: 002](t:0.004071): ls hallo
+[pirate][INFO    ][2019-06-14 12:53:12,901][4][R:0][  OK    ](t:0.004318): touch hallo
+[pirate][INFO    ][2019-06-14 12:53:12,901][5][R:0][  OK    ](t:0.007164): ls hallo
+[pirate][INFO    ][2019-06-14 12:53:12,901]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 13:43:58,960]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:43:58,960]test log 'info'
+[pirate][INFO    ][2019-06-14 13:43:58,961]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][INFO    ][2019-06-14 13:43:58,990][0][R:0][  OK    ](t:0.006126): uname
+[pirate][INFO    ][2019-06-14 13:43:58,990][1][R:0][  OK    ](t:0.005597): sleep 0.001
+[pirate][INFO    ][2019-06-14 13:43:58,990][2][R:0][  OK    ](t:0.003585): rm hallo
+[pirate][INFO    ][2019-06-14 13:43:58,990][3][R:2][Err: 002](t:0.004058): ls hallo
+[pirate][INFO    ][2019-06-14 13:43:58,990][4][R:0][  OK    ](t:0.003538): touch hallo
+[pirate][INFO    ][2019-06-14 13:43:58,990][5][R:0][  OK    ](t:0.003556): ls hallo
+[pirate][INFO    ][2019-06-14 13:43:58,990]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 13:46:03,708]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:46:03,708]test log 'info'
+[pirate][INFO    ][2019-06-14 13:46:03,709]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][CRITICAL][2019-06-14 13:46:21,617]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:46:21,617]test log 'info'
+[pirate][INFO    ][2019-06-14 13:46:21,617]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][CRITICAL][2019-06-14 13:46:44,884]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:46:44,884]test log 'info'
+[pirate][INFO    ][2019-06-14 13:46:44,885]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][INFO    ][2019-06-14 13:46:44,917]write summary to /tmp/log/summarypreafix_0_sumary_.log
+[pirate][INFO    ][2019-06-14 13:46:44,918][0][R:0][  OK    ](t:0.007053): uname
+[pirate][INFO    ][2019-06-14 13:46:44,918][1][R:0][  OK    ](t:0.005348): sleep 0.001
+[pirate][INFO    ][2019-06-14 13:46:44,918][2][R:0][  OK    ](t:0.003498): rm hallo
+[pirate][INFO    ][2019-06-14 13:46:44,918][3][R:2][Err: 002](t:0.006336): ls hallo
+[pirate][INFO    ][2019-06-14 13:46:44,918][4][R:0][  OK    ](t:0.003944): touch hallo
+[pirate][INFO    ][2019-06-14 13:46:44,918][5][R:0][  OK    ](t:0.003809): ls hallo
+[pirate][INFO    ][2019-06-14 13:46:44,918]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 13:48:09,048]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:48:09,048]test log 'info'
+[pirate][INFO    ][2019-06-14 13:48:09,049]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][INFO    ][2019-06-14 13:48:09,089]write summary to /tmp/log/summarypreafix_0_sumary_.log
+[pirate][INFO    ][2019-06-14 13:48:09,089][0][R:0][  OK    ](t:0.005826): uname
+[pirate][INFO    ][2019-06-14 13:48:09,090][1][R:0][  OK    ](t:0.010992): sleep 0.001
+[pirate][INFO    ][2019-06-14 13:48:09,090][2][R:0][  OK    ](t:0.004304): rm hallo
+[pirate][INFO    ][2019-06-14 13:48:09,090][3][R:2][Err: 002](t:0.004106): ls hallo
+[pirate][INFO    ][2019-06-14 13:48:09,090][4][R:0][  OK    ](t:0.004408): touch hallo
+[pirate][INFO    ][2019-06-14 13:48:09,090][5][R:0][  OK    ](t:0.006517): ls hallo
+[pirate][INFO    ][2019-06-14 13:48:09,090]simple test logging passed!
+[pirate][CRITICAL][2019-06-14 13:52:09,088]test log 'critical'
+[pirate][INFO    ][2019-06-14 13:52:09,088]test log 'info'
+[pirate][INFO    ][2019-06-14 13:52:09,089]logging to /tmp/log/log_42_stream_thecommand-param1-log123.log
+[pirate][INFO    ][2019-06-14 13:52:09,122]write summary to /tmp/log/summarypreafix_0_sumary_.log
+[pirate][INFO    ][2019-06-14 13:52:09,122][0][R:0][  OK    ](t:0.005740): uname
+[pirate][INFO    ][2019-06-14 13:52:09,123][1][R:0][  OK    ](t:0.007227): sleep 0.001
+[pirate][INFO    ][2019-06-14 13:52:09,123][2][R:0][  OK    ](t:0.004179): rm hallo
+[pirate][INFO    ][2019-06-14 13:52:09,123][3][R:2][Err: 002](t:0.003824): ls hallo
+[pirate][INFO    ][2019-06-14 13:52:09,123][4][R:0][  OK    ](t:0.003585): touch hallo
+[pirate][INFO    ][2019-06-14 13:52:09,123][5][R:0][  OK    ](t:0.005719): ls hallo
+[pirate][INFO    ][2019-06-14 13:52:09,123]simple test logging passed!
+[pirate][CRITICAL][2019-09-27 11:58:23,970]test log 'critical'
+[pirate][INFO    ][2019-09-27 11:58:23,982]test log 'info'
+[pirate][ERROR   ][2019-09-27 11:58:24,050]Provided path for logfiles does not exist. exit cause of error!
+[pirate][ERROR   ][2019-09-27 11:58:24,050]provided path for batch summary does not exist! /tmp/log
+[pirate][INFO    ][2019-09-27 11:58:24,051]simple test logging passed!
+[pirate][CRITICAL][2019-09-27 11:58:33,434]test log 'critical'
+[pirate][INFO    ][2019-09-27 11:58:33,434]test log 'info'
+[pirate][INFO    ][2019-09-27 11:59:12,730]type: <type 'unicode'>
+ message:aseftÃ¤Ã¶l?ÃŸ
+[pirate][INFO    ][2019-09-27 12:05:32,932]type: <type 'unicode'>
+ message:aseftÃ¤Ã¶l?ÃŸ
+[pirate][INFO    ][2019-09-27 12:05:41,928]type: <type 'str'>
+ message:aseftäöl?ß
+[pirate][CRITICAL][2019-09-27 12:06:17,552]test log 'critical'
+[pirate][INFO    ][2019-09-27 12:06:17,552]test log 'info'
+[pirate][INFO    ][2019-09-27 12:06:30,220]type: <type 'str'>
+ message:aseftäöl?ß
+[pirate][INFO    ][2019-09-27 12:06:32,458]type: <type 'unicode'>
+ message:aseftÃ¤Ã¶l?ÃŸ
+[pirate][INFO    ][2019-09-27 12:10:54,374]type: <type 'unicode'>
+ message:aseftÃ¤Ã¶l?ÃŸ
+[pirate][INFO    ][2019-09-27 12:10:58,615]type: <type 'unicode'>
+ message:aseftÃ¤Ã¶l?ÃŸ
+[pirate][INFO    ][2019-09-27 12:11:04,643]type: <type 'str'>
+ message:aseftäöl?ß
+[pirate][INFO    ][2019-09-27 12:12:17,020]type: <type 'str'>
+ message:aseftäöl?ß
+[pirate][INFO    ][2019-09-27 12:12:23,701]type: <type 'str'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:12:28,636]type: <type 'unicode'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:13:33,163]type: <type 'unicode'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:13:55,900]type: <type 'str'>
+ message:äöü
+[pirate][CRITICAL][2019-09-27 12:14:48,458]test log 'critical'
+[pirate][INFO    ][2019-09-27 12:14:48,458]test log 'info'
+[pirate][INFO    ][2019-09-27 12:14:58,139]type: <type 'str'>
+ message:äöü
+[pirate][INFO    ][2019-09-27 12:15:01,495]type: <type 'unicode'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:15:22,872]type: <type 'str'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:16:26,206]type: <type 'str'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:16:41,156]type: <type 'str'>
+ message:äöü
+[pirate][INFO    ][2019-09-27 12:19:46,660]type: <type 'str'>
+ message:Ã¤Ã¶Ã¼
+[pirate][INFO    ][2019-09-27 12:26:08,452]type: <type 'unicode'>
+ message:Ã¤Ã¶Ã¼
+[pirate][CRITICAL][2019-10-01 12:15:09,779]test log 'critical'
+[pirate][INFO    ][2019-10-01 12:15:09,792]test log 'info'
+[pirate][ERROR   ][2019-10-01 12:15:09,926]Provided path for logfiles does not exist. exit cause of error!
+[pirate][ERROR   ][2019-10-01 12:15:09,926]provided path for batch summary does not exist! /tmp/log
+[pirate][INFO    ][2019-10-01 12:15:09,926]simple test logging passed!
+[pirate][INFO    ][2019-11-04 14:33:53,552]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:33:53,565]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:33:53,565]No folder found => nothing to reset! [Errno 2] No such file or directory: '/tmp/logfiles/logs_last_run'
+[pirate][INFO    ][2019-11-04 14:33:53,565]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 14:33:53,565]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 14:34:10,683]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:34:10,683]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:34:10,684]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:34:10,684]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 14:34:10,684]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 14:34:57,872]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:34:57,872]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:34:57,872]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:34:57,873]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 14:34:57,873]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 14:36:14,631]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:36:14,631]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:36:14,631]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:36:14,632]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 14:36:14,632]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 14:50:23,987]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:50:23,987]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:50:23,987]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:50:45,696]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:50:45,697]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:50:45,697]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:52:21,606]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:52:21,606]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:52:21,606]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:54:57,568]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:54:57,568]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:54:57,569]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 14:56:04,885]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 14:56:04,886]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 14:56:18,951]Compress to archive: logfiles_file_eysdvxists
+[pirate][INFO    ][2019-11-04 14:56:18,952]Compressing logfiles to /tmp/logfiles/logs_final_zip/logfiles_file_eysdvxists.zip)
+[pirate][INFO    ][2019-11-04 14:56:31,707]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 14:56:31,707]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 14:56:31,707]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 15:00:20,490]logfiles tmp: /tmp/logfiles/logs_last_run
+[pirate][INFO    ][2019-11-04 15:00:20,490]logfiles zip: /tmp/logfiles/logs_final_zip
+[pirate][INFO    ][2019-11-04 15:00:20,490]remove old file: demofile.log
+[pirate][INFO    ][2019-11-04 15:00:20,490]Compress to archive: MyPreafix1logfiles_mySuffix
+[pirate][INFO    ][2019-11-04 15:00:20,490]Compressing logfiles to /tmp/logfiles/logs_final_zip/MyPreafix1logfiles_mySuffix.zip)
+[pirate][INFO    ][2019-11-04 15:00:20,511]Compress to archive: logfiles_2019_11_04-14x00x20-myUUID-Linux-x86_64-meinNetX-port
+[pirate][INFO    ][2019-11-04 15:00:20,511]Compressing logfiles to /tmp/logfiles/logs_final_zip/logfiles_2019_11_04-14x00x20-myUUID-Linux-x86_64-meinNetX-port.zip)
