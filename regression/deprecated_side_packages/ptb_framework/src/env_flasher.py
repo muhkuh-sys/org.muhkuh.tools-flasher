@@ -155,11 +155,9 @@ class EnvFlasher(PTBEnv):
                                  help='The provided uuid from the test environment. '
                                       'will be passed to the Dyntest class as static var.')
         parser_test.add_argument('-lb', '--list_black',
-                                 nargs='+',
                                  help="Blacklist reduces the selected ports to those which are not in the black list."
                                       " Kicks also white listed, if necessary.")
         parser_test.add_argument('-lw', '--list_white',
-                                 nargs='+',
                                  help="White List of ports. Every used port must be content of the white list. "
                                       "White listed parameters can also be reduced by black list again.")
         parser_test.add_argument("-m", '--mode',
@@ -168,7 +166,7 @@ class EnvFlasher(PTBEnv):
                                  nargs='+',
                                  help="precision of the test")
         parser_test.add_argument("name",
-                                 help="the name of the test to perform, only flasher supported, todo: add romloader",
+                                 help="the name of the test to perform",
                                  choices=["flasher"])
         # self.args_result = self.parser.parse_args()
         # print(args)
@@ -198,7 +196,6 @@ class EnvFlasher(PTBEnv):
         if minimal is in the string, the romloader will not be patced, this can be useful for final packages.
         Also dpinst is not instaled but delivered and extracted. reason: no autoinstall of dpinst!
         :todo: Black/White Mask does not apply to flasher test!
-        todo: this is old?
         :return:
         '''
         iErr = -1
