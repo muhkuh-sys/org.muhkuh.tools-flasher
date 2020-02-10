@@ -6,3 +6,4 @@
 
 # Ignore all compiled python modules.
 *.pyc
+test_files

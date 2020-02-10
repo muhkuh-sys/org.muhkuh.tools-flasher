@@ -3,44 +3,43 @@ import os
 from simpelTools.src.logging_default import *
 
 
-
 def strip_command_arguments(str_command_line_arguments):
-  single_arguments = str_command_line_arguments.split()
-  stripped_string = ''
-  for ele in single_arguments:
-    stripped_string += " %s"%os.path.basename(ele)
+    single_arguments = str_command_line_arguments.split()
+    stripped_string = ''
+    for ele in single_arguments:
+        stripped_string += " %s" % os.path.basename(ele)
 
-  return stripped_string[1:]
+    return stripped_string[1:]
 
 
 def test_strip_command_arguments():
-  full = "/my/bin/path.bin  /may/file/path/my.file -p 1234_.ksdnb -b0"
+    full = "/my/bin/path.bin  /may/file/path/my.file -p 1234_.ksdnb -b0"
 
-  stripped = strip_command_arguments(full)
+    stripped = strip_command_arguments(full)
 
-  print(">%s<"%stripped)
+    print(">%s<" % stripped)
 
-  assert("path.bin my.file -p 1234_.ksdnb -b0" == stripped)
+    assert ("path.bin my.file -p 1234_.ksdnb -b0" == stripped)
+    helper_type_conversion(b'\xe4') # may not fail
 
 
 def helper_type_conversion(input_string):
-  test1 = 'äöü'
-  test2 = b'\xe4\xf6\xfc'
-  test3 = u'äöü'
-  """
-  Converts every input to unicode. tested with testcases abouve!
-  :param input_string: may be a string or unicode or bytes.
-  :return: returns unicode
-  """
-
-  l.debug("type: %s\n message:%s" % (type(input_string), input_string))
-  if type(input_string) is not unicode:
-    # i don't need to decode unicode. because it already is!
-    output_string = input_string.decode("utf-8")  # converts bytes to unicode
-  else:
-    output_string = input_string
-  return output_string
-
+    test1 = 'äöü'
+    test2 = b'\xe4\xf6\xfc'
+    test3 = u'äöü'
+    """
+    Converts every input to unicode. tested with testcases abouve!
+    :param input_string: may be a string or unicode or bytes.
+    :return: returns unicode
+    """
+    print(input_string)
+    l.debug("type: %s\n message:%s" % (type(input_string), input_string))
+    if type(input_string) is not unicode:
+        # i don't need to decode unicode. because it already is!
+        output_string = input_string.decode('utf-8', errors='replace')  # converts bytes to unicode
+    else:
+        output_string = input_string
+    return output_string
 
 
 """
@@ -57,8 +56,5 @@ def all_eating_unicode_converter(input_string):
         return input_string.decode("utf-8")
     return input_string"""
 
-
 if __name__ == "__main__":
-  test_strip_command_arguments()
-
-
+    test_strip_command_arguments()

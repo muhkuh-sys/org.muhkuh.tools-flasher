@@ -4,7 +4,7 @@ import zipfile
 from simpelTools.src.logging_default import *
 
 
-def generate_randome_file_by_size_and_name(path_generated_file, test_binary_size):
+def generate_random_file_by_size_and_name(path_generated_file, test_binary_size):
     """
     simply generates a binary file from given length and given size.
     Removes a old file with the same name!

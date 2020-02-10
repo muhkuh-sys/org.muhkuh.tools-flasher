@@ -71,6 +71,7 @@ class EnvFlasher(PTBEnv):
             self.name_flasher_plugin_folder = 'lua_plugins'
             self.gPathAbs_flasher_luaplugin = os.path.join(self.gpathAbs_flasher, self.name_flasher_plugin_folder)
             self.name_file_cliFlash = 'cli_flash.lua'
+            self.name_file_wfp = 'wfp.lua'
             self.command_flasher_listInterfaces = "list_interfaces"
             self.command_flasher_detectNetx = "detect_netx"
 
@@ -155,18 +156,20 @@ class EnvFlasher(PTBEnv):
                                  help='The provided uuid from the test environment. '
                                       'will be passed to the Dyntest class as static var.')
         parser_test.add_argument('-lb', '--list_black',
+                                 nargs='+',
                                  help="Blacklist reduces the selected ports to those which are not in the black list."
                                       " Kicks also white listed, if necessary.")
         parser_test.add_argument('-lw', '--list_white',
+                                 nargs='+',
                                  help="White List of ports. Every used port must be content of the white list. "
                                       "White listed parameters can also be reduced by black list again.")
         parser_test.add_argument("-m", '--mode',
-                                 choices=["regr_short", "wfp_complete", "regr_standard", "regr_long", "all"],
+                                 choices=["regr_short", "regr_standard", "regr_long", "all"],
                                  default='fast',
                                  nargs='+',
                                  help="precision of the test")
         parser_test.add_argument("name",
-                                 help="the name of the test to perform",
+                                 help="the name of the test to perform, only flasher supported, todo: add romloader",
                                  choices=["flasher"])
         # self.args_result = self.parser.parse_args()
         # print(args)
@@ -196,6 +199,7 @@ class EnvFlasher(PTBEnv):
         if minimal is in the string, the romloader will not be patced, this can be useful for final packages.
         Also dpinst is not instaled but delivered and extracted. reason: no autoinstall of dpinst!
         :todo: Black/White Mask does not apply to flasher test!
+        todo: this is old?
         :return:
         '''
         iErr = -1

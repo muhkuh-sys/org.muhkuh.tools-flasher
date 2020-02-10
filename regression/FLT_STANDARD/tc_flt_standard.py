@@ -33,7 +33,7 @@ class FltStandardSqiFlash(Flashertest):
                                                        "test_%s_read_file_from_netx.bin" % self.__class__.__name__))
         self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_writefile_to_netx.bin" % self.__class__.__name__))
-        generate_randome_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
+        generate_random_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
         shutil.copy(self.binary_file_write_to_netx, self.lfm.get_dir_tmp_logfiles())
 
     def init_command_array(self):
@@ -98,7 +98,7 @@ class FltStandardOtherFlash(Flashertest):
                                                        "test_%s_read_file_from_netx.bin" % self.__class__.__name__))
         self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_writefile_to_netx.bin" % self.__class__.__name__))
-        generate_randome_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
+        generate_random_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
         shutil.copy(self.binary_file_write_to_netx, self.lfm.get_dir_tmp_logfiles())
 
     def init_command_array(self):

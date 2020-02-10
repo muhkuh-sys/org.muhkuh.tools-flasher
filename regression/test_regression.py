@@ -24,6 +24,7 @@ from NXTFLASHER_51.tc_nxtflasher_51 import NxtFlasher_51
 from FLT_STANDARD.tc_flt_standard import FltStandardSqiFlash, FltStandardOtherFlash, FltTestcliSqiFlash
 from FLT_HASH.tc_flt_hash import FltHash
 from NXTFLASHER_55.tc_nxtflasher_55 import NxtFlasher_55
+from WFP.wfp_test import TestWfp
 # ptb imports
 from ptb_framework.src.env_flasher import *
 
@@ -99,6 +100,7 @@ class UnitTestFlasherTest(unittest.TestCase):
         ]
 
         loc_plugin_name = connected_netx[Jasonixer.json_chip_if_port]
+        plug_num = connected_netx['tmp_iterator_detect']
         loc_netx_chip_type = int(connected_netx[Jasonixer.json_chip_type_number])
         loc_netx_chip_type_id = connected_netx[Jasonixer.json_chip_type_identifyer]
         loc_protocol = connected_netx[Jasonixer.json_chip_flasher_name]
@@ -219,6 +221,8 @@ class UnitTestFlasherTest(unittest.TestCase):
              ["netIOL MPW", 15, "ROMLOADER_CHIPTYP_NETIOLA"],
              ["netIOL Rev0", 16, "ROMLOADER_CHIPTYP_NETIOLB"]]
 
+
+
         # set up transfare structures
         # Todo: Later use Janonixer structures for it
         for ele in select_list:
@@ -236,6 +240,7 @@ class UnitTestFlasherTest(unittest.TestCase):
         # todo: transfare into jasonixer
                 cls.plugin_name = {
                     "plugin_name": loc_plugin_name,
+                    "plug_num": plug_num,
                     "netx_port": loc_connected_port_type,
                     "netx_protocol": loc_protocol_alias,
                     "netx_chip_type": loc_netx_chip_type,
@@ -311,6 +316,41 @@ class UnitTestFlasherTest(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
+    def test_wfp_complete(self):
+        enable_test = 0
+        for TestGroup in self.RunTestsGroups:
+            if TestGroup in ["wfp_complete", "all"]:
+                # set flasg to enable test
+                enable_test = 1
+
+        if not enable_test:
+            self.skipTest("test_wfp_complete NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+
+        test_started = 0
+        test_results = 0
+        for memory_to_test in self.memories_to_test:
+            # test requires external SQI flash
+            if (memory_to_test["b"] in [1] and
+                    memory_to_test["u"] in [0] and
+                    memory_to_test["cs"] in [0] and
+                    memory_to_test["size"] > 1 * 1024 * 1024):
+                test_started = 1
+            else:
+                # skip other memory interfaces
+                l.info(" *** Skip for netX %d memory: %s" % (self.plugin_name["netx_chip_type"], memory_to_test))
+                continue
+
+            tc = TestWfp(self.lfm)
+            tc.init_params(self.plugin_name, memory_to_test,
+                           0,
+                           self.path_flasher_files,
+                           self.path_flasher_binary,
+                           {})
+            tc.run_test()
+            test_result = tc.numErrors_a[-1]
+            # collect all test results
+            test_results += test_result[1]
+
     # what ever name follows test_*(): doesn't matter.
     def test_Standard_SQI_flash(self):
         """
@@ -321,13 +361,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         :return:
         """
         # skip test, if not inside the list to be executed
-        enableTest = 0
+        enable_test = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_short", "regr_standard", "all"]:
                 # set flasg to enable test
-                enableTest = 1
+                enable_test = 1
 
-        if not enableTest:
+        if not enable_test:
             self.skipTest("test_Standard_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         num_bytes_to_test = 1024 * 1024
@@ -424,13 +464,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         """
 
         # skip test, if not inside the list to be executed
-        enableTest = 0
+        enable_test = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_standard", "all"]:
                 # set flasg to enable test
-                enableTest = 1
+                enable_test = 1
 
-        if not enableTest:
+        if not enable_test:
             self.skipTest("test_hash_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         # skip because the flasher for netX 90, netIOL => does not implement the hash function
@@ -478,13 +518,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         """
 
         # skip test, if not inside the list to be executed
-        enableTest = 0
+        enable_test = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_long", "all"]:
                 # set flasg to enable test
-                enableTest = 1
+                enable_test = 1
 
-        if not enableTest:
+        if not enable_test:
             self.skipTest("test_testcli_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         test_started = 0
@@ -550,9 +590,9 @@ class UnitTestFlasherTest(unittest.TestCase):
 
             # test requires external SQI flash
             if (memory_to_test["b"] in [1] and
-                memory_to_test["u"] in [0] and
-                memory_to_test["cs"] in [0] and
-                memory_to_test["size"] > 1 * 1024 * 1024):
+                    memory_to_test["u"] in [0] and
+                    memory_to_test["cs"] in [0] and
+                    memory_to_test["size"] > 1 * 1024 * 1024):
                 test_started = 1
             else:
                 # skip the sub test

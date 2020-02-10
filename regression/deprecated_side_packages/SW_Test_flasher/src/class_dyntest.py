@@ -232,15 +232,6 @@ class Flashertest(Dyntest):
         assert type(mandatory_version) is not list
         # todo: this test is weak,
 
-
-
-
-
-
-
-
-
-
     def convert_final_command_entries_to_commands(self):
         if self.command_strings:
             assert True
@@ -294,7 +285,8 @@ class Flashertest(Dyntest):
             default_carrier,
             self.command_strings,
             self.lfm.get_dir_tmp_logfiles(),
-            self.uuid_test)
+            self.uuid_test
+        )
         self.numErrors += eval_batch_result(
             carrier_result,
             self.lfm.get_dir_tmp_logfiles(),
