@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<FlasherPackage version="1.0.0">
+	<Target netx="NETX90">
+		<Flash bus="IFlash" chip_select="0" unit="0">
+			<Data file="netx90_file_0.bin" offset="0x00008000"/>
+			<Data file="netx90_file_1.bin" offset="0x00046000"/>
+			<Data file="netx90_file_2.bin" offset="0x00061000"/>
+		</Flash>
+	</Target>
+    <Target netx="NETX4000">
+		<Flash bus="Spi" chip_select="0" unit="0">
+			<Data file="netx4000_file_0.bin" offset="0x003E6000"/>
+			<Data file="netx4000_file_1.bin" offset="0x00975000"/>
+			<Data file="netx4000_file_2.bin" offset="0x00F04000"/>
+		</Flash>
+	</Target>
+    <Target netx="NETX500">
+		<Flash bus="Spi" chip_select="0" unit="0">
+			<Data file="netx500_file_0.bin" offset="0x003E6000"/>
+			<Data file="netx500_file_1.bin" offset="0x00975000"/>
+			<Data file="netx500_file_2.bin" offset="0x00F04000"/>
+		</Flash>
+	</Target>
+</FlasherPackage>

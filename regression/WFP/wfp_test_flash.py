@@ -1,7 +1,7 @@
 import os
 import sys
 import random
-from xml.etree.ElementTree import Element, SubElement, ElementTree, tostring
+from xml.etree.ElementTree import Element, SubElement, ElementTree, tostring, parse
 from xml.dom.minidom import parseString
 
 root__ = os.path.dirname(os.path.realpath(__file__))
@@ -60,7 +60,7 @@ def create_empty_bin(path, size):
             binary.write(b'\xff')
 
 
-def get_random_file_sizes(file_number, flash_size, puffer):
+def get_random_file_sizes(file_number, flash_size, puffer, max_size=None):
     """
         generate random file size pattern for a flash size
     :param file_number: number of files to put in the file
@@ -72,8 +72,10 @@ def get_random_file_sizes(file_number, flash_size, puffer):
     empty_files = {}
     current_offset = 0x0
     for idx in range(file_number):
-
-        size = random.randrange(1, int(flash_size / file_number - puffer))
+        max_file_size = int(flash_size / file_number - puffer)
+        if max_file_size > max_size:
+            max_file_size = max_size
+        size = random.randrange(1, max_file_size)
 
         start = int(idx * flash_size / file_number / 4 * 4)
         end = int((idx + 1) * flash_size / file_number - size)
@@ -113,7 +115,7 @@ def get_random_file_sizes(file_number, flash_size, puffer):
     return files, empty_files
 
 
-class TestWfp(Flashertest):
+class TestWfpFlash(Flashertest):
     """
     define the standard tests
     """
@@ -154,8 +156,14 @@ class TestWfp(Flashertest):
         self.chip_id = plugin_name['netx_chip_type']
 
     def pre_test_step(self):
-        self.wfp_dir_path = os.path.join(root__, "test_files", "wfp_archive")
-        self.wfp_zip_path = os.path.join(root__, "test_files", "wfp_archive.zip")
+        self.wfp_dir_path = os.path.join(self.lfm.get_dir_tmp_logfiles(),
+                                         "wfp_archive_b%s_u%s_cs%s" % (self.memory_to_test["b"],
+                                                                    self.memory_to_test["u"],
+                                                                    self.memory_to_test["cs"]))
+        self.wfp_zip_path = os.path.join(os.path.join(self.lfm.get_dir_tmp_logfiles(),
+                                                      "wfp_archive_b%s_u%s_cs%s.zip" % (self.memory_to_test["b"],
+                                                                                        self.memory_to_test["u"],
+                                                                                        self.memory_to_test["cs"])))
         if os.path.exists(self.wfp_dir_path):
             shutil.rmtree(self.wfp_dir_path)
         os.makedirs(self.wfp_dir_path)
@@ -165,7 +173,9 @@ class TestWfp(Flashertest):
 
         for i in range(NUMBER_OF_TESTFILES):
             self.test_files[i] = {"file": "random_file_%i.bin" % i}
-        file_sizes, self.empty_files = get_random_file_sizes(NUMBER_OF_TESTFILES, self.memory_to_test['size']/1024, 4)
+        file_sizes, self.empty_files = get_random_file_sizes(NUMBER_OF_TESTFILES,
+                                                             self.memory_to_test['size']/1024,
+                                                             puffer=4, max_size=20)
 
         ######################################
         # setup wfp.xml for test

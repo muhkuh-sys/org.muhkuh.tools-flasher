@@ -177,7 +177,7 @@ def runCommandBase(cmd_carry, user_input=None):
 
 
 def batch_command_base(cmd_carry_default, array_command, path_logfile='.',
-                       logfile_prefix='log', user_input_assign=None):
+                       logfile_prefix='log', user_input_assign={}):
     """
     Provide a sequence with commands. Every single command will be invoked after each other.
     the result is an array consinting of the command carriers used for running every command.

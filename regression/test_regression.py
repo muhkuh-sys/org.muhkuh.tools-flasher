@@ -24,7 +24,10 @@ from NXTFLASHER_51.tc_nxtflasher_51 import NxtFlasher_51
 from FLT_STANDARD.tc_flt_standard import FltStandardSqiFlash, FltStandardOtherFlash, FltTestcliSqiFlash
 from FLT_HASH.tc_flt_hash import FltHash
 from NXTFLASHER_55.tc_nxtflasher_55 import NxtFlasher_55
-from WFP.wfp_test import TestWfp
+from WFP.wfp_test_flash import TestWfpFlash
+from WFP_MULTITARGET.wfp_test_multitarget import TestWfpMultiTarget
+from WFP_MULTIFLASH.wfp_test_multiflash import TestWfpMultiFlash
+from WFP_OS.wfp_test_os import TestWfpOs
 # ptb imports
 from ptb_framework.src.env_flasher import *
 
@@ -316,31 +319,108 @@ class UnitTestFlasherTest(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
-    def test_wfp_complete(self):
+    def test_wfp_os(self):
+        """
+        flash to test all functions of wfp.lua except the flash function
+        using only the first flash
+        :return:
+        """
         enable_test = 0
         for TestGroup in self.RunTestsGroups:
-            if TestGroup in ["wfp_complete", "all"]:
+            if TestGroup in ["regr_short", "all"]:
                 # set flasg to enable test
                 enable_test = 1
 
         if not enable_test:
-            self.skipTest("test_wfp_complete NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+
+        test_started = 0
+        test_results = 0
+        memory_to_test = self.memories_to_test[0]
+
+        tc = TestWfpOs(self.lfm)
+        tc.init_params(self.plugin_name, memory_to_test,
+                       0,
+                       self.path_flasher_files,
+                       self.path_flasher_binary,
+                       {})
+        tc.run_test()
+        test_result = tc.numErrors_a[-1]
+        # collect all test results
+        test_results += test_result[1]
+
+    def test_wfp_multi_flash(self):
+            """
+            create WFP with random files for each flash on hardware board
+            :return:
+            """
+            enable_test = 0
+            for TestGroup in self.RunTestsGroups:
+                if TestGroup in ["regr_long", "all"]:
+                    # set flasg to enable test
+                    enable_test = 1
+
+            if not enable_test:
+                self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+
+            test_started = 0
+            test_results = 0
+            tc = TestWfpMultiFlash(self.lfm)
+            tc.init_params(self.plugin_name, self.memories_to_test, 0,
+                           self.path_flasher_files,
+                           self.path_flasher_binary,{})
+
+            tc.run_test()
+            test_result = tc.numErrors_a[-1]
+            # collect all test results
+            test_results += test_result[1]
+
+    def test_wfp_multi_target(self):
+        """
+        use static wfp.xml with targets for netx4000, netx90 and netx100/500
+        test works with each of the above netx types and will flash 3 files
+        :return:
+        """
+        enable_test = 0
+        for TestGroup in self.RunTestsGroups:
+            if TestGroup in ["regr_standard", "all"]:
+                # set flasg to enable test
+                enable_test = 1
+
+        if not self.plugin_name['netx_chip_type'] in [0, 1, 11, 12, 13, 14]:
+            self.skipTest("this test only runs with  netx90, netx4000 and netx100/500")
+
+        if not enable_test:
+            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+
+        test_started = 0
+        test_results = 0
+        tc = TestWfpMultiTarget(self.lfm)
+        tc.init_params(self.plugin_name, self.memories_to_test,
+                       0,
+                       self.path_flasher_files,
+                       self.path_flasher_binary,
+                       {})
+        tc.run_test()
+        test_result = tc.numErrors_a[-1]
+        # collect all test results
+        test_results += test_result[1]
+
+    def test_wfp_flash(self):
+        enable_test = 0
+        for TestGroup in self.RunTestsGroups:
+            if TestGroup in ["regr_standard", "all"]:
+                # set flasg to enable test
+                enable_test = 1
+
+        if not enable_test:
+            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         test_started = 0
         test_results = 0
         for memory_to_test in self.memories_to_test:
-            # test requires external SQI flash
-            if (memory_to_test["b"] in [1] and
-                    memory_to_test["u"] in [0] and
-                    memory_to_test["cs"] in [0] and
-                    memory_to_test["size"] > 1 * 1024 * 1024):
-                test_started = 1
-            else:
-                # skip other memory interfaces
-                l.info(" *** Skip for netX %d memory: %s" % (self.plugin_name["netx_chip_type"], memory_to_test))
-                continue
 
-            tc = TestWfp(self.lfm)
+            tc = TestWfpFlash(self.lfm)
             tc.init_params(self.plugin_name, memory_to_test,
                            0,
                            self.path_flasher_files,
@@ -665,6 +745,7 @@ if __name__ == '__main__':
     runner.verbosity = 2
     loader = unittest.TestLoader()
     test = loader.discover(local_path, pattern="test_regression.py", top_level_dir=local_path)
+
     test_suit = unittest.TestSuite(test)
     result_class = runner.run(test_suit)
     print("")  # BKP

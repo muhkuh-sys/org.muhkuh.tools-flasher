@@ -161,7 +161,7 @@ class EnvFlasher(PTBEnv):
                                  help="White List of ports. Every used port must be content of the white list. "
                                       "White listed parameters can also be reduced by black list again.")
         parser_test.add_argument("-m", '--mode',
-                                 choices=["regr_short", "wfp_complete", "regr_standard", "regr_long", "all"],
+                                 choices=["regr_short", "regr_standard", "regr_long", "all"],
                                  default='fast',
                                  nargs='+',
                                  help="precision of the test")
@@ -653,11 +653,12 @@ class EnvFlasher(PTBEnv):
                 l.error(
                     "unrecognised pattern in list: %s does not match %s" % (
                         sorted_line, re_pattern_flasher_listInterfaces))
+                continue
             # m_netx = c_netx()
+
             try:
                 m_netx = Jasonixer.generate_desc_empty_chip(num=None, name=tmatch.group(3), tmp_port=tmatch.group(2))
                 m_netx[Jasonixer.json_chip_tmp_it] = tmatch.group(1)
-
 
             except IndexError as ie:
                 print(ie, '\n[pirate][error][%d]: string had not expected pattern: %s' % (i, sorted_line))
