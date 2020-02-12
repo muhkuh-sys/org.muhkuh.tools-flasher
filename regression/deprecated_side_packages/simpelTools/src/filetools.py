@@ -21,7 +21,9 @@ def generate_random_file_by_size_and_name(path_generated_file, test_binary_size)
     if test_binary_size > 1024*1024*200:
         raise MemoryError('Cowardly refusing to generate a file with more than 200MB of random test data.'
                           'Might not be necessary and a programmers error.')
-
+    p, f = os.path.split(path_generated_file)
+    if not os.path.exists(p):
+        os.makedirs(p)
     with open(path_generated_file, 'wb') as fout:
         try:
             fout.write(os.urandom(test_binary_size))

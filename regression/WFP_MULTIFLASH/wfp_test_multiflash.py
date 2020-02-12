@@ -121,8 +121,8 @@ class TestWfpMultiFlash(Flashertest):
             for i, test_file in enumerate(self.test_files.values()):
                 test_file.update(file_sizes[i])
                 # generate random files
-                generate_random_file_by_size_and_name(os.path.join(self.wfp_dir_path,
-                                                                   test_file['file']),                                                                   test_file['size'] * 1024)
+                generate_random_file_by_size_and_name(os.path.join(self.wfp_dir_path, test_file['file']),
+                                                      test_file['size'] * 1024)
 
                 SubElement(xml_flash_cmd, "Data",
                            file=test_file['file'],

@@ -66,7 +66,11 @@ class TestWfpOs(TestWfpFlash):
         self.wfp_xml_path = os.path.join(self.wfp_dir_path, "wfp.xml")
 
         for i in range(NUMBER_OF_TESTFILES):
-            self.test_files[i] = {"file": "random_file_%i.bin" % i}
+            file_path = "random_file_%i.bin" % i
+            # todo future: add this part to use subdirs in wfp
+            # if i == 0:
+            #     file_path = os.path.join('subdir', file_path)
+            self.test_files[i] = {"file": file_path}
         file_sizes, self.empty_files = get_random_file_sizes(NUMBER_OF_TESTFILES,
                                                              self.memory_to_test['size'] / 1024,
                                                              puffer=4, max_size=20)
@@ -198,15 +202,33 @@ class TestWfpOs(TestWfpFlash):
 
             }
         }
+        verifies = []
+
 
         self.command_structure = [
-            [wfp_flash, "wfp.lua", "-h"],
+            [wfp_pack, "wfp.lua", "-h"],
+            [wfp_pack, "wfp.lua", "--help"],
             [wfp_pack, "wfp.lua", "pack", "-h"],
+            [wfp_pack, "wfp.lua", "p", "--help"],
             [wfp_pack, "wfp.lua", "pack", self.wfp_xml_path, self.wfp_zip_path],
             [wfp_pack, "wfp.lua", "pack", self.wfp_xml_path, self.wfp_zip_path, "-o"],
+            [wfp_pack, "wfp.lua", "pack", self.wfp_xml_path, self.wfp_zip_path, "--overwrite"],
             [wfp_pack, "wfp.lua", "list", "-h"],
+            [wfp_pack, "wfp.lua", "l", "--help"],
             [wfp_pack, "wfp.lua", "list", self.wfp_zip_path],
             [wfp_pack, "wfp.lua", "flash", "-h"],
+            [wfp_pack, "wfp.lua", "f", "--help"],
             [wfp_flash, "wfp.lua", "flash", self.wfp_zip_path, '-d'],
+            [wfp_flash, "wfp.lua", "flash", self.wfp_zip_path, '--dry-run'],
+            [wfp_flash, "wfp.lua", "flash", self.wfp_zip_path]
         ]
 
+        for f in self.test_files.values():
+            file_path = os.path.join(self.wfp_dir_path, f['file'])
+            self.command_structure.append([enable_flasher,
+                             "cli_flash.lua",
+                             "verify",
+                             self.bus_port_parameters_flasher,
+                             self.plugin_name,
+                             "-s", "0x%08X" % (f['offset']*1024),
+                             file_path])

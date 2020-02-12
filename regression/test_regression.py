@@ -332,11 +332,13 @@ class UnitTestFlasherTest(unittest.TestCase):
                 enable_test = 1
 
         if not enable_test:
-            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+            self.skipTest("test_wfp_os NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         test_started = 0
         test_results = 0
-        memory_to_test = self.memories_to_test[0]
+        for mem in self.memories_to_test:
+            if mem['b'] in [1]:  # chose sqi flash
+                memory_to_test = mem
 
         tc = TestWfpOs(self.lfm)
         tc.init_params(self.plugin_name, memory_to_test,
@@ -356,9 +358,15 @@ class UnitTestFlasherTest(unittest.TestCase):
             """
             enable_test = 0
             for TestGroup in self.RunTestsGroups:
-                if TestGroup in ["regr_long", "all"]:
+                if TestGroup in ["regr_long", "regr_standard", "all"]:
                     # set flasg to enable test
                     enable_test = 1
+
+            if "regr_standard" in self.RunTestsGroups:
+                if not self.plugin_name['netx_chip_type'] in [14]:
+                    self.skipTest("this test only runs with  netx90 Rev 1")
+
+
 
             if not enable_test:
                 self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
@@ -388,10 +396,9 @@ class UnitTestFlasherTest(unittest.TestCase):
                 enable_test = 1
 
         if not self.plugin_name['netx_chip_type'] in [0, 1, 11, 12, 13, 14]:
-            self.skipTest("this test only runs with  netx90, netx4000 and netx100/500")
-
+            self.skipTest("test_wfp_multi_target: this test only runs with  netx90, netx4000 and netx100/500")
         if not enable_test:
-            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+            self.skipTest("test_wfp_multi_target NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         test_started = 0
         test_results = 0

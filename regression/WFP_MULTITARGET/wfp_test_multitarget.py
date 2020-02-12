@@ -46,14 +46,12 @@ class TestWfpMultiTarget(Flashertest):
                     self.test_data['target'][i]['files'][j] = {}
                     self.test_data['target'][i]['files'][j] = data.attrib
 
-            print("ok")
-
 
     def init_params(self, plugin_name, memories_to_test, test_binary_size, path_lua_files, flasher_binary,
-                    dict_add_params):
+                    dict_add_params, ut_class=None):
 
 
-
+        self.ut_class = ut_class
         self.command_structure = []
         self.path_lua_files = path_lua_files
         self.flasher_binary = flasher_binary
@@ -64,7 +62,7 @@ class TestWfpMultiTarget(Flashertest):
         self.plugin_name = "-p %s" % plugin_name["plugin_name"]
 
         self.wfp_dir_path = os.path.join(root__, "test_files", "wfp_archive")
-        self.wfp_zip_path = os.path.join(root__, "test_files", "wfp_archive")
+        self.wfp_zip_path = os.path.join(root__, "test_files", "wfp_archive.zip")
         self.wfp_xml_path = os.path.join(self.wfp_dir_path, "wfp.xml")
 
 
@@ -74,6 +72,7 @@ class TestWfpMultiTarget(Flashertest):
         self.chip_id = plugin_name['netx_chip_type']
 
         self.get_target_data()
+
 
     def pre_test_step(self):
         enable_flasher = {"flasher": True}
@@ -92,7 +91,9 @@ class TestWfpMultiTarget(Flashertest):
                     self.memory_to_test = mem
                     break
             if not self.memory_to_test:
-                raise (BaseException("Memory from wfp.xml is not found on test hardware!"))
+                self.ut_class.skipTest('test_wfp_multi_target: Memory from wfp.xml is not found on test hardware!')
+                # raise (BaseException("Memory from wfp.xml is not found on test hardware!"))
+
             self.test_binary_size = self.memory_to_test['size']
             # add erase command and wfp flash command
             self.command_structure.append([enable_flasher, "cli_flash.lua", "erase", self.bus_port_parameters_flasher,

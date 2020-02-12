@@ -15,7 +15,7 @@
 		</Flash>
 	</Target>
     <Target netx="NETX500">
-		<Flash bus="Spi" chip_select="0" unit="0">
+		<Flash bus="Parflash" chip_select="0" unit="0">
 			<Data file="netx500_file_0.bin" offset="0x003E6000"/>
 			<Data file="netx500_file_1.bin" offset="0x00975000"/>
 			<Data file="netx500_file_2.bin" offset="0x00F04000"/>
