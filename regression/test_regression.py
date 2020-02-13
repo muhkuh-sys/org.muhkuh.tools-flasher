@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import json
 
 from os.path import realpath, dirname
 
@@ -28,6 +29,7 @@ from WFP.wfp_test_flash import TestWfpFlash
 from WFP_MULTITARGET.wfp_test_multitarget import TestWfpMultiTarget
 from WFP_MULTIFLASH.wfp_test_multiflash import TestWfpMultiFlash
 from WFP_OS.wfp_test_os import TestWfpOs
+from FLT_TIMING.tc_flt_timing import FltTiming
 # ptb imports
 from ptb_framework.src.env_flasher import *
 
@@ -439,6 +441,75 @@ class UnitTestFlasherTest(unittest.TestCase):
             test_results += test_result[1]
 
     # what ever name follows test_*(): doesn't matter.
+
+    def test_flash_timing(self):
+
+        enable_test = 0
+        for TestGroup in self.RunTestsGroups:
+            if TestGroup in ["timing", "regr_long", "all"]:
+                # set flasg to enable test
+                enable_test = 1
+
+        if not enable_test:
+            self.skipTest("test_flash_timing NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
+
+        timings = {}
+        data = timings['data'] = {}
+        timings['flasher_version'] = self.flasher_env.dict_json_version['VERSION_FLASHER']
+
+        timings['netx_chip_type'] = self.plugin_name['netx_chip_type']
+        timings['netx_chip_type_id'] = self.plugin_name['netx_chip_type_id']
+        timings['plugin_name'] = self.plugin_name['plugin_name']
+        timings['netx_port'] = self.plugin_name['netx_port']
+        timings['netx_protocol'] = self.plugin_name['netx_protocol']
+        timings['bus'] = "sqi"
+
+        test_runs = 2
+        test_sizes = {
+            "4kB": 4 * 1024,
+            "64kB": 64 * 1024,
+            "4MB": 4 * 1024 * 1024,
+            "16MB": 16 * 1024 * 1024
+        }
+
+        test_started = 0
+        test_results = 0
+
+        memory_to_test = None
+        for mem in self.memories_to_test:
+            if mem['b'] in [1]:
+                memory_to_test = mem
+                break
+        if not memory_to_test:
+            self.skipTest("test_flash_timing: no sqi flash found on HW!")
+        for name, size in test_sizes.items():
+            t_size = data[name] = {}
+            for i in range(test_runs):
+                t_tun = t_size[i] = {}
+                tc = FltTiming(self.lfm)
+                tc.init_params(self.plugin_name,
+                               memory_to_test,
+                               size,
+                               self.path_flasher_files,
+                               self.path_flasher_binary,
+                               {})
+
+                tc.run_test()
+                t_tun['write_empty'] = tc.carrier_result[1].time_execute
+                t_tun['write_not_empty'] = tc.carrier_result[2].time_execute
+                t_tun['read'] = tc.carrier_result[3].time_execute
+                t_tun['erase_not_empty'] = tc.carrier_result[4].time_execute
+
+                test_result = tc.numErrors_a[-1]
+                # collect all test results
+                test_results += test_result[1]
+
+        output_json = os.path.join(self.lfm.get_dir_zip_logfiles(), '%s_timings.json' % tc.uuid_test)
+        # print(timings)
+        with open(output_json, 'w') as out:
+            json.dump(timings, out, indent=4)
+
+
     def test_Standard_SQI_flash(self):
         """
         Testdescription

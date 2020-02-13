@@ -146,6 +146,7 @@ class Flashertest(Dyntest):
         self.test_binary_size = None
         self.command_strings = []  # strings generated from command array abouve
         self.bool_interrupt_batch_f = False
+        self.carrier_result = None
 
     def run_test(self):
         l.info("# run %s with uuid: %s" % (self.__class__.__name__, self.uuid_test))
@@ -166,7 +167,7 @@ class Flashertest(Dyntest):
         # todo: use output from jasonixer here!
         self.plugin_name = "-p %s" % plugin_name["plugin_name"]
         self.bus_port_parameters_flasher = "-b %s -u %s -cs %s" % (memory_to_test["b"], memory_to_test["u"], memory_to_test["cs"])
-
+        self.memory_to_test = memory_to_test
         # test binary size has to be smaller or equal to the physically available size
         if test_binary_size <= memory_to_test["size"]:
             self.test_binary_size = test_binary_size
@@ -281,14 +282,14 @@ class Flashertest(Dyntest):
         # todo: rework the command carrier, this is kind of not cool. (redundant code)
         # inert here final commands!
         # todo: integrate the logfiles more?
-        carrier_result = batch_command_base(
+        self.carrier_result = batch_command_base(
             default_carrier,
             self.command_strings,
             self.lfm.get_dir_tmp_logfiles(),
             self.uuid_test
         )
         self.numErrors += eval_batch_result(
-            carrier_result,
+            self.carrier_result,
             self.lfm.get_dir_tmp_logfiles(),
             self.logfile_prefix,
             "%s %s" % (self.uuid_test, self.__class__.__name__))

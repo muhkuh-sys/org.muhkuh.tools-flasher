@@ -161,7 +161,7 @@ class EnvFlasher(PTBEnv):
                                  help="White List of ports. Every used port must be content of the white list. "
                                       "White listed parameters can also be reduced by black list again.")
         parser_test.add_argument("-m", '--mode',
-                                 choices=["regr_short", "regr_standard", "regr_long", "all"],
+                                 choices=["timing", "regr_short", "regr_standard", "regr_long", "all"],
                                  default='fast',
                                  nargs='+',
                                  help="precision of the test")
