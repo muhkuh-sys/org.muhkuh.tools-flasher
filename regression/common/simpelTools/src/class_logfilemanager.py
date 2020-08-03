@@ -1,6 +1,7 @@
 import uuid, time
 from common.simpelTools.src.filetools import *
 from common.simpelTools.src.platform_detect import platform_deliver
+import json
 
 
 class LogfileManager:
@@ -129,6 +130,7 @@ class LogfileManager:
                     l.error("Reason: >%s<" % e)
         else:
             l.error("Path to logfiles does not exist, cant archive logfiles! %s" % folder_source)
+        return tmp_logfile_name
 
     def get_unique_index(self):
         """
@@ -139,7 +141,7 @@ class LogfileManager:
         self.unique_log_index += 1
         return ret
 
-    def wrap_archive_logs_and_clear(self, uuid, test_name='', upper_index=0, comment="x"):
+    def wrap_archive_logs_and_clear(self, uuid, test_name='', upper_index=0, comment="x", result=[]):
         """
         Special function for flasher test. Provided is an external uuid and a test name, which can be leaved blank.
         the upper index is some index which is maintained by the upper programm, like a chapter. this function adds an
@@ -150,7 +152,6 @@ class LogfileManager:
         :param upper_index: Upper index from test framework, treated like major index, minor is a ever incementing one
         :return: nothing (compressing a file)
         """
-
         #generate a proper name for logfiles
         tmp_name_logfiles = self.gen_name_logfiles_man(
             has_uuid=uuid,
@@ -158,12 +159,16 @@ class LogfileManager:
             index_minor=self.get_unique_index()
         )
 
-        self.archive_logs(logfile_suffix="%s_%s" % (test_name, comment), logfile_preafix=tmp_name_logfiles)
+        #returns total name, will be used to write a jsonfile with the result array beside it.
+        total_name = self.archive_logs(logfile_suffix="%s_%s" % (test_name, comment), logfile_preafix=tmp_name_logfiles)
+
+        summary_json = os.path.join(self.path_abs_logfiles_zipped, "%s.json" % total_name)
+        dict_result = {'result': result,
+                       'num_errors': len(result)}
+        with open(summary_json, 'w') as json_file:
+            json.dump(dict_result, json_file, indent=4)
         # reset logfile folder
         self.logfiles_folder_reset_create()
-
-
-        ## where???
 
     @classmethod
     def gen_name_logfiles_man(cls, additional=None, xos=None,index_maj=0, index_minor=0, has_uuid=None):
@@ -213,7 +218,7 @@ class LogfileManager:
 
     @classmethod
     def gen_timestamp(cls):
-        time_stamp = time.strftime("%Y_%m_%d-%Hx%Mx%S", time.gmtime())
+        time_stamp = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         return time_stamp
 
     @classmethod

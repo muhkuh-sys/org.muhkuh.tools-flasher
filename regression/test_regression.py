@@ -605,7 +605,7 @@ class UnitTestFlasherTest(unittest.TestCase):
         if self.plugin_name["netx_chip_type"] in [13]:
             pass
         else:
-            self.skipTest("Test %s only for netX 90 rev0" % NxtFlasher_55().__class__.__name__)
+            self.skipTest("Test %s only for netX 90 rev0" % NxtFlasher_55.__class__.__name__)
 
         tc = NxtFlasher_55(self.lfm)
         memory_to_test = {"b": 2, "u": 3, "cs": 0, "name": "INT flash 0/1", "size": 1024 * 1024}  # use dummy values
@@ -650,7 +650,7 @@ if __name__ == '__main__':
             l.info("\t[%s]: %s"% (test_name, skipping_reason))
         exit(2)
     if(test_errors):
-        l.error("Some test failed. (%d)"%test_errors)
+        l.error("Some test failed. (%d)" % test_errors)
         l.error("several errors in the sourrounding of the test have occured")
         for entry in result_class.failures:
             test_name = entry[0]._testMethodName

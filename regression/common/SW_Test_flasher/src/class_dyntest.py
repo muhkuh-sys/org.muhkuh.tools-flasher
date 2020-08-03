@@ -94,7 +94,10 @@ class Dyntest:
 
     @classmethod
     def set_random_uuid(cls):
-        cls.uuid_test = str(uuid.uuid4())
+        """
+        Gen stripped UUID
+        """
+        cls.uuid_test = uuid.uuid4().hex[16:24]  # variant bits and begin of node ID
 
     @abstractmethod
     def run_test(self):
@@ -115,7 +118,8 @@ class Dyntest:
             self.uuid_test,
             self.__class__.__name__,
             self.get_iteration_index_inc(),
-            comment=self.get_last_comment_rease()
+            comment=self.get_last_comment_rease(),
+            result=self.numErrors_a
         )
 
 
