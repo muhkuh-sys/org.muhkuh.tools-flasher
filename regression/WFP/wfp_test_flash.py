@@ -10,8 +10,8 @@ base_root = os.path.dirname(root__)  # location where all projects reside
 # print base_root
 sys.path.append(base_root)
 
-from SW_Test_flasher.src.class_dyntest import *
-from simpelTools.src.filetools import *
+from common.SW_Test_flasher.src.class_dyntest import *
+from common.simpelTools.src.filetools import *
 
 NUMBER_OF_TESTFILES = 3
 

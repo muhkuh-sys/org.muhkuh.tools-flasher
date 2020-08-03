@@ -7,9 +7,9 @@ base_root = os.path.dirname(file_dir)  # location where all projects reside
 sys.path.append(base_root)
 
 # from ptb_api.SW_Test_flasher.src.class_dyntest import *
-from SW_Test_flasher.src.class_dyntest import *
+from common.SW_Test_flasher.src.class_dyntest import *
 # from ptb_api.simpelTools.src.filetools import *
-from simpelTools.src.filetools import *
+from common.simpelTools.src.filetools import *
 
 
 class FltHash(Flashertest):
@@ -30,7 +30,7 @@ class FltHash(Flashertest):
         self.binary_file_write_to_netx = os.path.realpath(os.path.join(self.lfm.get_dir_work(),
                                                        "test_%s_writefile_to_netx.bin" % self.__class__.__name__))
 
-        generate_random_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
+        generate_randome_file_by_size_and_name(self.binary_file_write_to_netx, self.test_binary_size)
         shutil.copy(self.binary_file_write_to_netx, self.lfm.get_dir_tmp_logfiles())
 
     def init_command_array(self):

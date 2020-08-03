@@ -7,9 +7,9 @@ base_root = os.path.dirname(file_dir)  # location where all projects reside
 sys.path.append(base_root)
 
 # from ptb_api.SW_Test_flasher.src.class_dyntest import *
-from SW_Test_flasher.src.class_dyntest import *
+from common.SW_Test_flasher.src.class_dyntest import *
 # from ptb_api.simpelTools.src.filetools import *
-from simpelTools.src.filetools import *
+from common.simpelTools.src.filetools import *
 
 
 class NxtFlasher_55(Flashertest):

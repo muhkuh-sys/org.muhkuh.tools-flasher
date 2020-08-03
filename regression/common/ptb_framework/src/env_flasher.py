@@ -6,10 +6,10 @@ project_root_path = os.path.dirname(file_dir)  # xxx/helper_platform_detect
 base_root = os.path.dirname(project_root_path)  # location where all projects reside
 sys.path.append(base_root)
 
-from ptb_framework.src.pirate import PTBEnv
-from simpelTools.src.filetools import *
-from simpelTools.src.command_carrier import *
-from SW_Test_flasher.src.class_jasonixer import Jasonixer
+from common.ptb_framework.src.pirate import PTBEnv
+from common.simpelTools.src.filetools import *
+from common.simpelTools.src.command_carrier import *
+from common.SW_Test_flasher.src.class_jasonixer import Jasonixer
 
 # todo: inherit argparse from global. now only quick and dirty
 import argparse
@@ -71,7 +71,6 @@ class EnvFlasher(PTBEnv):
             self.name_flasher_plugin_folder = 'lua_plugins'
             self.gPathAbs_flasher_luaplugin = os.path.join(self.gpathAbs_flasher, self.name_flasher_plugin_folder)
             self.name_file_cliFlash = 'cli_flash.lua'
-            self.name_file_wfp = 'wfp.lua'
             self.command_flasher_listInterfaces = "list_interfaces"
             self.command_flasher_detectNetx = "detect_netx"
 
@@ -156,11 +155,9 @@ class EnvFlasher(PTBEnv):
                                  help='The provided uuid from the test environment. '
                                       'will be passed to the Dyntest class as static var.')
         parser_test.add_argument('-lb', '--list_black',
-                                 nargs='+',
                                  help="Blacklist reduces the selected ports to those which are not in the black list."
                                       " Kicks also white listed, if necessary.")
         parser_test.add_argument('-lw', '--list_white',
-                                 nargs='+',
                                  help="White List of ports. Every used port must be content of the white list. "
                                       "White listed parameters can also be reduced by black list again.")
         parser_test.add_argument("-m", '--mode',
@@ -169,7 +166,7 @@ class EnvFlasher(PTBEnv):
                                  nargs='+',
                                  help="precision of the test")
         parser_test.add_argument("name",
-                                 help="the name of the test to perform, only flasher supported, todo: add romloader",
+                                 help="the name of the test to perform",
                                  choices=["flasher"])
         # self.args_result = self.parser.parse_args()
         # print(args)
@@ -199,7 +196,6 @@ class EnvFlasher(PTBEnv):
         if minimal is in the string, the romloader will not be patced, this can be useful for final packages.
         Also dpinst is not instaled but delivered and extracted. reason: no autoinstall of dpinst!
         :todo: Black/White Mask does not apply to flasher test!
-        todo: this is old?
         :return:
         '''
         iErr = -1
@@ -384,7 +380,7 @@ class EnvFlasher(PTBEnv):
         l.info("[enumerate] Check all available ports for netX")
         tmp_run_command_flasher_listInterfaces = self.gen_list_interfaces()
         car_list_interfaces = self.run_command_flasher_helper(tmp_run_command_flasher_listInterfaces)
-        accessable_netX = []  # final list which contains the nbetX which have responded posetive
+        accessable_netX = []  # final list which contains the netX which have responded positive
         if car_list_interfaces.ret_val:
             l.error("List command failed with retval != 0 [%d]" % car_list_interfaces.ret_val)
             l.error("\tcmd: %s" % car_list_interfaces.cmd)

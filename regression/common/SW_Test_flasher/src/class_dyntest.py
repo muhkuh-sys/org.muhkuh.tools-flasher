@@ -10,10 +10,10 @@ print("dyntest bast path %s"%base_root)
 sys.path.append(base_root)
 
 
-from simpelTools.src.command_carrier import command_carrier, batch_command_base, eval_batch_result, slugify
-from simpelTools.src.filetools import *
-from simpelTools.src.class_logfilemanager import LogfileManager
-from simpelTools.src.platform_detect import *
+from common.simpelTools.src.command_carrier import command_carrier, batch_command_base, eval_batch_result, slugify
+from common.simpelTools.src.filetools import *
+from common.simpelTools.src.class_logfilemanager import LogfileManager
+from common.simpelTools.src.platform_detect import *
 # todo: write batch command base into class off comman carrier, e.g. write a class "command_crrier"
 
 
@@ -146,7 +146,6 @@ class Flashertest(Dyntest):
         self.test_binary_size = None
         self.command_strings = []  # strings generated from command array abouve
         self.bool_interrupt_batch_f = False
-        self.carrier_result = None
 
     def run_test(self):
         l.info("# run %s with uuid: %s" % (self.__class__.__name__, self.uuid_test))
@@ -165,15 +164,19 @@ class Flashertest(Dyntest):
 
         # todo: should be more a temporary solution for debugging, not for testing
         # todo: use output from jasonixer here!
-        self.plugin_name = "-p %s" % plugin_name["plugin_name"]
+
         self.bus_port_parameters_flasher = "-b %s -u %s -cs %s" % (memory_to_test["b"], memory_to_test["u"], memory_to_test["cs"])
-        self.memory_to_test = memory_to_test
+
         # test binary size has to be smaller or equal to the physically available size
         if test_binary_size <= memory_to_test["size"]:
             self.test_binary_size = test_binary_size
         else:
             self.test_binary_size = memory_to_test["size"]
 
+        self.init_params_global(plugin_name, path_lua_files, flasher_binary, dict_add_params)
+
+    def init_params_global(self, plugin_name, path_lua_files, flasher_binary, dict_add_params):
+        self.plugin_name = "-p %s" % plugin_name["plugin_name"]
         self.flasher_binary = flasher_binary
         self.path_lua_files = path_lua_files
         self.bool_params_init = True
@@ -233,6 +236,15 @@ class Flashertest(Dyntest):
         assert type(mandatory_version) is not list
         # todo: this test is weak,
 
+
+
+
+
+
+
+
+
+
     def convert_final_command_entries_to_commands(self):
         if self.command_strings:
             assert True
@@ -282,14 +294,13 @@ class Flashertest(Dyntest):
         # todo: rework the command carrier, this is kind of not cool. (redundant code)
         # inert here final commands!
         # todo: integrate the logfiles more?
-        self.carrier_result = batch_command_base(
+        carrier_result = batch_command_base(
             default_carrier,
             self.command_strings,
             self.lfm.get_dir_tmp_logfiles(),
-            self.uuid_test
-        )
+            self.uuid_test)
         self.numErrors += eval_batch_result(
-            self.carrier_result,
+            carrier_result,
             self.lfm.get_dir_tmp_logfiles(),
             self.logfile_prefix,
             "%s %s" % (self.uuid_test, self.__class__.__name__))

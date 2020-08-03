@@ -1,7 +1,7 @@
 import json, os
 
 
-from simpelTools.src.logging_default import *
+from common.simpelTools.src.logging_default import *
 
 
 

@@ -8,7 +8,7 @@ base_root = os.path.dirname(project_root_path)  # location where all projects re
 sys.path.append(base_root)
 
 
-from SW_Test_flasher.src.class_dyntest import *
+from common.SW_Test_flasher.src.class_dyntest import *
 
 
 

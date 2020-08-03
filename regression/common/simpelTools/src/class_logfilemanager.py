@@ -1,6 +1,6 @@
 import uuid, time
-from simpelTools.src.filetools import *
-from simpelTools.src.platform_detect import platform_deliver
+from common.simpelTools.src.filetools import *
+from common.simpelTools.src.platform_detect import platform_deliver
 
 
 class LogfileManager:
@@ -78,10 +78,7 @@ class LogfileManager:
         :param reset: an array of path names for folders to be resetted
         :return:
         """
-        exclude = [self.path_abs_logfiles_zipped]
         for old_folder in reset:
-            if old_folder in exclude:
-                continue
             tmp_base = os.path.dirname(old_folder)
             if not tmp_base :
                 l.error("basefolder %s does not exist, it's the ancor for logfiles: %s" % tmp_base )
@@ -97,19 +94,11 @@ class LogfileManager:
                 continue
             if tmp_old_files:
                 for f in tmp_old_files:
-                    path = os.path.join(old_folder, f)
-                    if os.path.isfile(os.path.join(path)):
-                        l.info("remove old file: %s" % f)
-                        try:
-                            os.remove(path)
-                        except BaseException as e:
-                            l.info(e)
-                    else:
-                        l.info("remove old data in: %s" % f)
-                        try:
-                            shutil.rmtree(path)
-                        except BaseException as e:
-                            l.info(e)
+                    l.info("remove old file: %s" % f)
+                    try:
+                        os.remove(os.path.join(old_folder, f))
+                    except BaseException as e:
+                        l.info(e)
 
     def archive_logs(self, logfile_suffix, logfile_preafix=''):
         """

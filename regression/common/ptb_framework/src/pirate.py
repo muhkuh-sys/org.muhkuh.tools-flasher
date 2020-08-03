@@ -1,7 +1,7 @@
 import os
 
-from simpelTools.src.platform_detect import platform_deliver
-from simpelTools.src.class_logfilemanager import LogfileManager
+from common.simpelTools.src.platform_detect import platform_deliver
+from common.simpelTools.src.class_logfilemanager import LogfileManager
 
 
 class PTBEnv:

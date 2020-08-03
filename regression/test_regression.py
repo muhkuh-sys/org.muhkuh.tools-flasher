@@ -1,9 +1,10 @@
 import os
 import sys
 import unittest
-import json
 
 from os.path import realpath, dirname
+
+from config import *
 
 #import HtmlTestRunner
 
@@ -18,20 +19,15 @@ sys.path.append(package_root)
 # todo: dyntst may be out of date, redirect it!
 # from ptb_api.SW_Test_flasher.src.class_dyntest import *
 print(sys.path)
-from SW_Test_flasher.src.class_dyntest import *
+from common.SW_Test_flasher.src.class_dyntest import *
 
 # import of tests
 from NXTFLASHER_51.tc_nxtflasher_51 import NxtFlasher_51
 from FLT_STANDARD.tc_flt_standard import FltStandardSqiFlash, FltStandardOtherFlash, FltTestcliSqiFlash
 from FLT_HASH.tc_flt_hash import FltHash
 from NXTFLASHER_55.tc_nxtflasher_55 import NxtFlasher_55
-from WFP.wfp_test_flash import TestWfpFlash
-from WFP_MULTITARGET.wfp_test_multitarget import TestWfpMultiTarget
-from WFP_MULTIFLASH.wfp_test_multiflash import TestWfpMultiFlash
-from WFP_OS.wfp_test_os import TestWfpOs
-from FLT_TIMING.tc_flt_timing import FltTiming
 # ptb imports
-from ptb_framework.src.env_flasher import *
+from common.ptb_framework.src.env_flasher import *
 
 
 class UnitTestFlasherTest(unittest.TestCase):
@@ -105,7 +101,6 @@ class UnitTestFlasherTest(unittest.TestCase):
         ]
 
         loc_plugin_name = connected_netx[Jasonixer.json_chip_if_port]
-        plug_num = connected_netx['tmp_iterator_detect']
         loc_netx_chip_type = int(connected_netx[Jasonixer.json_chip_type_number])
         loc_netx_chip_type_id = connected_netx[Jasonixer.json_chip_type_identifyer]
         loc_protocol = connected_netx[Jasonixer.json_chip_flasher_name]
@@ -226,8 +221,6 @@ class UnitTestFlasherTest(unittest.TestCase):
              ["netIOL MPW", 15, "ROMLOADER_CHIPTYP_NETIOLA"],
              ["netIOL Rev0", 16, "ROMLOADER_CHIPTYP_NETIOLB"]]
 
-
-
         # set up transfare structures
         # Todo: Later use Janonixer structures for it
         for ele in select_list:
@@ -245,7 +238,6 @@ class UnitTestFlasherTest(unittest.TestCase):
         # todo: transfare into jasonixer
                 cls.plugin_name = {
                     "plugin_name": loc_plugin_name,
-                    "plug_num": plug_num,
                     "netx_port": loc_connected_port_type,
                     "netx_protocol": loc_protocol_alias,
                     "netx_chip_type": loc_netx_chip_type,
@@ -321,195 +313,7 @@ class UnitTestFlasherTest(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
-    def test_wfp_os(self):
-        """
-        flash to test all functions of wfp.lua except the flash function
-        using only the first flash
-        :return:
-        """
-        enable_test = 0
-        for TestGroup in self.RunTestsGroups:
-            if TestGroup in ["regr_short", "all"]:
-                # set flasg to enable test
-                enable_test = 1
-
-        if not enable_test:
-            self.skipTest("test_wfp_os NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
-
-        test_started = 0
-        test_results = 0
-        for mem in self.memories_to_test:
-            if mem['b'] in [1]:  # chose sqi flash
-                memory_to_test = mem
-
-        tc = TestWfpOs(self.lfm)
-        tc.init_params(self.plugin_name, memory_to_test,
-                       0,
-                       self.path_flasher_files,
-                       self.path_flasher_binary,
-                       {})
-        tc.run_test()
-        test_result = tc.numErrors_a[-1]
-        # collect all test results
-        test_results += test_result[1]
-
-    def test_wfp_multi_flash(self):
-            """
-            create WFP with random files for each flash on hardware board
-            :return:
-            """
-            enable_test = 0
-            for TestGroup in self.RunTestsGroups:
-                if TestGroup in ["regr_long", "regr_standard", "all"]:
-                    # set flasg to enable test
-                    enable_test = 1
-
-            if "regr_standard" in self.RunTestsGroups:
-                if not self.plugin_name['netx_chip_type'] in [14]:
-                    self.skipTest("this test only runs with  netx90 Rev 1")
-
-
-
-            if not enable_test:
-                self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
-
-            test_started = 0
-            test_results = 0
-            tc = TestWfpMultiFlash(self.lfm)
-            tc.init_params(self.plugin_name, self.memories_to_test, 0,
-                           self.path_flasher_files,
-                           self.path_flasher_binary,{})
-
-            tc.run_test()
-            test_result = tc.numErrors_a[-1]
-            # collect all test results
-            test_results += test_result[1]
-
-    def test_wfp_multi_target(self):
-        """
-        use static wfp.xml with targets for netx4000, netx90 and netx100/500
-        test works with each of the above netx types and will flash 3 files
-        :return:
-        """
-        enable_test = 0
-        for TestGroup in self.RunTestsGroups:
-            if TestGroup in ["regr_standard", "all"]:
-                # set flasg to enable test
-                enable_test = 1
-
-        if not self.plugin_name['netx_chip_type'] in [0, 1, 11, 12, 13, 14]:
-            self.skipTest("test_wfp_multi_target: this test only runs with  netx90, netx4000 and netx100/500")
-        if not enable_test:
-            self.skipTest("test_wfp_multi_target NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
-
-        test_started = 0
-        test_results = 0
-        tc = TestWfpMultiTarget(self.lfm)
-        tc.init_params(self.plugin_name, self.memories_to_test,
-                       0,
-                       self.path_flasher_files,
-                       self.path_flasher_binary,
-                       {})
-        tc.run_test()
-        test_result = tc.numErrors_a[-1]
-        # collect all test results
-        test_results += test_result[1]
-
-    def test_wfp_flash(self):
-        enable_test = 0
-        for TestGroup in self.RunTestsGroups:
-            if TestGroup in ["regr_standard", "all"]:
-                # set flasg to enable test
-                enable_test = 1
-
-        if not enable_test:
-            self.skipTest("test_wfp_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
-
-        test_started = 0
-        test_results = 0
-        for memory_to_test in self.memories_to_test:
-
-            tc = TestWfpFlash(self.lfm)
-            tc.init_params(self.plugin_name, memory_to_test,
-                           0,
-                           self.path_flasher_files,
-                           self.path_flasher_binary,
-                           {})
-            tc.run_test()
-            test_result = tc.numErrors_a[-1]
-            # collect all test results
-            test_results += test_result[1]
-
     # what ever name follows test_*(): doesn't matter.
-
-    def test_flash_timing(self):
-
-        enable_test = 0
-        for TestGroup in self.RunTestsGroups:
-            if TestGroup in ["timing", "regr_long", "all"]:
-                # set flasg to enable test
-                enable_test = 1
-
-        if not enable_test:
-            self.skipTest("test_flash_timing NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
-
-        timings = {}
-        data = timings['data'] = {}
-        timings['flasher_version'] = self.flasher_env.dict_json_version['VERSION_FLASHER']
-
-        timings['netx_chip_type'] = self.plugin_name['netx_chip_type']
-        timings['netx_chip_type_id'] = self.plugin_name['netx_chip_type_id']
-        timings['plugin_name'] = self.plugin_name['plugin_name']
-        timings['netx_port'] = self.plugin_name['netx_port']
-        timings['netx_protocol'] = self.plugin_name['netx_protocol']
-        timings['bus'] = "sqi"
-
-        test_runs = 2
-        test_sizes = {
-            "4kB": 4 * 1024,
-            "64kB": 64 * 1024,
-            "4MB": 4 * 1024 * 1024,
-            "16MB": 16 * 1024 * 1024
-        }
-
-        test_started = 0
-        test_results = 0
-
-        memory_to_test = None
-        for mem in self.memories_to_test:
-            if mem['b'] in [1]:
-                memory_to_test = mem
-                break
-        if not memory_to_test:
-            self.skipTest("test_flash_timing: no sqi flash found on HW!")
-        for name, size in test_sizes.items():
-            t_size = data[name] = {}
-            for i in range(test_runs):
-                t_tun = t_size[i] = {}
-                tc = FltTiming(self.lfm)
-                tc.init_params(self.plugin_name,
-                               memory_to_test,
-                               size,
-                               self.path_flasher_files,
-                               self.path_flasher_binary,
-                               {})
-
-                tc.run_test()
-                t_tun['write_empty'] = tc.carrier_result[1].time_execute
-                t_tun['write_not_empty'] = tc.carrier_result[2].time_execute
-                t_tun['read'] = tc.carrier_result[3].time_execute
-                t_tun['erase_not_empty'] = tc.carrier_result[4].time_execute
-
-                test_result = tc.numErrors_a[-1]
-                # collect all test results
-                test_results += test_result[1]
-
-        output_json = os.path.join(self.lfm.get_dir_zip_logfiles(), '%s_timings.json' % tc.uuid_test)
-        # print(timings)
-        with open(output_json, 'w') as out:
-            json.dump(timings, out, indent=4)
-
-
     def test_Standard_SQI_flash(self):
         """
         Testdescription
@@ -519,13 +323,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         :return:
         """
         # skip test, if not inside the list to be executed
-        enable_test = 0
+        enableTest = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_short", "regr_standard", "all"]:
                 # set flasg to enable test
-                enable_test = 1
+                enableTest = 1
 
-        if not enable_test:
+        if not enableTest:
             self.skipTest("test_Standard_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         num_bytes_to_test = 1024 * 1024
@@ -622,13 +426,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         """
 
         # skip test, if not inside the list to be executed
-        enable_test = 0
+        enableTest = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_standard", "all"]:
                 # set flasg to enable test
-                enable_test = 1
+                enableTest = 1
 
-        if not enable_test:
+        if not enableTest:
             self.skipTest("test_hash_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         # skip because the flasher for netX 90, netIOL => does not implement the hash function
@@ -676,13 +480,13 @@ class UnitTestFlasherTest(unittest.TestCase):
         """
 
         # skip test, if not inside the list to be executed
-        enable_test = 0
+        enableTest = 0
         for TestGroup in self.RunTestsGroups:
             if TestGroup in ["regr_long", "all"]:
                 # set flasg to enable test
-                enable_test = 1
+                enableTest = 1
 
-        if not enable_test:
+        if not enableTest:
             self.skipTest("test_testcli_SQI_flash NOT inlcuded inside test group(s): %s" % self.RunTestsGroups)
 
         test_started = 0
@@ -748,9 +552,9 @@ class UnitTestFlasherTest(unittest.TestCase):
 
             # test requires external SQI flash
             if (memory_to_test["b"] in [1] and
-                    memory_to_test["u"] in [0] and
-                    memory_to_test["cs"] in [0] and
-                    memory_to_test["size"] > 1 * 1024 * 1024):
+                memory_to_test["u"] in [0] and
+                memory_to_test["cs"] in [0] and
+                memory_to_test["size"] > 1 * 1024 * 1024):
                 test_started = 1
             else:
                 # skip the sub test
@@ -823,7 +627,6 @@ if __name__ == '__main__':
     runner.verbosity = 2
     loader = unittest.TestLoader()
     test = loader.discover(local_path, pattern="test_regression.py", top_level_dir=local_path)
-
     test_suit = unittest.TestSuite(test)
     result_class = runner.run(test_suit)
     print("")  # BKP
