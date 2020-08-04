@@ -141,7 +141,7 @@ class LogfileManager:
         self.unique_log_index += 1
         return ret
 
-    def wrap_archive_logs_and_clear(self, uuid, test_name='', upper_index=0, comment="x", result=[]):
+    def wrap_archive_logs_and_clear(self, uuid, test_name='', upper_index=0, comment="x", result=None):
         """
         Special function for flasher test. Provided is an external uuid and a test name, which can be leaved blank.
         the upper index is some index which is maintained by the upper programm, like a chapter. this function adds an
@@ -163,8 +163,21 @@ class LogfileManager:
         total_name = self.archive_logs(logfile_suffix="%s_%s" % (test_name, comment), logfile_preafix=tmp_name_logfiles)
 
         summary_json = os.path.join(self.path_abs_logfiles_zipped, "%s.json" % total_name)
-        dict_result = {'result': result,
-                       'num_errors': len(result)}
+        if result is not None:
+            result = result[-1]
+            dict_result = {
+                           'Name_Test': result[2],
+                           'num_sub_tests': result[3],  # uuid err name num_test flash_name
+                           'result': result[1], # number failed tests. Expected 0
+                           'Tesdescription': total_name,
+                           'uuid': uuid,
+                           }
+        else:
+            dict_result = {
+                "num_err": "Not provided",
+                'Tesdescription': total_name
+            }
+
         with open(summary_json, 'w') as json_file:
             json.dump(dict_result, json_file, indent=4)
         # reset logfile folder
