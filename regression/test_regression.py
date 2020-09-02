@@ -311,6 +311,36 @@ class UnitTestFlasherTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """
+        Generating summary log.
+        :return:
+        """
+        path = cls.lfm.path_abs_logfiles_zipped
+        sum_result = 0
+        sum_tests = []
+        for file_name in os.listdir(path):
+            name, ext = os.path.splitext(file_name)
+            if ext == '.json':
+                json_path = os.path.join(path, file_name)
+                with open(json_path, "r") as read_file:
+                    content = json.load(read_file)
+                    if content["result"] != 0:
+                        sum_result += 1
+                    sum_tests.append(content)
+        final_json = {
+            "result": sum_result,
+            "groups": sum_tests
+        }
+
+        path_final_json = os.path.join(path, "result.json")
+
+        with open(path_final_json, 'w') as x:
+            json.dump(final_json, x, indent=4)
+
+
+
+
+
         pass
 
     # what ever name follows test_*(): doesn't matter.
