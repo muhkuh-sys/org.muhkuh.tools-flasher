@@ -3,8 +3,8 @@ python:
   - '2.7'
 
 
-# Build on Ubuntu 14.04 .
-dist: trusty
+# Build on Ubuntu 18.04 .
+dist: bionic
 
 # Use the full VM to get all packages.
 sudo: true
