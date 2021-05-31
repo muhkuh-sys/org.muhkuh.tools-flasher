@@ -4,8 +4,16 @@ local WfpControl = class()
 
 
 function WfpControl:_init(tLogWriter)
+  -- Get the LUA version number in the form major * 100 + minor .
+  local strMaj, strMin = string.match(_VERSION, '^Lua (%d+)%.(%d+)$')
+  if strMaj~=nil then
+    self.LUA_VER_NUM = tonumber(strMaj) * 100 + tonumber(strMin)
+  end
+
   -- The "penlight" module is used to parse the configuration file.
   self.pl = require'pl.import_into'()
+
+  self.archive = require 'archive'
 
   -- lxp is used to parse the XML data.
   self.lxp = require 'lxp'
@@ -32,6 +40,9 @@ function WfpControl:_init(tLogWriter)
   -- This is the open archive.
   self.tArchive = nil
 
+  -- This is the list of conditions from the parsed XML.
+  self.atConditions = nil
+
   -- Map chip type to the name.
   self.atChiptyp2name = {
     [romloader.ROMLOADER_CHIPTYP_NETX500]          = "NETX500",
@@ -45,7 +56,9 @@ function WfpControl:_init(tLogWriter)
     [romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL]   = "NETX4000",
     [romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = "NETX90_MPW",
     [romloader.ROMLOADER_CHIPTYP_NETX90]           = "NETX90",
-    [romloader.ROMLOADER_CHIPTYP_NETX90B]          = "NETX90"
+    [romloader.ROMLOADER_CHIPTYP_NETX90B]          = "NETX90",
+    [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = "NETIOL",
+    [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = "NETIOL"
   }
 end
 
@@ -69,7 +82,7 @@ function WfpControl:__search_archive_contents(strEntry)
       tLog.debug('Open WFP archive "%s".', self.strWfpArchiveFile)
 
       -- Create a new reader which supports all formats and filters.
-      tArchive = archive.ArchiveRead()
+      tArchive = self.archive.ArchiveRead()
       tArchive:support_filter_all()
       tArchive:support_format_all()
 
@@ -166,6 +179,29 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tLog.error('Error in line %d, col %d: invalid "version": %s', iPosLine, iPosColumn, strError)
       end
       aLxpAttr.tVersion = tVersion
+    end
+
+  elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
+    -- The attribute "name" is required.
+    local strName = atAttributes['name']
+    if strName==nil or strName=='' then
+      aLxpAttr.tResult = nil
+      aLxpAttr.tLog.error('Error in line %d, col %d: missing attribute "name".', iPosLine, iPosColumn)
+    else
+      -- The attribute "default" is optional.
+      local strDefault = atAttributes['default']
+      -- The attribute "test" is optional. If set, it must be "none", "list" or "re".
+      local strTest = atAttributes['test']
+      -- The default is "none".
+      if strTest==nil or strTest=='' then
+        strTest = 'none'
+      end
+      if strTest~='none' and strTest~='list' and strTest~='re' then
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: invalid attribute "test", must be "none", "list" or "re".', iPosLine, iPosColumn)
+      else
+        aLxpAttr.tCondition = { name=strName, default=strDefault, test=strTest }
+      end
     end
 
   elseif strCurrentPath=='/FlasherPackage/Target' then
@@ -274,11 +310,56 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
       end
 
+      local strCondition = atAttributes['condition']
+      if strCondition==nil then
+        strCondition = ''
+      end
+
       local tData = {}
       tData.strFile = strFile
       tData.ulOffset = ulOffset
+      tData.strCondition = strCondition
 
       table.insert(aLxpAttr.tCurrentFlash.atData, tData)
+    end
+
+  elseif strCurrentPath=='/FlasherPackage/Target/Flash/Erase' then
+    local strOffset = atAttributes['offset']
+    if strOffset==nil or strOffset=='' then
+      -- No offset specified.
+      aLxpAttr.tResult = nil
+      aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is not set.', iPosLine, iPosColumn)
+    else
+      local ulOffset = tonumber(strOffset)
+      if ulOffset==nil then
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
+      else
+        local strSize = atAttributes['size']
+        if strSize==nil or strSize=='' then
+          -- No size specified.
+          aLxpAttr.tResult = nil
+          aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is not set.', iPosLine, iPosColumn)
+        else
+          local ulSize = tonumber(strSize)
+          if ulSize==nil then
+            aLxpAttr.tResult = nil
+            aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is no number: "%s".', iPosLine, iPosColumn, strSize)
+          else
+            local strCondition = atAttributes['condition']
+            if strCondition==nil then
+              strCondition = ''
+            end
+
+            local tErase = {}
+            tErase.ulSize = ulSize
+            tErase.ulOffset = ulOffset
+            tErase.strCondition = strCondition
+
+            table.insert(aLxpAttr.tCurrentFlash.atData, tErase)
+          end
+        end
+      end
     end
   end
 end
@@ -295,7 +376,11 @@ function WfpControl.__parseCfg_EndElement(tParser, strName)
   local iPosLine, iPosColumn, iPosAbs = tParser:pos()
 
   local strCurrentPath = aLxpAttr.strCurrentPath
-  if strCurrentPath=='/FlasherPackage/Target' then
+  if strCurrentPath=='/FlasherPackage/Conditions/Condition' then
+    table.insert(aLxpAttr.atConditions, aLxpAttr.tCondition)
+    aLxpAttr.tCondition = nil
+
+  elseif strCurrentPath=='/FlasherPackage/Target' then
     local strNetx = aLxpAttr.tCurrentTarget.netX
     -- Does the target already exist?
     if aLxpAttr.atTargets[strNetx]==nil then
@@ -303,7 +388,7 @@ function WfpControl.__parseCfg_EndElement(tParser, strName)
       aLxpAttr.atTargets[strNetx] = aLxpAttr.tCurrentTarget
     else
       -- Append all flash entries.
-      self.pl.tablex(aLxpAttr.atTargets[strNetx].atFlashes, aLxpAttr.tCurrentTarget.atFlashes)
+      aLxpAttr.pl.tablex(aLxpAttr.atTargets[strNetx].atFlashes, aLxpAttr.tCurrentTarget.atFlashes)
     end
     aLxpAttr.tCurrentTarget = nil
 
@@ -325,10 +410,16 @@ end
 -- @param strData The character data.
 function WfpControl.__parseCfg_CharacterData(tParser, strData)
   local aLxpAttr = tParser:getcallbacks().userdata
+  local pl = aLxpAttr.pl
 
---  if aLxpAttr.strCurrentPath=="/jonchki-artifact/info/description" then
---    aLxpAttr.tInfo.strDescription = strData
---  end
+  if aLxpAttr.strCurrentPath=="/FlasherPackage/Conditions/Condition" then
+    local tData = strData
+    local tCondition = aLxpAttr.tCondition
+    if tCondition.test=='list' then
+      tData = pl.tablex.imap(pl.stringx.strip, pl.stringx.split(strData, ','))
+    end
+    aLxpAttr.tCondition.constraints = tData
+  end
 end
 
 
@@ -350,10 +441,13 @@ function WfpControl:__parse_configuration(strConfiguration)
     tCurrentFlash = nil,
 
     tVersion = nil,
+    tCondition = nil,
     atTargets = {},
+    atConditions = {},
 
     tResult = true,
-    tLog = self.tLog
+    tLog = self.tLog,
+    pl = self.pl
   }
 
   local aLxpCallbacks = {}
@@ -380,6 +474,7 @@ function WfpControl:__parse_configuration(strConfiguration)
   else
     self.tConfigurationVersion = aLxpCallbacks.userdata.tVersion
     self.atConfigurationTargets = aLxpCallbacks.userdata.atTargets
+    self.atConditions = aLxpCallbacks.userdata.atConditions
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.
@@ -438,7 +533,7 @@ function WfpControl:openXml(strWfpControlFile)
     tLog.debug('Reading control file "%s".', strWfpControlFile)
     local strData, strError = self.pl.utils.readfile(strWfpControlFile, false)
     if strData==nil then
-      tLog.error('Faied to read the control file "%s" not found: %s', strWfpControlFile, strError)
+      tLog.error('Failed to read the control file "%s" not found: %s', strWfpControlFile, strError)
     else
       -- Parse the XML file.
       tResult = self:__parse_configuration(strData)
@@ -463,6 +558,128 @@ function WfpControl:getTarget(iChiptype)
     end
   end
   return tTarget
+end
+
+
+
+function WfpControl:__runInSandbox(atValues, strExpression)
+  local tResult
+  local tLog = self.tLog
+  local pl = self.pl
+
+  -- Create a sandbox.
+  local atEnv = {
+    ['error']=error,
+    ['ipairs']=ipairs,
+    ['next']=next,
+    ['pairs']=pairs,
+    ['print']=print,
+    ['select']=select,
+    ['tonumber']=tonumber,
+    ['tostring']=tostring,
+    ['type']=type,
+    ['math']=math,
+    ['string']=string,
+    ['table']=table
+  }
+  for strKey, tValue in pairs(atValues) do
+    local strValue
+    local strType = type(tValue)
+    if strType~='number' and strType~='boolean' and strType~='string' then
+      error(string.format('Invalid value type for key %s: %s', strKey, strType))
+    end
+    atEnv[strKey] = tValue
+  end
+  local strCode = string.format('return %s', strExpression)
+  local tFn, strError = pl.compat.load(strCode, 'condition code', 't', atEnv)
+  if tFn==nil then
+    error(string.format('Invalid expression "%s": %s', strExpression, tostring(strError)))
+  end
+  local fRun, tFnResult = pcall(tFn)
+  if fRun==false then
+    error(string.format('Failed to run the expression "%s": %s', strExpression, tostring(tResult)))
+  end
+  local strType = type(tFnResult)
+  if strType~='boolean' then
+    error(string.format('Invalid condition return type for expression "%s": %s', strExpression, strType))
+  end
+  tResult = tFnResult
+
+  return tResult
+end
+
+
+
+function WfpControl:matchCondition(atData, strCondition)
+  local tResult = true
+  local tLog = self.tLog
+  -- Does a condition exist?
+  if string.len(strCondition)==0 then
+    tLog.debug('Condition check: no condition -> true')
+  else
+    -- Evaluate the condition in a sandbox.
+    tResult = self:__runInSandbox(atData, strCondition)
+    tLog.debug('Condition check: "%s" -> %s', strCondition, tostring(tResult))
+  end
+  return tResult
+end
+
+
+
+function WfpControl:getConditions()
+  return self.atConditions
+end
+
+
+function WfpControl:validateCondition(strKey, strValue)
+  local tResult
+  local strError
+  local atConditions = self.atConditions
+
+  -- Search the condition in the list.
+  local tHit
+  for _, tCondition in ipairs(atConditions) do
+    if tCondition.name==strKey then
+      tHit = tCondition
+      break
+    end
+  end
+  if tHit==nil then
+    -- No condition -> always ok.
+    tResult = true
+  else
+    local strTest = tHit.test
+    if strTest=='none' then
+      -- No test -> always ok.
+      tResult = true
+    elseif strTest=='list' then
+      local atList = tHit.constraints
+      for _, strElement in ipairs(atList) do
+        if strElement==strValue then
+          tResult = true
+          break
+        end
+      end
+      if tResult~=true then
+        tResult = false
+        strError = string.format('"%s" is not part of the list %s', strValue, table.concat(atList, ','))
+      end
+    elseif strTest=='re' then
+      local strRe = tHit.constraints
+      local tMatch = string.match(strValue, strRe)
+      if tMatch==nil then
+        tResult = false
+        strError = string.format('"%s" does not match the regular expression %s', strValue, strRe)
+      else
+        tResult = true
+      end
+    else
+      -- Unknown test always fails.
+      tResult = false
+    end
+  end
+
+  return tResult, strError
 end
 
 
