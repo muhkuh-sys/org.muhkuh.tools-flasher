@@ -101,6 +101,29 @@ function getPlugin(strPluginName)
 	return tPlugin, strError
 end
 
+function printTable(tTable, ulIndent)
+    local strIndentSpace = string.rep(" ", ulIndent)
+    for key, value in pairs(tTable) do
+        if type(value) == "table" then
+            print(strIndentSpace, key)
+            printTable(value, ulIndent+4)
+        else
+            print(strIndentSpace, key, " = ", value)
+        end
+    end
+    if next(tTable) == nil then
+       print(strIndentSpace, " -- empty --")
+    end
+end
+
+function printArgs(tArgs, tLog)
+    print("")
+    print("run wfp.lua with the following args:")
+    print("------------------------------------")
+    printTable(tArgs, 0)
+    print("")
+end
+
 local tParser = argparse('wfp', 'Flash, list and create WFP packages.')
   :command_target("strSubcommand")
 
@@ -174,6 +197,7 @@ tParserCommandPack:option('-v --verbose')
 
 local tArgs = tParser:parse()
 
+
 -- moved requirements here to avoid prints before argparse
 require 'muhkuh_cli_init'
 --require 'flasher'
@@ -187,10 +211,11 @@ local tLog = require 'log'.new(
   require 'log.formatter.format'.new()
 )
 
+printArgs(tArgs, tLog)
+
 -- Register the CLI tester.
 -- tester = require 'tester_cli'(tLog)
 -- tester = require 'tester_cli'
-print(tester)
 -- Ask the user to select a plugin.
 tester.fInteractivePluginSelection = true
 
@@ -235,7 +260,6 @@ if tArgs.fCommandFlashSelected==true then
         atWfpConditions[strKey] = strValue
       end
     end
-
     if fOk==true then
       -- Set the default values for missing conditions.
       for _, tCondition in ipairs(atConditions) do
@@ -274,8 +298,6 @@ if tArgs.fCommandFlashSelected==true then
       else
         local strError
 		tPlugin, strError = getPlugin(tArgs.strPluginName)
-        print("getPlugin Error:")
-        print(strError)
 	  end
 	
 	  tPlugin:Connect()
@@ -318,7 +340,7 @@ if tArgs.fCommandFlashSelected==true then
 
               if tArgs.fVerify == true then
                   -- new verify function here
-                  fOk = wfp_verify.verify_wfp_data(tTargetFlash, tWfpControl, tPlugin, tFlasher, aAttr, tLog)
+                  fOk = wfp_verify.verify_wfp_data(tTargetFlash, tWfpControl, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
                   tLog.log('verification: ')
                   tLog.log(fOk)
 
@@ -643,7 +665,9 @@ if fOk==true then
   tLog.info('##     ## ##   ##  ')
   tLog.info(' #######  ##    ## ')
   tLog.info('')
+  tLog.info('RESULT: OK')
   os.exit(0)
 else
+  tLog.info('RESULT: ERROR')
   os.exit(1)
 end
