@@ -610,6 +610,7 @@ if fBuildIsFull==True:
         'lua/read_bootimage_intflash2.lua',
         'lua/read_complete_flash.lua',
         'lua/wfp.lua',
+        'lua/wfp_verify.lua',
         tDemoShowEraseAreas)
 
     tArcList.AddFiles('',
@@ -687,6 +688,7 @@ if fBuildIsFull==True:
         'targets/testbench/read_complete_flash.lua':                       'lua/read_complete_flash.lua',
         'targets/testbench/test_netx90_intflash.lua':                      'lua/test_netx90_intflash.lua',
         'targets/testbench/wfp.lua':                                       'lua/wfp.lua',
+        'targets/testbench/wfp_verify.lua':                                'lua/wfp_verify.lua',
         'targets/testbench/show_erase_areas.lua':                          tDemoShowEraseAreas,
 
         # collect the lib files in a directory
