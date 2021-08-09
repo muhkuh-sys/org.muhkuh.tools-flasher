@@ -138,12 +138,14 @@ tParserCommandFlash:flag('-d --dry-run'):description('Dry run. Connect to a netX
 tParserCommandFlash:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
 tParserCommandFlash:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 
 local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
 tParserCommandVerify:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
 tParserCommandVerify:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 
 
 -- Add the "list" command and all its options.
@@ -260,7 +262,7 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
-                tPlugin, strError = getPlugin(tArgs.strPluginName)
+                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
             end
 
             tPlugin:Connect()
