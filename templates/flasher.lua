@@ -662,6 +662,14 @@ end
 function isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	local fIsErased = false
 
+	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
+	if ulEraseEnd == 0xffffffff then
+		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+		if not (ulEraseStart and ulEraseEnd) then
+			return false, "getEraseArea failed!"
+		end
+	end
+
 	local aulParameter =
 	{
 		OPERATION_MODE_IsErased,               -- operation mode: isErased
