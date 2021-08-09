@@ -562,6 +562,7 @@ NETX_CONSOLEAPP_RESULT_T parflash_isErased(const CMD_PARAMETER_ISERASED_T *ptPar
 		ulErased &= *(tCnt.puc++);
 		if( ulErased!=0xff )
 		{
+            uprintf("! not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", tCnt.puc, 0xff, ulErased);
 			break;
 		}
 

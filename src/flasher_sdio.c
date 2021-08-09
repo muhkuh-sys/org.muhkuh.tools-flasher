@@ -533,6 +533,7 @@ NETX_CONSOLEAPP_RESULT_T sdio_is_erased(CMD_PARAMETER_ISERASED_T *ptParams, unsi
 		{
 			if (*pucCnt != 0) {
 				fIsErased = 1;
+				uprintf("! not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", pucCnt, 0, *pucCnt);
 				break;
 			}
 			pucCnt++;

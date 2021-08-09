@@ -1358,6 +1358,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_is_erased(CMD_PARAMETER_ISERASED_
 					ucFlashData = pucFlashStart[ulOffset];
 					if( ucFlashData!=0xffU )
 					{
+					    uprintf("! not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", ulOffset, 0xff, ucFlashData);
 						break;
 					}
 

@@ -776,6 +776,7 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(const FLASHER_SPI_FLASH_T *ptFlashDescript
 
 		if( ulErased!=0xff )
 		{
+		    uprintf("! not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", pucCnt, 0xff, ulErased);
 			break;
 		}
 
