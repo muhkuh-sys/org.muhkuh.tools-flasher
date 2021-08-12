@@ -84,20 +84,71 @@ function getPluginByName(strName)
     return nil, "plugin not found"
 end
 
-function getPlugin(strPluginName)
-    local tPlugin, strError
-    if strPluginName then
-        -- get the plugin by name
-        tPlugin, strError = getPluginByName(strPluginName)
-    else
-        -- Ask the user to pick a plugin.
-        tPlugin = select_plugin.SelectPlugin()
-        if tPlugin == nil then
-            strError = "No plugin selected!"
-        end
-    end
+function getPlugin(strPluginName, strPluginType)
+	local tPlugin, strError
+	if strPluginName then
+		-- get the plugin by name
+		tPlugin, strError = getPluginByName(strPluginName)
+	else
+		-- Ask the user to pick a plugin.
+		tPlugin = SelectPlugin(nil, strPluginType)
+		if tPlugin == nil then
+			strError = "No plugin selected!"
+		end
+	end
 
-    return tPlugin, strError
+	return tPlugin, strError
+end
+
+function SelectPlugin(strPattern, strPluginType)
+	local iInterfaceIdx
+	local aDetectedInterfaces
+	local tPlugin
+	local strPattern = strPattern or ".*"
+
+	repeat do
+		-- Detect all interfaces.
+		aDetectedInterfaces = {}
+		for i,v in ipairs(__MUHKUH_PLUGINS) do
+			if strPluginType == nil or strPluginType == v:GetID() then
+				local iDetected
+				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
+				iDetected = v:DetectInterfaces(aDetectedInterfaces)
+				print(string.format("Found %d interfaces with plugin %s", iDetected, v:GetID()))
+			end
+		end
+		print(string.format("Found a total of %d interfaces with %d plugins", #aDetectedInterfaces, #__MUHKUH_PLUGINS))
+		print("")
+
+		-- Show all detected interfaces.
+		print("Please select the interface:")
+		for i,v in ipairs(aDetectedInterfaces) do
+			print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+		end
+		print("R: rescan")
+		print("C: cancel")
+
+		-- Get the user input.
+		repeat do
+			io.write(">")
+			strInterface = io.read():lower()
+			iInterfaceIdx = tonumber(strInterface)
+		-- Ask again until...
+		--  1) the user requested a rescan ("r")
+		--  2) the user canceled the selection ("c")
+		--  3) the input is a number and it is an index to an entry in aDetectedInterfaces
+		end until strInterface=="r" or strInterface=="c" or (iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces)
+	-- Scan again if the user requested it.
+	end until strInterface~="r"
+
+	if strInterface~="c" then
+		-- Create the plugin.
+		tPlugin = aDetectedInterfaces[iInterfaceIdx]:Create()
+	else
+		tPlugin = nil
+	end
+
+	return tPlugin
 end
 
 function printTable(tTable, ulIndent)
