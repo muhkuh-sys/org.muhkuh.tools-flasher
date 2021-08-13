@@ -54,28 +54,30 @@ local atLogLevels = {
 
 -- copied from cli_flash.lua!
 -- this was necessarry because when importing it with "require 'cli_flash'" the argparser is overwritten
-function getPluginByName(strName)
+function getPluginByName(strName, strPluginType)
     for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-        local iDetected
-        local aDetectedInterfaces = {}
-        print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
-        iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
-        print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
-
-        for i, v in ipairs(aDetectedInterfaces) do
-            print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
-            if strName == v:GetName() then
-                if not v:IsValid() then
-                    return nil, "Plugin is not valid"
-                elseif v:IsUsed() then
-                    return nil, "Plugin is in use"
-                else
-                    print("found plugin")
-                    local tPlugin = v:Create()
-                    if tPlugin then
-                        return tPlugin
+        if strPluginType == nil or strPluginType == tPluginClass:GetID() then
+            local iDetected
+            local aDetectedInterfaces = {}
+            print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
+            iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
+            print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
+    
+            for i, v in ipairs(aDetectedInterfaces) do
+                print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+                if strName == v:GetName() then
+                    if not v:IsValid() then
+                        return nil, "Plugin is not valid"
+                    elseif v:IsUsed() then
+                        return nil, "Plugin is in use"
                     else
-                        return nil, "Error creating plugin instance"
+                        print("found plugin")
+                        local tPlugin = v:Create()
+                        if tPlugin then
+                            return tPlugin
+                        else
+                            return nil, "Error creating plugin instance"
+                        end
                     end
                 end
             end
@@ -85,10 +87,13 @@ function getPluginByName(strName)
 end
 
 function getPlugin(strPluginName, strPluginType)
+	print ("getPlugin")
+	print ("strPluginName:", strPluginName)
+	print ("strPluginType:", strPluginType)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName)
+		tPlugin, strError = getPluginByName(strPluginName, strPluginType)
 	else
 		-- Ask the user to pick a plugin.
 		tPlugin = SelectPlugin(nil, strPluginType)
