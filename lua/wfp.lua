@@ -314,7 +314,7 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
         if fOk == true then
             -- Select a plugin and connect to the netX.
             local tPlugin
-            if tArgs.strPluginName == nil then
+            if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
