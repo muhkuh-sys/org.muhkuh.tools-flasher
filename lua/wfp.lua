@@ -319,9 +319,10 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
             else
                 local strError
                 tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+                if tPlugin then
+                    tPlugin:Connect()
+                end
             end
-
-            tPlugin:Connect()
 
             if not tPlugin then
                 tLog.error('No plugin selected, nothing to do!')
