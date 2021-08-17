@@ -771,11 +771,21 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(const FLASHER_SPI_FLASH_T *ptFlashDescript
 		pucEnd = pucSpiBuffer + ulSegSize;
 		while( pucCnt<pucEnd )
 		{
-			ulErased &= *(pucCnt++);
+			ulErased &= *pucCnt;
+			if( ulErased!=0xff )
+			{
+				uprintf("! Memory not erased at offset 0x%08x - expected: 0x%02x found: 0x%02x\n", 
+					ulCnt + (unsigned long)(pucCnt - pucSpiBuffer), 0xff, ulErased);
+				/* exit inner loop */
+				break;
+			}
+			
+			++pucCnt;
 		}
 
 		if( ulErased!=0xff )
 		{
+			/* exit outer loop */
 			break;
 		}
 
