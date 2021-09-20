@@ -1010,8 +1010,17 @@ else
 	elseif aArgs.iMode == MODE_TEST_CLI then
 		flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
 		fOk, strMsg = flasher_test.testFlasher(flasher_interface)
-		print(fOk, strMsg)
-		os.exit(0)
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			print("Test PASSED")
+			os.exit(0)
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			print("Test FAILED")
+			os.exit(1)
+		end
 		
 	else
 		fOk, strMsg = exec(aArgs)
