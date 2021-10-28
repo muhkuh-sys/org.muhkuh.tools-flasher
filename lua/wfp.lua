@@ -556,7 +556,7 @@ elseif tArgs.fCommandPackSelected == true then
                                     tLog.debug('Extending the relative path "%s" to "%s".', strFile, strFileAbs)
                                 end
                                 local strFileBase = pl.path.basename(strFile)
-                                if atFiles[strFileBase] == nil then
+                                if atFiles[strFile] == nil then
                                     if pl.path.exists(strFileAbs) ~= strFileAbs then
                                         tLog.error('The path "%s" does not exist.', strFileAbs)
                                         fOk = false
@@ -565,7 +565,7 @@ elseif tArgs.fCommandPackSelected == true then
                                         fOk = false
                                     else
                                         tLog.debug('Adding file "%s" to the list.', strFileAbs)
-                                        atFiles[strFileBase] = strFileAbs
+                                        atFiles[strFile] = strFileAbs
                                         local tAttr = {
                                             ucBus = tBus,
                                             ucUnit = tTargetFlash.ulUnit,
@@ -576,8 +576,8 @@ elseif tArgs.fCommandPackSelected == true then
                                         }
                                         table.insert(atSortedFiles, tAttr)
                                     end
-                                elseif atFiles[strFileBase] ~= strFileAbs then
-                                    tLog.error('Multiple files with the base name "%s" found.', strFileBase)
+                                elseif atFiles[strFile] ~= strFileAbs then
+                                    tLog.error('Multiple files with the path "%s" found.', strFileBase)
                                     fOk = false
                                 end
                             end
