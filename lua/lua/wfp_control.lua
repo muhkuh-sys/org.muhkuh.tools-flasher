@@ -168,6 +168,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
 
   if strCurrentPath=='/FlasherPackage' then
     local strVersion = atAttributes['version']
+    local strHasSubdirs = atAttributes['has_subdirs']
     if strVersion==nil or strVersion=='' then
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: missing attribute "version".', iPosLine, iPosColumn)
@@ -179,6 +180,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tLog.error('Error in line %d, col %d: invalid "version": %s', iPosLine, iPosColumn, strError)
       end
       aLxpAttr.tVersion = tVersion
+      aLxpAttr.strHasSubdirs = strHasSubdirs
     end
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
@@ -213,7 +215,6 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       local tTarget = {}
       tTarget.netX = strNetx
       tTarget.atFlashes = {}
-
       aLxpAttr.tCurrentTarget = tTarget
     end
 
@@ -316,6 +317,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       end
 
       local tData = {}
+      tData.strType = "Data"
       tData.strFile = strFile
       tData.ulOffset = ulOffset
       tData.strCondition = strCondition
@@ -352,6 +354,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
             end
 
             local tErase = {}
+            tErase.strType = "Erase"
             tErase.ulSize = ulSize
             tErase.ulOffset = ulOffset
             tErase.strCondition = strCondition
@@ -475,6 +478,7 @@ function WfpControl:__parse_configuration(strConfiguration)
     self.tConfigurationVersion = aLxpCallbacks.userdata.tVersion
     self.atConfigurationTargets = aLxpCallbacks.userdata.atTargets
     self.atConditions = aLxpCallbacks.userdata.atConditions
+    self.strHasSubdirs = aLxpCallbacks.userdata.strHasSubdirs
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.
@@ -630,6 +634,9 @@ function WfpControl:getConditions()
   return self.atConditions
 end
 
+function WfpControl:getHasSubdirs()
+  return self.strHasSubdirs
+end
 
 function WfpControl:validateCondition(strKey, strValue)
   local tResult

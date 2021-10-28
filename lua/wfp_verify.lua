@@ -117,7 +117,14 @@ function generate_file_list(tTargetFlash, tWfpControl, atWfpConditions, tLog)
                 table.insert(tFiles, tCommand)
             else
                 -- data (flash) commands here
-                local strFile = pl.path.basename(tData.strFile)
+                local strFile
+                if tWfpControl:getHasSubdirs() == "True" then
+                    tLog.info('WFP archive uses subdirs.')
+                    strFile = tData.strFile
+                else
+                    tLog.info('WFP archive does not use subdirs.')
+                    strFile = pl.path.basename(tData.strFile)
+                end
                 local ulOffset = tData.ulOffset
 
                 tLog.info('Found file "%s" with offset 0x%08x', strFile, ulOffset)
