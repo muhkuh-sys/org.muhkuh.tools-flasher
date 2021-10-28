@@ -333,7 +333,7 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                     -- Download the binary.
                     local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
 
-                    -- Loop over all flashes.
+                    -- Loop over all flashes. (inside xml)
                     for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                         local strBusName = tTargetFlash.strBus
                         local tBus = atName2Bus[strBusName]
@@ -361,7 +361,8 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                 tLog.log(fOk)
                             end
                             if tArgs.fCommandFlashSelected == true then
-                                for _, tData in ipairs(tTargetFlash.atData) do
+                                -- loop over data inside xml
+                                for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
                                     -- Is this an erase command?
                                     if tData.strFile == nil then
                                         local ulOffset = tData.ulOffset
@@ -383,7 +384,15 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                             end
                                         end
                                     else
-                                        local strFile = pl.path.basename(tData.strFile)
+                                        local strFile
+                                        if tWfpControl:getHasSubdirs() == "True" then
+                                            tLog.info('WFP archive uses subdirs.')
+                                            strFile = tData.strFile
+                                        else
+                                            tLog.info('WFP archive does not use subdirs.')
+                                            strFile = pl.path.basename(tData.strFile)
+                                        end
+
                                         local ulOffset = tData.ulOffset
                                         local strCondition = tData.strCondition
                                         tLog.info('Found file "%s" with offset 0x%08x and condition "%s".', strFile, ulOffset, strCondition)
@@ -537,7 +546,7 @@ elseif tArgs.fCommandPackSelected == true then
                         fOk = false
                         break
                     else
-                        for _, tData in ipairs(tTargetFlash.atData) do
+                        for tDataidx, tData in ipairs(tTargetFlash.atData) do
                             local strFile = tData.strFile
                             -- Skip erase entries.
                             if strFile ~= nil then
@@ -562,7 +571,8 @@ elseif tArgs.fCommandPackSelected == true then
                                             ucUnit = tTargetFlash.ulUnit,
                                             ucChipSelect = tTargetFlash.ulChipSelect,
                                             ulOffset = tData.ulOffset,
-                                            strFilename = strFileAbs
+                                            strFilename = strFileAbs,
+                                            strFileRelPath = tData.strFile
                                         }
                                         table.insert(atSortedFiles, tAttr)
                                     end
@@ -608,18 +618,24 @@ elseif tArgs.fCommandPackSelected == true then
                             local tEntry = archive.ArchiveEntry()
                             tEntry:set_pathname('wfp.xml')
                             local strData = pl.utils.readfile(tArgs.strWfpControlFile, true)
-                            tEntry:set_size(string.len(strData))
+                            -- add 'has_subdir="True" to xml'
+                            local strRegex = '<FlasherPackage version="(%d+).(%d+).(%d+)">'
+                            local strReplace = '<FlasherPackage version="%1.%2.%3" has_subdirs="True">'
+                            strSubbed = strData:gsub(strRegex, strReplace)
+
+                            tEntry:set_size(string.len(strSubbed))
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
                             --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
-                            tArchive:write_data(strData)
+                            tArchive:write_data(strSubbed)
                             tArchive:finish_entry()
 
                             for _, tAttr in ipairs(atSortedFiles) do
                                 local tEntry = archive.ArchiveEntry()
-                                tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
+                                -- tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
+                                tEntry:set_pathname(tAttr.strFileRelPath)
                                 local strData = pl.utils.readfile(tAttr.strFilename, true)
                                 tEntry:set_size(string.len(strData))
                                 tEntry:set_filetype(archive.AE_IFREG)
