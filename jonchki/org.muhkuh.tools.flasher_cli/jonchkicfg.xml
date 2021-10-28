@@ -39,5 +39,13 @@
 			<config>[group]/[module]/[version]/[artifact]-[version].[extension][platform]/download</config>
 			<artifact>[group]/[module]/[version]/[artifact]-[version].[extension][platform]/download</artifact>
 		</repository>
+
+        <!-- Search github for older versions of muhkuh_base_cli -->
+        <repository id="github_for_base_cli" type="url" cacheable="true" rescan="3600">
+            <root>https://github.com/muhkuh-sys</root>
+            <versions>[dotgroup]-[module]/releases?after=v2.4.0</versions>
+            <config>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</config>
+            <artifact>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</artifact>
+        </repository>
 	</repositories>
 </jonchkicfg>
