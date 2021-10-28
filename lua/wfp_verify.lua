@@ -164,16 +164,15 @@ function verify_wfp_data(tTargetFlash, tWfpControl, atWfpConditions, tPlugin, tF
 
 
         elseif tChunk['strType'] == "flash" then
-            tLog.info('verify flash command at offset 0x%08x to 0x%08x. file %s', tChunk['ulOffset'], tChunk['ulEndOffset'], tChunk['tFile']['strFilePath'])
+            tLog.info('verify flash command at offset [0x%08x, 0x%08x[. file %s', tChunk['ulOffset'], tChunk['ulEndOffset'], tChunk['tFile']['strFilePath'])
             -- get the chunk data from the file
 
             local ulChunkSize = tChunk['ulEndOffset'] - tChunk['ulOffset']
             local ulDataOffset = tChunk['ulOffset'] - tChunk['tFile']['ulOffset'] + 1
             local ulDataEndOffset = ulDataOffset + ulChunkSize - 1
 
-            tLog.info('get data from file offset 0x%08x to 0x%08x.', ulDataOffset, ulDataEndOffset)
+            tLog.info('get data area from file [0x%08x, 0x%08x[', (ulDataOffset-1), ulDataEndOffset)
             local strChunkData = string.sub(tChunk['tFile']['strData'], ulDataOffset, ulDataEndOffset)
-
             fOk, strMessage = tFlasher.verifyArea(tPlugin, aAttr, tChunk['ulOffset'], strChunkData)
             if fOk == true then
                 tLog.info('ok')
