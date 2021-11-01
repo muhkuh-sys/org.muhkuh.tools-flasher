@@ -23,20 +23,20 @@ strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         
 Mode        Parameters                                                  
-flash       [p][t] dev [offset]      file   Write file to flash    
-read        [p][t] dev [offset] size file   Read flash and write to file      
-erase       [p][t] dev [offset] size        Erase area or whole flash       
-verify      [p][t] dev [offset]      file   Byte-by-byte compare
-verify_hash [p][t] dev [offset]      file   Quick compare using checksums
-hash        [p][t] dev [offset] size        Compute SHA1
-info        [p][t]                          Show busses/units/chip selects
-detect      [p][t] dev                      Check if flash is recognized
-test        [p][t] dev                      Test flasher      
-testcli     [p][t] dev                      Test cli flasher  
-list_interfaces[t]                          List all usable interfaces
-detect_netx [p][t]                          Detect the netx chip type
--h                                          Show this help   
--version                                    Show flasher version 
+flash       [p][t][o] dev [offset]      file   Write file to flash    
+read        [p][t][o] dev [offset] size file   Read flash and write to file      
+erase       [p][t][o] dev [offset] size        Erase area or whole flash       
+verify      [p][t][o] dev [offset]      file   Byte-by-byte compare
+verify_hash [p][t][o] dev [offset]      file   Quick compare using checksums
+hash        [p][t][o] dev [offset] size        Compute SHA1
+info        [p][t][o]                          Show busses/units/chip selects
+detect      [p][t][o] dev                      Check if flash is recognized
+test        [p][t][o] dev                      Test flasher      
+testcli     [p][t][o] dev                      Test cli flasher  
+list_interfaces[t][o]                          List all usable interfaces
+detect_netx [p][t][o]                          Detect the netx chip type
+-h                                             Show this help   
+-version                                       Show flasher version 
         
 p:    -p plugin_name
       select plugin
@@ -46,6 +46,10 @@ t:    -t plugin_type
       select plugin type
       example: -t romloader_jtag
         
+o:    [-jtag_khz frequency] [-jtag_reset mode]
+      -jtag_khz: override JTAG frequency 
+      -jtag_reset_mode: hard/soft/attach
+
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
       default: -u 0 -cs 0
@@ -139,12 +143,14 @@ function printf(...) print(string.format(...)) end
 -- is scanned.
 -- If strPluginType is nil, all plugin providers are scanned. 
 
-function SelectPlugin(strPattern, strPluginType)
+function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	local iInterfaceIdx
 	local aDetectedInterfaces
 	local tPlugin
 	local strPattern = strPattern or ".*"
 
+	show_plugin_options(atPluginOptions)
+	
 	repeat do
 		-- Detect all interfaces.
 		aDetectedInterfaces = {}
@@ -152,7 +158,7 @@ function SelectPlugin(strPattern, strPluginType)
 			if strPluginType == nil or strPluginType == v:GetID() then
 				local iDetected
 				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
-				iDetected = v:DetectInterfaces(aDetectedInterfaces)
+				iDetected = v:DetectInterfaces(aDetectedInterfaces,  atPluginOptions)
 				print(string.format("Found %d interfaces with plugin %s", iDetected, v:GetID()))
 			end
 		end
@@ -194,7 +200,9 @@ end
 -- This function assumes that the name starts with the name of the interface,
 -- e.g. romloader_uart, and scans only for interfaces whose type is contained
 -- in the name string.
-function getPluginByName(strName, strPluginType)
+function getPluginByName(strName, strPluginType, atPluginOptions)
+	show_plugin_options(atPluginOptions)
+	
 	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			local iDetected
@@ -203,7 +211,7 @@ function getPluginByName(strName, strPluginType)
 			local strPluginType = tPluginClass:GetID()
 			if strName:match(strPluginType) then
 				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
-				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
+				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
 			end
 			
@@ -238,14 +246,14 @@ end
 -- a plugin provider, e.g. "romloader_uart"), only this plugin provider
 -- is scanned.
 
-function getPlugin(strPluginName, strPluginType)
+function getPlugin(strPluginName, strPluginType, atPluginOptions)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName, strPluginType)
+		tPlugin, strError = getPluginByName(strPluginName, strPluginType, atPluginOptions)
 	else
 		-- Ask the user to pick a plugin.
-		tPlugin = SelectPlugin(nil, strPluginType)
+		tPlugin = SelectPlugin(nil, strPluginType, atPluginOptions)
 		if tPlugin == nil then
 			strError = "No plugin selected!"
 		end
@@ -256,12 +264,14 @@ end
 
 
 function printf(...) print(string.format(...)) end
-function list_interfaces(strPluginType)
+function list_interfaces(strPluginType, atPluginOptions)
+	show_plugin_options(atPluginOptions)
+
 	-- detect all interfaces
 	local aDetectedInterfaces = {}
 	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
-			tPluginClass:DetectInterfaces(aDetectedInterfaces)
+			tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 		end
 	end
 	-- filter used and non valid interfaces
@@ -287,8 +297,9 @@ end
 function detect_chiptype(aArgs)
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
+	local atPluginOptions= aArgs.atPluginOptions
 	local fOk = false
-	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType)
+	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
 		tPlugin:Connect()
 		
@@ -335,18 +346,18 @@ MODE_GET_DEVICE_SIZE = 14
 
 
 atModeArgs = {
-	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t"}},
-	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t"}},
-	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t"}},
-	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t"}},
-	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t"}},
-	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t"}},
-	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t"}},
-	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t"}},
-	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t"}},
-	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t"}},
-	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t"}},
-	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t"}},
+	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr"}},
+	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
+	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
+	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
+	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
+	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }
@@ -360,7 +371,12 @@ p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin 
 t  = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin type"},
 s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
 l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
-f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"}
+f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
+
+jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
+jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
+	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"}
+	},
 }
 
 
@@ -417,6 +433,16 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 		iVal = tonumber(strVal)
 		if iVal then
 			aArgs[tArgdef.argkey] = iVal
+			fOk = true
+		else
+			fOk = false
+			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
+		end
+	elseif tArgdef.type == "choice" then
+		print("choice", strVal)
+		local val = tArgdef.choices[strVal]
+		if val then
+			aArgs[tArgdef.argkey] = val
 			fOk = true
 		else
 			fOk = false
@@ -520,12 +546,20 @@ function parseArgs()
 		end
 	end
 	
+	-- construct the argument list for DetectInterfaces
+	aArgs.atPluginOptions = {
+		romloader_jtag = {
+			jtag_reset = aArgs.strJtagReset,
+			jtag_frequency_khz = aArgs.iJtagKhz
+		}
+	}
+	
 	return fOk, aArgs, strMsg
 end
 
 
 function showArgs(aArgs)
-	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f"}
+	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf"}
 	local astrArgLines = {}
 		
 	for i, k in ipairs(arg_order) do
@@ -554,6 +588,16 @@ function showArgs(aArgs)
 		print(strLine)
 	end
 	print("")
+end
+
+function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			print(strKey, tVal)
+		end
+	end
 end
 
 --------------------------------------------------------------------------
@@ -627,6 +671,7 @@ function exec(aArgs)
 	local ulStartOffset  = aArgs.ulStartOffset
 	local ulLen          = aArgs.ulLen
 	local strDataFileName= aArgs.strDataFileName
+	local atPluginOptions= aArgs.atPluginOptions
 	
 	local tPlugin
 	local aAttr
@@ -640,7 +685,7 @@ function exec(aArgs)
 	local strFileHash , strFlashHash
 	
 	-- open the plugin
-	tPlugin, strMsg = getPlugin(strPluginName, strPluginType)
+	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
 		tPlugin:Connect()
 		fOk = true
@@ -985,14 +1030,14 @@ elseif aArgs.iMode == MODE_VERSION then
     
 else
 	showArgs(aArgs)
-		
+	
 	require("muhkuh_cli_init")
 	require("mhash")
 	require("flasher")
 	require("flasher_test")
 	
 	if aArgs.iMode == MODE_LIST_INTERFACES then
-		list_interfaces(aArgs.strPluginType)
+		list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
 		os.exit(0)
 	
 	elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
