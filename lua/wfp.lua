@@ -624,24 +624,25 @@ elseif tArgs.fCommandPackSelected == true then
                             local tEntry = archive.ArchiveEntry()
                             tEntry:set_pathname('wfp.xml')
                             local strData = pl.utils.readfile(tArgs.strWfpControlFile, true)
-                            -- add 'has_subdir="True" to xml'
-                            local strRegex = '<FlasherPackage version="(%d+).(%d+).(%d+)">'
-                            local strReplace = '<FlasherPackage version="%1.%2.%3" has_subdirs="True">'
-                            strSubbed = strData:gsub(strRegex, strReplace)
 
-                            tEntry:set_size(string.len(strSubbed))
+                            tEntry:set_size(string.len(strData))
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
                             --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
-                            tArchive:write_data(strSubbed)
+                            tArchive:write_data(strData)
                             tArchive:finish_entry()
 
                             for _, tAttr in ipairs(atSortedFiles) do
                                 local tEntry = archive.ArchiveEntry()
-                                -- tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
-                                tEntry:set_pathname(tAttr.strFileRelPath)
+                                if tWfpControl:getHasSubdirs() == "True" then
+                                    tLog.info('Pack WFP with subdirs.')
+                                    tEntry:set_pathname(tAttr.strFileRelPath)
+                                else
+                                    tLog.info('Pack WFP without subdirs.')
+                                    tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
+                                end
                                 local strData = pl.utils.readfile(tAttr.strFilename, true)
                                 tEntry:set_size(string.len(strData))
                                 tEntry:set_filetype(archive.AE_IFREG)
