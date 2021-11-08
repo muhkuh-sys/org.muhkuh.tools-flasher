@@ -35,6 +35,7 @@ test        [p][t][o] dev                      Test flasher
 testcli     [p][t][o] dev                      Test cli flasher  
 list_interfaces[t][o]                          List all usable interfaces
 detect_netx [p][t][o]                          Detect the netx chip type
+reset_netx  [p][t][o]                          Reset the netx
 -h                                             Show this help   
 -version                                       Show flasher version 
         
@@ -320,6 +321,142 @@ function detect_chiptype(aArgs)
 	return fOk, strMsg
 end
 
+-- Set up the watchdog to reset after one second. 
+-- This gives us time to disconnect the plugin.
+--
+-- Notes: 
+-- Currently does not support netIOL (not tested)
+-- Does not work reliably via JTAG.
+--
+-- watchdog CTRL register: at base address + 0
+-- bit 31   write_enable 
+-- bit 29   wdg_active_enable_w (*)
+-- bit 28   wdg_counter_trigger_w
+-- bit 24   irq_req_watchdog 
+-- bit 19-0 access code
+-- 
+-- (*) Watchdog Active Enable. 
+-- If this bit is set, the WDGACT output signal(PIN D16) is enabled.
+-- Only on netx 500/100/50.
+-- 
+-- IRQ_TIMEOUT: at base address + 8
+-- bit 15-0 IRQ timeout in units of 100 µs
+-- 
+-- RES_TIMEOUT: at base address + 12 
+-- bit 15-0 RESET timeout in units of 100 µs
+
+function reset_netx_via_watchdog(aArgs)
+	local tPlugin
+	local fOk
+	local strMsg
+
+	local strPluginName  = aArgs.strPluginName
+	local strPluginType  = aArgs.strPluginType
+	local atPluginOptions= aArgs.atPluginOptions
+
+	local atChiptyp2WatchdogBase = {
+		[romloader.ROMLOADER_CHIPTYP_NETX500]          = 0x00100200,
+		[romloader.ROMLOADER_CHIPTYP_NETX100]          = 0x00100200,
+		[romloader.ROMLOADER_CHIPTYP_NETX50]           = 0x1c000200,
+		[romloader.ROMLOADER_CHIPTYP_NETX10]           = 0x101c0200,
+		[romloader.ROMLOADER_CHIPTYP_NETX56]           = 0x1018c5b0,
+		[romloader.ROMLOADER_CHIPTYP_NETX56B]          = 0x1018c5b0,
+		[romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = 0xf409c200,
+		[romloader.ROMLOADER_CHIPTYP_NETX4000_FULL]    = 0xf409c200,
+		[romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL]   = 0xf409c200,
+		[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90]           = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90B]          = 0xFF001640,
+		-- [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = 0x00000500,
+		-- [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = 0x00000500,
+	}
+
+	fOk = false
+	
+	-- open the plugin
+	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+
+	if tPlugin ~= nil then 
+		tPlugin:Connect()
+		local iChiptype = tPlugin:GetChiptyp()
+		local strChiptypName = tPlugin:GetChiptypName(iChiptype)
+		local ulWdgBaseAddr = atChiptyp2WatchdogBase[iChiptype]
+		
+		if ulWdgBaseAddr == nil then
+			-- unknown chip type or not supported
+			strMsg = string.format("reset_netx command not supported on %s (%d)", strChiptypName, iChiptype)
+			
+		elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLA or 
+			iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLB then 
+			-- Watchdog reset on netIOL
+
+			local ulAddr_wdg_sys_cfg            = ulWdgBaseAddr + 0
+			local ulAddr_wdg_sys_cmd            = ulWdgBaseAddr + 4
+			local ulAddr_wdg_sys_cnt_upper_rld  = ulWdgBaseAddr + 8
+			local ulAddr_wdg_sys_cnt_lower_rld  = ulWdgBaseAddr + 12
+			local ulPwd = 0x3fa * 4
+			local ulVal
+			
+			-- disable watchdog 
+			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd)
+			
+			-- check if it is disabled
+			ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
+			ulVal = ulVal % 1
+			--ulVal = bit.band(ulVal, 1)
+			if ulVal ~= 0 then
+				print("Warning: cannot disable watchdog on netIOL")
+			end
+			
+			-- todo: what values for prescaler/counter?
+			tPlugin:write_data16(ulAddr_wdg_sys_cnt_upper_rld, 0x07ff)
+			tPlugin:write_data16(ulAddr_wdg_sys_cnt_lower_rld, 0xffff)
+			
+			-- enable watchdog
+			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd + 1)
+			
+			-- trigger watchdog
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0x72b4)
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xde80)
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xd281)
+			
+			fOk = true
+
+		else
+			-- watchdog reset on other netX types
+			local ulAddr_WdgCtrl       = ulWdgBaseAddr + 0
+			local ulAddr_WdgIrqTimeout = ulWdgBaseAddr + 8
+			local ulAddr_WdgResTimeout = ulWdgBaseAddr + 12
+			local ulVal
+			
+			-- Set write enable for the timeout regs
+			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+			ulVal = ulVal + 0x80000000
+			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+			
+			-- IRQ after 0.9 seconds (9000 * 100µs, not handled)
+			tPlugin:write_data32(ulAddr_WdgIrqTimeout, 9000)
+			-- reset 0.1 seconds later
+			tPlugin:write_data32(ulAddr_WdgResTimeout, 1000)
+
+			-- Trigger the watchdog once to start it
+			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+			ulVal = ulVal + 0x10000000
+			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+			
+			fOk = true
+		end
+		
+		tPlugin:Disconnect()
+		tPlugin = nil
+		
+		print ("The netX should reset after one second.")
+	end 
+	
+	return fOk, strMsg
+end
+
+
 
 --------------------------------------------------------------------------
 -- handle command line arguments
@@ -337,6 +474,7 @@ MODE_HELP = 10
 MODE_LIST_INTERFACES = 15
 MODE_DETECT_CHIPTYPE = 16
 MODE_VERSION = 17
+MODE_RESET = 18
 -- test modes
 MODE_TEST = 11
 MODE_TEST_CLI = 12
@@ -357,7 +495,8 @@ atModeArgs = {
 	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
 	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
-	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
+	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
+	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }
@@ -1040,6 +1179,18 @@ else
 		list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
 		os.exit(0)
 	
+	elseif aArgs.iMode == MODE_RESET then
+		fOk, strMsg = reset_netx_via_watchdog(aArgs)
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			os.exit(0)
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			os.exit(1)
+		end
+		
 	elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
 		fOk, strMsg = detect_chiptype(aArgs)
 		if fOk then
