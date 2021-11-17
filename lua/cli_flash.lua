@@ -49,7 +49,7 @@ t:    -t plugin_type
         
 o:    [-jtag_khz frequency] [-jtag_reset mode]
       -jtag_khz: override JTAG frequency 
-      -jtag_reset_mode: hard/soft/attach
+      -jtag_reset: hard/soft/attach
 
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
