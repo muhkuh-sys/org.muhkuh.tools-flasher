@@ -62,7 +62,9 @@ size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
 
-                        
+Note: The reset_netx command, when used via JTAG, only works
+      correctly with the netX 90.
+
 Examples:
 
 Write file to serial flash:
