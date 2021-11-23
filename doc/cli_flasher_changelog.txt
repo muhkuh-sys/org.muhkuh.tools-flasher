@@ -1,0 +1,136 @@
+Updates in CLI flasher v1.6.3
+==============================
+
+* USIP player:
+  This is an extension that allows access to the secure info pages and 
+  execution of USIP images on the netX 90.
+
+  usip                  Load an usip file on the netX, reset the netX and 
+                        process the usip file to update the SecureInfoPage.
+  set_sip_protection    Set the SipProtectionCookie.
+  disable_secure_boot   Disable Secure Boot. 
+                        NOTE: Does NOT support security level 2.
+  read_sip              Read out the content of the secure infopage and 
+                        save it into a temporary folder.
+
+  Example:
+  lua5.1 usip_player.lua -h
+
+* Moved to OpenOCD 0.11.0/libUSB 1.0.24
+
+* Initialize the netIOL PLL
+
+* Improved stability of machine interface protocol 
+
+* JTAG: Disable breakpoints after running the flasher on netX  
+
+* reset_netx 
+  This new command allows to reset the netX.
+  It works by triggering a watchdog reset.
+  This means that it does not require a hardware reset line, but does require
+  that the netX is accessible via a machine interface connection or via JTAG.
+  Limitation: When using JTAG, this command only supports the netX 90.
+  Example:
+  lua5.1 cli_flash.lua reset_netx 
+  
+* JTAG reset mode
+  This option allows selecting if/how the netX is reset when connecting
+  via JTAG:
+  hard: reset the netX using the SRST line of the JTAG adapter (default)
+  soft: reset the netX using the DPM reset request
+  attach: do not reset the netX
+  Example:
+  lua5.1 cli_flash.lua flash -jtag_reset hard -b 1 data.bin
+  
+* JTAG frequency 
+  This option allows selecting the frequency used for the JTAG interface.
+  Example:
+  lua5.1 cli_flash.lua flash -jtag_khz 6000 -b 1 data.bin
+
+* WFP: WFP files may contain multiple files with the same name
+  under different paths.
+  The file attribute of a Data node may now contain a filename with a path, if 
+  the FlasherPackage node includes the attribute has_subdirs="True".
+  
+
+ 
+Updates in CLI flasher v1.6.2
+==============================
+
+* Specify interface type to speed up scanning for interfaces
+  Both cli_flash.lua and wfp.lua now support the command line argument 
+  -t <plugin type> to specify the interface type.
+  This can speed up the scanning process.
+  
+  Example:
+  lua5.1 cli_flash.lua list_interfaces -t romloader_uart
+
+  The following interface types exist:
+  romloader_uart 
+  romloader_usb 
+  romloader_jtag
+  romloader_eth
+
+  -t may be combined with -p (specifying the interface name).
+
+* If an isErased check fails, the device offset of the first 
+  non-erased location is printed.
+
+* Bugfix: Verify error offset 
+  The verify function for serial flash reported an incorrect offset when a difference was found. (cli_flash.lua)
+
+
+Changes specific to JTAG:
+
+* Add support for the Segger J-Link JTAG adapter.
+  Support has been added for the following variants:
+  VID 0x1366 PID 0x0101 
+  VID 0x1366 PID 0x0105 
+  
+* Add support for the NXEB 90-SPE board.
+
+* Change the interface name of the NXHX90-DRIVE board to NXHX90-MC.
+
+* Removed delays in JTAG memory access functions. Poll faster for messages.
+
+* Bugfix: Spike on nSRST line
+  Fix a spike on the reset line that occurred on the nSRST line on FTDI-based
+  JTAG adapters when a reset was triggered.
+  
+  This change affects the following boards:
+  NXHX 90-JTAG
+  NXHX 90-MC
+  NXHX 90-SPE
+  NRPEB H90-RE
+  and the following adapters:
+  NXJTAG-USB 
+  NXJTAG-4000-USB
+
+
+
+Changes specific to WFP:
+
+* Add the verify command to check if a WFP was written to flash correctly.
+
+* Add "conditions" to the flash and verify commands
+  Conditions are variables that are set via the command line as key=value pairs. 
+  The instructions in the wfp.xml control file can be made dependent on the 
+  values of these variables.
+  For instance, this allows to use a single WFP file to flash different 
+  hardware configurations or firmware variants.
+
+* Add the 'erase' command to the wfp.xml control file.
+
+* Add simple WFPs
+  Add the flag -s/--simple to the pack command. 
+  This will create a SWFP file without compression.
+
+* Add version command 
+  Using the command -v or --version
+
+* It is now possible to use subdirectories in wfp.xml
+
+* Bugfix: wfp.lua returns return code 1 in case of errors.
+
+
+

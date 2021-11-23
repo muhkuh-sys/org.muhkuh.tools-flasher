@@ -578,7 +578,8 @@ if fBuildIsFull==True:
     tArcList.AddFiles('doc/',
         doc,
         tDocSpiFlashTypesHtml,
-        tDocSpiFlashListTxt)
+        tDocSpiFlashListTxt, 
+        "doc/cli_flasher_changelog.txt")
 
     tArcList.AddFiles('lua/',
         lua_flasher,
