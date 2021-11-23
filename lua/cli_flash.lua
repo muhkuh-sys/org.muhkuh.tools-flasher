@@ -62,8 +62,13 @@ size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
 
-Note: The reset_netx command, when used via JTAG, only works
-      correctly with the netX 90.
+
+Limitations:
+
+The reset_netx command, when used via JTAG, supports only the netx 90.
+
+The hash and verify_hash commands do not support the netx 90 and netIOL.
+
 
 Examples:
 
