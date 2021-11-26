@@ -562,7 +562,15 @@ elseif tArgs.fCommandPackSelected == true then
                                     tLog.debug('Extending the relative path "%s" to "%s".', strFile, strFileAbs)
                                 end
                                 local strFileBase = pl.path.basename(strFile)
-                                if atFiles[strFile] == nil then
+                                local strCompareName
+                                if tWfpControl:getHasSubdirs() == "True" then
+									print("Wfp uses subdirs so we use the complete path as reference")
+                                    strCompareName = strFile
+                                else
+									print("Wfp does not use subdirs so we use file name as reference")
+                                    strCompareName = strFileBase
+                                end
+                                if atFiles[strCompareName] == nil then
                                     if pl.path.exists(strFileAbs) ~= strFileAbs then
                                         tLog.error('The path "%s" does not exist.', strFileAbs)
                                         fOk = false
@@ -571,7 +579,7 @@ elseif tArgs.fCommandPackSelected == true then
                                         fOk = false
                                     else
                                         tLog.debug('Adding file "%s" to the list.', strFileAbs)
-                                        atFiles[strFile] = strFileAbs
+                                        atFiles[strCompareName] = strFileAbs
                                         local tAttr = {
                                             ucBus = tBus,
                                             ucUnit = tTargetFlash.ulUnit,
@@ -582,7 +590,7 @@ elseif tArgs.fCommandPackSelected == true then
                                         }
                                         table.insert(atSortedFiles, tAttr)
                                     end
-                                elseif atFiles[strFile] ~= strFileAbs then
+                                elseif atFiles[strCompareName] ~= strFileAbs then
                                     tLog.error('Multiple files with the path "%s" found.', strFileBase)
                                     fOk = false
                                 end
