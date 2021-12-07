@@ -51,7 +51,17 @@ Updates in CLI flasher v1.6.3
   under different paths.
   The file attribute of a Data node may now contain a filename with a path, if 
   the FlasherPackage node includes the attribute has_subdirs="True".
-  
+
+  When using 'has_subdirs' flag:
+   - the whole file path inside the wfp-control file is used as reference to 
+     check for multiple copies of the same file
+   - the archive will be packed with a hierarchy
+  When not using 'has_subdirs' flag:
+   - only the file name will be used as a reference for checking for multiple 
+     files with the same name
+   - multiple files with the same name in different subdirs will lead to an 
+     Error while packing
+   - the archive will be packed with a flat hierarchy
 
  
 Updates in CLI flasher v1.6.2
