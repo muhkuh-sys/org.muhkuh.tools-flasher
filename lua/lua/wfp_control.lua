@@ -181,6 +181,22 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       end
       aLxpAttr.tVersion = tVersion
       aLxpAttr.strHasSubdirs = strHasSubdirs
+      
+      -- Reject the control file if the version is >= 1.3
+      local tVersion_1_3 = aLxpAttr.Version()
+      tVersion_1_3:set("1.3")
+      if aLxpAttr.Version.compare(tVersion_1_3, tVersion) <= 0 then 
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: Control file version %s is not supported', iPosLine, iPosColumn, strVersion)
+      end 
+      
+      -- Print a warning if the version is < 1.2 but the has_subdirs attribute is used
+      local tVersion_1_2 = aLxpAttr.Version()
+      tVersion_1_2:set("1.2")
+      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then 
+        aLxpAttr.tLog.warning('Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute', iPosLine, iPosColumn)
+      end 
+      
     end
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
