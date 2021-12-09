@@ -153,6 +153,30 @@ end
 
 
 
+local atStringToBool = {
+  ["TRUE"]  = true,
+  ["FALSE"] = false,
+  ["T"]     = true,
+  ["F"]     = false,
+  ["YES"]   = true,
+  ["NO"]    = false,
+  ["Y"]     = true,
+  ["N"]     = false,
+  ["1"]     = true, 
+  ["0"]     = false
+}
+
+--- Map a string value to a boolean value. 
+-- Accepts a variety of inputs:
+-- true/false, t/f, yes/no, y/n, 1/0 independent of case.
+-- see hboot_image.py __string_to_bool
+-- @param strBool the string to be mapped to a boolean value.
+-- @return boolean value true, false or nil.
+local function stringToBool(strBool)
+  strBool = string.upper(strBool)
+  return atStringToBool[strBool]
+end 
+
 --- Expat callback function for starting an element.
 -- This function is part of the callbacks for the expat parser.
 -- It is called when a new element is opened.
@@ -180,7 +204,6 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tLog.error('Error in line %d, col %d: invalid "version": %s', iPosLine, iPosColumn, strError)
       end
       aLxpAttr.tVersion = tVersion
-      aLxpAttr.strHasSubdirs = strHasSubdirs
       
       -- Reject the control file if the version is >= 1.3
       local tVersion_1_3 = aLxpAttr.Version()
@@ -196,6 +219,20 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then 
         aLxpAttr.tLog.warning('Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute', iPosLine, iPosColumn)
       end 
+      
+      -- Evaluate the value of has_subdirs to a boolean value.
+      -- Default is false if has_subdirs is not present.
+      local fHasSubdirs 
+      if strHasSubdirs == nil then
+        fHasSubdirs = false 
+      else 
+        fHasSubdirs = stringToBool(strHasSubdirs)
+        if fHasSubdirs==nil then
+          aLxpAttr.tResult = nil
+          aLxpAttr.tLog.error('Error in line %d, col %d: Attribute has_subdirs has illegal value', iPosLine, iPosColumn)
+        end
+      end
+      aLxpAttr.fHasSubdirs = fHasSubdirs
       
     end
 
@@ -494,7 +531,7 @@ function WfpControl:__parse_configuration(strConfiguration)
     self.tConfigurationVersion = aLxpCallbacks.userdata.tVersion
     self.atConfigurationTargets = aLxpCallbacks.userdata.atTargets
     self.atConditions = aLxpCallbacks.userdata.atConditions
-    self.strHasSubdirs = aLxpCallbacks.userdata.strHasSubdirs
+    self.fHasSubdirs = aLxpCallbacks.userdata.fHasSubdirs
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.
@@ -650,8 +687,10 @@ function WfpControl:getConditions()
   return self.atConditions
 end
 
+--- Get the value of has_subdirs.
+-- @return a boolean value
 function WfpControl:getHasSubdirs()
-  return self.strHasSubdirs
+  return self.fHasSubdirs
 end
 
 function WfpControl:validateCondition(strKey, strValue)

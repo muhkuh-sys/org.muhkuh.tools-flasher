@@ -391,7 +391,7 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         end
                                     else
                                         local strFile
-                                        if tWfpControl:getHasSubdirs() == "True" then
+                                        if tWfpControl:getHasSubdirs() == true then
                                             tLog.info('WFP archive uses subdirs.')
                                             strFile = tData.strFile
                                         else
@@ -563,7 +563,7 @@ elseif tArgs.fCommandPackSelected == true then
                                 end
                                 local strFileBase = pl.path.basename(strFile)
                                 local strCompareName
-                                if tWfpControl:getHasSubdirs() == "True" then
+                                if tWfpControl:getHasSubdirs() == true then
 									print("Wfp uses subdirs so we use the complete path as reference")
                                     strCompareName = strFile
                                 else
@@ -644,7 +644,7 @@ elseif tArgs.fCommandPackSelected == true then
 
                             for _, tAttr in ipairs(atSortedFiles) do
                                 local tEntry = archive.ArchiveEntry()
-                                if tWfpControl:getHasSubdirs() == "True" then
+                                if tWfpControl:getHasSubdirs() == true then
                                     tLog.info('Pack WFP with subdirs.')
                                     tEntry:set_pathname(tAttr.strFileRelPath)
                                 else

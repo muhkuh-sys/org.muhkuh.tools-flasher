@@ -118,7 +118,7 @@ function generate_file_list(tTargetFlash, tWfpControl, atWfpConditions, tLog)
             else
                 -- data (flash) commands here
                 local strFile
-                if tWfpControl:getHasSubdirs() == "True" then
+                if tWfpControl:getHasSubdirs() == true then
                     tLog.info('WFP archive uses subdirs.')
                     strFile = tData.strFile
                 else
