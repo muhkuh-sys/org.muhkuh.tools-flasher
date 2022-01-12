@@ -12,6 +12,10 @@ Updates in CLI flasher v1.6.3
                         NOTE: Does NOT support security level 2.
   read_sip              Read out the content of the secure infopage and 
                         save it into a temporary folder.
+  verify_content        Verify the content of a usip file against the 
+                        content of a secure info page.
+  detect_secure_mode    Detect the secure mode of the netX. 
+  get_uid               Get the unique ID.
 
   Example:
   lua5.1 usip_player.lua -h
