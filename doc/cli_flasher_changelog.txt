@@ -21,6 +21,13 @@ Updates in CLI flasher v1.6.3
   lua5.1 usip_player.lua -h
 
 * Moved to OpenOCD 0.11.0/libUSB 1.0.24
+  Change in output formatting:
+  Trace messages passed up from the flasher running on the netX that previously
+  ended with a double line break, now end with a single line break.
+  Some trace messages from OpenOCD itself, e.g. register writes, that previously
+  ended with a single line break, now end with a double line break.
+  
+* JTAG: Add support for the netSHIELD 90 board 
 
 * Initialize the netIOL PLL
 
