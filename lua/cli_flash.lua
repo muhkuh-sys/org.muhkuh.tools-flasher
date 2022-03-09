@@ -35,7 +35,7 @@ test        [p][t][o] dev                      Test flasher
 testcli     [p][t][o] dev                      Test cli flasher  
 list_interfaces[t][o]                          List all usable interfaces
 detect_netx [p][t][o]                          Detect the netx chip type
-reset_netx  [p][t][o]                          Reset the netx
+reset_netx  [p][t][o]                          Reset the netx 90
 -h                                             Show this help   
 -version                                       Show flasher version 
         
@@ -65,7 +65,7 @@ size: -l length
 
 Limitations:
 
-The reset_netx command, when used via JTAG, supports only the netx 90.
+The reset_netx command currently supports only the netx 90.
 
 The hash and verify_hash commands do not support the netx 90 and netIOL.
 
@@ -328,6 +328,17 @@ function detect_chiptype(aArgs)
 	return fOk, strMsg
 end
 
+
+-- Sleep for a number of seconds
+-- (between seconds and seconds+1)
+function sleep_s(seconds)
+	local t1 = os.time()
+	local t2
+	repeat 
+		t2 = os.time()
+	until os.difftime(t2, t1) >= (seconds+1)
+end
+
 -- Set up the watchdog to reset after one second. 
 -- This gives us time to disconnect the plugin.
 --
@@ -362,15 +373,15 @@ function reset_netx_via_watchdog(aArgs)
 	local atPluginOptions= aArgs.atPluginOptions
 
 	local atChiptyp2WatchdogBase = {
-		[romloader.ROMLOADER_CHIPTYP_NETX500]          = 0x00100200,
-		[romloader.ROMLOADER_CHIPTYP_NETX100]          = 0x00100200,
-		[romloader.ROMLOADER_CHIPTYP_NETX50]           = 0x1c000200,
-		[romloader.ROMLOADER_CHIPTYP_NETX10]           = 0x101c0200,
-		[romloader.ROMLOADER_CHIPTYP_NETX56]           = 0x1018c5b0,
-		[romloader.ROMLOADER_CHIPTYP_NETX56B]          = 0x1018c5b0,
-		[romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = 0xf409c200,
-		[romloader.ROMLOADER_CHIPTYP_NETX4000_FULL]    = 0xf409c200,
-		[romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL]   = 0xf409c200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX500]          = 0x00100200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX100]          = 0x00100200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX50]           = 0x1c000200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX10]           = 0x101c0200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX56]           = 0x1018c5b0,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX56B]          = 0x1018c5b0,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = 0xf409c200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4000_FULL]    = 0xf409c200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL]   = 0xf409c200,
 		[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90]           = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90B]          = 0xFF001640,
@@ -391,7 +402,7 @@ function reset_netx_via_watchdog(aArgs)
 		
 		if ulWdgBaseAddr == nil then
 			-- unknown chip type or not supported
-			strMsg = string.format("reset_netx command not supported on %s (%d)", strChiptypName, iChiptype)
+			strMsg = string.format("The reset_netx command is not supported on %s (%d)", strChiptypName, iChiptype)
 			
 		elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLA or 
 			iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLB then 
@@ -427,6 +438,7 @@ function reset_netx_via_watchdog(aArgs)
 			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xde80)
 			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xd281)
 			
+			print ("The netX should reset after one second.")
 			fOk = true
 
 		else
@@ -451,13 +463,17 @@ function reset_netx_via_watchdog(aArgs)
 			ulVal = ulVal + 0x10000000
 			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
 			
+			print ("The netX should reset after one second.")
 			fOk = true
 		end
 		
 		tPlugin:Disconnect()
 		tPlugin = nil
 		
-		print ("The netX should reset after one second.")
+		-- Wait 1 second (actually between 1 and 2 seconds)
+		if (fOk == true) then
+			sleep_s(1)
+		end
 	end 
 	
 	return fOk, strMsg
