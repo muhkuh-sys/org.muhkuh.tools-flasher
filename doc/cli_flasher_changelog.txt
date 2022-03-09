@@ -35,6 +35,11 @@ Updates in CLI flasher v1.6.3
 
 * JTAG: Disable breakpoints after running the flasher on netX  
 
+* JTAG: Update attach/reset procedure for netx 90:
+  Remove early breakpoint at 0x170
+  This breakpoint can be enabled manually in jtag_detect_init.tcl
+  Abort with an error if the CPU cannot be halted.
+
 * reset_netx 
   This new command allows to reset the netX.
   It works by triggering a watchdog reset.
@@ -74,7 +79,15 @@ Updates in CLI flasher v1.6.3
      Error while packing
    - the archive will be packed with a flat hierarchy
 
- 
+Other changes:
+
+* Replace the netX4000 RELAXED with the netX4000 FULL
+
+* Build the GPIO drivers on ARM platforms.
+
+
+
+	
 Updates in CLI flasher v1.6.2
 ==============================
 
