@@ -1,3 +1,6 @@
+-- uncomment the following line to debug code (use IP of computer this is running on)
+--require("LuaPanda").start("192.168.56.1",8818)
+
 local archive = require 'archive'
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
@@ -62,7 +65,7 @@ function getPluginByName(strName, strPluginType)
             print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
             iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
             print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
-    
+
             for i, v in ipairs(aDetectedInterfaces) do
                 print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
                 if strName == v:GetName() then
@@ -244,7 +247,7 @@ tester.fInteractivePluginSelection = true
 local tFlasher = require 'flasher'
 
 
-local atName2Bus = {
+atName2Bus = {
     ['Parflash'] = tFlasher.BUS_Parflash,
     ['Spi'] = tFlasher.BUS_Spi,
     ['IFlash'] = tFlasher.BUS_IFlash,
@@ -339,97 +342,98 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                     -- Download the binary.
                     local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
 
-                    -- Loop over all flashes. (inside xml)
-                    for _, tTargetFlash in ipairs(tTarget.atFlashes) do
-                        local strBusName = tTargetFlash.strBus
-                        local tBus = atName2Bus[strBusName]
-                        if tBus == nil then
-                            tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
-                            fOk = false
-                            break
-                        else
-                            local ulUnit = tTargetFlash.ulUnit
-                            local ulChipSelect = tTargetFlash.ulChipSelect
-                            tLog.debug('Processing bus: %s, unit: %d, chip select: %d', strBusName, ulUnit, ulChipSelect)
+					-- Verify command now moved above Target Flash Loop to collect data for each flash before running verification
+                    if tArgs.fCommandVerifySelected == true then
+                         -- new verify function here
+                        fOk = wfp_verify.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
+                        tLog.info('verification result: %s', tostring(fOk))
+                    else
 
-                            -- Detect the device.
-                            fOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect)
-                            if fOk ~= true then
-                                tLog.error("Failed to detect the device!")
+                        -- Loop over all flashes. (inside xml)
+                        for _, tTargetFlash in ipairs(tTarget.atFlashes) do
+                            local strBusName = tTargetFlash.strBus
+                            local tBus = atName2Bus[strBusName]
+                            if tBus == nil then
+                                tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
                                 fOk = false
                                 break
-                            end
+                            else
+                                local ulUnit = tTargetFlash.ulUnit
+                                local ulChipSelect = tTargetFlash.ulChipSelect
+                                tLog.debug('Processing bus: %s, unit: %d, chip select: %d', strBusName, ulUnit, ulChipSelect)
 
-                            if tArgs.fCommandVerifySelected == true then
-                                -- new verify function here
-                                fOk = wfp_verify.verify_wfp_data(tTargetFlash, tWfpControl, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
-                                tLog.log('verification: ')
-                                tLog.log(fOk)
-                            end
-                            if tArgs.fCommandFlashSelected == true then
-                                -- loop over data inside xml
-                                for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
-                                    -- Is this an erase command?
-                                    if tData.strFile == nil then
-                                        local ulOffset = tData.ulOffset
-                                        local ulSize = tData.ulSize
-                                        local strCondition = tData.strCondition
-                                        tLog.info('Found erase 0x%08x-0x%08x and condition "%s".', ulOffset, ulOffset + ulSize, strCondition)
+                                -- Detect the device.
+                                fOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect)
+                                if fOk ~= true then
+                                    tLog.error("Failed to detect the device!")
+                                    fOk = false
+                                    break
+                                end
+                                if tArgs.fCommandFlashSelected == true then
+                                    -- loop over data inside xml
+                                    for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
+                                        -- Is this an erase command?
+                                        if tData.strFile == nil then
+                                            local ulOffset = tData.ulOffset
+                                            local ulSize = tData.ulSize
+                                            local strCondition = tData.strCondition
+                                            tLog.info('Found erase 0x%08x-0x%08x and condition "%s".', ulOffset, ulOffset + ulSize, strCondition)
 
-                                        if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
-                                            tLog.info('Not processing erase : prevented by condition.')
-                                        else
-                                            if tArgs.fDryRun == true then
-                                                tLog.warning('Not touching the flash as dry run is selected.')
+                                            if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
+                                                tLog.info('Not processing erase : prevented by condition.')
                                             else
-                                                fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, ulSize)
-                                                if fOk ~= true then
-                                                    tLog.error('Failed to erase the area: %s', strMsg)
-                                                    break
-                                                end
-                                            end
-                                        end
-                                    else
-                                        local strFile
-                                        if tWfpControl:getHasSubdirs() == true then
-                                            tLog.info('WFP archive uses subdirs.')
-                                            strFile = tData.strFile
-                                        else
-                                            tLog.info('WFP archive does not use subdirs.')
-                                            strFile = pl.path.basename(tData.strFile)
-                                        end
-
-                                        local ulOffset = tData.ulOffset
-                                        local strCondition = tData.strCondition
-                                        tLog.info('Found file "%s" with offset 0x%08x and condition "%s".', strFile, ulOffset, strCondition)
-
-                                        if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
-                                            tLog.info('Not processing file %s : prevented by condition.', strFile)
-                                        else
-                                            -- Loading the file data from the archive.
-                                            local strData = tWfpControl:getData(strFile)
-                                            if strData == nil then
-                                                tLog.error('Failed to get the data %s', strFile)
-                                                fOk = false
-                                                break
-                                            else
-                                                local sizData = string.len(strData)
                                                 if tArgs.fDryRun == true then
                                                     tLog.warning('Not touching the flash as dry run is selected.')
                                                 else
-                                                    tLog.debug('Flashing %d bytes...', sizData)
-
-                                                    fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, sizData)
+                                                    fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, ulSize)
                                                     if fOk ~= true then
                                                         tLog.error('Failed to erase the area: %s', strMsg)
-                                                        fOk = false
                                                         break
+                                                    end
+                                                end
+                                            end
+                                        else
+                                            local strFile
+                                            if tWfpControl:getHasSubdirs() == true then
+                                                tLog.info('WFP archive uses subdirs.')
+                                                strFile = tData.strFile
+                                            else
+                                                tLog.info('WFP archive does not use subdirs.')
+                                                strFile = pl.path.basename(tData.strFile)
+                                            end
+
+                                            local ulOffset = tData.ulOffset
+                                            local strCondition = tData.strCondition
+                                            tLog.info('Found file "%s" with offset 0x%08x and condition "%s".', strFile, ulOffset, strCondition)
+
+                                            if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
+                                                tLog.info('Not processing file %s : prevented by condition.', strFile)
+                                            else
+                                                -- Loading the file data from the archive.
+                                                local strData = tWfpControl:getData(strFile)
+                                                if strData == nil then
+                                                    tLog.error('Failed to get the data %s', strFile)
+                                                    fOk = false
+                                                    break
+                                                else
+                                                    local sizData = string.len(strData)
+                                                    if tArgs.fDryRun == true then
+                                                        tLog.warning('Not touching the flash as dry run is selected.')
                                                     else
-                                                        fOk, strMsg = tFlasher.flashArea(tPlugin, aAttr, ulOffset, strData)
+                                                        tLog.debug('Flashing %d bytes...', sizData)
+
+                                                        fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, sizData)
                                                         if fOk ~= true then
-                                                            tLog.error('Failed to flash the area: %s', strMsg)
+                                                            tLog.error('Failed to erase the area: %s', strMsg)
                                                             fOk = false
                                                             break
+                                                        else
+                                                            fOk, strMsg = tFlasher.flashArea(tPlugin, aAttr, ulOffset, strData)
+                                                            if fOk ~= true then
+                                                                tLog.error('Failed to flash the area: %s', strMsg)
+                                                                fOk = false
+                                                                break
+                                                            end
                                                         end
                                                     end
                                                 end
@@ -438,10 +442,10 @@ if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                     end
                                 end
                             end
-                        end
 
-                        if fOk ~= true then
-                            break
+                            if fOk ~= true then
+                                break
+                            end
                         end
                     end
                 end
@@ -637,6 +641,7 @@ elseif tArgs.fCommandPackSelected == true then
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
+                            print(tEntry)
                             --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
