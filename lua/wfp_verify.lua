@@ -129,26 +129,35 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                     if tNewChunk['ulOffset'] < ulIntflDiff and tNewChunk['ulEndOffset'] > ulIntflDiff then
                         tLog.info("split chunk into two chunks. it is overlapping two flashes")
 
-
-                        -- split chunks into two
                         local strNewChunkData
                         local strSplitChunkData
                         local ulSplitOffset = ulIntflDiff-tNewChunk['ulOffset']
-
-                        strNewChunkData, strSplitChunkData = splitDataString(tNewChunk['strData'],
-                        tNewChunk['ulEndOffset']-tNewChunk['ulOffset'], ulSplitOffset)
                         local tSplitChunk1 = {}
+
                         tSplitChunk1['ulOffset'] = 0x0  -- the part will be mapped to intflash0 and all offsets are subtracted by 0x80000
-                        tSplitChunk1['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflDiff
                         tSplitChunk1['strType'] = tNewChunk['strType']
                         tSplitChunk1['tFile'] = tNewChunk['tFile']
                         tSplitChunk1['delete'] = tNewChunk['delete']
-                        tSplitChunk1['strData'] = strSplitChunkData
                         tSplitChunk1['ulFileOffset'] = ulSplitOffset
+                        if not tNewChunk['ulEndOffset'] == 0xFFFFFFFF then
+                            tSplitChunk1['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflDiff
+                            tNewChunk['ulEndOffset'] = ulIntflDiff
+                        else
+                            -- if the ulEndOffset is 0xFFFFFFFF it needs to stay like that
+                            tSplitChunk1['ulEndOffset'] = tNewChunk['ulEndOffset']
+                            tNewChunk['ulEndOffset'] = tNewChunk['ulEndOffset']
+                        end
 
-                        tNewChunk['ulEndOffset'] = ulIntflDiff
-                        tNewChunk['strData'] = strNewChunkData
+                        -- change ulFileEndOffset offset of tNewChunk
                         tNewChunk['ulFileEndOffset'] = ulSplitOffset
+
+                        if tNewChunk['strType'] == "flash" then
+                            -- split the data only if the type is flash (erase has no data to split)
+                            strNewChunkData, strSplitChunkData = splitDataString(tNewChunk['strData'],
+                            tNewChunk['ulEndOffset']-tNewChunk['ulOffset'], ulSplitOffset)
+                            tSplitChunk1['strData'] = strSplitChunkData
+                            tNewChunk['strData'] = strNewChunkData
+                        end
 
                         -- add the new chunk part that is inside intflash0 to intflash0 chunk list
                         addChunkToList(tIntfl0Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
@@ -162,7 +171,9 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         -- add the new chunk part that is inside intflash1 to intflash1 chunk list
                         -- the offsets need to be subtracted by ulIntflDiff
                         tNewChunk['ulOffset'] = tNewChunk['ulOffset'] - ulIntflDiff
-                        tNewChunk['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflDiff
+                        if not tNewChunk['ulEndOffset'] == 0xFFFFFFFF then
+                            tNewChunk['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflDiff
+                        end
                         tNewChunk['tFile']['ulOffset'] = tNewChunk['tFile']['ulOffset'] - ulIntflDiff
                         tNewChunk['tFile']['ulEndOffset'] = tNewChunk['tFile']['ulEndOffset'] - ulIntflDiff
                         addChunkToList(tIntfl1Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
