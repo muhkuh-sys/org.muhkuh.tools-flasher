@@ -1180,7 +1180,6 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_erase(CMD_PARAMETER_ERASE_T *ptPa
 }
 
 
-
 NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptParameter)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -1223,19 +1222,36 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 				/* Set the flash to read mode. */
 				internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 
-				/* Copy the data block to the destination buffer.*/
-				pucBufferStart = ptParameter->pucData;
-
-				/* Copy the data block to the destination buffer.*/
-				ulOffset = 0;
-				ulLength = ulOffsetEnd - ulOffsetStart;
-				do
+				/* If Iflash01 (unit 3) is selected and the access starts in intflash0
+				 * but ends in intflash1, configure intflash1, too */
+				if ((ptAttr->tArea == INTERNAL_FLASH_AREA_Flash01_Main) &&
+					(ulOffsetStart < IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES) &&
+					(ulOffsetEnd > IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES)
+				)
 				{
-					pucBufferStart[ulOffset] = pucFlashStart[ulOffset];
-					++ulOffset;
-				} while( ulOffset<ulLength );
-
-				tResult = NETX_CONSOLEAPP_RESULT_OK;
+					tResult = iflash_get_controller(ptAttr, IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES, &tFlashBlock);
+					if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+					{
+						internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
+					}
+				}
+					
+				if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+				{
+					/* Copy the data block to the destination buffer.*/
+					pucBufferStart = ptParameter->pucData;
+	
+					/* Copy the data block to the destination buffer.*/
+					ulOffset = 0;
+					ulLength = ulOffsetEnd - ulOffsetStart;
+					do
+					{
+						pucBufferStart[ulOffset] = pucFlashStart[ulOffset];
+						++ulOffset;
+					} while( ulOffset<ulLength );
+	
+					tResult = NETX_CONSOLEAPP_RESULT_OK;
+				}
 			}
 		}
 	}
@@ -1298,27 +1314,44 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 				/* Set the flash to read mode. */
 				internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 
-				/* Be optimistic... */
-				tResult = NETX_CONSOLEAPP_RESULT_OK;
-
-				/* Compare the data from the buffer with the flash contents. */
-				pucBufferStart = ptParameter->pucData;
-
-				ulOffset = 0;
-				ulLength = ulOffsetEnd - ulOffsetStart;
-				do
+				/* If Iflash01 (unit 3) is selected and the access starts in intflash0
+				 * but ends in intflash1, configure intflash1, too */
+				if ((ptAttr->tArea == INTERNAL_FLASH_AREA_Flash01_Main) &&
+					(ulOffsetStart < IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES) &&
+					(ulOffsetEnd > IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES)
+				)
 				{
-					ucFlashData = pucFlashStart[ulOffset];
-					ucBufferData = pucBufferStart[ulOffset];
-					if( ucFlashData!=ucBufferData )
+					tResult = iflash_get_controller(ptAttr, IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES, &tFlashBlock);
+					if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 					{
-						uprintf(". verify error at offset 0x%08x. buffer: 0x%02x, flash: 0x%02x.\n", ulOffsetStart + ulOffset, ucBufferData, ucFlashData);
-						tResult = NETX_CONSOLEAPP_RESULT_ERROR;
-						break;
+						internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 					}
-
-					++ulOffset;
-				} while( ulOffset<ulLength );
+				}
+					
+				if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+				{
+					/* Be optimistic... */
+					tResult = NETX_CONSOLEAPP_RESULT_OK;
+	
+					/* Compare the data from the buffer with the flash contents. */
+					pucBufferStart = ptParameter->pucData;
+	
+					ulOffset = 0;
+					ulLength = ulOffsetEnd - ulOffsetStart;
+					do
+					{
+						ucFlashData = pucFlashStart[ulOffset];
+						ucBufferData = pucBufferStart[ulOffset];
+						if( ucFlashData!=ucBufferData )
+						{
+							uprintf(". verify error at offset 0x%08x. buffer: 0x%02x, flash: 0x%02x.\n", ulOffsetStart + ulOffset, ucBufferData, ucFlashData);
+							tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+							break;
+						}
+	
+						++ulOffset;
+					} while( ulOffset<ulLength );
+				}
 
 				ptConsoleParams->pvReturnMessage = (void*)tResult;
 			}
@@ -1373,32 +1406,50 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_is_erased(CMD_PARAMETER_ISERASED_
 				/* Set the flash to read mode. */
 				internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 
-				/* Be optimistic... */
-				tResult = NETX_CONSOLEAPP_RESULT_OK;
-
-				ulOffset = 0;
-				ulLength = ulOffsetEnd - ulOffsetStart;
-				do
+				/* If Iflash01 (unit 3) is selected and the access starts in intflash0
+				 * but ends in intflash1, configure intflash1, too */
+				if ((ptAttr->tArea == INTERNAL_FLASH_AREA_Flash01_Main) &&
+					(ulOffsetStart < IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES) &&
+					(ulOffsetEnd > IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES)
+				)
 				{
-					ucFlashData = pucFlashStart[ulOffset];
-					if( ucFlashData!=0xffU )
+					tResult = iflash_get_controller(ptAttr, IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES, &tFlashBlock);
+					if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 					{
-						uprintf("! Memory not erased at offset 0x%08x - expected: 0x%02x found: 0x%02x\n", ulOffsetStart + ulOffset, 0xff, ucFlashData);
-						break;
+						internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 					}
-
-					++ulOffset;
-				} while( ulOffset<ulLength );
-
-				if( ucFlashData==0xff )
-				{
-					uprintf(". CLEAN! The area is erased.\n");
 				}
-				else
+					
+				if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 				{
-					uprintf(". DIRTY! The area is not erased.\n");
+					/* Be optimistic... */
+					tResult = NETX_CONSOLEAPP_RESULT_OK;
+	
+					ulOffset = 0;
+					ulLength = ulOffsetEnd - ulOffsetStart;
+					do
+					{
+						ucFlashData = pucFlashStart[ulOffset];
+						if( ucFlashData!=0xffU )
+						{
+							uprintf("! Memory not erased at offset 0x%08x - expected: 0x%02x found: 0x%02x\n", ulOffsetStart + ulOffset, 0xff, ucFlashData);
+							break;
+						}
+	
+						++ulOffset;
+					} while( ulOffset<ulLength );
+	
+					if( ucFlashData==0xff )
+					{
+						uprintf(". CLEAN! The area is erased.\n");
+					}
+					else
+					{
+						uprintf(". DIRTY! The area is not erased.\n");
+					}
+					
+					ptConsoleParams->pvReturnMessage = (void*)((unsigned long)ucFlashData);
 				}
-				ptConsoleParams->pvReturnMessage = (void*)((unsigned long)ucFlashData);
 			}
 		}
 	}
