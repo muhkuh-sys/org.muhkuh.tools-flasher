@@ -272,12 +272,33 @@ static void internal_flash_select_mode_and_clear_caches(const INTERNAL_FLASH_ATT
 }
 
 
-
 static void internal_flash_select_read_mode_and_clear_caches(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, HOSTADEF(IFLASH_CFG) *ptIFlashCfgArea)
 {
 	internal_flash_select_mode_and_clear_caches(ptAttr, ptIFlashCfgArea, IFLASH_MODE_READ);
 }
 
+/* Set all three flash banks to the main array and read mode. 
+ * todo: should the TMR signal be set to 1? 
+ */
+//static void internal_flash_select_main_array_read();
+static void internal_flash_select_main_array_read(void)
+{
+	INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T tAttr;
+	HOSTDEF(ptIflashCfg0ComArea);
+	HOSTDEF(ptIflashCfg1ComArea);
+	HOSTDEF(ptIflashCfg2Area);
+	
+	tAttr.iMain0_Info1_InfoK2 = 0;
+	tAttr.ulSizeInBytes = IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES;
+	tAttr.tArea = INTERNAL_FLASH_AREA_Flash0_Main;
+	internal_flash_select_read_mode_and_clear_caches(&tAttr, ptIflashCfg0ComArea);
+	
+	tAttr.tArea = INTERNAL_FLASH_AREA_Flash1_Main;
+	internal_flash_select_read_mode_and_clear_caches(&tAttr, ptIflashCfg1ComArea);
+
+	tAttr.tArea = INTERNAL_FLASH_AREA_Flash2_Main;
+	internal_flash_select_read_mode_and_clear_caches(&tAttr, ptIflashCfg2Area);
+}
 
 
 static void iflash_start_and_wait(HOSTADEF(IFLASH_CFG) *ptIFlashCfgArea)
@@ -1082,7 +1103,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_flash(CMD_PARAMETER_FLASH_T *ptPa
 			}
 		}
 	}
-
+	
+	internal_flash_select_main_array_read();
 	return tResult;
 }
 
@@ -1153,6 +1175,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_erase(CMD_PARAMETER_ERASE_T *ptPa
 		}
 	}
 
+	internal_flash_select_main_array_read();
 	return tResult;
 }
 
@@ -1217,6 +1240,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 		}
 	}
 
+	internal_flash_select_main_array_read();
 	return tResult;
 }
 
@@ -1301,6 +1325,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 		}
 	}
 
+	internal_flash_select_main_array_read();
 	return tResult;
 }
 
@@ -1378,6 +1403,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_is_erased(CMD_PARAMETER_ISERASED_
 		}
 	}
 
+	internal_flash_select_main_array_read();
 	return tResult;
 }
 
