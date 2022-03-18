@@ -254,7 +254,7 @@ static void internal_flash_select_page(HOSTADEF(IFLASH_CFG) *ptIFlashCfgArea, in
 
 
 
-/* Set the mode (read/erase/program) and select main array or info page */
+/* Configure all flash banks to read from the main array. */
 static void internal_flash_select_mode_and_clear_caches(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, HOSTADEF(IFLASH_CFG) *ptIFlashCfgArea, unsigned long ulMode)
 {
 	/* Reset the flash. This clears the "read" caches. */
@@ -277,10 +277,7 @@ static void internal_flash_select_read_mode_and_clear_caches(const INTERNAL_FLAS
 	internal_flash_select_mode_and_clear_caches(ptAttr, ptIFlashCfgArea, IFLASH_MODE_READ);
 }
 
-/* Set all three flash banks to the main array and read mode. 
- * todo: should the TMR signal be set to 1? 
- */
-//static void internal_flash_select_main_array_read();
+/* Set all three flash banks to the main array and read mode. */
 static void internal_flash_select_main_array_read(void)
 {
 	INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T tAttr;
