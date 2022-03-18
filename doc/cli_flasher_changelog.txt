@@ -15,13 +15,11 @@ Updates in CLI Flasher v1.6.3
 
   usip                  Load an usip file on the netX, reset the netX and 
                         process the usip file to update the SecureInfoPage.
-  set_sip_protection    Set the SipProtectionCookie.
-  disable_secure_boot   Disable Secure Boot. 
-                        NOTE: Does NOT support security level 2.
-  read_sip              Read out the content of the secure infopage and 
-                        save it into a temporary folder.
-  verify_content        Verify the content of a usip file against the 
+  verify                Verify the content of a usip file against the 
                         content of a secure info page.
+  read                  Read out the content of the secure infopage and 
+                        save it into a temporary folder.
+  set_sip_protection    Set the SipProtectionCookie, enable protection of SIPs.
   detect_secure_mode    Detect the secure mode of the netX. 
   get_uid               Get the unique ID.
 
@@ -86,6 +84,8 @@ Updates in CLI Flasher v1.6.3
    - multiple files with the same name in different subdirs will lead to an 
      Error while packing
    - the archive will be packed with a flat hierarchy
+
+* WFP verify bugfix: handle netx 90 intflash01 (-b 2 -u 3) correctly.
 
 Other changes:
 
