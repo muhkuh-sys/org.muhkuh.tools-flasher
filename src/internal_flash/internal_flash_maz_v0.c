@@ -247,6 +247,9 @@ static void internal_flash_select_page(HOSTADEF(IFLASH_CFG) *ptIFlashCfgArea, in
 	}
 	ptIFlashCfgArea->ulIflash_ifren_cfg = ulValue;
 
+	/* Read back ifren to make sure the write has finished. */
+	(void) ptIFlashCfgArea->ulIflash_ifren_cfg;
+	
 	/* Clear the the CPU caches. */
 	__asm__("DSB");
 	__asm__("ISB");
