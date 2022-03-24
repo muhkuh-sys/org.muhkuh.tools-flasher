@@ -1,3 +1,14 @@
+Updates in CLI Flasher v1.7.0
+==============================
+* USIP Player improvements:
+  When the command line option '--force_console' is present, 
+  the interface must be UART, so scan only for UART interfaces.
+  When the command line option '--extend_exec' is present, 
+  the interface must be JTAG, so scan only for JTAG interfaces.
+
+  Speed up scanning for interfaces by not scanning on ethernet.
+
+
 Updates in CLI Flasher v1.6.3
 ==============================
 
