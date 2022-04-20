@@ -420,7 +420,7 @@ function reset_netx_via_watchdog(aArgs)
 			
 			-- check if it is disabled
 			ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
-			ulVal = ulVal % 1
+			ulVal = ulVal % 2
 			--ulVal = bit.band(ulVal, 1)
 			if ulVal ~= 0 then
 				print("Warning: cannot disable watchdog on netIOL")
