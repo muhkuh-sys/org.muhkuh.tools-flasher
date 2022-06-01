@@ -166,7 +166,7 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 		strNetxName = 'netx4000'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
 		strNetxName = 'netx90_mpw'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
 		strNetxName = 'netx90'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
 		strNetxName = 'netiol'

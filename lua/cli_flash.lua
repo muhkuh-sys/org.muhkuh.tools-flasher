@@ -385,6 +385,8 @@ function reset_netx_via_watchdog(aArgs)
 		[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90]           = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90B]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90C]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90D]          = 0xFF001640,
 		-- [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = 0x00000500,
 		-- [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = 0x00000500,
 	}
