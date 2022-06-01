@@ -11,7 +11,7 @@ node {
         sh 'rm -rf .[^.] .??* *'
 
         checkout([$class: 'GitSCM',
-            branches: [[name: '*/master']],
+            branches: [[name: env.GIT_BRANCH_SPECIFIER]],
             doGenerateSubmoduleConfigurations: false,
             extensions: [
                 [$class: 'SubmoduleOption',
