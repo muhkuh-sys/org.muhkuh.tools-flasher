@@ -12,6 +12,9 @@ SVN_VERSION="$Revision$"
 SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
+-- Uncomment to debug with LuaPanda
+-- require("LuaPanda").start("127.0.0.1",8818)
+
 -- Requires are below, because they cause a lot of text to be printed.
 
 
