@@ -312,6 +312,24 @@ function detect_chiptype(aArgs)
 		tPlugin:Connect()
 		
 		local iChiptype = tPlugin:GetChiptyp()
+
+		-- Detect the PHY version to discriminate
+		-- between netX 90 Rev1 and netx 90 Rev1 PHY V3
+		if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+		iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+			print("Detecting PHY version on netX 90 Rev1")
+			local bootpins = require("bootpins")
+			bootpins:_init()
+			local atResult = bootpins:read(tPlugin)
+			if atResult.chip_id == bootpins.atChipID.NETX90B then 
+				iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90B
+			elseif atResult.chip_id == bootpins.atChipID.NETX90BPHYR3 then 
+				iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90C
+			else
+				iChiptype = nil
+			end
+		end
+
 		if iChiptype then
 			local strChipName = tPlugin:GetChiptypName(iChiptype)
 			print("")
