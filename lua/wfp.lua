@@ -428,7 +428,9 @@ atName2Bus = {
 local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
-
+if tArgs.fCommandBackupSelected == true then
+    fOk = backup(tArgs, tLog)
+end
 if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
