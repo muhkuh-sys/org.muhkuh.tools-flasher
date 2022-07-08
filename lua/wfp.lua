@@ -182,8 +182,8 @@ function printArgs(tArgs, tLog)
     print("")
 end
 
-function backup(tArgs, tLog)
-    -- Create the WFP controller.
+function backup(tArgs, tLog, tWfpControl, tFlasher)
+  
     local ulSize
     -- local ulOffset = tData.ulOffset
     local ulOffset
@@ -429,7 +429,8 @@ local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
 if tArgs.fCommandBackupSelected == true then
-    fOk = backup(tArgs, tLog)
+    fOk =  backup(tArgs, tLog, tWfpControl, tFlasher)
+
 end
 if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
