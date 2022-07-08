@@ -363,7 +363,16 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tResult = nil
         aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
       end
-
+      local strSize = atAttributes["size"]
+      local ulSize
+      if strSize == nil or strSize == "" then
+          -- No size specified.
+          -- aLxpAttr.tResult = nil
+          --aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is not set.', iPosLine, iPosColumn)
+      else
+          ulSize = tonumber(strSize)
+        
+      end
       local strCondition = atAttributes['condition']
       if strCondition==nil then
         strCondition = ''
@@ -372,6 +381,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       local tData = {}
       tData.strType = "Data"
       tData.strFile = strFile
+      tData.ulSize = ulSize
       tData.ulOffset = ulOffset
       tData.strCondition = strCondition
 
