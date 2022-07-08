@@ -876,6 +876,7 @@ function exec(aArgs)
 	local strMsg
 	
 	local ulDeviceSize
+	local tDevInfo = {}
 	
 	local strFileHashBin, strFlashHashBin
 	local strFileHash , strFlashHash
@@ -941,6 +942,19 @@ function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to get a device description!"
 				else
+				
+					if iBus == flasher.BUS_Spi then
+						local strDevDesc = flasher.readDeviceDescriptor(tPlugin, aAttr)
+						if strDevDesc==nil then
+							strMsg = "Failed to read the flash device descriptor!"
+							fOk = false
+						else 
+							local strSpiDevName, strSpiDevId = flasher.SpiFlash_getNameAndId(strDevDesc)
+							tDevInfo.strDevName = strSpiDevName or "unknown"
+							tDevInfo.strDevId = strSpiDevId or "unknown"
+						end
+					end
+				
 					ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
 					if ulDeviceSize == nil then
 						fOk = false
@@ -1052,9 +1066,9 @@ function exec(aArgs)
 	end
 	
 	if iMode == MODE_GET_DEVICE_SIZE then
-		return ulLen, strMsg
+		return ulLen, strMsg, tDevInfo
 	else
-		return fOk, strMsg
+		return fOk, strMsg, tDevInfo
 	end
 end
 
@@ -1276,7 +1290,14 @@ else
 		end
 		
 	else
-		fOk, strMsg = exec(aArgs)
+		fOk, strMsg, tDevInfo = exec(aArgs)
+		
+		if tDevInfo.strDevName then
+			printf("Flash device name: %s", tDevInfo.strDevName)
+		end
+		if tDevInfo.strDevId then
+			printf("Flash device has JEDEC ID: %s", tDevInfo.strDevId)
+		end
 		
 		if fOk then
 			if strMsg then 
