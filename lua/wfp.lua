@@ -182,6 +182,158 @@ function printArgs(tArgs, tLog)
     print("")
 end
 
+function backup(tArgs, tLog)
+    -- Create the WFP controller.
+    local ulSize
+    -- local ulOffset = tData.ulOffset
+    local ulOffset
+    local DestinationFolder = tArgs.strBackupPath
+    local DestinationXml = DestinationFolder .. "/wfp.xml"
+    --create a directory if it is not existed
+
+    --overwrite
+    local fOk = true --be optimistic
+    if pl.path.exists(DestinationFolder) == DestinationFolder then
+        if tArgs.fOverwrite ~= true then
+            tLog.error(
+                'The output directory "%s" already exists. Use "--overwrite" to force overwriting it.',
+                DestinationFolder
+            )
+            fOk = false
+        else
+            local tFsResult, strError = pl.dir.rmtree(DestinationFolder)
+            if tFsResult == nil then
+                tLog.error('Failed to delete the output directory "%s": %s', DestinationFolder, strError)
+                fOk = false
+            end
+        end
+    end
+    if fOk == true then
+        -- os.execute("mkdir " .. DestinationFolder)
+        pl.path.mkdir(DestinationFolder)
+        print("Folder created************************************")
+        local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
+
+        if txmlResult == nil then
+            fOk = false
+        end
+    end
+    if fOk == true then
+        -- Select a plugin and connect to the netX.
+        local tPlugin
+        if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
+            tPlugin = tester:getCommonPlugin()
+        else
+            local strError
+            tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+            if tPlugin then
+                tPlugin:Connect()
+            end
+        end
+
+        if not tPlugin then
+            tLog.error("No plugin selected, nothing to do!")
+            fOk = false
+        else
+            local iChiptype = tPlugin:GetChiptyp()
+            print("found chip type: ", iChiptype)
+            -- Does the WFP have an entry for the chip?
+            local tTarget = tWfpControl:getTarget(iChiptype)
+            if tTarget == nil then
+                tLog.error("The chip type %s is not supported.", tostring(iChiptype))
+                fOk = false
+            else
+                -- Download the binary. (load the flasher binary into intram)
+                local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+
+                -- Loop over all flashes. (inside xml)
+                for _, tTargetFlash in ipairs(tTarget.atFlashes) do
+                    local strBusName = tTargetFlash.strBus
+                    local tBus = atName2Bus[strBusName]
+                    if tBus == nil then
+                        tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
+                        fOk = false
+                        break
+                    else
+                        local ulUnit = tTargetFlash.ulUnit
+                        local ulChipSelect = tTargetFlash.ulChipSelect
+                        tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
+
+                        -- Detect the device.
+                        fOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected is existed inside the hardware
+
+                        if fOk ~= true then
+                            tLog.error("Failed to detect the device!")
+                            fOk = false
+                            break
+                        end
+
+                        for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
+                            -- Is this an data area?
+                            if tData.strType == "Data" then
+                                print("data**********************************************")
+                                if (tData.ulSize) == nil then
+                                    tLog.error("Size is not existed")
+                                    fOk = false
+                                    break
+                                end
+
+                                ulSize = tData.ulSize
+
+                                print("the size is:******************", ulSize)
+
+                                local strFile
+                                if tWfpControl:getHasSubdirs() == true then
+                                    tLog.info("WFP archive uses subdirs.")
+                                    strFile = tData.strFile
+                                else
+                                    tLog.info("WFP archive does not use subdirs.")
+                                    strFile = pl.path.basename(tData.strFile)
+                                end
+                                ulOffset = tData.ulOffset
+                                ulSize = tData.ulSize
+
+                                tLog.info(
+                                    'create backup for Data area 0x%08x-0x%08x ********************************************** ".',
+                                    ulOffset,
+                                    ulOffset + ulSize
+                                )
+                                -- continue with reading the selected area
+
+                                -- read
+                                print("start reading**********************************************")
+
+                                strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
+                                print("doneREad**********************************************")
+                                if strData == nil then
+                                    fOk = false
+                                    strMsg = strMsg or "Error while reading"
+                                end
+
+                                local fileName = DestinationFolder .. "/" .. strFile
+                                -- save the read area  to the output file (write binary)
+                                pl.utils.writefile(fileName, strData, false)
+                                print("DoneWrite**********************************************")
+                            elseif tData.strType == "Erase" then
+                                tLog.info("ignor Erase areas with Read function")
+                            end
+                        end
+                    end
+                end
+
+                --copy xml_file from target to a destination
+                local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
+                print(strDataxml, "*********************************")
+                local fOk = pl.utils.writefile(DestinationXml, strDataxml, false)
+                if fOk == true then
+                    tLog.info("Xml file copied")
+                end
+            end
+        end
+    end
+    return fOk
+end
+
 local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
 
 tParser:flag "--version":description "Show version info and exit. ":action(function()
