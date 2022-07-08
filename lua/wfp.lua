@@ -358,6 +358,23 @@ tParserCommandVerify:option('-v --verbose'):description(string.format('Set the v
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 
+-- Add the "Backup" command and all its options.
+local tParserCommandBackup =
+    tParser:command("backup b", "backup the contents of the WFP."):target("fCommandBackupSelected")
+tParserCommandBackup:argument("xml", "The XML control file."):target("strWfpControlFile")
+tParserCommandBackup:argument("backup_path", "The destination path to create the backup."):target("strBackupPath")
+tParserCommandBackup:option("-v --verbose"):description(
+    string.format(
+        "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
+        table.concat(atLogLevels, ", ")
+    )
+):argname("<LEVEL>"):default("debug"):target("strLogLevel")
+tParserCommandBackup:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
+tParserCommandBackup:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCommandBackup:flag("-o --overwrite"):description(
+    "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
+):default(false):target("fOverwrite")
+
 
 -- Add the "list" command and all its options.
 local tParserCommandList = tParser:command('list l', 'List the contents of the WFP.'):target('fCommandListSelected')
