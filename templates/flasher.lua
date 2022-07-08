@@ -606,10 +606,10 @@ function SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
 	-- print("aucIdMask:", getHexString(aucIdMask))
 	-- print("aucIdMagid:", getHexString(aucIdMagic))
 	
+	local strJedecId
 	if idLen >2 then
 		local fJedecIdValid = true
 		local astrJedecId = {}
-		local strJedecId
 		
 		for i=1, idLen do
 			local bSend = string.byte(aucIdSend, i)
@@ -633,7 +633,7 @@ function SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
 		
 		if fJedecIdValid == true then
 			strJedecId = table.concat(astrJedecId, ", ")
-			print("JEDEC ID: ", strJedecId)
+			print("JEDEC ID from flash ID sequence: ", strJedecId)
 		else
 		
 			print("The ID sequence does not contain a JEDEC ID")
@@ -659,6 +659,7 @@ function SpiFlash_getNameAndId(strDeviceDesc)
 		local fn = function(x) table.insert(bytes, "0x"..x) end
 		string.gsub(strJedecId, "..", fn)
 		strJedecId = table.concat(bytes, ", ")
+		print("JEDEC ID from SFDP device name:", strJedecId)
 	end
 	
 	return strDevName, strJedecId
