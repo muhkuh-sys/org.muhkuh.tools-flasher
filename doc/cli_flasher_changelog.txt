@@ -1,3 +1,10 @@
+Updates in CLI Flasher v1.8.0
+==============================
+
+* When detecting an SPI/SQI flash, detect and display the 
+  device name and its JEDEC ID, when possible.
+* 
+
 Updates in CLI Flasher v1.7.1
 ==============================
 
