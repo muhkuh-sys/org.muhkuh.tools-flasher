@@ -1,3 +1,23 @@
+Updates in CLI Flasher v1.8.0
+==============================
+
+* When detecting an SPI/SQI flash, detect and display the 
+  device name and its JEDEC ID, when possible.
+* 
+
+Updates in CLI Flasher v1.7.1
+==============================
+
+* Added support for chip types:
+  netX 90 Rev1 with PHY v3 (Step C)
+  netX 90 Rev2 (Step D)
+
+* netx 90 Rev1 and Rev2: When the netx is in the UART terminal console,
+  send a reset command which allows us to enter the machine interface.
+  (Previously, a manual reset was required).
+
+
+
 Updates in CLI Flasher v1.7.0
 ==============================
 

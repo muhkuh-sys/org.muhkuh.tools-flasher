@@ -12,6 +12,9 @@ SVN_VERSION="$Revision$"
 SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
+-- Uncomment to debug with LuaPanda
+-- require("LuaPanda").start("127.0.0.1",8818)
+
 -- Requires are below, because they cause a lot of text to be printed.
 
 
@@ -308,12 +311,41 @@ function detect_chiptype(aArgs)
 	local atPluginOptions= aArgs.atPluginOptions
 	local fOk = false
 	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	local fConnected = false
 	if tPlugin then
-		tPlugin:Connect()
+		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		
 		local iChiptype = tPlugin:GetChiptyp()
+
+		-- Detect the PHY version to discriminate
+		-- between netX 90 Rev1 and netx 90 Rev1 PHY V3
+		if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+		iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+			if fConnected == true then
+				print("Detecting PHY version on netX 90 Rev1")
+				local bootpins = require("bootpins")
+				bootpins:_init()
+				local atResult = bootpins:read(tPlugin)
+				if atResult.chip_id == bootpins.atChipID.NETX90B then 
+					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90B
+				elseif atResult.chip_id == bootpins.atChipID.NETX90BPHYR3 then 
+					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90C
+				else
+					iChiptype = nil
+				end
+			else
+				iChiptype = nil
+			end
+		end
+
 		if iChiptype then
-			local strChipName = tPlugin:GetChiptypName(iChiptype)
+			local strChipName
+			if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
+				strChipName = "netX90 Rev1 (PHY V2)"
+			else 
+				strChipName = tPlugin:GetChiptypName(iChiptype)
+			end
+			
 			print("")
 			printf("Chip type: (%d) %s", iChiptype, strChipName)
 			print("")
@@ -385,6 +417,8 @@ function reset_netx_via_watchdog(aArgs)
 		[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90]           = 0xFF001640,
 		[romloader.ROMLOADER_CHIPTYP_NETX90B]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90C]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90D]          = 0xFF001640,
 		-- [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = 0x00000500,
 		-- [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = 0x00000500,
 	}
@@ -842,6 +876,7 @@ function exec(aArgs)
 	local strMsg
 	
 	local ulDeviceSize
+	local tDevInfo = {}
 	
 	local strFileHashBin, strFlashHashBin
 	local strFileHash , strFlashHash
@@ -907,6 +942,19 @@ function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to get a device description!"
 				else
+				
+					if iBus == flasher.BUS_Spi then
+						local strDevDesc = flasher.readDeviceDescriptor(tPlugin, aAttr)
+						if strDevDesc==nil then
+							strMsg = "Failed to read the flash device descriptor!"
+							fOk = false
+						else 
+							local strSpiDevName, strSpiDevId = flasher.SpiFlash_getNameAndId(strDevDesc)
+							tDevInfo.strDevName = strSpiDevName or "unknown"
+							tDevInfo.strDevId = strSpiDevId or "unknown"
+						end
+					end
+				
 					ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
 					if ulDeviceSize == nil then
 						fOk = false
@@ -1018,9 +1066,9 @@ function exec(aArgs)
 	end
 	
 	if iMode == MODE_GET_DEVICE_SIZE then
-		return ulLen, strMsg
+		return ulLen, strMsg, tDevInfo
 	else
-		return fOk, strMsg
+		return fOk, strMsg, tDevInfo
 	end
 end
 
@@ -1242,7 +1290,14 @@ else
 		end
 		
 	else
-		fOk, strMsg = exec(aArgs)
+		fOk, strMsg, tDevInfo = exec(aArgs)
+		
+		if tDevInfo.strDevName then
+			printf("Flash device name: %s", tDevInfo.strDevName)
+		end
+		if tDevInfo.strDevId then
+			printf("Flash device has JEDEC ID: %s", tDevInfo.strDevId)
+		end
 		
 		if fOk then
 			if strMsg then 
