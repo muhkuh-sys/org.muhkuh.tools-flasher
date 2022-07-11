@@ -260,9 +260,10 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                         tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
 
                         -- Detect the device.
-                        fOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected is existed inside the hardware
+                        local fDetectOk
+                        fDetectOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected is existed inside the hardware
 
-                        if fOk ~= true then
+                        if fDetectOk ~= true then
                             tLog.error("Failed to detect the device!")
                             fOk = false
                             break
@@ -273,7 +274,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                             if tData.strType == "Data" then
                                 print("data**********************************************")
                                 if (tData.ulSize) == nil then
-                                    tLog.error("Size is not existed")
+                                    tLog.error("Size attribute is missing")
                                     fOk = false
                                     break
                                 end
@@ -315,24 +316,27 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                 pl.utils.writefile(fileName, strData, false)
                                 print("DoneWrite**********************************************")
                             elseif tData.strType == "Erase" then
-                                tLog.info("ignor Erase areas with Read function")
+                                tLog.info("ignore Erase areas with Read function")
                             end
                         end
                     end
                 end
-
-                --copy xml_file from target to a destination
-                local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
-                print(strDataxml, "*********************************")
-                local fOk = pl.utils.writefile(DestinationXml, strDataxml, false)
-                if fOk == true then
-                    tLog.info("Xml file copied")
-                end
             end
+        end
+    end
+    if fOk==true then
+        --copy xml_file from target to a destination
+        local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
+        print(strDataxml, "*********************************")
+        local fOk = pl.utils.writefile(DestinationXml, strDataxml, false)
+        if fOk == true then
+            tLog.info("Xml file copied")
         end
     end
     return fOk
 end
+
+
 
 local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
 
