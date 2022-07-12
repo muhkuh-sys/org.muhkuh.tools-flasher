@@ -52,7 +52,7 @@ t:    -t plugin_type
         
 o:    [-jtag_khz frequency] [-jtag_reset mode]
       -jtag_khz: override JTAG frequency 
-      -jtag_reset: hard/soft/attach
+      -jtag_reset: hard(default)/soft/attach
 
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
@@ -571,7 +571,8 @@ f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file na
 
 jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
 jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
-	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"}
+	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
+	choices_help = "Possible values are: hard (default), soft, attach"
 	},
 }
 
@@ -635,7 +636,6 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
 		end
 	elseif tArgdef.type == "choice" then
-		print("choice", strVal)
 		local val = tArgdef.choices[strVal]
 		if val then
 			aArgs[tArgdef.argkey] = val
@@ -643,6 +643,9 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 		else
 			fOk = false
 			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
+			if tArgdef.choices_help then 
+				strMsg = strMsg .. " " .. tArgdef.choices_help
+			end
 		end
 	end
 	
