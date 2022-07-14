@@ -183,16 +183,18 @@ function printArgs(tArgs, tLog)
 end
 
 function backup(tArgs, tLog, tWfpControl, tFlasher)
+    -- TODO: add function description for backup function
+    -- TODO: - what does this function achieve?
+    -- TODO: - which are the steps in the process
   
     local ulSize
-    -- local ulOffset = tData.ulOffset
     local ulOffset
     local DestinationFolder = tArgs.strBackupPath
     local DestinationXml = DestinationFolder .. "/wfp.xml"
-    --create a directory if it is not existed
 
-    --overwrite
     local fOk = true --be optimistic
+
+    -- TODO: describe the how the overwrite works
     if pl.path.exists(DestinationFolder) == DestinationFolder then
         if tArgs.fOverwrite ~= true then
             tLog.error(
@@ -208,9 +210,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
             end
         end
     end
+    -- TODO: switch the order of creating a folder and reading the control file -> no need to create a folder if the XML is not readable
+    -- TODO: OR delete DestinationFolder is the result of the backup function is False in the end
     if fOk == true then
-        -- os.execute("mkdir " .. DestinationFolder)
         pl.path.mkdir(DestinationFolder)
+        -- TODO: change this print to a more user friendly one including the path where a folder was created
         print("Folder created************************************")
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
@@ -218,6 +222,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
             fOk = false
         end
     end
+
     if fOk == true then
         -- Select a plugin and connect to the netX.
         local tPlugin
@@ -270,8 +275,9 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                         end
 
                         for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
-                            -- Is this an data area?
+                            -- Is this a data area?
                             if tData.strType == "Data" then
+                                -- TODO: remove prints that were used for debugging
                                 print("data**********************************************")
                                 if (tData.ulSize) == nil then
                                     tLog.error("Size attribute is missing")
@@ -280,7 +286,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                 end
 
                                 ulSize = tData.ulSize
-
+                                -- TODO: remove prints that were used for debugging
                                 print("the size is:******************", ulSize)
 
                                 local strFile
@@ -299,9 +305,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     ulOffset,
                                     ulOffset + ulSize
                                 )
+
                                 -- continue with reading the selected area
 
                                 -- read
+                                -- TODO: remove prints that were used for debugging
                                 print("start reading**********************************************")
 
                                 strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
@@ -310,10 +318,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     fOk = false
                                     strMsg = strMsg or "Error while reading"
                                 end
-
+                                -- TODO: we don't have anything to write if the read area failed -> only write if readArea worked
                                 local fileName = DestinationFolder .. "/" .. strFile
                                 -- save the read area  to the output file (write binary)
                                 pl.utils.writefile(fileName, strData, false)
+                                -- TODO: remove prints that were used for debugging
                                 print("DoneWrite**********************************************")
                             elseif tData.strType == "Erase" then
                                 tLog.info("ignore Erase areas with Read function")
@@ -327,12 +336,14 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
     if fOk==true then
         --copy xml_file from target to a destination
         local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
+        -- TODO: remove prints that were used for debugging
         print(strDataxml, "*********************************")
         local fOk = pl.utils.writefile(DestinationXml, strDataxml, false)
         if fOk == true then
             tLog.info("Xml file copied")
         end
     end
+    -- TODO: add second return value DestinationXml. This can be used later for packing the wfp archive
     return fOk
 end
 
@@ -435,7 +446,7 @@ local fOk = true
 if tArgs.fCommandBackupSelected == true then
     fOk =  backup(tArgs, tLog, tWfpControl, tFlasher)
 
-end
+end -- TODO: should be elseif not end if
 if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
@@ -694,6 +705,7 @@ elseif tArgs.fCommandListSelected == true then
         end
     end
 elseif tArgs.fCommandPackSelected == true then
+    -- TODO: move the pack command into a function
     local archive = require 'archive'
 
     -- Does the archive already exist?
