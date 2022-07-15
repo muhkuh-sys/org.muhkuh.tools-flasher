@@ -185,8 +185,12 @@ end
 function backup(tArgs, tLog, tWfpControl, tFlasher)
 	--create a backup for all flash areas in netX
 	--read the flash areas and save the images to reinstall them later
-	--Steps: read the control file, detect the exisiting flashes, read the offset and size for each area inside the flash,copy the contents to different bin files
-	--
+	--Steps:
+		-- read the control file
+		--detect the exisiting flashes
+		-- read the offset and size for each area inside the flash
+		--copy the contents to different bin files
+		--copy xml file
     
   
     local ulSize
@@ -300,7 +304,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     ulSize = tData.ulSize
 
                                     tLog.info(
-                                        'create backup for Data area 0x%08x-0x%08x ********************************************** ".',
+                                        'create backup for Data area 0x%08x-0x%08x  ".',
                                         ulOffset,
                                         ulOffset + ulSize
                                     )
@@ -313,11 +317,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     if strData == nil then
                                         fOk = false
                                         strMsg = strMsg or "Error while reading"
+                                    else
+                                        -- save the read area  to the output file (write binary)
+                                        local fileName = DestinationFolder .. "/" .. strFile
+                                        pl.utils.writefile(fileName, strData, false)
                                     end
-                                    -- TODO: we don't have anything to write if the read area failed -> only write if readArea worked
-                                    local fileName = DestinationFolder .. "/" .. strFile
-                                    -- save the read area  to the output file (write binary)
-                                    pl.utils.writefile(fileName, strData, false)
                                 elseif tData.strType == "Erase" then
                                     tLog.info("ignore Erase areas with Read function")
                                 end
@@ -330,8 +334,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         if fOk==true then
             --copy xml_file from target to a destination
             local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
-            -- TODO: remove prints that were used for debugging
-            print(strDataxml, "*********************************")
+           
             local fWriteOk = pl.utils.writefile(DestinationXml, strDataxml, false)
             if fWriteOk == true then
                 tLog.info("Xml file copied")
