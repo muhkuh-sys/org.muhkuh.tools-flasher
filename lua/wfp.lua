@@ -183,9 +183,11 @@ function printArgs(tArgs, tLog)
 end
 
 function backup(tArgs, tLog, tWfpControl, tFlasher)
-    -- TODO: add function description for backup function
-    -- TODO: - what does this function achieve?
-    -- TODO: - which are the steps in the process
+	--create a backup for all flash areas in netX
+	--read the flash areas and save the images to reinstall them later
+	--Steps: read the control file, detect the exisiting flashes, read the offset and size for each area inside the flash,copy the contents to different bin files
+	--
+    
   
     local ulSize
     local ulOffset
@@ -193,8 +195,9 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
     local DestinationXml = DestinationFolder .. "/wfp.xml"
 
     local fOk = true --be optimistic
-
-    -- TODO: describe the how the overwrite works
+	--overwrite :
+	--check if the directory exists
+	-- if the overwrite parameter is given then delete the directory otherwise throw an error
     if pl.path.exists(DestinationFolder) == DestinationFolder then
         if tArgs.fOverwrite ~= true then
             tLog.error(
@@ -277,8 +280,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                         for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
                             -- Is this a data area?
                             if tData.strType == "Data" then
-                                -- TODO: remove prints that were used for debugging
-                                print("data**********************************************")
                                 if (tData.ulSize) == nil then
                                     tLog.error("Size attribute is missing")
                                     fOk = false
@@ -286,8 +287,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                 end
 
                                 ulSize = tData.ulSize
-                                -- TODO: remove prints that were used for debugging
-                                print("the size is:******************", ulSize)
 
                                 local strFile
                                 if tWfpControl:getHasSubdirs() == true then
@@ -309,11 +308,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                 -- continue with reading the selected area
 
                                 -- read
-                                -- TODO: remove prints that were used for debugging
-                                print("start reading**********************************************")
 
                                 strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
-                                print("doneREad**********************************************")
                                 if strData == nil then
                                     fOk = false
                                     strMsg = strMsg or "Error while reading"
@@ -322,8 +318,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                 local fileName = DestinationFolder .. "/" .. strFile
                                 -- save the read area  to the output file (write binary)
                                 pl.utils.writefile(fileName, strData, false)
-                                -- TODO: remove prints that were used for debugging
-                                print("DoneWrite**********************************************")
                             elseif tData.strType == "Erase" then
                                 tLog.info("ignore Erase areas with Read function")
                             end
@@ -338,9 +332,18 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
         -- TODO: remove prints that were used for debugging
         print(strDataxml, "*********************************")
-        local fOk = pl.utils.writefile(DestinationXml, strDataxml, false)
-        if fOk == true then
+        local fWriteOk = pl.utils.writefile(DestinationXml, strDataxml, false)
+        if fWriteOk == true then
             tLog.info("Xml file copied")
+        else
+            fOk=false
+        end
+    end
+    if fOk==false and tArgs.fOverwrite==true then
+        local tFsResult, strError = pl.dir.rmtree(DestinationFolder)
+        if tFsResult == nil then
+            tLog.error('Failed to delete the output directory "%s": %s', DestinationFolder, strError)
+            fOk = false
         end
     end
     -- TODO: add second return value DestinationXml. This can be used later for packing the wfp archive
