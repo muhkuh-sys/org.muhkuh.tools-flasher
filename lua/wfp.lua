@@ -182,6 +182,179 @@ function printArgs(tArgs, tLog)
     print("")
 end
 
+function backup(tArgs, tLog, tWfpControl, tFlasher)
+	-- create a backup for all flash areas in netX
+	-- read the flash areas and save the images to reinstall them later
+	-- Steps:
+		-- read the control file
+		-- detect the exisiting flashes
+		-- read the offset and size for each area inside the flash
+		-- copy the contents to different bin files
+		-- copy xml file
+    
+  
+    local ulSize
+    local ulOffset
+    local DestinationFolder = tArgs.strBackupPath
+    local DestinationXml = DestinationFolder .. "/wfp.xml"
+
+    local fOk = true --be optimistic
+	-- overwrite :
+	-- check if the directory exists
+	-- if the overwrite parameter is given then delete the directory otherwise throw an error
+    if pl.path.exists(DestinationFolder) == DestinationFolder then
+        if tArgs.fOverwrite ~= true then
+            tLog.error(
+                'The output directory "%s" already exists. Use "--overwrite" to force overwriting it.',
+                DestinationFolder
+            )
+            fOk = false
+        else
+            local tFsResult, strError = pl.dir.rmtree(DestinationFolder)
+            if tFsResult == nil then
+                tLog.error('Failed to delete the output directory "%s": %s', DestinationFolder, strError)
+                fOk = false
+            end
+        end
+    end
+    if fOk == true then
+        pl.path.mkdir(DestinationFolder)
+        -- TODO: change this print to a more user friendly one including the path where a folder was created
+        print("Folder created************************************")
+        local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
+
+        if txmlResult == nil then
+            fOk = false
+        end
+    
+
+        if fOk == true then
+            -- Select a plugin and connect to the netX.
+            local tPlugin
+            if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
+                tPlugin = tester:getCommonPlugin()
+            else
+                local strError
+                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+                if tPlugin then
+                    tPlugin:Connect()
+				else
+					tLog.error(strError)
+                end
+            end
+
+            if not tPlugin then
+                tLog.error("No plugin selected, nothing to do!")
+                fOk = false
+            else
+                local iChiptype = tPlugin:GetChiptyp()
+                print("found chip type: ", iChiptype)
+                -- Does the WFP have an entry for the chip?
+                local tTarget = tWfpControl:getTarget(iChiptype)
+                if tTarget == nil then
+                    tLog.error("The chip type %s is not supported.", tostring(iChiptype))
+                    fOk = false
+                else
+                    -- Download the binary. (load the flasher binary into intram)
+                    local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+
+                    -- Loop over all flashes. (inside xml)
+                    for _, tTargetFlash in ipairs(tTarget.atFlashes) do
+                        local strBusName = tTargetFlash.strBus
+                        local tBus = atName2Bus[strBusName]
+                        if tBus == nil then
+                            tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
+                            fOk = false
+                            break
+                        else
+                            local ulUnit = tTargetFlash.ulUnit
+                            local ulChipSelect = tTargetFlash.ulChipSelect
+                            tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
+
+                            -- Detect the device.
+                            local fDetectOk
+                            fDetectOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected is existed inside the hardware
+
+                            if fDetectOk ~= true then
+                                tLog.error("Failed to detect the device!")
+                                fOk = false
+                                break
+                            end
+
+                            for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
+                                -- Is this a data area?
+                                if tData.strType == "Data" then
+                                    if (tData.ulSize) == nil then
+                                        tLog.error("Size attribute is missing")
+                                        fOk = false
+                                        break
+                                    end
+
+                                    local strFile
+                                    if tWfpControl:getHasSubdirs() == true then
+                                        tLog.info("WFP archive uses subdirs.")
+                                        strFile = tData.strFile
+                                    else
+                                        tLog.info("WFP archive does not use subdirs.")
+                                        strFile = pl.path.basename(tData.strFile)
+                                    end
+                                    ulOffset = tData.ulOffset
+                                    ulSize = tData.ulSize
+
+                                    tLog.info(
+                                        'read data from area 0x%08x-0x%08x  ".',
+                                        ulOffset,
+                                        ulOffset + ulSize
+                                    )
+
+                                    -- continue with reading the selected area
+
+                                    -- read
+
+                                    strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
+                                    if strData == nil then
+                                        fOk = false
+                                        strMsg = strMsg or "Error while reading"
+                                    else
+                                        -- save the read area  to the output file (write binary)
+                                        local fileName = DestinationFolder .. "/" .. strFile
+                                        pl.utils.writefile(fileName, strData, false)
+                                    end
+                                elseif tData.strType == "Erase" then
+                                    tLog.info("ignore Erase areas with Read function")
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if fOk==true then
+            --copy xml_file from target to a destination
+            local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
+           
+            local fWriteOk = pl.utils.writefile(DestinationXml, strDataxml, false)
+            if fWriteOk == true then
+                tLog.info("Xml file copied")
+            else
+                fOk=false
+            end
+        end
+        if fOk==false then
+            local tFsResult, strError = pl.dir.rmtree(DestinationFolder)
+            if tFsResult == nil then
+                tLog.error('Failed to delete the output directory "%s": %s', DestinationFolder, strError)
+                fOk = false
+            end
+        end
+    end
+
+    -- TODO: add second return value DestinationXml. This can be used later for packing the wfp archive
+    return fOk
+end
+
+
+
 local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
 
 tParser:flag "--version":description "Show version info and exit. ":action(function()
@@ -205,6 +378,23 @@ tParserCommandVerify:option('-c --condition'):description('Add a condition in th
 tParserCommandVerify:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+
+-- Add the "Read" command and all its options.
+local tParserCmmandRead =
+    tParser:command("read r", "read command based on XML control file."):target("fCommandReadSelected")
+tParserCmmandRead:argument("xml", "The XML control file."):target("strWfpControlFile")
+tParserCmmandRead:argument("output_dir", "The destination path to create the backup."):target("strBackupPath")
+tParserCmmandRead:option("-v --verbose"):description(
+    string.format(
+        "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
+        table.concat(atLogLevels, ", ")
+    )
+):argname("<LEVEL>"):default("debug"):target("strLogLevel")
+tParserCmmandRead:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
+tParserCmmandRead:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCmmandRead:flag("-o --overwrite"):description(
+    "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
+):default(false):target("fOverwrite")
 
 
 -- Add the "list" command and all its options.
@@ -259,7 +449,10 @@ atName2Bus = {
 local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
+if tArgs.fCommandReadSelected == true then
+    fOk =  backup(tArgs, tLog, tWfpControl, tFlasher)
 
+end -- TODO: should be elseif not end if
 if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
@@ -518,6 +711,7 @@ elseif tArgs.fCommandListSelected == true then
         end
     end
 elseif tArgs.fCommandPackSelected == true then
+    -- TODO: move the pack command into a function
     local archive = require 'archive'
 
     -- Does the archive already exist?
