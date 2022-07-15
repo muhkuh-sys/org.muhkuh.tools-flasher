@@ -183,14 +183,14 @@ function printArgs(tArgs, tLog)
 end
 
 function backup(tArgs, tLog, tWfpControl, tFlasher)
-	--create a backup for all flash areas in netX
-	--read the flash areas and save the images to reinstall them later
-	--Steps:
+	-- create a backup for all flash areas in netX
+	-- read the flash areas and save the images to reinstall them later
+	-- Steps:
 		-- read the control file
-		--detect the exisiting flashes
+		-- detect the exisiting flashes
 		-- read the offset and size for each area inside the flash
-		--copy the contents to different bin files
-		--copy xml file
+		-- copy the contents to different bin files
+		-- copy xml file
     
   
     local ulSize
@@ -199,8 +199,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
     local DestinationXml = DestinationFolder .. "/wfp.xml"
 
     local fOk = true --be optimistic
-	--overwrite :
-	--check if the directory exists
+	-- overwrite :
+	-- check if the directory exists
 	-- if the overwrite parameter is given then delete the directory otherwise throw an error
     if pl.path.exists(DestinationFolder) == DestinationFolder then
         if tArgs.fOverwrite ~= true then
@@ -217,8 +217,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
             end
         end
     end
-    -- TODO: switch the order of creating a folder and reading the control file -> no need to create a folder if the XML is not readable
-    -- TODO: OR delete DestinationFolder is the result of the backup function is False in the end
     if fOk == true then
         pl.path.mkdir(DestinationFolder)
         -- TODO: change this print to a more user friendly one including the path where a folder was created
@@ -240,6 +238,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                 tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
                 if tPlugin then
                     tPlugin:Connect()
+				else
+					tLog.error(strError)
                 end
             end
 
@@ -290,8 +290,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                         break
                                     end
 
-                                    ulSize = tData.ulSize
-
                                     local strFile
                                     if tWfpControl:getHasSubdirs() == true then
                                         tLog.info("WFP archive uses subdirs.")
@@ -304,7 +302,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     ulSize = tData.ulSize
 
                                     tLog.info(
-                                        'create backup for Data area 0x%08x-0x%08x  ".',
+                                        'read data from area 0x%08x-0x%08x  ".',
                                         ulOffset,
                                         ulOffset + ulSize
                                     )
