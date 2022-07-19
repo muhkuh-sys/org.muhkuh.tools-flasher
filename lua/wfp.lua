@@ -186,10 +186,8 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
     
     local archive = require 'archive'
     local fOk=true
-    
-    
+
     -- Does the archive already exist?
-    -- local strWfpArchiveFile = tArgs.strWfpArchiveFile
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
             tLog.error('The output archive "%s" already exists. Use "--overwrite" to force overwriting it.', strWfpArchiveFile)
@@ -384,8 +382,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
 		-- read the offset and size for each area inside the flash
 		-- copy the contents to different bin files
 		-- copy xml file
-    
-  
+      
     local ulSize
     local ulOffset
     local DestinationFolder = tArgs.strBackupPath
@@ -412,16 +409,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
     end
     if fOk == true then
         pl.path.mkdir(DestinationFolder)
-        -- TODO: change this print to a more user friendly one including the path where a folder was created
-        print("Folder created************************************")
+        tLog.info('Folder created "%s":', DestinationFolder)
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
         if txmlResult == nil then
             fOk = false
         end
-    
-
-        if fOk == true then
+         if fOk == true then
             -- Select a plugin and connect to the netX.
             local tPlugin
             if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
@@ -466,7 +460,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
 
                             -- Detect the device.
                             local fDetectOk
-                            fDetectOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected is existed inside the hardware
+                            fDetectOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected exists inside the hardware
 
                             if fDetectOk ~= true then
                                 tLog.error("Failed to detect the device!")
@@ -525,7 +519,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         if fOk==true then
             --copy xml_file from target to a destination
             local strDataxml = pl.utils.readfile(tArgs.strWfpControlFile, false)
-           
             local fWriteOk = pl.utils.writefile(DestinationXml, strDataxml, false)
             if fWriteOk == true then
                 tLog.info("Xml file copied")
@@ -542,7 +535,6 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         end
     end
 
-    -- TODO: add second return value DestinationXml. This can be used later for packing the wfp archive
     return fOk, DestinationXml
 end
 
