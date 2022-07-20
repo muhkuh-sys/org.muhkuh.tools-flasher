@@ -835,7 +835,6 @@ elseif tArgs.fCommandPackSelected == true then
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
-                            print(tEntry)
                             --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
