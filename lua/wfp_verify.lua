@@ -75,14 +75,15 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                 end
             else
 				-- new entry for the current flash
+
                 if atFlashDataTable[strChunkKey] == nil then
                     atFlashDataTable[strChunkKey] = {}
-                    tCurrentFlashEntry = atFlashDataTable[strChunkKey]
-                    tCurrentFlashEntry['atChunkList'] = {}
-                    tCurrentFlashEntry['tBus'] = tBus
-                    tCurrentFlashEntry['ulUnit'] = ulUnit
-                    tCurrentFlashEntry['ulChipSelect'] = ulChipSelect
+                    atFlashDataTable[strChunkKey]['atChunkList'] = {}
+                    atFlashDataTable[strChunkKey]['tBus'] = tBus
+                    atFlashDataTable[strChunkKey]['ulUnit'] = ulUnit
+                    atFlashDataTable[strChunkKey]['ulChipSelect'] = ulChipSelect
                 end
+                tCurrentFlashEntry = atFlashDataTable[strChunkKey]
             end
             -- save intflash0 entry for later
             if strChipType == "NETX90" and tBus == 2 and ulChipSelect == 0 and ulUnit == 0 then
@@ -175,6 +176,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                     end
                 else
                     -- add the new chunk to the current chunk entry
+
                     addChunkToList(tCurrentFlashEntry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                 end
             end
@@ -182,8 +184,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     end
 
 
+    tLog.info("Verify After gathering data.")
 
-    -- verify if the found data is inside flash
     for strChunkKey, atFlashData in pairs(atFlashDataTable) do
         tLog.info("Verify Data inside Flash B"..atFlashData['tBus'] .." CS" .. atFlashData['ulChipSelect'] .." U"..atFlashData['ulUnit'])
          -- Detect the device. (switch to right flash)
@@ -224,6 +226,7 @@ end
 function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
     -- add tNewChunk to tDataChunks
     ---- modify chunks that would be overwritten by tNewChunk
+    tLog.info("Add to chunk list")
     local tSplitChunk
     for ulChunkIdx, tChunk in ipairs(tDataChunks) do
         if tChunk['delete'] ~= true then
