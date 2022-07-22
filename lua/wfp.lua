@@ -186,7 +186,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
     
     local archive = require 'archive'
     local fOk=true
-
+    
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
@@ -388,6 +388,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
     local DestinationFolder = tArgs.strBackupPath
     local DestinationXml = DestinationFolder .. "/wfp.xml"
 
+   
     local fOk = true --be optimistic
 	-- overwrite :
 	-- check if the directory exists
@@ -414,9 +415,24 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
 
         if txmlResult == nil then
             fOk = false
+        else
+            local Version = require 'Version'
+            local tConfigurationVersion=tWfpControl:getVersion()   --current_version
+            -- Reject the control file if the version is >= 1.3
+            local tVersion_1_3 = Version()
+            tVersion_1_3:set("1.3")
+            -- only allow xml versions 1.3 and newer
+            if Version.compare(tVersion_1_3, tConfigurationVersion) > 0 then
+                tLog.error('The read command is only supported from version 1.3.0 and further')
+                fOk=false
+            end
         end
-         if fOk == true then
-            -- Select a plugin and connect to the netX.
+
+
+        if fOk == true then
+
+           
+           -- Select a plugin and connect to the netX.
             local tPlugin
             if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
                 tPlugin = tester:getCommonPlugin()
