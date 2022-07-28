@@ -167,7 +167,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         -- add the new chunk part that is inside intflash1 to intflash1 chunk list
                         -- the offsets need to be subtracted by ulIntflDiff
                         tNewChunk['ulOffset'] = tNewChunk['ulOffset'] - ulIntflash0Size
-                        if not tNewChunk['ulEndOffset'] == 0xFFFFFFFF then
+                        if tNewChunk['ulEndOffset'] ~= 0xFFFFFFFF then
                             tNewChunk['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflash0Size
                         end
                         tNewChunk['tFile']['ulOffset'] = tNewChunk['tFile']['ulOffset'] - ulIntflash0Size
