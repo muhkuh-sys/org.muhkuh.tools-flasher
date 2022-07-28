@@ -7,7 +7,51 @@ local pl = require 'pl.import_into'()
 local wfp_control = require 'wfp_control'
 local wfp_verify = require 'wfp_verify'
 
+local class = require 'pl.class'
+local WFPXml = class()
+local xml = require 'pl.xml'
+local utils = require 'pl.utils'
 
+function WFPXml:_init(version, tLog)
+    -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
+    version = version or "1.3.0"
+    self.tLog = tLog
+    self.nodeFlasherPack = xml.new("FlasherPackage")
+    self.nodeFlasherPack:set_attrib("version", version)
+end
+
+function WFPXml:addTarget(strTargetName)
+	self.tTarget = xml.new("Target")
+	self.tTarget:set_attrib("netx", strTargetName)
+	self.nodeFlasherPack:add_child(self.tTarget)
+	
+end
+
+function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
+	tFlash = xml.new("Flash")
+	tFlash:set_attrib("bus", strBus)
+	tFlash:set_attrib("chip_select", ucChipSelect)
+	tFlash:set_attrib("unit", ucUnit)
+	self.tTarget:add_child(tFlash)
+	
+	tData = xml.new("Data")
+	tData:set_attrib("file", "test_data.bin")
+	tData:set_attrib("size", "0x1000")
+	tData:set_attrib("offset", "0x0")
+	tFlash:add_child(tData)
+	
+	tErase = xml.new("Erase")
+	tErase:set_attrib("size", "0x1000")
+	tErase:set_attrib("offset", "0x0")
+	tFlash:add_child(tErase)
+
+end
+
+function WFPXml:exportXml(outputDir)
+    self.tLog.info("export example XML ", outputDir)
+    strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
+    utils.writefile(outputDir, strXmlData)
+end
 
 local function __writeU32(tFile, ulData)
     local ucB0 = math.fmod(ulData, 256)
@@ -180,6 +224,60 @@ function printArgs(tArgs, tLog)
     print("------------------------------------")
     printTable(tArgs, 0)
     print("")
+end
+
+
+function example_xml(tArgs, tLog, tFlasher, tWfpControl)
+	-- create an example xml based on the selected plugin (NXTFLASHER-264)
+
+    tLog.info("Creating example control XML")
+    local iChiptype
+    local tPlugin
+    local aAttr
+    local aBoardInfo
+
+    if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
+        tPlugin = tester:getCommonPlugin()
+    else
+        local strError
+        tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+        if tPlugin then
+            tPlugin:Connect()
+        else
+            tLog.error(strError)
+        end
+    end
+	
+    exampleXml = WFPXml(nil, tLog)
+    
+    iChiptype = tPlugin:GetChiptyp()
+	strTargetName = tWfpControl.atChiptyp2name[iChiptype]
+    -- Download the binary. (load the flasher binary into intram)
+    aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+    -- get the board info
+    aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+	exampleXml:addTarget(strTargetName)
+	for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
+		ucBus = tBusInfo.iIdx
+		strBus = atBus2Name[ucBus]
+		for iUnitCnt,tUnitInfo in ipairs(tBusInfo.aUnitInfo) do
+			ucChipSelect = 0
+			ucUnit = tUnitInfo.iIdx
+			-- add only unit 2 and 3 for IFlash of netx90
+			if strTargetName == "NETX90" and ucBus == 2 then
+				if ucUnit == 2 or ucUnit == 3 then 
+					exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
+				end
+			-- only add Unit 0 Flashes to example
+			elseif ucUnit == 0 then
+				exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
+			end 
+		end
+	end
+	
+	exampleXml:exportXml(tArgs.strWfpControlFile)
+    
+    return true
 end
 
 function backup(tArgs, tLog, tWfpControl, tFlasher)
@@ -410,6 +508,12 @@ tParserCommandPack:flag('-o --overwrite'):description('Overwrite an existing WFP
 tParserCommandPack:flag('-s --simple'):description('Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
 tParserCommandPack:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
+local tParserCommandExample = tParser:command('example e', 'Create example XML for connected netX.'):target('fCommandExampleSelected')
+tParserCommandExample:argument('xml', 'Output example XML control file.'):target('strWfpControlFile')
+tParserCommandExample:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
+tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+
 
 local tArgs = tParser:parse()
 
@@ -443,6 +547,12 @@ atName2Bus = {
     ['IFlash'] = tFlasher.BUS_IFlash,
     ['SDIO'] = tFlasher.BUS_SDIO
 }
+atBus2Name = {
+    [tFlasher.BUS_Parflash] = 'Parflash',
+    [tFlasher.BUS_Spi] = 'Spi',
+    [tFlasher.BUS_IFlash] = 'IFlash',
+    [tFlasher.BUS_SDIO] = 'SDIO'
+}
 
 
 -- Create the WFP controller.
@@ -451,9 +561,10 @@ local tWfpControl = wfp_control(tLogWriterFilter)
 local fOk = true
 if tArgs.fCommandReadSelected == true then
     fOk =  backup(tArgs, tLog, tWfpControl, tFlasher)
-
-end -- TODO: should be elseif not end if
-if tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
+elseif tArgs.fCommandExampleSelected == true then
+    print("EXAMPLE")
+    fOk = example_xml(tArgs, tLog, tFlasher, tWfpControl)
+elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
     local tResult = tWfpControl:open(tArgs.strWfpArchiveFile)

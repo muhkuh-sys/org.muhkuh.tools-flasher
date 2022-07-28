@@ -58,7 +58,9 @@ function WfpControl:_init(tLogWriter)
     [romloader.ROMLOADER_CHIPTYP_NETX90]           = "NETX90",
     [romloader.ROMLOADER_CHIPTYP_NETX90B]          = "NETX90",
     [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = "NETIOL",
-    [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = "NETIOL"
+    [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = "NETIOL",
+    [romloader.ROMLOADER_CHIPTYP_NETX90C]          = "NETX90",
+    [romloader.ROMLOADER_CHIPTYP_NETX90D]          = "NETX90"
   }
 end
 
