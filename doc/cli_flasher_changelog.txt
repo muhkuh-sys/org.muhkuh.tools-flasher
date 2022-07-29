@@ -18,6 +18,9 @@ Romloader 2.5.2-dev3:
   During the connection setup, when the netx is repeatedly sending a packet
   because it is waiting for an ack packet, send a cancel_operation request.
 
+* Update SIPper to v0.2.3
+  Changed uart_handler to version 1.2.1
+  Added support of new uart_handler receive routine to make the communication more robust
 
 Updates in CLI Flasher v1.7.1
 ==============================
