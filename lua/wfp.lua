@@ -408,9 +408,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             tEntry:set_gname('wfp')
                             tEntry:set_ctime(ulCreationTime, 0)
                             tEntry:set_mtime(ulModTime, 0)
-                            -- tLog.info("getLastModifiedDate: %s", tEntry:getLastModifiedDate())
 
-                            --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
