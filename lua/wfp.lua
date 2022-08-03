@@ -1,7 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
---require("LuaPanda").start("192.168.56.1",8818)
 
-local archive = require 'archive'
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
 local wfp_control = require 'wfp_control'
@@ -10,7 +8,7 @@ local wfp_verify = require 'wfp_verify'
 local class = require 'pl.class'
 local WFPXml = class()
 local xml = require 'pl.xml'
-local utils = require 'pl.utils'
+
 
 function WFPXml:_init(version, tLog)
     -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
@@ -24,7 +22,7 @@ function WFPXml:addTarget(strTargetName)
 	self.tTarget = xml.new("Target")
 	self.tTarget:set_attrib("netx", strTargetName)
 	self.nodeFlasherPack:add_child(self.tTarget)
-	
+
 end
 
 function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
@@ -33,13 +31,13 @@ function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
 	self.tTarget:add_child(tFlash)
-	
+
 	tData = xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
-	
+
 	tErase = xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
@@ -50,7 +48,7 @@ end
 function WFPXml:exportXml(outputDir)
     self.tLog.info("export example XML ", outputDir)
     strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
-    utils.writefile(outputDir, strXmlData)
+    pl.utils.writefile(outputDir, strXmlData)
 end
 
 local function __writeU32(tFile, ulData)
@@ -247,9 +245,9 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
             tLog.error(strError)
         end
     end
-	
+
     exampleXml = WFPXml(nil, tLog)
-    
+
     iChiptype = tPlugin:GetChiptyp()
 	strTargetName = tWfpControl.atChiptyp2name[iChiptype]
     -- Download the binary. (load the flasher binary into intram)
@@ -265,27 +263,28 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
 			ucUnit = tUnitInfo.iIdx
 			-- add only unit 2 and 3 for IFlash of netx90
 			if strTargetName == "NETX90" and ucBus == 2 then
-				if ucUnit == 2 or ucUnit == 3 then 
+				if ucUnit == 2 or ucUnit == 3 then
 					exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
 				end
 			-- only add Unit 0 Flashes to example
 			elseif ucUnit == 0 then
 				exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
-			end 
+			end
 		end
 	end
-	
+
 	exampleXml:exportXml(tArgs.strWfpControlFile)
-    
+
     return true
 end
 
 
+
 function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
-    
+
     local archive = require 'archive'
     local fOk=true
-    
+
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
@@ -397,22 +396,29 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             fOk = false
                         else
                             -- Add the control file.
-                            local tEntry = archive.ArchiveEntry()
-                            tEntry:set_pathname('wfp.xml')
                             local strData = pl.utils.readfile(strWfpControlFile, true)
+                            local ulCreationTime = pl.file.creation_time(strWfpControlFile)
+                            local ulModTime = pl.file.modified_time(strWfpControlFile)
+                            local tEntry = archive.ArchiveEntry()
 
+                            tEntry:set_pathname('wfp.xml')
                             tEntry:set_size(string.len(strData))
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
-                            print(tEntry)
+                            tEntry:set_ctime(ulCreationTime, 0)
+                            tEntry:set_mtime(ulModTime, 0)
+                            -- tLog.info("getLastModifiedDate: %s", tEntry:getLastModifiedDate())
+
                             --              tEntry:set_uname('wfp')
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
 
                             for _, tAttr in ipairs(atSortedFiles) do
+
                                 local tEntry = archive.ArchiveEntry()
+
                                 if tWfpControl:getHasSubdirs() == true then
                                     tLog.info('Pack WFP with subdirs.')
                                     tEntry:set_pathname(tAttr.strFileRelPath)
@@ -421,11 +427,16 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                                     tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
                                 end
                                 local strData = pl.utils.readfile(tAttr.strFilename, true)
+                                local ulCreationTime = pl.file.creation_time(tAttr.strFilename)
+                                local ulModTime = pl.file.modified_time(tAttr.strFilename)
+
                                 tEntry:set_size(string.len(strData))
                                 tEntry:set_filetype(archive.AE_IFREG)
                                 tEntry:set_perm(420)
                                 tEntry:set_gname('wfp')
-                                --                tEntry:set_uname('wfp')
+                                tEntry:set_ctime(ulCreationTime, 0)
+                                tEntry:set_mtime(ulModTime, 0)
+
                                 tArchive:write_header(tEntry)
                                 tArchive:write_data(strData)
                                 tArchive:finish_entry()
