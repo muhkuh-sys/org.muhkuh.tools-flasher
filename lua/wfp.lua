@@ -620,7 +620,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     else
                                         -- save the read area  to the output file (write binary)
                                         local fileName = DestinationFolder .. "/" .. strFile
-                                        pl.utils.writefile(fileName, strData, false)
+                                        pl.utils.writefile(fileName, strData, true)
                                     end
                                 elseif tData.strType == "Erase" then
                                     tLog.info("ignore Erase areas with Read function")
