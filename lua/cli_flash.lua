@@ -349,7 +349,14 @@ function detect_chiptype(aArgs)
 			print("")
 			printf("Chip type: (%d) %s", iChiptype, strChipName)
 			print("")
-			fOk = true
+
+            -- chip type unknown should not result in fOk result being true
+            if strChipName == "unknown chip" or iChiptype == romloader.ROMLOADER_CHIPTYP_UNKNOWN then
+                strMsg = "detect_chiptype(): unknown chipType detected"
+            else
+                printf("detect_chiptype(): OK")
+                fOk = true
+            end
 		else
 			strMsg = "Failed to get chip type"
 		end -- if iChiptype
