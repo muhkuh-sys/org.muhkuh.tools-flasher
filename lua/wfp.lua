@@ -508,7 +508,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         end
     end
     if fOk == true then
-        pl.path.mkdir(DestinationFolder)
+        pl.dir.makepath(DestinationFolder)
         tLog.info('Folder created "%s":', DestinationFolder)
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
@@ -620,6 +620,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     else
                                         -- save the read area  to the output file (write binary)
                                         local fileName = DestinationFolder .. "/" .. strFile
+										
+										-- create the subdirectory inside the output folder if it does not exist
+                                        local strSubFolderPath = pl.path.dirname(fileName)
+                                            if not pl.path.exists(strSubFolderPath) then
+                                                pl.dir.makepath(strSubFolderPath)
+                                            end
+
                                         pl.utils.writefile(fileName, strData, false)
                                     end
                                 elseif tData.strType == "Erase" then
