@@ -22,7 +22,7 @@ function WFPXml:addTarget(strTargetName)
 	self.tTarget = xml.new("Target")
 	self.tTarget:set_attrib("netx", strTargetName)
 	self.nodeFlasherPack:add_child(self.tTarget)
-
+	
 end
 
 function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
@@ -31,13 +31,13 @@ function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
 	self.tTarget:add_child(tFlash)
-
+	
 	tData = xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
-
+	
 	tErase = xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
@@ -245,9 +245,9 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
             tLog.error(strError)
         end
     end
-
+	
     exampleXml = WFPXml(nil, tLog)
-
+    
     iChiptype = tPlugin:GetChiptyp()
 	strTargetName = tWfpControl.atChiptyp2name[iChiptype]
     -- Download the binary. (load the flasher binary into intram)
@@ -263,28 +263,27 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
 			ucUnit = tUnitInfo.iIdx
 			-- add only unit 2 and 3 for IFlash of netx90
 			if strTargetName == "NETX90" and ucBus == 2 then
-				if ucUnit == 2 or ucUnit == 3 then
+				if ucUnit == 2 or ucUnit == 3 then 
 					exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
 				end
 			-- only add Unit 0 Flashes to example
 			elseif ucUnit == 0 then
 				exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
-			end
+			end 
 		end
 	end
-
+	
 	exampleXml:exportXml(tArgs.strWfpControlFile)
-
+    
     return true
 end
 
 
-
 function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
-
+    
     local archive = require 'archive'
     local fOk=true
-
+    
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
@@ -414,9 +413,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             tArchive:finish_entry()
 
                             for _, tAttr in ipairs(atSortedFiles) do
-
                                 local tEntry = archive.ArchiveEntry()
-
                                 if tWfpControl:getHasSubdirs() == true then
                                     tLog.info('Pack WFP with subdirs.')
                                     tEntry:set_pathname(tAttr.strFileRelPath)
