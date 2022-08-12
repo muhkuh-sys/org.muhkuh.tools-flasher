@@ -620,8 +620,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     else
                                         -- save the read area  to the output file (write binary)
                                         local fileName = DestinationFolder .. "/" .. strFile
-										
-										-- create the subdirectory inside the output folder if it does not exist
+                                        
+                                        -- create the subdirectory inside the output folder if it does not exist
                                         local strSubFolderPath = pl.path.dirname(fileName)
                                             if not pl.path.exists(strSubFolderPath) then
                                                 pl.dir.makepath(strSubFolderPath)
