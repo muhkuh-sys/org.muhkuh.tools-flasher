@@ -1,7 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
---require("LuaPanda").start("192.168.56.1",8818)
 
-local archive = require 'archive'
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
 local wfp_control = require 'wfp_control'
@@ -10,7 +8,7 @@ local wfp_verify = require 'wfp_verify'
 local class = require 'pl.class'
 local WFPXml = class()
 local xml = require 'pl.xml'
-local utils = require 'pl.utils'
+
 
 function WFPXml:_init(version, tLog)
     -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
@@ -51,7 +49,7 @@ end
 function WFPXml:exportXml(outputDir)
     self.tLog.info("export example XML ", outputDir)
     strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
-    utils.writefile(outputDir, strXmlData)
+    pl.utils.writefile(outputDir, strXmlData)
 end
 
 local function __writeU32(tFile, ulData)
@@ -398,14 +396,19 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             fOk = false
                         else
                             -- Add the control file.
-                            local tEntry = archive.ArchiveEntry()
-                            tEntry:set_pathname('wfp.xml')
                             local strData = pl.utils.readfile(strWfpControlFile, true)
+                            local ulCreationTime = pl.file.creation_time(strWfpControlFile)
+                            local ulModTime = pl.file.modified_time(strWfpControlFile)
+                            local tEntry = archive.ArchiveEntry()
 
+                            tEntry:set_pathname('wfp.xml')
                             tEntry:set_size(string.len(strData))
                             tEntry:set_filetype(archive.AE_IFREG)
                             tEntry:set_perm(420)
                             tEntry:set_gname('wfp')
+                            tEntry:set_ctime(ulCreationTime, 0)
+                            tEntry:set_mtime(ulModTime, 0)
+                            
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
@@ -420,11 +423,16 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                                     tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
                                 end
                                 local strData = pl.utils.readfile(tAttr.strFilename, true)
+                                local ulCreationTime = pl.file.creation_time(tAttr.strFilename)
+                                local ulModTime = pl.file.modified_time(tAttr.strFilename)
+
                                 tEntry:set_size(string.len(strData))
                                 tEntry:set_filetype(archive.AE_IFREG)
                                 tEntry:set_perm(420)
                                 tEntry:set_gname('wfp')
-                                --                tEntry:set_uname('wfp')
+                                tEntry:set_ctime(ulCreationTime, 0)
+                                tEntry:set_mtime(ulModTime, 0)
+
                                 tArchive:write_header(tEntry)
                                 tArchive:write_data(strData)
                                 tArchive:finish_entry()
