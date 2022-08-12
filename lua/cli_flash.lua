@@ -338,7 +338,7 @@ function detect_chiptype(aArgs)
 			end
 		end
 
-		if iChiptype then
+		if iChiptype and iChiptype ~= romloader.ROMLOADER_CHIPTYP_UNKNOWN then
 			local strChipName
 			if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
 				strChipName = "netX90 Rev1 (PHY V2)"
@@ -349,14 +349,9 @@ function detect_chiptype(aArgs)
 			print("")
 			printf("Chip type: (%d) %s", iChiptype, strChipName)
 			print("")
-
-            -- chip type unknown should not result in fOk result being true
-            if strChipName == "unknown chip" or iChiptype == romloader.ROMLOADER_CHIPTYP_UNKNOWN then
-                strMsg = "detect_chiptype(): unknown chipType detected"
-            else
-                printf("detect_chiptype(): OK")
-                fOk = true
-            end
+			
+			fOk = true
+			
 		else
 			strMsg = "Failed to get chip type"
 		end -- if iChiptype
