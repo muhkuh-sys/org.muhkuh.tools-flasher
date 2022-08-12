@@ -16,6 +16,7 @@ function WFPXml:_init(version, tLog)
     self.tLog = tLog
     self.nodeFlasherPack = xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
+    self.nodeFlasherPack:set_attrib("has_subdirs", "True")
 end
 
 function WFPXml:addTarget(strTargetName)
@@ -407,7 +408,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             tEntry:set_gname('wfp')
                             tEntry:set_ctime(ulCreationTime, 0)
                             tEntry:set_mtime(ulModTime, 0)
-
+                            
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
@@ -514,7 +515,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
         end
     end
     if fOk == true then
-        pl.path.mkdir(DestinationFolder)
+        pl.dir.makepath(DestinationFolder)
         tLog.info('Folder created "%s":', DestinationFolder)
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
@@ -626,7 +627,14 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     else
                                         -- save the read area  to the output file (write binary)
                                         local fileName = DestinationFolder .. "/" .. strFile
-                                        pl.utils.writefile(fileName, strData, false)
+                                        
+                                        -- create the subdirectory inside the output folder if it does not exist
+                                        local strSubFolderPath = pl.path.dirname(fileName)
+                                            if not pl.path.exists(strSubFolderPath) then
+                                                pl.dir.makepath(strSubFolderPath)
+                                            end
+
+                                        pl.utils.writefile(fileName, strData, true)
                                     end
                                 elseif tData.strType == "Erase" then
                                     tLog.info("ignore Erase areas with Read function")
