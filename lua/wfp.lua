@@ -18,6 +18,7 @@ function WFPXml:_init(version, tLog)
     self.tLog = tLog
     self.nodeFlasherPack = xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
+    self.nodeFlasherPack:set_attrib("has_subdirs", "True")
 end
 
 function WFPXml:addTarget(strTargetName)
