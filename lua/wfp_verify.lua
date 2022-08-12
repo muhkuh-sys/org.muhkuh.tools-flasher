@@ -245,8 +245,8 @@ function print_verify_summary(atFlashDataTable, tLog)
         print("")
     end
     tLog.info("===========================================")
-    tLog.info("    Passes:   %s", ulSuccessCount)
-    tLog.info("    Failures: %s", ulFailCount)
+    tLog.info("    Chunks successfully verified:   %s", ulSuccessCount)
+    tLog.info("    Chunks failed to verify:        %s", ulFailCount)
     tLog.info("-------------------------------------------")
 end
 
