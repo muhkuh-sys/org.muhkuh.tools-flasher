@@ -248,7 +248,7 @@ atEnv.DEFAULT.Version('targets/version/flasher_version.xsl', 'templates/flasher_
 from datetime import datetime
 tBuildTime = datetime.now()
 strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
-tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': ''}
+tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': '-dev2'}
 lua_flasher_version_tmp = atEnv.DEFAULT.Version('targets/version/flasher_version_TMP.lua', 'templates/flasher_version.lua')
 lua_flasher_version = atEnv.DEFAULT.Filter('#/targets/version/flasher_version.lua', lua_flasher_version_tmp, SUBSTITUTIONS=tDict)
 
@@ -563,7 +563,8 @@ if fBuildIsFull==True:
         bin_netx56_nodbg,
         bin_netx50_nodbg,
         bin_netx10_nodbg,
-        bin_netiol_nodbg)
+        bin_netiol_nodbg,
+        'bootpins_netx90/bootpins_netx90.bin')
 
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
@@ -585,7 +586,8 @@ if fBuildIsFull==True:
         lua_flasher,
         'lua/flasher_test.lua',
         'lua/lua/Version.lua',
-        'lua/lua/wfp_control.lua')
+        'lua/lua/wfp_control.lua', 
+        'bootpins_netx90/bootpins.lua')
 
     tArcList.AddFiles('demo/',
         'lua/cli_flash.lua',
@@ -638,6 +640,7 @@ if fBuildIsFull==True:
     #
     atCopyFiles = {
         # Copy all binaries.
+        'targets/testbench/netx/bootpins_netx90.bin':                      'bootpins_netx90/bootpins_netx90.bin',
         'targets/testbench/netx/flasher_netx4000.bin':                     bin_netx4000_nodbg,
         'targets/testbench/netx/flasher_netx500.bin':                      bin_netx500_nodbg,
         'targets/testbench/netx/flasher_netx90_mpw.bin':                   bin_netx90_mpw_nodbg,
@@ -661,6 +664,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/Version.lua':                               'lua/lua/Version.lua',
         'targets/testbench/lua/flasher.lua':                               lua_flasher,
         'targets/testbench/lua/wfp_control.lua':                           'lua/lua/wfp_control.lua',
+        'targets/testbench/lua/bootpins.lua':                              'bootpins_netx90/bootpins.lua',
 
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,

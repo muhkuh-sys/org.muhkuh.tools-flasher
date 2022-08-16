@@ -10,7 +10,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 	---- create a buffer containing the write/erase data of each flash
 	------ NEW: for netx90 the data of Bus:2 CS: 0 Unit:3 will be added to the flashes that are morrored by that flash
 	---- whenever data overlaps data that was already added to the buffer, it will replace that data either partially or completely
-	
+
 	-- loop over created buffer table for each flash
 	---- switch to current flash via detect command
 	---- clean flash list (remove entries that were flagged with 'delete' -> whole chunks overwritten by other data)
@@ -32,10 +32,10 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
     -- loop over Flashes inside Target
     for _, tTargetFlash in ipairs(tTarget.atFlashes) do
-	
+
         local strBusName = tTargetFlash.strBus
         local tBus = atName2Bus[strBusName]
-		
+
         if tBus == nil then
             tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
             fOk = false
@@ -75,14 +75,15 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                 end
             else
 				-- new entry for the current flash
+
                 if atFlashDataTable[strChunkKey] == nil then
                     atFlashDataTable[strChunkKey] = {}
-                    tCurrentFlashEntry = atFlashDataTable[strChunkKey]
-                    tCurrentFlashEntry['atChunkList'] = {}
-                    tCurrentFlashEntry['tBus'] = tBus
-                    tCurrentFlashEntry['ulUnit'] = ulUnit
-                    tCurrentFlashEntry['ulChipSelect'] = ulChipSelect
+                    atFlashDataTable[strChunkKey]['atChunkList'] = {}
+                    atFlashDataTable[strChunkKey]['tBus'] = tBus
+                    atFlashDataTable[strChunkKey]['ulUnit'] = ulUnit
+                    atFlashDataTable[strChunkKey]['ulChipSelect'] = ulChipSelect
                 end
+                tCurrentFlashEntry = atFlashDataTable[strChunkKey]
             end
             -- save intflash0 entry for later
             if strChipType == "NETX90" and tBus == 2 and ulChipSelect == 0 and ulUnit == 0 then
@@ -166,7 +167,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         -- add the new chunk part that is inside intflash1 to intflash1 chunk list
                         -- the offsets need to be subtracted by ulIntflDiff
                         tNewChunk['ulOffset'] = tNewChunk['ulOffset'] - ulIntflash0Size
-                        if not tNewChunk['ulEndOffset'] == 0xFFFFFFFF then
+                        if tNewChunk['ulEndOffset'] ~= 0xFFFFFFFF then
                             tNewChunk['ulEndOffset'] = tNewChunk['ulEndOffset'] - ulIntflash0Size
                         end
                         tNewChunk['tFile']['ulOffset'] = tNewChunk['tFile']['ulOffset'] - ulIntflash0Size
@@ -175,6 +176,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                     end
                 else
                     -- add the new chunk to the current chunk entry
+
                     addChunkToList(tCurrentFlashEntry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                 end
             end
@@ -182,8 +184,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     end
 
 
+    tLog.info("Verify After gathering data.")
 
-    -- verify if the found data is inside flash
     for strChunkKey, atFlashData in pairs(atFlashDataTable) do
         tLog.info("Verify Data inside Flash B"..atFlashData['tBus'] .." CS" .. atFlashData['ulChipSelect'] .." U"..atFlashData['ulUnit'])
          -- Detect the device. (switch to right flash)
@@ -216,14 +218,42 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
         end
     end
     -- print final verify result and return
-    print("VerifyWfp result: " .. tostring(fVerified))
+    print_verify_summary(atFlashDataTable, tLog)
+
     return fVerified
 end
 
+function print_verify_summary(atFlashDataTable, tLog)
+    local ulSuccessCount = 0
+    local ulFailCount = 0
+    tLog.info("Verification summary:")
+    tLog.info("===========================================")
+    for strChunkKey, atFlashData in pairs(atFlashDataTable) do
+        if atFlashData['atChunkList'] ~= nil then
+            tLog.info("Flash Bus: "..atFlashData['tBus'] .." Unit: "..atFlashData['ulUnit'].." ChipSelect: " .. atFlashData['ulChipSelect'])
+            tLog.info("-------------------------------------------")
+        end
+        for _, tChunk in ipairs(atFlashData['atChunkList']) do
+            if tChunk.verified == true then
+                tLog.info("    %s Chunk 0x%08x - 0x%08x: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+                ulSuccessCount = ulSuccessCount +1
+            else
+                tLog.info("    %s Chunk 0x%08x - 0x%08x: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+                ulFailCount = ulFailCount +1
+            end
+        end
+        print("")
+    end
+    tLog.info("===========================================")
+    tLog.info("    Chunks successfully verified:   %s", ulSuccessCount)
+    tLog.info("    Chunks failed to verify:        %s", ulFailCount)
+    tLog.info("-------------------------------------------")
+end
 
 function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
     -- add tNewChunk to tDataChunks
     ---- modify chunks that would be overwritten by tNewChunk
+    tLog.info("Add to chunk list")
     local tSplitChunk
     for ulChunkIdx, tChunk in ipairs(tDataChunks) do
         if tChunk['delete'] ~= true then
@@ -401,9 +431,11 @@ function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
             fOk = tFlasher.isErased(tPlugin, aAttr, tChunk['ulOffset'], tChunk['ulEndOffset'])
             if fOk == true then
                 tLog.info('ok')
+                tChunk['verified'] = true
             else
                 tLog.info("ERROR: area 0x%08x to 0x%08x not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
                 fVerified = false
+                tChunk['verified'] = false
                 print("verified result: " .. tostring(fVerified))
             end
 
@@ -418,16 +450,16 @@ function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
             if fOk == true then
                 tLog.info('ok')
                 tLog.info(strMessage or "")
-
+                tChunk['verified'] = true
             else
                 tLog.info('ERROR: verify failed for area 0x%08x to 0x%08x!', tChunk['ulOffset'], tChunk['ulEndOffset'])
                 tLog.info(strMessage or "")
                 fVerified = false
+                tChunk['verified'] = false
                 print("verified result: " .. tostring(fVerified))
             end
         end
 
     end
-    print("verified result end: " .. tostring(fVerified))
     return fVerified
 end

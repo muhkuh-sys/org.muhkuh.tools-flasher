@@ -1,3 +1,64 @@
+Updates in CLI Flasher v1.8.0
+==============================
+
+* When detecting an SPI/SQI flash, detect and display the 
+  device name and its JEDEC ID, when possible.
+
+WFP:
+* Added the read command. It allows to read data from 
+  the flash controlled by a WFP control file and store the resulting 
+  files in a WFP directory or a WFP archive.
+
+* Added summary output to verify command
+  Added  new command 'example' that gives an example control XML based 
+  on the connected netX (selected plugin) 
+
+* Bugfix: Verify command fails for a wfp archive that uses a flash command 
+  for intflash01 before another flash command for intflash1 or intflash0.
+  (NXTFLASHER-432)
+
+USIP Player:
+* Add command set_kek
+* Updated the read_sip binary
+  Invalidate the SIP copy in RAM and reset to prevent reading from an outdated copy.
+
+Updates SIPper to v0.2.3.dev2:
+* Changed uart_handler to version 1.2.1
+  Added support of new uart_handler receive routine to make the communication more robust
+* Added details to executable, which are shown when you hover over the exe file in Windows
+* Added LICENSE.txt
+* Added CHANGELOG.rst
+
+Romloader 2.5.2-dev3:
+* Changed wording of some messages during chip type detection
+  more uniform messages
+  mention when chip type is potentially incorrect
+  mention open/secure boot mode
+
+* UART machine interface:
+  During the connection setup, when the netx is repeatedly sending a packet
+  because it is waiting for an ack packet, send a cancel_operation request.
+
+Romloader 2.5.2-dev4:
+* netX 90/JTAG: disable all IRQs if CPU is halted in undefined state 
+  (that is, when attach mode is selected or when the CPU does not halt 
+  in the breakpoint as expected after reset.)
+
+
+
+Updates in CLI Flasher v1.7.1
+==============================
+
+* Added support for chip types:
+  netX 90 Rev1 with PHY v3 (Step C)
+  netX 90 Rev2 (Step D)
+
+* netx 90 Rev1 and Rev2: When the netx is in the UART terminal console,
+  send a reset command which allows us to enter the machine interface.
+  (Previously, a manual reset was required).
+
+
+
 Updates in CLI Flasher v1.7.0
 ==============================
 

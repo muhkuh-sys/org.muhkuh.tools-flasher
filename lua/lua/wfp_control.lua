@@ -58,7 +58,9 @@ function WfpControl:_init(tLogWriter)
     [romloader.ROMLOADER_CHIPTYP_NETX90]           = "NETX90",
     [romloader.ROMLOADER_CHIPTYP_NETX90B]          = "NETX90",
     [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = "NETIOL",
-    [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = "NETIOL"
+    [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = "NETIOL",
+    [romloader.ROMLOADER_CHIPTYP_NETX90C]          = "NETX90",
+    [romloader.ROMLOADER_CHIPTYP_NETX90D]          = "NETX90"
   }
 end
 
@@ -204,15 +206,15 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tLog.error('Error in line %d, col %d: invalid "version": %s', iPosLine, iPosColumn, strError)
       end
       aLxpAttr.tVersion = tVersion
-      
-      -- Reject the control file if the version is >= 1.3
-      local tVersion_1_3 = aLxpAttr.Version()
-      tVersion_1_3:set("1.3")
-      if aLxpAttr.Version.compare(tVersion_1_3, tVersion) <= 0 then 
+
+      -- Reject the control file if the version is >= 1.4
+      local tVersion_1_4 = aLxpAttr.Version()
+      tVersion_1_4:set("1.4")
+      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then 
         aLxpAttr.tResult = nil
         aLxpAttr.tLog.error('Error in line %d, col %d: Control file version %s is not supported', iPosLine, iPosColumn, strVersion)
-      end 
-      
+      end
+
       -- Print a warning if the version is < 1.2 but the has_subdirs attribute is used
       local tVersion_1_2 = aLxpAttr.Version()
       tVersion_1_2:set("1.2")
@@ -363,7 +365,16 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         aLxpAttr.tResult = nil
         aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
       end
-
+      local strSize = atAttributes["size"]
+      local ulSize
+      if strSize == nil or strSize == "" then
+          -- No size specified.
+          -- aLxpAttr.tResult = nil
+          --aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is not set.', iPosLine, iPosColumn)
+      else
+          ulSize = tonumber(strSize)
+        
+      end
       local strCondition = atAttributes['condition']
       if strCondition==nil then
         strCondition = ''
@@ -372,6 +383,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       local tData = {}
       tData.strType = "Data"
       tData.strFile = strFile
+      tData.ulSize = ulSize
       tData.ulOffset = ulOffset
       tData.strCondition = strCondition
 
@@ -418,6 +430,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       end
     end
   end
+
 end
 
 
@@ -691,6 +704,12 @@ end
 -- @return a boolean value
 function WfpControl:getHasSubdirs()
   return self.fHasSubdirs
+end
+--- Get the value of tVersion.
+-- @return a version
+function WfpControl:getVersion()
+  
+  return self.tConfigurationVersion
 end
 
 function WfpControl:validateCondition(strKey, strValue)
