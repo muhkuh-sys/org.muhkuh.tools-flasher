@@ -1,61 +1,68 @@
 Updates in CLI Flasher v1.8.0
 ==============================
 
+* Add Support for new chip types:
+  netX 90 Rev1 with PHY v3 (Step C)
+  netX 90 Rev2 (Step D)
+
 * When detecting an SPI/SQI flash, detect and display the 
   device name and its JEDEC ID, when possible.
 
-WFP:
-* Added the read command. It allows to read data from 
-  the flash controlled by a WFP control file and store the resulting 
-  files in a WFP directory or a WFP archive.
+* 'detect_netx' command: when netX 90 Rev. 1 is found,
+  detect the PHY version.
 
-* Added summary output to verify command
-  Added  new command 'example' that gives an example control XML based 
-  on the connected netX (selected plugin) 
 
-* Bugfix: Verify command fails for a wfp archive that uses a flash command 
-  for intflash01 before another flash command for intflash1 or intflash0.
-  (NXTFLASHER-432)
+Romloader v2.5.2:
+* netX 90/JTAG: disable all IRQs if CPU is halted in undefined state 
+  (that is, when attach mode is selected or when the CPU does not halt 
+  in the breakpoint as expected after reset.)
 
-USIP Player:
-* Add command set_kek
-* Updated the read_sip binary
-  Invalidate the SIP copy in RAM and reset to prevent reading from an outdated copy.
-
-Updates SIPper to v0.2.3.dev2:
-* Changed uart_handler to version 1.2.1
-  Added support of new uart_handler receive routine to make the communication more robust
-* Added details to executable, which are shown when you hover over the exe file in Windows
-* Added LICENSE.txt
-* Added CHANGELOG.rst
-
-Romloader 2.5.2-dev3:
-* Changed wording of some messages during chip type detection
-  more uniform messages
-  mention when chip type is potentially incorrect
-  mention open/secure boot mode
+* netx 90 Rev1 and Rev2: When the netx is in the UART terminal console,
+  send a reset command which allows us to enter the machine interface.
+  (Previously, a manual reset was required).
 
 * UART machine interface:
   During the connection setup, when the netx is repeatedly sending a packet
   because it is waiting for an ack packet, send a cancel_operation request.
 
-Romloader 2.5.2-dev4:
-* netX 90/JTAG: disable all IRQs if CPU is halted in undefined state 
-  (that is, when attach mode is selected or when the CPU does not halt 
-  in the breakpoint as expected after reset.)
+* netX 90: When secure boot mode is detected, exit with an error.
+
+* Changed wording of some messages during chip type detection
+  more uniform messages
+  mention when chip type is potentially incorrect
+  mention open/secure boot mode
 
 
+WFP:
+* Added the 'read' command.
+  It allows to read data from the flash controlled by a WFP control file 
+  and store the resulting files in a WFP directory or a WFP archive.
 
-Updates in CLI Flasher v1.7.1
-==============================
+* Added the 'example' command.
+  It detects the chip type of a connected netx chip and creates an example
+  control XML file for this chip type.
 
-* Added support for chip types:
-  netX 90 Rev1 with PHY v3 (Step C)
-  netX 90 Rev2 (Step D)
+* Added summary output to the verify command.
 
-* netx 90 Rev1 and Rev2: When the netx is in the UART terminal console,
-  send a reset command which allows us to enter the machine interface.
-  (Previously, a manual reset was required).
+* Bugfix: Verify command fails for a wfp archive that uses a flash command 
+  for intflash01 before another flash command for intflash1 or intflash0.
+  (NXTFLASHER-432)
+
+* Bugfix: Add timestamps to the files in a created archive. (NXTFLASHER-426)
+
+
+USIP Player:
+* Added command 'set_kek'
+
+* Updated the read_sip binary
+  Invalidate the SIP copy in RAM and reset to prevent reading from an outdated copy.
+
+
+SIPper v0.2.3:
+* Changed uart_handler to version 1.2.1
+  Added support of new uart_handler receive routine to make the communication more robust
+
+* Added details to executable, which are shown when you hover over the exe file in Windows
 
 
 
