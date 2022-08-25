@@ -541,42 +541,223 @@ MODE_TEST_CLI = 12
 MODE_IS_ERASED = 13
 MODE_GET_DEVICE_SIZE = 14
 
+-- functions to add arguments to subcommands
 
-atModeArgs = {
-	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr"}},
-	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
-	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
-	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
-	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
-	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
-	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
-}
+function addFilePathArg(tParserCommand)
+   tParserCommand:argument('file', 'file name'):target('strDataFileName')
+end
 
+function addBusOptionArg(tParserCommand)
+    -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
+    tOption = tParserCommand:option('-b', 'bus number'):target('iBus')
+    tOption._mincount = 1
+end
 
-argdefs = {
-b  = {type = "number", clkey ="-b",  argkey = "iBus",              name="bus number"},
-u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number",        default=0},
-cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number", default=0},
-p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
-t  = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin type"},
-s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
-l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
-f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
+function addUnitOptionArg(tParserCommand)
+    -- tOption = tParserCommand:option('-u --unit', 'unit number'):target('iUnit')
+    tOption = tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0)
+    tOption._mincount = 1
+end
 
-jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
-jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
-	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
-	choices_help = "Possible values are: hard (default), soft, attach"
-	},
-}
+function addChipSelectOptionArg(tParserCommand)
+    -- tOption = tParserCommand:option('-cs --chip_select', 'chip select number'):target('iChipSelect')
+    tOption = tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0)
+    tOption._mincount = 1
+end
+
+function addStartOffsetArg(tParserCommand)
+    -- tParserCommand:option('-s --start_offset', 'start offset'):target('ulStartOffset'):default(0)
+    tParserCommand:option('-s', 'start offset'):target('ulStartOffset'):default(0)
+end
+
+function addLengthArg(tParserCommand)
+    -- tOption = tParserCommand:option('-l --length', 'number of bytes to read/erase/hash'):target('ulLen')
+    tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen')
+    tOption._mincount = 1
+end
+
+function addPluginNameArg(tParserCommand)
+    -- tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
+    tParserCommand:option('-p', 'plugin name'):target('strPluginName')
+end
+
+function addPluginTypeArg(tParserCommand)
+    -- tParserCommand:option('--t --plugin_type', 'plugin type'):target('strPluginType')
+    tParserCommand:option('--t', 'plugin type'):target('strPluginType')
+end
+
+function addJtagKhzArg(tParserCommand)
+    tParserCommand:option('-jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz')
+end
+
+function addJtagResetArg(tParserCommand)
+    tOption = tParserCommand:option('-jtag_reset',
+            'JTAG reset method. Possible values are: hard (default), soft, attach'):target('strJtagReset')
+    tOption._options = {"HardReset", "SoftReset", "Attach" }
+end
+
+local argparse = require 'argparse'
+
+local tParser = argparse('Cli Flasher', ''):command_target("strSubcommand")
+
+tParser:flag "--version":description "Show version info and exit. ":action(function()
+    require("flasher_version")
+    print(FLASHER_VERSION_STRING)
+    os.exit(0)
+end)
+
+-- 	flashfCommandFlashSelected
+local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX'):target('fCommandFlashSelected')
+-- required_args = {"b", "u", "cs", "s", "f"},
+addFilePathArg(tParserCommandFlash)
+addBusOptionArg(tParserCommandFlash)
+addUnitOptionArg(tParserCommandFlash)
+addChipSelectOptionArg(tParserCommandFlash)
+addStartOffsetArg(tParserCommandFlash)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandFlash)
+addPluginTypeArg(tParserCommandFlash)
+addJtagResetArg(tParserCommandFlash)
+addJtagKhzArg(tParserCommandFlash)
+
+-- 	read
+local tParserCommandRead = tParser:command('read r', 'Read data from netX to a File'):target('fCommandReadSelected')
+-- required_args = {"b", "u", "cs", "s", "l", "f"}
+addFilePathArg(tParserCommandRead)
+addBusOptionArg(tParserCommandRead)
+addUnitOptionArg(tParserCommandRead)
+addChipSelectOptionArg(tParserCommandRead)
+addStartOffsetArg(tParserCommandRead)
+addLengthArg(tParserCommandRead)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandRead)
+addPluginTypeArg(tParserCommandRead)
+addJtagResetArg(tParserCommandRead)
+addJtagKhzArg(tParserCommandRead)
+
+-- erase
+local tParserCommandErase = tParser:command('erase e', 'Erase area inside flash'):target('fCommandEraseSelected')
+-- required_args = {"b", "u", "cs", "s", "l"}
+addBusOptionArg(tParserCommandErase)
+addUnitOptionArg(tParserCommandErase)
+addChipSelectOptionArg(tParserCommandErase)
+addStartOffsetArg(tParserCommandErase)
+addLengthArg(tParserCommandErase)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandErase)
+addPluginTypeArg(tParserCommandErase)
+addJtagResetArg(tParserCommandErase)
+addJtagKhzArg(tParserCommandErase)
+
+-- verify
+local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed'):target('fCommandVerifySelected')
+-- required_args = {"b", "u", "cs", "s", "f"}
+addFilePathArg(tParserCommandVerify)
+addBusOptionArg(tParserCommandVerify)
+addUnitOptionArg(tParserCommandVerify)
+addChipSelectOptionArg(tParserCommandVerify)
+addStartOffsetArg(tParserCommandVerify)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandVerify)
+addPluginTypeArg(tParserCommandVerify)
+addJtagResetArg(tParserCommandVerify)
+addJtagKhzArg(tParserCommandVerify)
+
+-- verify_hash
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', '???'):target('fCommandVerifyHashSelected')
+-- required_args = {"b", "u", "cs", "s", "f"}
+addFilePathArg(tParserCommandVerifyHash)
+addBusOptionArg(tParserCommandVerifyHash)
+addUnitOptionArg(tParserCommandVerifyHash)
+addChipSelectOptionArg(tParserCommandVerifyHash)
+addStartOffsetArg(tParserCommandVerifyHash)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandVerifyHash)
+addPluginTypeArg(tParserCommandVerifyHash)
+addJtagResetArg(tParserCommandVerifyHash)
+addJtagKhzArg(tParserCommandVerifyHash)
+
+-- hash
+local tParserCommandHash = tParser:command('hash h', '????'):target('fCommandHashSelected')
+-- required_args = {"b", "u", "cs", "s", "l"}
+addBusOptionArg(tParserCommandHash)
+addUnitOptionArg(tParserCommandHash)
+addChipSelectOptionArg(tParserCommandHash)
+addStartOffsetArg(tParserCommandHash)
+addLengthArg(tParserCommandHash)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandHash)
+addPluginTypeArg(tParserCommandHash)
+addJtagResetArg(tParserCommandHash)
+addJtagKhzArg(tParserCommandHash)
+
+-- detect
+local tParserCommandDetect = tParser:command('detect d', '????'):target('fCommandDetectSelected')
+-- required_args = {"b", "u", "cs"}
+addBusOptionArg(tParserCommandHash)
+addUnitOptionArg(tParserCommandHash)
+addChipSelectOptionArg(tParserCommandHash)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandHash)
+addPluginTypeArg(tParserCommandHash)
+addJtagResetArg(tParserCommandHash)
+addJtagKhzArg(tParserCommandHash)
+
+-- test
+local tParserCommandTest = tParser:command('test t', '????'):target('fCommandTestSelected')
+-- required_args = {"b", "u", "cs"}
+addBusOptionArg(tParserCommandTest)
+addUnitOptionArg(tParserCommandTest)
+addChipSelectOptionArg(tParserCommandTest)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandTest)
+addPluginTypeArg(tParserCommandTest)
+addJtagResetArg(tParserCommandTest)
+addJtagKhzArg(tParserCommandTest)
+
+-- testcli
+local tParserCommandTestCli = tParser:command('testcli tc', '????'):target('fCommandTestCliSelected')
+-- required_args = {"b", "u", "cs"}
+addBusOptionArg(tParserCommandTestCli)
+addUnitOptionArg(tParserCommandTestCli)
+addChipSelectOptionArg(tParserCommandTestCli)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandTestCli)
+addPluginTypeArg(tParserCommandTestCli)
+addJtagResetArg(tParserCommandTestCli)
+addJtagKhzArg(tParserCommandTestCli)
+
+-- info
+local tParserCommandInfo = tParser:command('info i', 'Show information about the netX'):target('fCommandInfoSelected')
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandInfo)
+addPluginTypeArg(tParserCommandInfo)
+addJtagResetArg(tParserCommandInfo)
+addJtagKhzArg(tParserCommandInfo)
+
+-- list_interfaces
+local tParserCommandListInterfaces = tParser:command('list_interfaces li', 'List all connected interfaces'):target('fCommandListInterfacesSelected')
+-- optional_args = {"t", "jf", "jr"}
+addPluginTypeArg(tParserCommandListInterfaces)
+addJtagResetArg(tParserCommandListInterfaces)
+addJtagKhzArg(tParserCommandListInterfaces)
+
+-- detect_netx
+local tParserCommandDetectNetx = tParser:command('detect_netx dn', 'Detect if an interface is a netX'):target('fCommandDetectNetxSelected')
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandDetectNetx)
+addPluginTypeArg(tParserCommandDetectNetx)
+addJtagResetArg(tParserCommandDetectNetx)
+addJtagKhzArg(tParserCommandDetectNetx)
+
+-- reset_netx
+local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandDetectNetxSelected')
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandResetNetx)
+addPluginTypeArg(tParserCommandResetNetx)
+addJtagResetArg(tParserCommandResetNetx)
+addJtagKhzArg(tParserCommandResetNetx)
+
 
 
 
@@ -588,174 +769,6 @@ function list_contains(l, e)
 		end
 	end
 	return false
-end
-
--- strKey and strVal are the argument key and value given on the command line.
--- strArgKey is the internal key, e.g. "b" for bus and "f" for file name.
-function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
-	local fOk
-	local strMsg
-	
-	local iVal
-	local strArgKey
-	local tArgdef
-	
-	for k, argdef in pairs(argdefs) do
-		if strKey == argdef.clkey then
-			strArgKey = k
-			tArgdef = argdef
-			break
-		end
-	end
-	
-	if not tArgdef then
-		fOk = false
-		strMsg = string.format("Unknown argument: %s", strKey)
-	
-	elseif not list_contains(tModeArgs.required_args, strArgKey) and not list_contains(tModeArgs.optional_args, strArgKey) then
-		fOk = false
-		if strKey=="" then
-			strMsg = string.format("Mode %s does not require argument %s", strMode, tArgdef.name)
-		else
-			strMsg = string.format("Mode %s does not require argument %s", strMode, strKey)
-		end
-	
-	elseif strVal == nil then
-		fOk = false
-		strMsg = string.format("Value for argument %s is missing", strKey)
-		
-	elseif tArgdef.type == "string" then
-		aArgs[tArgdef.argkey] = strVal
-		fOk = true
-		
-	elseif tArgdef.type == "number" then
-		iVal = tonumber(strVal)
-		if iVal then
-			aArgs[tArgdef.argkey] = iVal
-			fOk = true
-		else
-			fOk = false
-			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
-		end
-	elseif tArgdef.type == "choice" then
-		local val = tArgdef.choices[strVal]
-		if val then
-			aArgs[tArgdef.argkey] = val
-			fOk = true
-		else
-			fOk = false
-			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
-			if tArgdef.choices_help then 
-				strMsg = strMsg .. " " .. tArgdef.choices_help
-			end
-		end
-	end
-	
-	return fOk, strMsg
-end
-
-
--- Check if all required args are present 
--- If a required arg is not specified but has a default value, set the default.
--- If it does not have a default, return an error.
-function checkRequiredArgs(aArgs, astrRequiredArgs)
-	-- get the list of required/optional args for mode
-	local fOk = true
-	local strMsg 
-	
-	local astrMissingArgs = {}
-	
-	for _k, strArg in ipairs(astrRequiredArgs) do
-		local tArgdef = argdefs[strArg]
-		local tArgTableKey = tArgdef.argkey -- key in the argument table
-		
-		if aArgs[tArgTableKey] == nil then
-			if tArgdef.default then
-				aArgs[tArgTableKey] = tArgdef.default
-				printf("Setting default value for argument %s (%s): %s", tArgdef.clkey, tArgdef.name, tostring(tArgdef.default))
-			else
-				table.insert(astrMissingArgs, tArgdef.name)
-			end
-		end
-	end
-	
-	if #astrMissingArgs >0 then
-		fOk = false
-		strMsg = "Please specify the following arguments: " .. table.concat(astrMissingArgs, ", ")
-	end
-	
-	return fOk, strMsg
-end
-
-
--- Checks during argument parsing: Return an error if 
--- - the mode name is unknown
--- - an argument key ("-b") is unknown
--- - an argument key is known but neither required nor optional for the given mode
-
--- After argument parsing: Check if all required args are present 
--- If a required arg is not specified but has a default value, set the default.
--- If it does not have a default, return an error.
-
-function parseArgs()
-	local fOk
-	local strMsg
-	
-	local aArgs
-	local strMode
-	local tModeArgs
-
-	local iArg
-	local nArgs
-	
-	fOk = true
-	aArgs = {}
-	nArgs = #arg
-	
-	-- First arg is the mode.
-	-- If no args are given, set help mode
-	if nArgs == 0 then
-		aArgs.iMode = MODE_HELP
-		
-	else
-		strMode = arg[1]
-		tModeArgs = atModeArgs[strMode]
-		
-		if tModeArgs == nil then
-			fOk = false
-			strMsg = string.format("Unknown mode: %s", strMode)
-		else
-			aArgs.iMode = tModeArgs.mode
-			
-			iArg = 2
-			-- Parse the arguments.
-			-- The last argument may be the file name and has no key.
-			while (iArg <= nArgs and fOk == true) do
-				if iArg == nArgs then
-					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, "", arg[iArg])
-					iArg = iArg + 1
-				else
-					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, arg[iArg], arg[iArg+1])
-					iArg = iArg + 2
-				end
-			end
-			
-			-- check required arguments
-			if fOk == true then
-				fOk, strMsg = checkRequiredArgs(aArgs, tModeArgs.required_args)
-			end
-		end
-	end
-	
-	-- construct the argument list for DetectInterfaces
-	aArgs.atPluginOptions = {
-		romloader_jtag = {
-			jtag_reset = aArgs.strJtagReset,
-			jtag_frequency_khz = aArgs.iJtagKhz
-		}
-	}
-	
-	return fOk, aArgs, strMsg
 end
 
 
@@ -907,7 +920,7 @@ function exec(aArgs)
 		end
 		
 		-- load input file  strDataFileName --> strData
-		if fOk and (iMode == MODE_FLASH or iMode == MODE_VERIFY or iMode == MODE_VERIFY_HASH) then
+		if fOk and (aArgs.fCommandFlashSelected or aArgs.fCommandVerifySelected or aArgs.fCommandVerifyHashSelected) then
 			print("Loading data file")
 			strData, strMsg = loadBin(strDataFileName)
 			if not strData then
@@ -928,7 +941,7 @@ function exec(aArgs)
 		end
 		
 		if fOk then 
-			if iMode == MODE_INFO then
+			if aArgs.fCommandInfoSelected then
 				-- Get the board info table.
 				aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
 				if aBoardInfo then
@@ -980,24 +993,23 @@ function exec(aArgs)
 		end
 		
 		-- flash/erase: erase the area
-		--if fOk and (iMode == MODE_FLASH or iMode == MODE_ERASE) then
-		-- Explicit erase is not necessary when flashing SDIO
-		if fOk and (iMode == MODE_ERASE or (iMode == MODE_FLASH and iBus ~= flasher.BUS_SDIO))then
+
+		if fOk and (aArgs.fCommandEraseSelected or (aArgs.fCommandFlashSelected and iBus ~= flasher.BUS_SDIO))then
 			fOk, strMsg = flasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
 		end
 		
 		-- flash: flash the data
-		if fOk and iMode == MODE_FLASH then
+		if fOk and aArgs.fCommandFlashSelected then
 			fOk, strMsg = flasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
 		end
 		
 		-- verify
-		if fOk and iMode == MODE_VERIFY then
+		if fOk and aArgs.fCommandVerifySelected then
 			fOk, strMsg = flasher.verifyArea(tPlugin, aAttr, ulStartOffset, strData)
 		end
 		
 		-- read
-		if fOk and iMode == MODE_READ then
+		if fOk and aArgs.fCommandReadSelected then
 			strData, strMsg = flasher.readArea(tPlugin, aAttr, ulStartOffset, ulLen)
 			if strData == nil then
 				fOk = false
@@ -1006,7 +1018,7 @@ function exec(aArgs)
 		end
 		
 		-- for test mode
-		if fOk and iMode == MODE_TEST then
+		if fOk and aArgs.fCommandTestSelected then
 			flasher_test.flasher_interface:configure(tPlugin, FLASHER_PATH, iBus, iUnit, iChipSelect)
 			fOk, strMsg = flasher_test.testFlasher()
 		end
@@ -1028,7 +1040,7 @@ function exec(aArgs)
 		
 		
 		-- hash, verify_hash: compute the SHA1 of the data in the flash
-		if fOk and (iMode == MODE_HASH or iMode == MODE_VERIFY_HASH) then
+		if fOk and (aArgs.fCommandHashSelected or aArgs.fCommandVerifyHashSelected) then
 			strFlashHashBin, strMsg = flasher.hashArea(tPlugin, aAttr, ulStartOffset, ulLen)
 			if strFlashHashBin then
 				fOk = true
@@ -1042,7 +1054,7 @@ function exec(aArgs)
 		
 		
 		-- verify_hash: compute the hash of the input file and compare
-		if fOk and iMode == MODE_VERIFY_HASH then
+		if fOk and aArgs.fCommandVerifyHashSelected then
 			local mh = mhash.mhash_state()
 			mh:init(mhash.MHASH_SHA1)
 			mh:hash(strData)
@@ -1062,7 +1074,7 @@ function exec(aArgs)
 		end
 	
 		-- save output file   strData --> strDataFileName
-		if fOk and iMode == MODE_READ then
+		if fOk and aArgs.fCommandReadSelected then
 			fOk, strMsg = writeBin(strDataFileName, strData)
 		end
 		
@@ -1141,8 +1153,7 @@ function flasher_interface.flash(self, ulOffset, strData)
 	if fOk == false then
 		return false, strMsg
 	end
-	
-	self.aArgs.iMode = MODE_FLASH
+    self.aArgs.fCommandFlashSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	return exec(self.aArgs)
@@ -1154,15 +1165,14 @@ function flasher_interface.verify(self, ulOffset, strData)
 	if fOk == false then
 		return false, strMsg
 	end
-	
-	self.aArgs.iMode = MODE_VERIFY
+    self.aArgs.fCommandVerifySelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	return exec(self.aArgs)
 end
 
 function flasher_interface.read(self, ulOffset, ulSize)
-	self.aArgs.iMode = MODE_READ
+    self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	
@@ -1179,7 +1189,7 @@ end
 
 
 function flasher_interface.erase(self, ulOffset, ulSize)
-	self.aArgs.iMode = MODE_ERASE
+    self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	return exec(self.aArgs)
@@ -1214,105 +1224,93 @@ end
 
 FLASHER_PATH = "netx/"
 
-local aArgs
-local fOk
-local strMsg
+function main()
+    local aArgs
+    local fOk
+    local strMsg
 
-io.output():setvbuf("no")
+    io.output():setvbuf("no")
 
-fOk, aArgs, strMsg = parseArgs()
+    aArgs = tParser:parse()
+    	-- construct the argument list for DetectInterfaces
+	aArgs.atPluginOptions = {
+		romloader_jtag = {
+			jtag_reset = aArgs.strJtagReset,
+			jtag_frequency_khz = aArgs.iJtagKhz
+		}
+	}
+    fOk = true
 
-if fOk ~= true then
-	if strMsg then
-		print(strMsg)
-		print("-h for help")
-	else 
-		print(strUsage)
-	end
-	os.exit(1)
-	
-elseif aArgs.iMode == MODE_HELP then
-	require("flasher_version")
-	print(FLASHER_VERSION_STRING)
-	print()
-	print(strUsage)
-	os.exit(0)
-	
-elseif aArgs.iMode == MODE_VERSION then
-	require("flasher_version")
-	print(FLASHER_VERSION_STRING)
-	os.exit(0)
-    
-else
-	showArgs(aArgs)
-	
-	require("muhkuh_cli_init")
-	require("mhash")
-	require("flasher")
-	require("flasher_test")
-	
-	if aArgs.iMode == MODE_LIST_INTERFACES then
-		list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
-		os.exit(0)
-	
-	elseif aArgs.iMode == MODE_RESET then
-		fOk, strMsg = reset_netx_via_watchdog(aArgs)
-		if fOk then
-			if strMsg then 
-				print(strMsg)
-			end
-			os.exit(0)
-		else
-			printf("Error: %s", strMsg or "unknown error")
-			os.exit(1)
-		end
-		
-	elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
-		fOk, strMsg = detect_chiptype(aArgs)
-		if fOk then
-			if strMsg then 
-				print(strMsg)
-			end
-			os.exit(0)
-		else
-			printf("Error: %s", strMsg or "unknown error")
-			os.exit(1)
-		end
-		
-	elseif aArgs.iMode == MODE_TEST_CLI then
-		flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
-		fOk, strMsg = flasher_test.testFlasher(flasher_interface)
-		if fOk then
-			if strMsg then 
-				print(strMsg)
-			end
-			print("Test PASSED")
-			os.exit(0)
-		else
-			printf("Error: %s", strMsg or "unknown error")
-			print("Test FAILED")
-			os.exit(1)
-		end
-		
-	else
-		fOk, strMsg, tDevInfo = exec(aArgs)
-		
-		if tDevInfo.strDevName then
-			printf("Flash device name: %s", tDevInfo.strDevName)
-		end
-		if tDevInfo.strDevId then
-			printf("Flash device has JEDEC ID: %s", tDevInfo.strDevId)
-		end
-		
-		if fOk then
-			if strMsg then 
-				print(strMsg)
-			end
-			os.exit(0)
-		else
-			print(strMsg or "an unknown error occurred")
-			os.exit(1)
-		end
-	end
+    -- showArgs(aArgs)
+
+    require("muhkuh_cli_init")
+    require("mhash")
+    require("flasher")
+    require("flasher_test")
+
+    if aArgs.fCommandListInterfacesSelected then
+        list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
+        os.exit(0)
+
+    elseif aArgs.fCommandReadSelected then
+        fOk, strMsg = reset_netx_via_watchdog(aArgs)
+        if fOk then
+            if strMsg then
+                print(strMsg)
+            end
+            os.exit(0)
+        else
+            printf("Error: %s", strMsg or "unknown error")
+            os.exit(1)
+        end
+
+    elseif aArgs.fCommandDetectNetxSelected then
+        fOk, strMsg = detect_chiptype(aArgs)
+        if fOk then
+            if strMsg then
+                print(strMsg)
+            end
+            os.exit(0)
+        else
+            printf("Error: %s", strMsg or "unknown error")
+            os.exit(1)
+        end
+
+    elseif aArgs.fCommandTestCliSelected then
+        flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
+        fOk, strMsg = flasher_test.testFlasher(flasher_interface)
+        if fOk then
+            if strMsg then
+                print(strMsg)
+            end
+            print("Test PASSED")
+            os.exit(0)
+        else
+            printf("Error: %s", strMsg or "unknown error")
+            print("Test FAILED")
+            os.exit(1)
+        end
+
+    else
+        fOk, strMsg, tDevInfo = exec(aArgs)
+
+        if tDevInfo.strDevName then
+            printf("Flash device name: %s", tDevInfo.strDevName)
+        end
+        if tDevInfo.strDevId then
+            printf("Flash device has JEDEC ID: %s", tDevInfo.strDevId)
+        end
+
+        if fOk then
+            if strMsg then
+                print(strMsg)
+            end
+            os.exit(0)
+        else
+            print(strMsg or "an unknown error occurred")
+            os.exit(1)
+        end
+    end
 end
 
+main()
