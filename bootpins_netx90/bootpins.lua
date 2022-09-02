@@ -1,16 +1,36 @@
--- This version of the script is for inclusion in the CLI flasher. 
--- It contains some changes to make it compatible to the 
--- versions of romloader and tester_cli used in the flasher.
--- 
--- Changes for compatibility with Romloader: 
--- Added chip types net90C and netx90D to astrBinaryName
--- 
--- Changes for compatibility with old tester_cli.lua:
--- tester:fn() -> tester.fn()
--- tester:fn(...) -> tester.fn(nil, ...)
--- for fn in mbin_write, mbin_execute, stdRead, stdWrite, stdCall
+--[[
+This version of the script is for inclusion in the CLI flasher. 
+It contains some changes to make it compatible to the 
+versions of romloader and tester_cli used in the flasher.
 
--- Removed reading the unique ID
+Changes for compatibility with Romloader: 
+Added chip types net90C and netx90D to astrBinaryName
+
+Changes for compatibility with old tester_cli.lua:
+tester:fn() -> tester.fn()
+tester:fn(...) -> tester.fn(nil, ...)
+for mbin_write, mbin_execute, stdRead, stdWrite, stdCall
+
+Return values:
+asic_typ:               14  romloader chip type returned by plugin:get_chiptyp()
+boot_mode:              2
+strapping_options:      7
+chip_id:                18  chip type from bootpins.atChipID as detected by the routine
+size_of_unique_id_in_bits
+unique_id
+
+Values for chip_id that are relevant for netX 90:
+bootpins.atChipID.unknown      - clock enable mask bits are cleared
+bootpins.atChipID.NETX90       - either netX 90 MPW OR Rev0
+bootpins.atChipID.NETX90B      - netX 90 Rev1
+bootpins.atChipID.NETX90BPHYR3 - netX 90 Rev1 with PHY V3
+bootpins.atChipID.NETX90C      - netX 90 Rev2 
+
+Note: the routine always returns OK.
+If the clock enable fails because the clock_enable_mask bits are cleared,
+The routine returns OK and chip_id is == bootpins.atChipID.unknown
+--]]
+
 
 local class = require 'pl.class'
 local BootPins = class()
@@ -48,7 +68,6 @@ function BootPins:_init()
   end
   self.aulIdToChip = aulIdToChip
 
--- added netx90C/D to astrBinaryName
   self.astrBinaryName = {
     [romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = '4000',
     [romloader.ROMLOADER_CHIPTYP_NETX4000_FULL]    = '4000',
@@ -72,7 +91,6 @@ end
 
 
 -- Read the boot pins from the netX.
-
 function BootPins:read(tPlugin)
   -- Get the binary for the ASIC.
   local tAsicTyp = tPlugin:GetChiptyp()
@@ -84,42 +102,52 @@ function BootPins:read(tPlugin)
 
   -- Download the binary, execute it and get the results back.
   local aParameter = {
+    'INPUT', -- 0: skip PHY setup
     'OUTPUT',
     'OUTPUT',
     'OUTPUT',
     'OUTPUT',
     'OUTPUT'
   }
-	local aAttr = tester.mbin_open(strNetxBinary, tPlugin)
+
+  -- Skip the PHY setup when the routine is called via ethernet.
+  if (tPlugin:GetTyp()=="romloader_eth") then
+    aParameter[1] = 0 -- do not set up Phy
+  else
+    aParameter[1] = 1 -- set up Phy
+  end
+
+  local aAttr = tester.mbin_open(strNetxBinary, tPlugin)
   tester.mbin_debug(aAttr)
   tester.mbin_write(nil, tPlugin, aAttr)
   tester.mbin_set_parameter(tPlugin, aAttr, aParameter)
   local ulResult = tester.mbin_execute(nil, tPlugin, aAttr, aParameter)
-   
-  -- Note: the routine always returns OK.
-  -- If the clock enable fails because the clock_enable_mask bits are cleared,
-  -- The routine returns OK and chip_id is == CHIPID_unknown 
-  -- CHIPID_unknown - this is returned if the clock enable mask bits are cleared
-  -- CHIPID_netX90 - either MPW OR Rev0
-  -- CHIPID_netX90B - Rev1
-  -- CHIPID_netX90C - Rev2
-  -- CHIPID_netX90BPhyR3 - Rev1 with PHY v3
   if ulResult~=0 then
     error('The test failed with return code:' .. ulResult)
   end
 
--- asic_typ:       14
--- boot_mode :     2
--- strapping_options :     7
--- chip_id :       18
-  local atResult = {
-    -- chip type returned by plugin:get_chiptyp()
-    asic_typ = tAsicTyp,
+  -- Read the unique ID if there is one.
+  local sizUniqueIdInBits = aParameter[5]
+  local strUniqueId = ''
+  if sizUniqueIdInBits>0 then
+    -- Check for an upper limit.
+    if sizUniqueIdInBits>2048 then
+      error('Cowardly refusing to read more than 2048 bits.')
+    end
+    -- Get the size of the unique ID in bytes.
+    local sizUniqueId = math.ceil(sizUniqueIdInBits / 8)
 
-    boot_mode = aParameter[1],
-    strapping_options = aParameter[2],
-    -- chip type as detected by the routine
-    chip_id = aParameter[3],
+    -- Read the unique ID.
+    strUniqueId = tester.stdRead(nil, tPlugin, aAttr.ulParameterStartAddress+0x0c+0x10, sizUniqueId)
+  end
+
+  local atResult = {
+    asic_typ = tAsicTyp,
+    boot_mode = aParameter[2],
+    strapping_options = aParameter[3],
+    chip_id = aParameter[4],
+    size_of_unique_id_in_bits = sizUniqueIdInBits,
+    unique_id = strUniqueId
   }
 
   return atResult
