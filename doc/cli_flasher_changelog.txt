@@ -1,3 +1,13 @@
+Updates in CLI Flasher v1.8.1
+==============================
+
+* Bugfix: Possible crash when connecting to the netX 90 Rev2
+  via UART or ethernet (NXTFLASHER-534).
+
+* Bugfix: detect_netx may hang with netx 90 Rev.1 (PHY V2 or V3) 
+  over ethernet (NXTFLASHER-537).
+
+
 Updates in CLI Flasher v1.8.0
 ==============================
 
