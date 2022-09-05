@@ -7,6 +7,7 @@ between this chip type and the netX 90 Rev1 with PHY V3.
 
 This version is from the branch "cli_flasher".
 It skips the ethernet initialization when it is used via romloader_eth.
+It also sets the phy_clk_freq bit in int_phy_cfg_phy_ctrl.
 bootpins.lua has been edited to make it comaptible with the CLI flasher environment.
 
 
