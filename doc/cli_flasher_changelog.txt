@@ -1,11 +1,21 @@
 Updates in CLI Flasher v1.8.1
 ==============================
 
-* Bugfix: Possible crash when connecting to the netX 90 Rev2
-  via UART or ethernet (NXTFLASHER-534).
+* Bugfix: detect_netx may hang with netx 90 Rev1 (PHY V2 or V3) 
+  over ethernet.
 
-* Bugfix: detect_netx may hang with netx 90 Rev.1 (PHY V2 or V3) 
-  over ethernet (NXTFLASHER-537).
+Romloader v2.5.3:
+* Bugfix: Possible crash when connecting to the netX 90 Rev2
+  via UART or ethernet.
+
+USIPGen v0.2.1: 
+* Exit with error code 1 if the serial connection can not be opened
+  inside the load_usip function.
+
+USIP Player:
+* Do not verify the signature of the helper files if the read command 
+  is selected.
+
 
 
 Updates in CLI Flasher v1.8.0
