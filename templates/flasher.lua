@@ -52,6 +52,7 @@ OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- Expand 
 OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
 OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
 OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
+OPERATION_MODE_Identify			 = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
 
 
 MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -1373,3 +1374,19 @@ function sdi_idle_bytes(tPlugin, aAttr, sizIdleBytes, fnCallbackProgress, fnCall
 	return ulValue == 0
 end
 
+
+--------------------------------------------------------------------------																								
+--	Function to visually identify the connected hardware
+--	Blinks the status LED on the Board for 5 seconds
+--  Pattern => Y = Yellow O = Off G = Green YOYOGOGO
+--------------------------------------------------------------------------
+function identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
+	-- todo TODO
+	local aulParameter =
+	{
+		OPERATION_MODE_Identify,                       -- operation mode: identify
+		aAttr.ulDeviceDesc                             -- data block for the device description
+	}
+	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	return ulValue == 0
+end
