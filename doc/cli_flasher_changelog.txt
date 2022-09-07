@@ -1,3 +1,12 @@
+Updates in CLI Flasher v2.0.0
+==============================
+
+* Added the 'identify' command.
+  It allows the visual identification of hardware by flashing
+  the system LED in a Yellow Yellow Green Green pattern for 5 seconds
+
+
+
 Updates in CLI Flasher v1.8.1
 ==============================
 
