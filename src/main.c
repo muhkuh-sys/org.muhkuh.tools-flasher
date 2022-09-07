@@ -763,6 +763,33 @@ static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *pt
 
 /* ------------------------------------- */
 
+static NETX_CONSOLEAPP_RESULT_T opMode_identify(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	(void) ptConsoleParams; /* unused */
+	(void) ptAppParams; /* unused */
+
+	const unsigned int uDelayTimeMs = 125U;
+	const unsigned int uBlinkDurationMs = 5000U;
+
+	unsigned int blinks = 0U;
+
+	while(blinks < (uBlinkDurationMs/uDelayTimeMs)){
+		systime_delay_ms(uDelayTimeMs);
+		RDYRUN_T ledColor = blinks%8<4?RDYRUN_YELLOW:RDYRUN_GREEN;
+		rdy_run_setLEDs((blinks%2==1?ledColor:RDYRUN_OFF));
+		blinks++;
+	}
+
+	rdy_run_setLEDs(RDYRUN_OFF);
+	tResult = NETX_CONSOLEAPP_RESULT_OK;
+	
+	return tResult;
+}
+
+
+/* ------------------------------------- */
+
 #define FLAG_STARTADR 1
 #define FLAG_ENDADR 2
 #define FLAG_SIZE 4
@@ -893,6 +920,11 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 	case OPERATION_MODE_SpiMacroPlayer:
 		ulPars = 0;
 		/* NOTE: do not print the mode here or the user will get insane for big macros. */
+		break;
+
+	case OPERATION_MODE_Identify:
+		ulPars = 0;
+		uprintf(". Mode: Visually identify hardware\n");
 		break;
 
 	default:
@@ -1212,6 +1244,10 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 			case OPERATION_MODE_SpiMacroPlayer:
 				tResult = opMode_spiMacroPlayer(ptAppParams, ptTestParam);
+				break;
+			
+			case OPERATION_MODE_Identify:
+				tResult = opMode_identify(ptAppParams, ptTestParam);
 				break;
 			}
 		}

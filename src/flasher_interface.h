@@ -56,7 +56,8 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_GetEraseArea     = 7,    /* expand an area to the erase block borders */
 	OPERATION_MODE_GetBoardInfo     = 8,    /* get bus and unit information */
 	OPERATION_MODE_EasyErase        = 9,    /* A combination of GetEraseArea, IsErased and Erase. */
-	OPERATION_MODE_SpiMacroPlayer   = 10    /* Play an SPI macro. */
+	OPERATION_MODE_SpiMacroPlayer   = 10,    /* Play an SPI macro. */
+	OPERATION_MODE_Identify			= 11	/* Blink the status LED for 5 seconds to visualy identify the hardware */
 } OPERATION_MODE_T;
 
 
