@@ -763,28 +763,23 @@ static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *pt
 
 /* ------------------------------------- */
 
-static NETX_CONSOLEAPP_RESULT_T opMode_identify(tFlasherInputParameter *ptAppParams, NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
+static NETX_CONSOLEAPP_RESULT_T opMode_identify()
 {
-	NETX_CONSOLEAPP_RESULT_T tResult;
-	(void) ptConsoleParams; /* unused */
-	(void) ptAppParams; /* unused */
+	BLINKI_HANDLE_T tBlinkiHandle;
+	unsigned long ulStartTimeMs;
+	const unsigned long ulBlinkDurationMs = 5000U;
 
-	const unsigned int uDelayTimeMs = 125U;
-	const unsigned int uBlinkDurationMs = 5000U;
-
-	unsigned int blinks = 0U;
-
-	while(blinks < (uBlinkDurationMs/uDelayTimeMs)){
-		systime_delay_ms(uDelayTimeMs);
-		RDYRUN_T ledColor = blinks%8<4?RDYRUN_YELLOW:RDYRUN_GREEN;
-		rdy_run_setLEDs((blinks%2==1?ledColor:RDYRUN_OFF));
-		blinks++;
-	}
-
+	/* Switch all LEDs off. */
 	rdy_run_setLEDs(RDYRUN_OFF);
-	tResult = NETX_CONSOLEAPP_RESULT_OK;
-	
-	return tResult;
+
+	ulStartTimeMs = systime_get_ms();
+	rdy_run_blinki_init(&tBlinkiHandle, 0b001010101, 0b101010000);
+	while (0 == systime_elapsed(ulStartTimeMs, ulBlinkDurationMs))
+	{
+		rdy_run_blinki(&tBlinkiHandle);
+	};
+
+	return NETX_CONSOLEAPP_RESULT_OK;
 }
 
 
@@ -1247,7 +1242,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				break;
 			
 			case OPERATION_MODE_Identify:
-				tResult = opMode_identify(ptAppParams, ptTestParam);
+				tResult = opMode_identify();
 				break;
 			}
 		}

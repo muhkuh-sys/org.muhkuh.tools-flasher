@@ -39,7 +39,7 @@ testcli     [p][t][o] dev                      Test cli flasher
 list_interfaces[t][o]                          List all usable interfaces
 detect_netx [p][t][o]                          Detect the netx chip type
 reset_netx  [p][t][o]                          Reset the netx 90
-identify    [p][t][o]                          Blink status LED for 5 sec
+identify    [p][t][o]                          Blink SYS LED for 5 sec
 -h                                             Show this help   
 -version                                       Show flasher version 
         
@@ -558,7 +558,7 @@ atModeArgs = {
 	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
 	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
 	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
-	identify 		= { mode = MODE_IDENTIFY,		   required_args = {},								optional_args = {"p", "t", "jf", "jr"}},
+	identify        = { mode = MODE_IDENTIFY,          required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }

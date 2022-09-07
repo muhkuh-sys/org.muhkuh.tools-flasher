@@ -1381,11 +1381,9 @@ end
 --  Pattern => Y = Yellow O = Off G = Green YOYOGOGO
 --------------------------------------------------------------------------
 function identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
-	-- todo TODO
 	local aulParameter =
 	{
 		OPERATION_MODE_Identify,                       -- operation mode: identify
-		aAttr.ulDeviceDesc                             -- data block for the device description
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
