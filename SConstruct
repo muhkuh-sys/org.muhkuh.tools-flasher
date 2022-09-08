@@ -148,7 +148,7 @@ flasher_sources_lib_netx90 = """
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
-    src/sha1_netx/sha1.c
+	src/sha1_netx/sha1.c
 """
 
 
