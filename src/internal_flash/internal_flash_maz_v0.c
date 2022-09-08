@@ -1309,13 +1309,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 
 				ulLength = ulOffsetEnd - ulOffsetStart;
 
-	
-				// progress_bar_init(ulLength);
-
 				SHA1_Update(ptSha1Context, pucFlashStart, ulLength);
-
-				// progress_bar_set_position(ulLength);
-				// progress_bar_finalize();
 
 				tResult = NETX_CONSOLEAPP_RESULT_OK;
 			}
