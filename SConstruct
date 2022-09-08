@@ -706,6 +706,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/includes/spi_flash.h':                        'src/spi_flash.h',
         'targets/flasher_lib/includes/flasher_version.h':                  'targets/version/flasher_version.h',
         'targets/flasher_lib/includes/spi_flash_types.h':                  'targets/netx50_nodbg/spi_flash_types/spi_flash_types.h',
+
         'targets/flasher_lib/libflasher_netx4000.a':                       lib_netx4000_nodbg,
         'targets/flasher_lib/libflasher_netx500.a':                        lib_netx500_nodbg,
         'targets/flasher_lib/libflasher_netx90mpw.a':                      lib_netx90_mpw_nodbg,
