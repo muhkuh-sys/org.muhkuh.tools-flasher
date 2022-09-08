@@ -17,6 +17,12 @@ SVN_AUTHOR ="$Author$"
 
 -- Requires are below, because they cause a lot of text to be printed.
 
+local path = require "pl.path"
+local stringx = require "pl.stringx"
+local FLASHER_DIR = path.currentdir()
+local DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
+
+print("DEFAULT_HBOOT_OPTION: "..DEFAULT_HBOOT_OPTION)
 
 --------------------------------------------------------------------------
 -- Usage
@@ -543,17 +549,17 @@ MODE_GET_DEVICE_SIZE = 14
 
 
 atModeArgs = {
-	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr"}},
-	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
-	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
-	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
+	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
+	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr", 'comp', 'sec'}},
 	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
 	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
@@ -570,7 +576,10 @@ t  = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin 
 s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
 l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
 f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
-
+comp  = {type = "flag", clkey = "--comp",   argkey = "bCompMode",
+         name="use compatibility mode for netx90 M2M interfaces", default=false},
+sec  = {type = "string", clkey = "--sec",   argkey = "strSecureOption",
+        name="path to secure images used for secure M2M connection", default=DEFAULT_HBOOT_OPTION},
 jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
 jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
 	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
@@ -599,6 +608,7 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 	local iVal
 	local strArgKey
 	local tArgdef
+    local skip_args = 1
 	
 	for k, argdef in pairs(argdefs) do
 		if strKey == argdef.clkey then
@@ -619,11 +629,8 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 		else
 			strMsg = string.format("Mode %s does not require argument %s", strMode, strKey)
 		end
-	
-	elseif strVal == nil then
-		fOk = false
-		strMsg = string.format("Value for argument %s is missing", strKey)
-		
+
+
 	elseif tArgdef.type == "string" then
 		aArgs[tArgdef.argkey] = strVal
 		fOk = true
@@ -649,23 +656,32 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 				strMsg = strMsg .. " " .. tArgdef.choices_help
 			end
 		end
+    elseif tArgdef.type == "flag" then
+
+		aArgs[tArgdef.argkey] = true
+		fOk = true
+        skip_args = 0
+
+    elseif strVal == nil then
+		fOk = false
+		strMsg = string.format("Value for argument %s is missing", strKey)
 	end
 	
-	return fOk, strMsg
+	return fOk, strMsg, skip_args
 end
 
 
 -- Check if all required args are present 
 -- If a required arg is not specified but has a default value, set the default.
 -- If it does not have a default, return an error.
-function checkRequiredArgs(aArgs, astrRequiredArgs)
+function checkRequiredArgs(aArgs, tModeArgs)
 	-- get the list of required/optional args for mode
 	local fOk = true
 	local strMsg 
 	
 	local astrMissingArgs = {}
 	
-	for _k, strArg in ipairs(astrRequiredArgs) do
+	for _k, strArg in ipairs(tModeArgs.required_args) do
 		local tArgdef = argdefs[strArg]
 		local tArgTableKey = tArgdef.argkey -- key in the argument table
 		
@@ -678,7 +694,16 @@ function checkRequiredArgs(aArgs, astrRequiredArgs)
 			end
 		end
 	end
-	
+    for _k, strArg in ipairs(tModeArgs.optional_args) do
+		local tArgdef = argdefs[strArg]
+		local tArgTableKey = tArgdef.argkey -- key in the argument table
+		if aArgs[tArgTableKey] == nil then
+			if tArgdef.default ~= nil then
+				aArgs[tArgTableKey] = tArgdef.default
+				printf("Setting default value for argument %s (%s): %s", tArgdef.clkey, tArgdef.name, tostring(tArgdef.default))
+			end
+		end
+    end
 	if #astrMissingArgs >0 then
 		fOk = false
 		strMsg = "Please specify the following arguments: " .. table.concat(astrMissingArgs, ", ")
@@ -730,19 +755,26 @@ function parseArgs()
 			iArg = 2
 			-- Parse the arguments.
 			-- The last argument may be the file name and has no key.
-			while (iArg <= nArgs and fOk == true) do
-				if iArg == nArgs then
-					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, "", arg[iArg])
-					iArg = iArg + 1
-				else
-					fOk, strMsg = parseArg(aArgs, strMode, tModeArgs, arg[iArg], arg[iArg+1])
-					iArg = iArg + 2
-				end
+            while (iArg <= nArgs and fOk == true) do
+                local next_arg = arg[iArg]
+                if stringx.startswith(next_arg, '-') then
+                    print("")
+                    if iArg == nArgs then
+                        fOk, strMsg, skip_args = parseArg(aArgs, strMode, tModeArgs, arg[iArg], nil)
+                        iArg = iArg + 1 + skip_args
+                    else
+                        fOk, strMsg, skip_args = parseArg(aArgs, strMode, tModeArgs, arg[iArg], arg[iArg+1])
+                        iArg = iArg + 1 + skip_args
+                    end
+                else
+					fOk, strMsg, skip_args = parseArg(aArgs, strMode, tModeArgs, "", arg[iArg])
+					iArg = iArg + 1 + skip_args
+                end
 			end
 			
 			-- check required arguments
 			if fOk == true then
-				fOk, strMsg = checkRequiredArgs(aArgs, tModeArgs.required_args)
+				fOk, strMsg = checkRequiredArgs(aArgs, tModeArgs)
 			end
 		end
 	end
@@ -873,7 +905,9 @@ function exec(aArgs)
 	local ulLen          = aArgs.ulLen
 	local strDataFileName= aArgs.strDataFileName
 	local atPluginOptions= aArgs.atPluginOptions
-	
+    local bCompMode = aArgs.bCompMode
+	local strSecureOption = path.abspath(aArgs.strSecureOption)
+
 	local tPlugin
 	local aAttr
 	local strData
@@ -920,7 +954,7 @@ function exec(aArgs)
 		-- Download the flasher.
 		if fOk then
 			print("Downloading flasher binary")
-			aAttr = flasher.download(tPlugin, FLASHER_PATH)
+			aAttr = flasher.download(tPlugin, FLASHER_PATH, nil, bCompMode, strSecureOption)
 			if not aAttr then
 				fOk = false
 				strMsg = "Error while downloading flasher binary"
