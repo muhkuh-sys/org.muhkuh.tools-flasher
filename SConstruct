@@ -21,6 +21,7 @@
 
 
 import os.path
+import struct
 
 #----------------------------------------------------------------------------
 #
@@ -389,9 +390,23 @@ if 'NETX90' in atPickNetxForBuild:
     
     env_netx90_nodbg_secure = env_netx90_default.Clone()
     env_netx90_nodbg_secure.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0'], ['SECURE', '1']])
-    elf_netx90_nodbg_secure,bin_netx90_nodbg_secure, lib_netx90_nodbg_secure = flasher_build('flasher_netx90_secure', env_netx90_nodbg_secure, output_path, src_lib_netx90, src_main_netx90)
+    elf_netx90_nodbg_secure, bin_netx90_nodbg_secure, lib_netx90_nodbg_secure = flasher_build('flasher_netx90_secure', env_netx90_nodbg_secure, output_path, src_lib_netx90, src_main_netx90)
+
+    netx90_bin_file_path = str(bin_netx90_nodbg_secure[0])
+    with open (netx90_bin_file_path, "rb") as netx90_bin_file:
+        netx90_bin_file.seek(0x28)
+        netx90_parameter_addr_bytes = netx90_bin_file.read(4)
+        netx90_parameter_addr = "0x%08x" % struct.unpack('<I', netx90_parameter_addr_bytes)[0]
+        print("netx90_parameter_addr: %s " % netx90_parameter_addr)
+
     if(os.path.exists(tPublicOptionPatchTable)):
-        tImg = env_netx90_nodbg_secure.HBootImage(hboot_netx90_flasher_bin, strHbootDefinition, HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable, HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_nodbg_secure}), ASIC_TYP='NETX90B')
+        tImg = env_netx90_nodbg_secure.HBootImage(
+            hboot_netx90_flasher_bin,
+            strHbootDefinition,
+            HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_nodbg_secure}),
+            HBOOTIMAGE_DEFINES=dict({"PARAM_ADDR":netx90_parameter_addr}),
+            ASIC_TYP='NETX90B')
     else:
         print("one of these files does not exists: ")
         for f in [strKeyRomPath, tPublicOptionPatchTable]:
@@ -454,8 +469,21 @@ if 'NETX90' in atPickNetxForBuild:
     env_netx90_dbg_secure = env_netx90_default.Clone()
     env_netx90_dbg_secure.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1'], ['SECURE', '1']])
     elf_netx90_dbg_secure,bin_netx90_dbg_secure, lib_netx90_dbg_secure = flasher_build('flasher_netx90_secure', env_netx90_dbg_secure, output_path, src_lib_netx90, src_main_netx90)
+
+    netx90_bin_file_path = str(bin_netx90_dbg_secure[0])
+    with open (netx90_bin_file_path, "rb") as netx90_bin_file:
+        netx90_bin_file.seek(0x28)
+        netx90_parameter_addr_bytes = netx90_bin_file.read(4)
+        netx90_parameter_addr = "0x%08x" % struct.unpack('<I', netx90_parameter_addr_bytes)[0]
+        print("netx90_parameter_addr: %s " % netx90_parameter_addr)
+
     if(os.path.exists(strKeyRomPath) and os.path.exists(tPublicOptionPatchTable)):
-        tImg = env_netx90_dbg_secure.HBootImage(strOutputImg, strHbootDefinition, HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable, HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg_secure}), HBOOTIMAGE_KEYROM_XML=strKeyRomPath, ASIC_TYP='NETX90B')
+        tImg = env_netx90_dbg_secure.HBootImage(strOutputImg,
+            strHbootDefinition,
+            HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg_secure}),
+            HBOOTIMAGE_DEFINES=dict({"PARAM_ADDR":netx90_parameter_addr}),
+            HBOOTIMAGE_KEYROM_XML=strKeyRomPath, ASIC_TYP='NETX90B')
     else:
         print("one of these files does not exists: ")
         for f in [strKeyRomPath, tPublicOptionPatchTable]:

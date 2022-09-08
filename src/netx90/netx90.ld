@@ -23,7 +23,7 @@ ENTRY(start)
 MEMORY
 {
 	ASSERT_EMPTY(rwx): ORIGIN = 0x00000000, LENGTH = 0
-	INTRAM(rwx):       ORIGIN = 0x00024000, LENGTH = 0x0001c000
+	INTRAM(rwx):       ORIGIN = 0x00030000, LENGTH = 0x00040000
 	IOVECTORS(rw):     ORIGIN = 0x2009FFF0, LENGTH = 0x00000010
 }
 
@@ -58,8 +58,10 @@ SECTIONS
 		__bss_start__ = . ;
 
 		*(.bss COMMON)
-
 		__bss_end__ = . ;
+
+        /* Data buffer has to be aligned to be a multiple of an ECC protected intflash area size (128 bit)*/
+		. = ALIGN(16);
 		__BUFFER_START__ = .;
 	} >INTRAM
 
