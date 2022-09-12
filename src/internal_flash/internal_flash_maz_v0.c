@@ -1307,6 +1307,20 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 				/* Set the flash to read mode. */
 				internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
 
+				/* If Iflash01 (unit 3) is selected and the access starts in intflash0
+				 * but ends in intflash1, configure intflash1, too */
+				if ((ptAttr->tArea == INTERNAL_FLASH_AREA_Flash01_Main) &&
+					(ulOffsetStart < IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES) &&
+					(ulOffsetEnd > IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES)
+				)
+				{
+					tResult = iflash_get_controller(ptAttr, IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES, &tFlashBlock);
+					if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+					{
+						internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
+					}
+				}
+				
 				ulLength = ulOffsetEnd - ulOffsetStart;
 
 				SHA1_Update(ptSha1Context, pucFlashStart, ulLength);
