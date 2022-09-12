@@ -25,20 +25,21 @@ SVN_AUTHOR ="$Author$"
 strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         
-Mode        Parameters                                                  
-flash       [p][t][o] dev [offset]      file   Write file to flash    
-read        [p][t][o] dev [offset] size file   Read flash and write to file      
-erase       [p][t][o] dev [offset] size        Erase area or whole flash       
-verify      [p][t][o] dev [offset]      file   Byte-by-byte compare
-verify_hash [p][t][o] dev [offset]      file   Quick compare using checksums
-hash        [p][t][o] dev [offset] size        Compute SHA1
-info        [p][t][o]                          Show busses/units/chip selects
-detect      [p][t][o] dev                      Check if flash is recognized
-test        [p][t][o] dev                      Test flasher      
-testcli     [p][t][o] dev                      Test cli flasher  
-list_interfaces[t][o]                          List all usable interfaces
-detect_netx [p][t][o]                          Detect the netx chip type
-reset_netx  [p][t][o]                          Reset the netx 90
+Mode          Parameters                                                  
+flash         [p][t][o] dev [offset]      file   Write file to flash    
+read          [p][t][o] dev [offset] size file   Read flash and write to file      
+erase         [p][t][o] dev [offset] size        Erase area or whole flash       
+verify        [p][t][o] dev [offset]      file   Byte-by-byte compare
+verify_hash   [p][t][o] dev [offset]      file   Quick compare using checksums
+hash          [p][t][o] dev [offset] size        Compute SHA1
+info          [p][t][o]                          Show busses/units/chip selects
+detect        [p][t][o] dev                      Check if flash is recognized
+test          [p][t][o] dev                      Test flasher      
+testcli       [p][t][o] dev                      Test cli flasher  
+list_interfaces  [t][o]                          List all usable interfaces
+detect_netx   [p][t][o]                          Detect the netx chip type
+reset_netx    [p][t][o]                          Reset the netx 90
+identify_netx [p][t][o]                          Blink SYS LED for 5 sec
 -h                                             Show this help   
 -version                                       Show flasher version 
         
@@ -534,6 +535,7 @@ MODE_LIST_INTERFACES = 15
 MODE_DETECT_CHIPTYPE = 16
 MODE_VERSION = 17
 MODE_RESET = 18
+MODE_IDENTIFY = 19
 -- test modes
 MODE_TEST = 11
 MODE_TEST_CLI = 12
@@ -556,6 +558,7 @@ atModeArgs = {
 	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
 	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
 	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
+	identify_netx   = { mode = MODE_IDENTIFY,          required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }
@@ -938,7 +941,9 @@ function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to read board info"
 				end
-	
+			elseif iMode == MODE_IDENTIFY then
+				-- no action nescessary
+				fOk = true;
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
@@ -1064,6 +1069,12 @@ function exec(aArgs)
 		-- save output file   strData --> strDataFileName
 		if fOk and iMode == MODE_READ then
 			fOk, strMsg = writeBin(strDataFileName, strData)
+		end
+
+		-- identify_netx
+		if fOk and iMode == MODE_IDENTIFY then
+			fOk = flasher.identify(tPlugin, aAttr)
+			strMsg = "LED sequence finished"			
 		end
 		
 		tPlugin:Disconnect()
