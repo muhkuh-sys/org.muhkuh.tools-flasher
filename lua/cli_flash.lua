@@ -13,7 +13,7 @@ SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
 -- Uncomment to debug with LuaPanda
--- require("LuaPanda").start("127.0.0.1",8818)
+require("LuaPanda").start("127.0.0.1",8818)
 
 -- Requires are below, because they cause a lot of text to be printed.
 
@@ -577,9 +577,9 @@ s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start o
 l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
 f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
 comp  = {type = "flag", clkey = "--comp",   argkey = "bCompMode",
-         name="use compatibility mode for netx90 M2M interfaces", default=false},
+         name="use compatibility mode for netx90 M2M interfaces", default=false, mutual_exclusive_group=1},
 sec  = {type = "string", clkey = "--sec",   argkey = "strSecureOption",
-        name="path to secure images used for secure M2M connection", default=DEFAULT_HBOOT_OPTION},
+        name="hboot selection", default=DEFAULT_HBOOT_OPTION, mutual_exclusive_group=1},
 jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
 jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
 	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
@@ -704,11 +704,47 @@ function checkRequiredArgs(aArgs, tModeArgs)
 			end
 		end
     end
+
 	if #astrMissingArgs >0 then
 		fOk = false
 		strMsg = "Please specify the following arguments: " .. table.concat(astrMissingArgs, ", ")
 	end
 	
+	return fOk, strMsg
+end
+
+function checkMutualExclusiveGroups(aArgs, tModeArgs)
+	local fOk = true
+	local strMsg 
+    -- collect the mutual exclusive groups
+    local tMutualExclusiveGroups = {}
+    for _k, strArg in ipairs(tModeArgs.optional_args) do
+		local tArgdef = argdefs[strArg]
+        local tArgTableKey = tArgdef.argkey -- key in the argument table
+        if tArgdef.mutual_exclusive_group ~= nil then
+            if tMutualExclusiveGroups[tArgdef.mutual_exclusive_group] == nil then
+                tMutualExclusiveGroups[tArgdef.mutual_exclusive_group] = {}
+            end
+            table.insert(tMutualExclusiveGroups[tArgdef.mutual_exclusive_group], tArgTableKey)
+        end
+    end
+
+    for ulGroupIdx, MutualExclGr in ipairs(tMutualExclusiveGroups) do
+		local aMEGroup = {}
+        local ulSetArgCount = 0
+        for ulIdx, tArgTableKey in ipairs(MutualExclGr) do
+            if aArgs[tArgTableKey] ~= nil then
+                ulSetArgCount = ulSetArgCount + 1
+				table.insert(aMEGroup, tArgTableKey)
+            end
+        end
+		
+        if ulSetArgCount > 1 then
+			local strMEGroup = stringx.join(", ", aMEGroup)
+			fOk = false
+			strMsg = "Too many arguments set inside mutual exclusive group [" .. strMEGroup .. "]. You can only set one."
+        end
+    end
 	return fOk, strMsg
 end
 
@@ -771,7 +807,10 @@ function parseArgs()
 					iArg = iArg + 1 + skip_args
                 end
 			end
-			
+			-- check mutual exclusive groups
+			if fOk == true then
+				fOk, strMsg = checkMutualExclusiveGroups(aArgs, tModeArgs)
+			end
 			-- check required arguments
 			if fOk == true then
 				fOk, strMsg = checkRequiredArgs(aArgs, tModeArgs)
