@@ -763,7 +763,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_spiMacroPlayer(tFlasherInputParameter *pt
 
 /* ------------------------------------- */
 
-static NETX_CONSOLEAPP_RESULT_T opMode_identify()
+static NETX_CONSOLEAPP_RESULT_T opMode_identify(void)
 {
 	BLINKI_HANDLE_T tBlinkiHandle;
 	unsigned long ulStartTimeMs;
@@ -773,7 +773,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_identify()
 	rdy_run_setLEDs(RDYRUN_OFF);
 
 	ulStartTimeMs = systime_get_ms();
-	rdy_run_blinki_init(&tBlinkiHandle, 0b001010101, 0b101010000);
+	rdy_run_blinki_init(&tBlinkiHandle, 0x55, 0x150); /* 0x55 = 0b001010101, 0x150 = 0b101010000 */
 	while (0 == systime_elapsed(ulStartTimeMs, ulBlinkDurationMs))
 	{
 		rdy_run_blinki(&tBlinkiHandle);

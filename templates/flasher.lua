@@ -52,7 +52,7 @@ OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- Expand 
 OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
 OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
 OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
-OPERATION_MODE_Identify			 = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
+OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
 
 
 MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
