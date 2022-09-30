@@ -95,6 +95,9 @@ OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagic}
 -- global variable for usage of hboot mode.
 -- If this Flag is set to True we use the hboot mode for netx90 M2M connections
 local bHbootFlash = false
+local path = require "pl.path"
+local FLASHER_DIR = path.currentdir()
+DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 
 --------------------------------------------------------------------------
 -- callback/progress functions, 

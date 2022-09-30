@@ -13,16 +13,13 @@ SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
 -- Uncomment to debug with LuaPanda
-require("LuaPanda").start("127.0.0.1",8818)
+-- require("LuaPanda").start("127.0.0.1",8818)
 
 -- Requires are below, because they cause a lot of text to be printed.
 
-local path = require "pl.path"
 local stringx = require "pl.stringx"
-local FLASHER_DIR = path.currentdir()
-local DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
+require("flasher")
 
-print("DEFAULT_HBOOT_OPTION: "..DEFAULT_HBOOT_OPTION)
 
 --------------------------------------------------------------------------
 -- Usage
@@ -30,46 +27,54 @@ print("DEFAULT_HBOOT_OPTION: "..DEFAULT_HBOOT_OPTION)
 
 strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
-        
-Mode        Parameters                                                  
-flash       [p][t][o] dev [offset]      file   Write file to flash    
-read        [p][t][o] dev [offset] size file   Read flash and write to file      
-erase       [p][t][o] dev [offset] size        Erase area or whole flash       
-verify      [p][t][o] dev [offset]      file   Byte-by-byte compare
-verify_hash [p][t][o] dev [offset]      file   Quick compare using checksums
-hash        [p][t][o] dev [offset] size        Compute SHA1
-info        [p][t][o]                          Show busses/units/chip selects
-detect      [p][t][o] dev                      Check if flash is recognized
-test        [p][t][o] dev                      Test flasher      
-testcli     [p][t][o] dev                      Test cli flasher  
-list_interfaces[t][o]                          List all usable interfaces
-detect_netx [p][t][o]                          Detect the netx chip type
-reset_netx  [p][t][o]                          Reset the netx 90
--h                                             Show this help   
--version                                       Show flasher version 
-        
+
+Mode        Parameters
+flash       [p][t][o] dev [offset]      sec comp file   Write file to flash
+read        [p][t][o] dev [offset] size sec comp file   Read flash and write to file
+erase       [p][t][o] dev [offset] size sec comp        Erase area or whole flash
+verify      [p][t][o] dev [offset]      sec comp file   Byte-by-byte compare
+verify_hash [p][t][o] dev [offset]      sec comp file   Quick compare using checksums
+hash        [p][t][o] dev [offset] size sec comp        Compute SHA1
+info        [p][t][o]                   sec comp        Show busses/units/chip selects
+detect      [p][t][o] dev               sec comp        Check if flash is recognized
+test        [p][t][o] dev               sec comp        Test flasher
+testcli     [p][t][o] dev               sec comp        Test cli flasher
+list_interfaces[t][o]                   sec comp        List all usable interfaces
+detect_netx [p][t][o]                                   Detect the netx chip type
+reset_netx  [p][t][o]                                   Reset the netx 90
+-h                                                      Show this help
+-version                                                Show flasher version
+
 p:    -p plugin_name
       select plugin
       example: -p romloader_usb_00_01
-      
+
 t:    -t plugin_type
       select plugin type
       example: -t romloader_jtag
-        
+
 o:    [-jtag_khz frequency] [-jtag_reset mode]
-      -jtag_khz: override JTAG frequency 
+      -jtag_khz: override JTAG frequency
       -jtag_reset: hard(default)/soft/attach
 
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
       default: -u 0 -cs 0
-       
+
 off:  -s device_start_offset
       offset in the flash device, defaults to 0
-       
+
 size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
+
+sec:  --sec secure_option_path
+	  a path to the signed flasher files directory
+	  enables usage of secure mode communication with a netx90 via machine interfaces
+
+comp: --comp compatibility_mode
+	  flag: switch back to compatibility mode for netx90 machine interface communication
+	  when the flag is set, a binary version of the flasher is used instead of a hboot image version
 
 
 Limitations:
@@ -78,6 +83,8 @@ The reset_netx command currently supports only the netx 90.
 
 The hash and verify_hash commands do not support the netx 90 and netIOL.
 
+The secure mode features ('--sec' and '--comp') are only valid for netx90
+
 
 Examples:
 
@@ -85,11 +92,10 @@ Write file to serial flash:
 lua cli_flash.lua flash -b 1 NETX100-BSL.bin
 
 Erase boot cookie from serial flash:
-lua cli_flash.lua erase -b 1 -l 4 
+lua cli_flash.lua erase -b 1 -l 4
 
 Erase boot cookie from parallel flash:
 lua cli_flash.lua erase -b 0 -l 4
-
 ]==]
 
 --------------------------------------------------------------------------
@@ -98,8 +104,8 @@ lua cli_flash.lua erase -b 0 -l 4
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
--- returns 
---   data if successful 
+-- returns
+--   data if successful
 --   nil, message if an error occurred
 function loadBin(strFilePath)
 	local strData
@@ -559,8 +565,8 @@ atModeArgs = {
 	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
 	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
 	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr", 'comp', 'sec'}},
-	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr", 'comp', 'sec'}},
-	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
+	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
+	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
@@ -579,7 +585,7 @@ f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file na
 comp  = {type = "flag", clkey = "--comp",   argkey = "bCompMode",
          name="use compatibility mode for netx90 M2M interfaces", default=false, mutual_exclusive_group=1},
 sec  = {type = "string", clkey = "--sec",   argkey = "strSecureOption",
-        name="hboot selection", default=DEFAULT_HBOOT_OPTION, mutual_exclusive_group=1},
+        name="path to signed image directory", default=DEFAULT_HBOOT_OPTION, mutual_exclusive_group=1},
 jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
 jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
 	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
