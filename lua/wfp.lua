@@ -1,4 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
+-- require("LuaPanda").start("127.0.0.1",8818)
 
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
@@ -8,6 +9,11 @@ local wfp_verify = require 'wfp_verify'
 local class = require 'pl.class'
 local WFPXml = class()
 local xml = require 'pl.xml'
+
+--local tFlasher = require 'flasher'(tLog)
+local tFlasher = require 'flasher'
+
+
 
 
 function WFPXml:_init(version, tLog)
@@ -23,7 +29,7 @@ function WFPXml:addTarget(strTargetName)
 	self.tTarget = xml.new("Target")
 	self.tTarget:set_attrib("netx", strTargetName)
 	self.nodeFlasherPack:add_child(self.tTarget)
-	
+
 end
 
 function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
@@ -32,13 +38,13 @@ function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
 	self.tTarget:add_child(tFlash)
-	
+
 	tData = xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
-	
+
 	tErase = xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
@@ -226,7 +232,7 @@ function printArgs(tArgs, tLog)
 end
 
 
-function example_xml(tArgs, tLog, tFlasher, tWfpControl)
+function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOption)
 	-- create an example xml based on the selected plugin (NXTFLASHER-264)
 
     tLog.info("Creating example control XML")
@@ -246,13 +252,13 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
             tLog.error(strError)
         end
     end
-	
+
     exampleXml = WFPXml(nil, tLog)
-    
+
     iChiptype = tPlugin:GetChiptyp()
 	strTargetName = tWfpControl.atChiptyp2name[iChiptype]
     -- Download the binary. (load the flasher binary into intram)
-    aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+    aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
     -- get the board info
     aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
 	exampleXml:addTarget(strTargetName)
@@ -264,27 +270,27 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl)
 			ucUnit = tUnitInfo.iIdx
 			-- add only unit 2 and 3 for IFlash of netx90
 			if strTargetName == "NETX90" and ucBus == 2 then
-				if ucUnit == 2 or ucUnit == 3 then 
+				if ucUnit == 2 or ucUnit == 3 then
 					exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
 				end
 			-- only add Unit 0 Flashes to example
 			elseif ucUnit == 0 then
 				exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
-			end 
+			end
 		end
 	end
-	
+
 	exampleXml:exportXml(tArgs.strWfpControlFile)
-    
+
     return true
 end
 
 
 function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
-    
+
     local archive = require 'archive'
     local fOk=true
-    
+
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
@@ -408,7 +414,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             tEntry:set_gname('wfp')
                             tEntry:set_ctime(ulCreationTime, 0)
                             tEntry:set_mtime(ulModTime, 0)
-                            
+
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
@@ -479,7 +485,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
     return fOk
 end
 
-function backup(tArgs, tLog, tWfpControl, tFlasher)
+function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 	-- create a backup for all flash areas in netX
 	-- read the flash areas and save the images to reinstall them later
 	-- Steps:
@@ -488,13 +494,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
 		-- read the offset and size for each area inside the flash
 		-- copy the contents to different bin files
 		-- copy xml file
-      
+
     local ulSize
     local ulOffset
     local DestinationFolder = tArgs.strBackupPath
     local DestinationXml = DestinationFolder .. "/wfp.xml"
 
-   
+
     local fOk = true --be optimistic
 	-- overwrite :
 	-- check if the directory exists
@@ -537,7 +543,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
 
         if fOk == true then
 
-           
+
            -- Select a plugin and connect to the netX.
             local tPlugin
             if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
@@ -565,7 +571,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                     fOk = false
                 else
                     -- Download the binary. (load the flasher binary into intram)
-                    local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+                    local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
 
                     -- Loop over all flashes. (inside xml)
                     for _, tTargetFlash in ipairs(tTarget.atFlashes) do
@@ -627,7 +633,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher)
                                     else
                                         -- save the read area  to the output file (write binary)
                                         local fileName = DestinationFolder .. "/" .. strFile
-                                        
+
                                         -- create the subdirectory inside the output folder if it does not exist
                                         local strSubFolderPath = pl.path.dirname(fileName)
                                             if not pl.path.exists(strSubFolderPath) then
@@ -685,6 +691,8 @@ tParserCommandFlash:option('-c --condition'):description('Add a condition in the
 tParserCommandFlash:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCommandFlash:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
+tParserCommandFlash:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
@@ -692,6 +700,8 @@ tParserCommandVerify:option('-c --condition'):description('Add a condition in th
 tParserCommandVerify:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCommandVerify:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
+tParserCommandVerify:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- Add the "Read" command and all its options.
 local tParserCommandRead =
@@ -711,7 +721,8 @@ tParserCommandRead:option('-t --plugin_type'):description("plugin type"):target(
 tParserCommandRead:flag("-o --overwrite"):description(
     "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
 ):default(false):target("fOverwrite")
-
+tParserCommandRead:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
+tParserCommandRead:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- Add the "list" command and all its options.
 local tParserCommandList = tParser:command('list l', 'List the contents of the WFP.'):target('fCommandListSelected')
@@ -755,9 +766,6 @@ printArgs(tArgs, tLog)
 -- Ask the user to select a plugin.
 tester.fInteractivePluginSelection = true
 
---local tFlasher = require 'flasher'(tLog)
-local tFlasher = require 'flasher'
-
 
 atName2Bus = {
     ['Parflash'] = tFlasher.BUS_Parflash,
@@ -778,13 +786,13 @@ local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
 if tArgs.fCommandReadSelected == true then
-    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tFlasher)
+    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tFlasher, tArgs.bCompMode, tArgs.strSecureOption)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
     end
 elseif tArgs.fCommandExampleSelected == true then
     print("EXAMPLE")
-    fOk = example_xml(tArgs, tLog, tFlasher, tWfpControl)
+    fOk = example_xml(tArgs, tLog, tFlasher, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption)
 elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
@@ -865,7 +873,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                     fOk = false
                 else
                     -- Download the binary.
-                    local aAttr = tFlasher.download(tPlugin, strFlasherPrefix)
+                    local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, tArgs.bCompMode, tArgs.strSecureOption)
 
 					-- Verify command now moved above Target Flash Loop to collect data for each flash before running verification
                     if tArgs.fCommandVerifySelected == true then
