@@ -691,8 +691,10 @@ tParserCommandFlash:option('-c --condition'):description('Add a condition in the
 tParserCommandFlash:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandFlash:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
-tParserCommandFlash:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandFlash:mutex(
+        tParserCommandFlash:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
+        tParserCommandFlash:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+)
 
 local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
@@ -700,8 +702,10 @@ tParserCommandVerify:option('-c --condition'):description('Add a condition in th
 tParserCommandVerify:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandVerify:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
-tParserCommandVerify:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandVerify:mutex(
+        tParserCommandVerify:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
+        tParserCommandVerify:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+)
 
 -- Add the "Read" command and all its options.
 local tParserCommandRead =
@@ -721,8 +725,10 @@ tParserCommandRead:option('-t --plugin_type'):description("plugin type"):target(
 tParserCommandRead:flag("-o --overwrite"):description(
     "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
 ):default(false):target("fOverwrite")
-tParserCommandRead:option('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false)
-tParserCommandRead:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandRead:mutex(
+        tParserCommandRead:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
+        tParserCommandRead:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+)
 
 -- Add the "list" command and all its options.
 local tParserCommandList = tParser:command('list l', 'List the contents of the WFP.'):target('fCommandListSelected')
