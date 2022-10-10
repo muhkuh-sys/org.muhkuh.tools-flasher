@@ -18,7 +18,8 @@ SVN_AUTHOR ="$Author$"
 -- Requires are below, because they cause a lot of text to be printed.
 
 local stringx = require "pl.stringx"
-require("flasher")
+local tFlasher = require 'flasher'
+
 
 
 --------------------------------------------------------------------------
@@ -585,7 +586,7 @@ f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file na
 comp  = {type = "flag", clkey = "--comp",   argkey = "bCompMode",
          name="use compatibility mode for netx90 M2M interfaces", default=false, mutual_exclusive_group=1},
 sec  = {type = "string", clkey = "--sec",   argkey = "strSecureOption",
-        name="path to signed image directory", default=DEFAULT_HBOOT_OPTION, mutual_exclusive_group=1},
+        name="path to signed image directory", default=tFlasher.DEFAULT_HBOOT_OPTION, mutual_exclusive_group=1},
 jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
 jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
 	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
