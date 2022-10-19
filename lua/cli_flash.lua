@@ -583,22 +583,42 @@ end
 
 function addPluginTypeArg(tParserCommand)
     -- tParserCommand:option('--t --plugin_type', 'plugin type'):target('strPluginType')
-    tParserCommand:option('--t', 'plugin type'):target('strPluginType')
+    tParserCommand:option('-t', 'plugin type'):target('strPluginType')
 end
 
 function addJtagKhzArg(tParserCommand)
-    tParserCommand:option('-jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz')
+    tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz')
 end
 
 function addJtagResetArg(tParserCommand)
-    tOption = tParserCommand:option('-jtag_reset',
+    tOption = tParserCommand:option('--jtag_reset',
             'JTAG reset method. Possible values are: hard (default), soft, attach'):target('strJtagReset')
     tOption._options = {"HardReset", "SoftReset", "Attach" }
 end
 
 local argparse = require 'argparse'
 
-local tParser = argparse('Cli Flasher', ''):command_target("strSubcommand")
+local strEpilog = [==[
+Limitations:
+
+The reset_netx command currently supports only the netx 90.
+
+The hash and verify_hash commands do not support the netx 90 and netIOL.
+
+
+Examples:
+
+Write file to serial flash:
+lua cli_flash.lua flash -b 1 NETX100-BSL.bin
+
+Erase boot cookie from serial flash:
+lua cli_flash.lua erase -b 1 -l 4
+
+Erase boot cookie from parallel flash:
+lua cli_flash.lua erase -b 0 -l 4
+]==]
+
+local tParser = argparse('Cli Flasher', ''):command_target("strSubcommand"):epilog(strEpilog)
 
 tParser:flag "--version":description "Show version info and exit. ":action(function()
     require("flasher_version")
@@ -664,7 +684,7 @@ addJtagResetArg(tParserCommandVerify)
 addJtagKhzArg(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', '???'):target('fCommandVerifyHashSelected')
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums'):target('fCommandVerifyHashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
 addBusOptionArg(tParserCommandVerifyHash)
@@ -678,7 +698,7 @@ addJtagResetArg(tParserCommandVerifyHash)
 addJtagKhzArg(tParserCommandVerifyHash)
 
 -- hash
-local tParserCommandHash = tParser:command('hash h', '????'):target('fCommandHashSelected')
+local tParserCommandHash = tParser:command('hash h', 'Compute SHA1'):target('fCommandHashSelected')
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandHash)
 addUnitOptionArg(tParserCommandHash)
@@ -692,7 +712,7 @@ addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
 
 -- detect
-local tParserCommandDetect = tParser:command('detect d', '????'):target('fCommandDetectSelected')
+local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized'):target('fCommandDetectSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandHash)
 addUnitOptionArg(tParserCommandHash)
@@ -704,7 +724,7 @@ addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
 
 -- test
-local tParserCommandTest = tParser:command('test t', '????'):target('fCommandTestSelected')
+local tParserCommandTest = tParser:command('test t', 'Test flasher'):target('fCommandTestSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTest)
 addUnitOptionArg(tParserCommandTest)
@@ -716,7 +736,7 @@ addJtagResetArg(tParserCommandTest)
 addJtagKhzArg(tParserCommandTest)
 
 -- testcli
-local tParserCommandTestCli = tParser:command('testcli tc', '????'):target('fCommandTestCliSelected')
+local tParserCommandTestCli = tParser:command('testcli tc', 'Test cli flasher'):target('fCommandTestCliSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTestCli)
 addUnitOptionArg(tParserCommandTestCli)
