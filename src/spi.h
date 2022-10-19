@@ -79,6 +79,7 @@ typedef void (*PFN_FLASHER_SET_NEW_SPEED_T)(const struct FLASHER_SPI_CFG_STRUCT 
 typedef unsigned char (*PFN_FLASHER_EXCHANGE_BYTE_T)(const struct FLASHER_SPI_CFG_STRUCT *ptCfg, unsigned char ucByte);
 typedef unsigned long (*PFN_FLASHER_GET_DEVICE_SPEED_REPRESENTATION_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg, unsigned int uiSpeed);
 typedef void (*PFN_FLASHER_DEACTIVATE_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg);
+typedef unsigned long (*PFN_FLASHER_GET_KHZ_SPEED_REPRESENTATION_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg, unsigned int ulSpeed);
 
 /**
  * Configuration of the SPI interface. It is filled during spi_detect.
@@ -101,6 +102,7 @@ typedef struct FLASHER_SPI_CFG_STRUCT
 	PFN_FLASHER_EXCHANGE_BYTE_T pfnExchangeByte;
 	PFN_FLASHER_GET_DEVICE_SPEED_REPRESENTATION_T pfnGetDeviceSpeedRepresentation;
 	PFN_FLASHER_DEACTIVATE_T pfnDeactivate;
+	PFN_FLASHER_GET_KHZ_SPEED_REPRESENTATION_T pfnGetKHzSpeedRepresentation;
 
 	unsigned char ucIdleChar;       /**< @brief the idle character. */
 	unsigned long ulTrcBase;        /**< @brief the base bits of the transfer control register. */

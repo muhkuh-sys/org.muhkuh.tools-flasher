@@ -26,22 +26,22 @@ strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         
 Mode          Parameters                                                  
-flash         [p][t][o] dev [offset]      file   Write file to flash    
-read          [p][t][o] dev [offset] size file   Read flash and write to file      
-erase         [p][t][o] dev [offset] size        Erase area or whole flash       
-verify        [p][t][o] dev [offset]      file   Byte-by-byte compare
-verify_hash   [p][t][o] dev [offset]      file   Quick compare using checksums
-hash          [p][t][o] dev [offset] size        Compute SHA1
-info          [p][t][o]                          Show busses/units/chip selects
-detect        [p][t][o] dev                      Check if flash is recognized
-test          [p][t][o] dev                      Test flasher      
-testcli       [p][t][o] dev                      Test cli flasher  
-list_interfaces  [t][o]                          List all usable interfaces
-detect_netx   [p][t][o]                          Detect the netx chip type
-reset_netx    [p][t][o]                          Reset the netx 90
-identify_netx [p][t][o]                          Blink SYS LED for 5 sec
--h                                             Show this help   
--version                                       Show flasher version 
+flash         [p][t][o][spi] dev [offset]      file   Write file to flash    
+read          [p][t][o][spi] dev [offset] size file   Read flash and write to file      
+erase         [p][t][o][spi] dev [offset] size        Erase area or whole flash       
+verify        [p][t][o][spi] dev [offset]      file   Byte-by-byte compare
+verify_hash   [p][t][o][spi] dev [offset]      file   Quick compare using checksums
+hash          [p][t][o][spi] dev [offset] size        Compute SHA1
+info          [p][t][o][spi]                          Show busses/units/chip selects
+detect        [p][t][o][spi] dev                      Check if flash is recognized
+test          [p][t][o]      dev                      Test flasher      
+testcli       [p][t][o]      dev                      Test cli flasher  
+list_interfaces  [t][o]                               List all usable interfaces
+detect_netx   [p][t][o]                               Detect the netx chip type
+reset_netx    [p][t][o]                               Reset the netx 90
+identify_netx [p][t][o]                               Blink SYS LED for 5 sec
+-h                                                    Show this help   
+-version                                              Show flasher version 
         
 p:    -p plugin_name
       select plugin
@@ -65,6 +65,10 @@ off:  -s device_start_offset
 size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
+
+spi:  --spi_khz SPI frequency
+      override SPI bus speed in kHz (max. 50000kHz)
+      default: Automatically detects a reasonable speed (but max. 25MHz)
 
 
 Limitations:
@@ -545,13 +549,13 @@ MODE_GET_DEVICE_SIZE = 14
 
 
 atModeArgs = {
-	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr"}},
-	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
-	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
-	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr","spif"}},
+	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr","spif"}},
+	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr","spif"}},
+	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr","spif"}},
+	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr","spif"}},
+	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr","spif"}},
+	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr","spif"}},
 	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
 	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
 	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
@@ -565,20 +569,22 @@ atModeArgs = {
 
 
 argdefs = {
-b  = {type = "number", clkey ="-b",  argkey = "iBus",              name="bus number"},
-u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number",        default=0},
-cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number", default=0},
-p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
-t  = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin type"},
-s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
-l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
-f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
+b    = {type = "number", clkey ="-b",  argkey = "iBus",              name="bus number"},
+u    = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number",        default=0},
+cs   = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number", default=0},
+p    = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
+t    = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin type"},
+s    = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
+l    = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
+f    = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
 
-jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
-jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
+jf   = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
+jr   = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
 	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
 	choices_help = "Possible values are: hard (default), soft, attach"
 	},
+
+spif = {type = "number", clkey = "--spi_khz",   argkey = "iSpiKhz",     name="Spi speed in kHz"},
 }
 
 
@@ -763,7 +769,7 @@ end
 
 
 function showArgs(aArgs)
-	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf"}
+	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf", "spif"}
 	local astrArgLines = {}
 		
 	for i, k in ipairs(arg_order) do
@@ -876,6 +882,7 @@ function exec(aArgs)
 	local ulLen          = aArgs.ulLen
 	local strDataFileName= aArgs.strDataFileName
 	local atPluginOptions= aArgs.atPluginOptions
+	local iSpiKhz        = aArgs.iSpiKhz
 	
 	local tPlugin
 	local aAttr
@@ -947,7 +954,14 @@ function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+
+				-- Set a specific SPI speed if a value is provided, otherwise detect will set a default
+				-- This also overrides the default maximum speed (A cap of 50MHz still exists as defined in the regdef)
+				local atParameter = {}
+				atParameter.ulInitialSpeed = iSpiKhz or nil
+				atParameter.ulMaximumSpeed = iSpiKhz or nil
+
+				fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect,nil,nil,atParameter)
 				if fOk ~= true then
 					fOk = false
 					strMsg = "Failed to get a device description!"
