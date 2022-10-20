@@ -200,6 +200,29 @@ static unsigned long spi_get_device_speed_representation(const FLASHER_SPI_CFG_T
 	return ulDevSpeed;
 }
 
+/*** Convert a Spi Frequency in device speed representation into a kHz value.
+ * @param ptCfg The configuration struct of the Spi Interface
+ * @param ulDeviceSpeed The device speed representation of the Spi Frequency or the Spi control register 0
+ * 
+ * @return The Spi Frequency in kHz
+*/
+static unsigned long spi_get_khz_speed_representation(const unsigned long ulDeviceSpeed)
+{
+	unsigned long ulKHzSpeed;
+
+	/* Remove everything that's not the speed */
+	ulKHzSpeed = ulDeviceSpeed & HOSTMSK(spi_cr0_sck_muladd);
+
+	/* shift to value position */
+	ulKHzSpeed >>= HOSTSRT(spi_cr0_sck_muladd);
+
+	ulKHzSpeed *= 100000;
+
+	/* reconvert speed from "multiply add value" */
+	ulKHzSpeed /= 4096;
+
+	return ulKHzSpeed;
+}
 
 static int spi_slave_select(const FLASHER_SPI_CFG_T *ptCfg, int fIsSelected)
 {
@@ -409,6 +432,7 @@ int flasher_drv_spi_init(FLASHER_SPI_CFG_T *ptCfg, const FLASHER_SPI_CONFIGURATI
 	ptCfg->pfnExchangeByte = spi_exchange_byte;
 	ptCfg->pfnGetDeviceSpeedRepresentation = spi_get_device_speed_representation;
 	ptCfg->pfnDeactivate = spi_deactivate;
+	ptCfg->pfnGetKHzSpeedRepresentation = spi_get_khz_speed_representation;
 
 	/* copy the mmio pins */
 	memcpy(ptCfg->aucMmio, ptSpiCfg->aucMmio, sizeof(ptSpiCfg->aucMmio));

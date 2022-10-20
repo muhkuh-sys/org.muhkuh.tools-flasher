@@ -403,6 +403,10 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
 		local ulInitialSpeed = atParameter.ulInitialSpeed
 		ulInitialSpeed = ulInitialSpeed or 1000
+
+		-- Set the manual SPI speed. The default is 0 (Use detected value).
+		local ulManualSpeed = atParameter.ulManualSpeed
+		ulManualSpeed = ulManualSpeed or 0
 		
 		-- Set the maximum SPI speed. The default is 25000kHz (25MHz).
 		local ulMaximumSpeed = atParameter.ulMaximumSpeed
@@ -429,6 +433,7 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 			ulUnit,                               -- unit
 			ulChipSelect,                         -- chip select
 			ulInitialSpeed,                       -- initial speed in kHz
+			ulManualSpeed,                        -- manual speed in kHz
 			ulMaximumSpeed,                       -- maximum allowed speed in kHz
 			ulIdleCfg,                            -- idle configuration
 			ulSpiMode,                            -- mode
