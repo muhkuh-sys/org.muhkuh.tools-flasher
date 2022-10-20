@@ -741,10 +741,10 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 
 				unsigned short manualSpeed = 0;
 				/* If the passed speed was set manually use the passed value instead of the detected value */
-				if(ptSpiCfg->ulInitialSpeedKhz != 1000 || ptSpiCfg->ulMaximumSpeedKhz != 25000)
+				if(ptSpiCfg->ulManualSpeedKhz != 0)
 				{
 					manualSpeed = 1;
-					ptFlash->tAttributes.ulClock = ptSpiCfg->ulInitialSpeedKhz;
+					ptFlash->tAttributes.ulClock = ptSpiCfg->ulManualSpeedKhz;
 				}
 
 				/* set higher speed for the device */
@@ -752,10 +752,10 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 				ptSpiDev->pfnSetNewSpeed(ptSpiDev, ptSpiDev->ulSpeed);
 				
 				/* get the actually set speed and display it*/
-				unsigned long ulkHzSpeed = ptSpiDev->pfnGetKHzSpeedRepresentation(ptSpiDev,ptSpiDev->ulSpeed);
+				unsigned long ulkHzSpeed = ptSpiDev->pfnGetKHzSpeedRepresentation(ptSpiDev->ulSpeed);
 				if(manualSpeed == 1)
 				{
-					uprintf(". SPI_CLK requested %d kHz and configured %d kHz\n", ptSpiCfg->ulInitialSpeedKhz,ulkHzSpeed);
+					uprintf(". SPI_CLK requested %d kHz and configured %d kHz\n", ptSpiCfg->ulManualSpeedKhz,ulkHzSpeed);
 				}
 				else
 				{

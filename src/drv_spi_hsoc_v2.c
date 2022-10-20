@@ -206,10 +206,9 @@ static unsigned long spi_get_device_speed_representation(const FLASHER_SPI_CFG_T
  * 
  * @return The Spi Frequency in kHz
 */
-static unsigned long spi_get_khz_speed_representation(const FLASHER_SPI_CFG_T* ptCfg, const unsigned long ulDeviceSpeed)
+static unsigned long spi_get_khz_speed_representation(const unsigned long ulDeviceSpeed)
 {
 	unsigned long ulKHzSpeed;
-	unsigned long ulInputFilter;
 
 	/* Remove everything that's not the speed */
 	ulKHzSpeed = ulDeviceSpeed & HOSTMSK(spi_cr0_sck_muladd);

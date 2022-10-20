@@ -957,10 +957,13 @@ function exec(aArgs)
 
 				-- Set a specific SPI speed if a value is provided, otherwise detect will set a default
 				-- This also overrides the default maximum speed (A cap of 50MHz still exists as defined in the regdef)
-				local atParameter = {}
-				atParameter.ulInitialSpeed = iSpiKhz or nil
-				atParameter.ulMaximumSpeed = iSpiKhz or nil
-
+				local atParameter = {
+					ulInitialSpeed = iSpiKhz or nil,
+					ulManualSpeed = iSpiKhz or nil,
+					ulMaximumSpeed = iSpiKhz or nil,
+				}
+				
+				
 				fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect,nil,nil,atParameter)
 				if fOk ~= true then
 					fOk = false

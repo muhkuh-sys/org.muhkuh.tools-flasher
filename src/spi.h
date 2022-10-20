@@ -59,6 +59,7 @@ typedef struct FLASHER_SPI_CONFIGURATION_STRUCT
 	unsigned int uiUnit;              /**< @brief SPI unit number. */
 	unsigned int uiChipSelect;        /**< @brief The chip select of the SPI unit. */
 	unsigned long ulInitialSpeedKhz;  /**< @brief The initial speed during identification. */
+	unsigned long ulManualSpeedKhz;   /**< @brief The manually set speed. */
 	unsigned long ulMaximumSpeedKhz;  /**< @brief The maximum speed possible on the selected SPI interface. */
 	unsigned int uiIdleCfg;           /**< @brief Idle config. */
 	unsigned int uiMode;              /**< @brief SPI mode (0-3). */
@@ -79,7 +80,7 @@ typedef void (*PFN_FLASHER_SET_NEW_SPEED_T)(const struct FLASHER_SPI_CFG_STRUCT 
 typedef unsigned char (*PFN_FLASHER_EXCHANGE_BYTE_T)(const struct FLASHER_SPI_CFG_STRUCT *ptCfg, unsigned char ucByte);
 typedef unsigned long (*PFN_FLASHER_GET_DEVICE_SPEED_REPRESENTATION_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg, unsigned int uiSpeed);
 typedef void (*PFN_FLASHER_DEACTIVATE_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg);
-typedef unsigned long (*PFN_FLASHER_GET_KHZ_SPEED_REPRESENTATION_T)(const struct FLASHER_SPI_CFG_STRUCT *psCfg, unsigned int ulSpeed);
+typedef unsigned long (*PFN_FLASHER_GET_KHZ_SPEED_REPRESENTATION_T)(const unsigned long ulSpeed);
 
 /**
  * Configuration of the SPI interface. It is filled during spi_detect.

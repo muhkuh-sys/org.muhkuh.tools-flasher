@@ -145,7 +145,7 @@ static unsigned long spi_get_device_speed_representation(const FLASHER_SPI_CFG_T
  * 
  * @return The Spi Frequency in kHz or 0 if no matching entry was found (error)
 */
-static unsigned long spi_get_khz_speed_representation(const FLASHER_SPI_CFG_T* ptCfg, const unsigned long ulDeviceSpeed)
+static unsigned long spi_get_khz_speed_representation(const unsigned long ulDeviceSpeed)
 {
 	unsigned long ulSpiClkSpeed;
 	unsigned int uiCnt;
