@@ -141,7 +141,7 @@ static unsigned long spi_get_device_speed_representation(const FLASHER_SPI_CFG_T
 /** Convert a Spi Frequency in device speed representation into a kHz value.
  * 
  * @param ptCfg The configuration struct of the Spi Interface
- * @param ulDeviceSpeed The device speed representation of the Spi Frequency
+ * @param ulDeviceSpeed The device speed representation of the Spi Frequency or the Spi control register
  * 
  * @return The Spi Frequency in kHz or 0 if no matching entry was found (error)
 */
@@ -150,12 +150,13 @@ static unsigned long spi_get_khz_speed_representation(const FLASHER_SPI_CFG_T* p
 	unsigned long ulSpiClkSpeed;
 	unsigned int uiCnt;
 
-	ulSpiClkSpeed = ulDeviceSpeed;
+	/* Remove everything that's not the speed */
+	ulSpiClkSpeed = ulDeviceSpeed & HOSTMSK(spi_control_register_CR_speed);
 
-	// get speed in HAL_SPI_SPEED_t
+	/* get speed in HAL_SPI_SPEED_t */
 	ulSpiClkSpeed >>= HOSTSRT(spi_control_register_CR_speed);
 
-	// find the matching entry
+	/* find the matching entry */
 	uiCnt = sizeof(aulSpeedSteps)/sizeof(aulSpeedSteps[0]);
 	for(unsigned int i = 0; i < uiCnt; i++)
 	{
