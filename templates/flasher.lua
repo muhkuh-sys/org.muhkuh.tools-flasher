@@ -27,7 +27,8 @@ module("flasher", package.seeall)
 
 require("bit")
 require("romloader")
-
+require("pl")
+path = require("pl.path")
 
 -----------------------------------------------------------------------------
 --                           Definitions
@@ -91,6 +92,14 @@ OFFS_FLASH_ATTR_aucIdSend  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdSend}
 OFFS_FLASH_ATTR_aucIdMask  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMask}
 OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagic}
 
+
+-- global variable for usage of hboot mode.
+-- If this Flag is set to True we use the hboot mode for netx90 M2M connections
+local bHbootFlash = false
+local path = require "pl.path"
+local FLASHER_DIR = path.currentdir()
+DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
+
 --------------------------------------------------------------------------
 -- callback/progress functions, 
 -- read/write image, call
@@ -152,6 +161,25 @@ function call(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
 	return tPlugin:call(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
 end
 
+function call_hboot(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
+	return tPlugin:call_hboot(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
+end
+
+function call_usip(tPlugin, fnCallbackMessage)
+	return tPlugin:cmd_usip(fnCallbackMessage or default_callback_message, 2)
+end
+
+function get_info(tPlugin)
+	return tPlugin:get_info()
+end
+
+function get_mi_version_maj(tPlugin)
+	return tPlugin:get_mi_version_maj()
+end
+
+function get_mi_version_min(tPlugin)
+	return tPlugin:get_mi_version_min()
+end
 -----------------------------------------------------------------------------
 --                    Downloading the flasher
 -----------------------------------------------------------------------------
@@ -187,8 +215,50 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 		error("Unknown chiptyp! " .. tostring(iChiptype))
 	end
 	
-	local strPath = strPrefix .. "flasher_" .. strNetxName .. strDebug .. ".bin"
-	return strPath
+	local strFileName = "flasher_" .. strNetxName .. strDebug .. ".bin"
+    local strFilePath = path.join(strPrefix, strFileName)
+
+	return strFilePath
+end
+
+
+-- prefix must include a trailing backslash if it's a directory
+function get_flasher_hboot_path(iChiptype, fDebug, strSecureOption)
+	local strNetxName
+	local strDebug = fDebug and "_debug" or ""
+    local strSubdirName
+    local strFileName
+    local strPath
+    local strPathDir
+    print("secure option path")
+    print(strSecureOption)
+
+    print(string.format("iChiptype:          %s", iChiptype))
+    print(string.format("Using secure option files from: %s", strSecureOption))
+
+	-- First catch the unlikely case that "iChiptype" is nil.
+	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
+    if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
+		strNetxName = 'netx90'
+        strSubdirName = 'netx90' -- will be an other name in the future
+    else
+        strNetxName = nil
+    end
+
+	if not strNetxName then
+		error("Unknown or unsupported chiptyp! " .. tostring(iChiptype))
+    end
+    strPathDir = path.join(strSecureOption, strSubdirName)
+    print(string.format("strPathDir : %s",strPathDir))
+
+    strFileName = "flasher_" .. strNetxName .. "_hboot.bin"
+	print(string.format("strFileName : %s",strFileName))
+
+    strFilePath = path.join(strPathDir, strFileName)
+	print(string.format("file path full : %s",strFilePath))
+
+	return strFilePath
 end
 
 
@@ -201,14 +271,22 @@ end
 -- information about code/exec/buffer addresses
 function get_flasher_binary_attributes(strData)
 	local aAttr = {}
-	
+    local ulExtraOffset = 0
+
+    if bHbootFlash == true then
+        -- offset when parsing the hboot image instead of the binary
+        ulExtraOffset = 0x400
+        aAttr.ulLoadAddress = 0x200C0  -- load address for images in hboot mode
+    else
+        aAttr.ulLoadAddress = get_dword(strData,32 + 1)
+    end
+
 	-- Get the load and exec address from the binary.
-	aAttr.ulLoadAddress = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pulLoadAddress} + 1)
-	aAttr.ulExecAddress = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pfnExecutionAddress} + 1)
-	aAttr.ulParameter   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_Parameter} + 1)
-	aAttr.ulDeviceDesc  = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_DeviceDescription} + 1)
-	aAttr.ulBufferAdr   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_Data} + 1)
-	aAttr.ulBufferEnd   = get_dword(strData, ${OFFSETOF_FLASHER_VERSION_STRUCT_pucBuffer_End} + 1)
+	aAttr.ulExecAddress = get_dword(strData, 36 + 1 + ulExtraOffset)
+	aAttr.ulParameter   = get_dword(strData, 40 + 1 + ulExtraOffset)
+	aAttr.ulDeviceDesc  = get_dword(strData, 44 + 1 + ulExtraOffset)
+	aAttr.ulBufferAdr   = get_dword(strData, 48 + 1 + ulExtraOffset)
+	aAttr.ulBufferEnd   = get_dword(strData, 52 + 1 + ulExtraOffset)
 	aAttr.ulBufferLen   = aAttr.ulBufferEnd - aAttr.ulBufferAdr
 
 	-- Show the information:
@@ -257,10 +335,23 @@ end
 
 
 
-function download(tPlugin, strPrefix, fnCallbackProgress)
+function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOption)
 	local iChiptype = tPlugin:GetChiptyp()
 	local fDebug = false
-	local strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
+    local strPath
+
+    local usMiVersionMin = get_mi_version_min(tPlugin)
+    local usMiVersionMaj = get_mi_version_maj(tPlugin)
+
+    print(string.format("usMiVersionMaj 0x%04x", usMiVersionMaj))
+    print(string.format("usMiVersionMin 0x%04x", usMiVersionMin))
+
+    if (usMiVersionMaj == 3 and usMiVersionMin >=1 or usMiVersionMaj > 3) and bCompMode == false then
+        bHbootFlash = true
+        strPath = get_flasher_hboot_path(iChiptype, fDebug, strSecureOption)
+    else
+	    strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
+    end
 	local tFile, strMsg = io.open(strPath, 'rb')
 	if tFile==nil then
 		error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
@@ -324,9 +415,15 @@ function callFlasher(tPlugin, aAttr, aulParams, fnCallbackMessage, fnCallbackPro
 	end
 
 	set_parameterblock(tPlugin, aAttr.ulParameter, aulParameter, fnCallbackProgress)
-	
+
 	-- call
-	call(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage) 
+    if bHbootFlash == true then
+        print("use hboot call method")
+        call_hboot(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage)
+    else
+        print("use old call method")
+        call(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage)
+    end
 	
 	-- get the return value (ok/failed)
 	-- any further return values must be read by the calling function

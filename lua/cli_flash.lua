@@ -17,6 +17,8 @@ SVN_AUTHOR ="$Author$"
 
 -- Requires are below, because they cause a lot of text to be printed.
 
+local stringx = require "pl.stringx"
+local tFlasher = require 'flasher'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -588,6 +590,13 @@ function addPluginTypeArg(tParserCommand)
     tParserCommand:option('-t', 'plugin type'):target('strPluginType')
 end
 
+function addSecureArgs(tParserCommand)
+    tParserCommand:mutex(
+            tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
+            tParserCommand:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+    )
+end
+
 function addJtagKhzArg(tParserCommand)
     tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz')
 end
@@ -606,6 +615,8 @@ Limitations:
 The reset_netx command currently supports only the netx 90.
 
 The hash and verify_hash commands do not support the netx 90 and netIOL.
+
+The secure mode features ('--sec' and '--comp') are only valid for netx90
 
 
 Examples:
@@ -641,6 +652,7 @@ addPluginNameArg(tParserCommandFlash)
 addPluginTypeArg(tParserCommandFlash)
 addJtagResetArg(tParserCommandFlash)
 addJtagKhzArg(tParserCommandFlash)
+addSecureArgs(tParserCommandFlash)
 
 -- 	read
 local tParserCommandRead = tParser:command('read r', 'Read data from netX to a File'):target('fCommandReadSelected')
@@ -656,6 +668,7 @@ addPluginNameArg(tParserCommandRead)
 addPluginTypeArg(tParserCommandRead)
 addJtagResetArg(tParserCommandRead)
 addJtagKhzArg(tParserCommandRead)
+addSecureArgs(tParserCommandRead)
 
 -- erase
 local tParserCommandErase = tParser:command('erase e', 'Erase area inside flash'):target('fCommandEraseSelected')
@@ -670,6 +683,7 @@ addPluginNameArg(tParserCommandErase)
 addPluginTypeArg(tParserCommandErase)
 addJtagResetArg(tParserCommandErase)
 addJtagKhzArg(tParserCommandErase)
+addSecureArgs(tParserCommandErase)
 
 -- verify
 local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed'):target('fCommandVerifySelected')
@@ -684,6 +698,7 @@ addPluginNameArg(tParserCommandVerify)
 addPluginTypeArg(tParserCommandVerify)
 addJtagResetArg(tParserCommandVerify)
 addJtagKhzArg(tParserCommandVerify)
+addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
 local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums'):target('fCommandVerifyHashSelected')
@@ -716,14 +731,15 @@ addJtagKhzArg(tParserCommandHash)
 -- detect
 local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized'):target('fCommandDetectSelected')
 -- required_args = {"b", "u", "cs"}
-addBusOptionArg(tParserCommandHash)
-addUnitOptionArg(tParserCommandHash)
-addChipSelectOptionArg(tParserCommandHash)
+addBusOptionArg(tParserCommandDetect)
+addUnitOptionArg(tParserCommandDetect)
+addChipSelectOptionArg(tParserCommandDetect)
 -- optional_args = {"p", "t", "jf", "jr"}
-addPluginNameArg(tParserCommandHash)
-addPluginTypeArg(tParserCommandHash)
-addJtagResetArg(tParserCommandHash)
-addJtagKhzArg(tParserCommandHash)
+addPluginNameArg(tParserCommandDetect)
+addPluginTypeArg(tParserCommandDetect)
+addJtagResetArg(tParserCommandDetect)
+addJtagKhzArg(tParserCommandDetect)
+addSecureArgs(tParserCommandDetect)
 
 -- test
 local tParserCommandTest = tParser:command('test t', 'Test flasher'):target('fCommandTestSelected')
@@ -736,6 +752,7 @@ addPluginNameArg(tParserCommandTest)
 addPluginTypeArg(tParserCommandTest)
 addJtagResetArg(tParserCommandTest)
 addJtagKhzArg(tParserCommandTest)
+addSecureArgs(tParserCommandTest)
 
 -- testcli
 local tParserCommandTestCli = tParser:command('testcli tc', 'Test cli flasher'):target('fCommandTestCliSelected')
@@ -748,6 +765,7 @@ addPluginNameArg(tParserCommandTestCli)
 addPluginTypeArg(tParserCommandTestCli)
 addJtagResetArg(tParserCommandTestCli)
 addJtagKhzArg(tParserCommandTestCli)
+addSecureArgs(tParserCommandTestCli)
 
 -- info
 local tParserCommandInfo = tParser:command('info i', 'Show information about the netX'):target('fCommandInfoSelected')
@@ -756,6 +774,7 @@ addPluginNameArg(tParserCommandInfo)
 addPluginTypeArg(tParserCommandInfo)
 addJtagResetArg(tParserCommandInfo)
 addJtagKhzArg(tParserCommandInfo)
+addSecureArgs(tParserCommandInfo)
 
 -- list_interfaces
 local tParserCommandListInterfaces = tParser:command('list_interfaces li', 'List all connected interfaces'):target('fCommandListInterfacesSelected')
@@ -764,6 +783,7 @@ addPluginTypeArg(tParserCommandListInterfaces)
 addJtagResetArg(tParserCommandListInterfaces)
 addJtagKhzArg(tParserCommandListInterfaces)
 
+
 -- detect_netx
 local tParserCommandDetectNetx = tParser:command('detect_netx dn', 'Detect if an interface is a netX'):target('fCommandDetectNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
@@ -771,22 +791,25 @@ addPluginNameArg(tParserCommandDetectNetx)
 addPluginTypeArg(tParserCommandDetectNetx)
 addJtagResetArg(tParserCommandDetectNetx)
 addJtagKhzArg(tParserCommandDetectNetx)
+addSecureArgs(tParserCommandDetectNetx)
 
 -- reset_netx
-local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandDetectNetxSelected')
+local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandResetSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
 addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
+addSecureArgs(tParserCommandResetNetx)
 
 -- reset_netx
 local tParserCommandIdentifyNetx = tParser:command('identify_netx i', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
-addPluginNameArg(tParserCommandResetNetx)
-addPluginTypeArg(tParserCommandResetNetx)
-addJtagResetArg(tParserCommandResetNetx)
-addJtagKhzArg(tParserCommandResetNetx)
+addPluginNameArg(tParserCommandIdentifyNetx)
+addPluginTypeArg(tParserCommandIdentifyNetx)
+addJtagResetArg(tParserCommandIdentifyNetx)
+addJtagKhzArg(tParserCommandIdentifyNetx)
+
 
 
 -- return true if list l contains element e 
@@ -1287,7 +1310,7 @@ function main()
         list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
         os.exit(0)
 
-    elseif aArgs.fCommandReadSelected then
+    elseif aArgs.fCommandResetSelected then
         fOk, strMsg = reset_netx_via_watchdog(aArgs)
         if fOk then
             if strMsg then
