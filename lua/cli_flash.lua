@@ -553,30 +553,30 @@ end
 
 function addBusOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
-    tOption = tParserCommand:option('-b', 'bus number'):target('iBus')
+    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
     tOption._mincount = 1
 end
 
 function addUnitOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-u --unit', 'unit number'):target('iUnit')
-    tOption = tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0)
+    tOption = tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0):convert(tonumber)
     tOption._mincount = 1
 end
 
 function addChipSelectOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-cs --chip_select', 'chip select number'):target('iChipSelect')
-    tOption = tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0)
+    tOption = tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0):convert(tonumber)
     tOption._mincount = 1
 end
 
 function addStartOffsetArg(tParserCommand)
     -- tParserCommand:option('-s --start_offset', 'start offset'):target('ulStartOffset'):default(0)
-    tParserCommand:option('-s', 'start offset'):target('ulStartOffset'):default(0)
+    tParserCommand:option('-s', 'start offset'):target('ulStartOffset'):default(0):convert(tonumber)
 end
 
 function addLengthArg(tParserCommand)
     -- tOption = tParserCommand:option('-l --length', 'number of bytes to read/erase/hash'):target('ulLen')
-    tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen')
+    tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen'):convert(tonumber)
     tOption._mincount = 1
 end
 
@@ -598,7 +598,7 @@ function addSecureArgs(tParserCommand)
 end
 
 function addJtagKhzArg(tParserCommand)
-    tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz')
+    tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz'):convert(tonumber)
 end
 
 function addJtagResetArg(tParserCommand)
@@ -633,7 +633,7 @@ lua cli_flash.lua erase -b 0 -l 4
 
 local tParser = argparse('Cli Flasher', ''):command_target("strSubcommand"):epilog(strEpilog)
 
-tParser:flag "--version":description "Show version info and exit. ":action(function()
+tParser:flag "-v --version":description "Show version info and exit. ":action(function()
     require("flasher_version")
     print(FLASHER_VERSION_STRING)
     os.exit(0)
