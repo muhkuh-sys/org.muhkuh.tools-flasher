@@ -460,7 +460,7 @@ if 'NETX90' in atPickNetxForBuild:
     elf_netx90_dbg, bin_netx90_dbg, lib_netx90_dbg = flasher_build('flasher_netx90_debug', env_netx90_dbg, 'targets/netx90_dbg', src_lib_netx90, src_main_netx90)
     
     cwd = os.getcwd()
-    strKeyRomPath = "keys/keys.xml" # must be copied to repo
+    # strKeyRomPath = "keys/keys.xml" # must be copied to repo
     output_dir_name = "netx90_dbg_secure"
     output_path = os.path.join('targets', output_dir_name)
     strOutputImg =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
@@ -478,13 +478,13 @@ if 'NETX90' in atPickNetxForBuild:
         netx90_parameter_addr = "0x%08x" % struct.unpack('<I', netx90_parameter_addr_bytes)[0]
         print("netx90_parameter_addr: %s " % netx90_parameter_addr)
 
-    if(os.path.exists(strKeyRomPath) and os.path.exists(tPublicOptionPatchTable)):
+    if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_dbg_secure.HBootImage(strOutputImg,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
             HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg_secure}),
             HBOOTIMAGE_DEFINES=dict({"PARAM_ADDR":netx90_parameter_addr}),
-            HBOOTIMAGE_KEYROM_XML=strKeyRomPath, ASIC_TYP='NETX90B')
+            ASIC_TYP='NETX90B')
     else:
         print("one of these files does not exists: ")
         for f in [strKeyRomPath, tPublicOptionPatchTable]:
