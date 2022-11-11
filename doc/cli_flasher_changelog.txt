@@ -1,11 +1,29 @@
-Updates in CLI Flasher v2.0.0
+Updates in CLI Flasher v2.0.0-dev2
 ==============================
 
-* Added the 'identify' command.
+* CLI flasher, WFP on netX 90 Rev.1/2: 
+  Now working in secure boot mode
+  Now working when the netX has previously entered the UART terminal console.
+
+* CLI flasher: Updated the command line syntax
+
+* CLI flasher, WFP:
+  Use the new secure flasher functions on the command line
+  Add two new optional_args '--comp' and '--sec':
+    - '--comp': use compatibility mode for netx90 M2M interfaces
+        - per default the hboot mode is used for netx90 m2m communication
+        - when this flag is set, the binary mode is used.
+    - '--sec': path to secure images used for secure M2M connection
+        - path to a folder where all signed versions of the images from 'netx/hboot/unsigned' are stored
+
+* Implemented the 'hash' and 'verify_hash' commands on the netX 90.
+
+* Added the 'identify_netx' command.
   It allows the visual identification of hardware by flashing
   the system LED in a Yellow Yellow Green Green pattern for 5 seconds
 
-
+* Updated libusb version to 1.0.26
+  (todo: explain)
 
 Updates in CLI Flasher v1.8.1
 ==============================
