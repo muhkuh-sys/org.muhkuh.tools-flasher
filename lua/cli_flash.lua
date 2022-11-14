@@ -937,6 +937,8 @@ function exec(aArgs)
 	local ulLen          = aArgs.ulLen
 	local strDataFileName= aArgs.strDataFileName
 	local atPluginOptions= aArgs.atPluginOptions
+    local bCompMode = aArgs.bCompMode
+	local strSecureOption = path.abspath(aArgs.strSecureOption)
 	
 	local tPlugin
 	local aAttr
@@ -984,7 +986,7 @@ function exec(aArgs)
 		-- Download the flasher.
 		if fOk then
 			print("Downloading flasher binary")
-			aAttr = flasher.download(tPlugin, FLASHER_PATH)
+			aAttr = flasher.download(tPlugin, FLASHER_PATH, nil, bCompMode, strSecureOption)
 			if not aAttr then
 				fOk = false
 				strMsg = "Error while downloading flasher binary"
