@@ -20,7 +20,7 @@
 
         <Execute start_app="false" lock_firewall="true" activate_debugging="true" apply_firewall_settings="true">
             <File name="@tElf0" />
-			<R0>%%PARAM_ADDR%%</R0>
+			<R0>${__BUFFER_START__}</R0>
         </Execute>
 	</Chunks>
 </HBootImage>

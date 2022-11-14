@@ -386,7 +386,8 @@ if 'NETX90' in atPickNetxForBuild:
     output_dir_name = "netx90_nodbg_secure"
     output_path = os.path.join('targets', output_dir_name)
     hboot_netx90_flasher_bin =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
-    strHbootDefinition = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher.xml" )
+    strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
+    strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_nodbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
     
     env_netx90_nodbg_secure = env_netx90_default.Clone()
@@ -394,11 +395,8 @@ if 'NETX90' in atPickNetxForBuild:
     elf_netx90_nodbg_secure, bin_netx90_nodbg_secure, lib_netx90_nodbg_secure = flasher_build('flasher_netx90_secure', env_netx90_nodbg_secure, output_path, src_lib_netx90, src_main_netx90)
 
     netx90_bin_file_path = str(bin_netx90_nodbg_secure[0])
-    with open (netx90_bin_file_path, "rb") as netx90_bin_file:
-        netx90_bin_file.seek(0x28)
-        netx90_parameter_addr_bytes = netx90_bin_file.read(4)
-        netx90_parameter_addr = "0x%08x" % struct.unpack('<I', netx90_parameter_addr_bytes)[0]
-        print("netx90_parameter_addr: %s " % netx90_parameter_addr)
+ 
+    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
 
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_nodbg_secure.HBootImage(
@@ -406,7 +404,7 @@ if 'NETX90' in atPickNetxForBuild:
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
             HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_nodbg_secure}),
-            HBOOTIMAGE_DEFINES=dict({"PARAM_ADDR":netx90_parameter_addr}),
+            HBOOTIMAGE_DEFINES=dict(),
             ASIC_TYP='NETX90B')
     else:
         print("one of these files does not exists: ")
@@ -464,7 +462,8 @@ if 'NETX90' in atPickNetxForBuild:
     output_dir_name = "netx90_dbg_secure"
     output_path = os.path.join('targets', output_dir_name)
     strOutputImg =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
-    strHbootDefinition = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher.xml" )
+    strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
+    strHbootDefinition = os.path.join(cwd,"targets", "netx90_dbg_secure", "hboot_netx90_flasher_dbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
     
     env_netx90_dbg_secure = env_netx90_default.Clone()
@@ -472,18 +471,14 @@ if 'NETX90' in atPickNetxForBuild:
     elf_netx90_dbg_secure,bin_netx90_dbg_secure, lib_netx90_dbg_secure = flasher_build('flasher_netx90_secure', env_netx90_dbg_secure, output_path, src_lib_netx90, src_main_netx90)
 
     netx90_bin_file_path = str(bin_netx90_dbg_secure[0])
-    with open (netx90_bin_file_path, "rb") as netx90_bin_file:
-        netx90_bin_file.seek(0x28)
-        netx90_parameter_addr_bytes = netx90_bin_file.read(4)
-        netx90_parameter_addr = "0x%08x" % struct.unpack('<I', netx90_parameter_addr_bytes)[0]
-        print("netx90_parameter_addr: %s " % netx90_parameter_addr)
-
+    
+    env_netx90_dbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_dbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_dbg_secure.HBootImage(strOutputImg,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
             HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg_secure}),
-            HBOOTIMAGE_DEFINES=dict({"PARAM_ADDR":netx90_parameter_addr}),
+            HBOOTIMAGE_DEFINES=dict(),
             ASIC_TYP='NETX90B')
     else:
         print("one of these files does not exists: ")
