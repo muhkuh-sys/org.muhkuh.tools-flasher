@@ -506,6 +506,7 @@ NETX_CONSOLEAPP_RESULT_T sdio_is_erased(CMD_PARAMETER_ISERASED_T *ptParams, unsi
 	const SDIO_HANDLE_T *ptSdioHandle;
 	FLASH_POSITIONS_T tFlashPos;
 	
+	unsigned long ulFlashAdr; /* device offset (for error message) */
 	unsigned char *pucCnt;
 	unsigned char *pucEnd;
 	
@@ -517,6 +518,7 @@ NETX_CONSOLEAPP_RESULT_T sdio_is_erased(CMD_PARAMETER_ISERASED_T *ptParams, unsi
 	uprintf("# Is-erased check...\n");
 	
 	flashpos_init(&tFlashPos, ptParams->ulStartAdr, ptParams->ulEndAdr, NULL);
+	ulFlashAdr = ptParams->ulStartAdr;
 	
 	while ((1 == flashpos_get_chunk(&tFlashPos)) && (fIsErased == 0))
 	{
@@ -532,10 +534,12 @@ NETX_CONSOLEAPP_RESULT_T sdio_is_erased(CMD_PARAMETER_ISERASED_T *ptParams, unsi
 		while (pucCnt < pucEnd)
 		{
 			if (*pucCnt != 0) {
+				uprintf("! not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", ulFlashAdr, 0, *pucCnt);
 				fIsErased = 1;
 				break;
 			}
-			pucCnt++;
+			++pucCnt;
+			++ulFlashAdr;
 		}
 		
 		flashpos_skip_chunk(&tFlashPos);

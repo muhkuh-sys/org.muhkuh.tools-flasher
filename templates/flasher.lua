@@ -79,6 +79,17 @@ SMC_SEND_IDLE_BYTES              = ${SMC_SEND_IDLE_BYTES}
 FLASHER_INTERFACE_VERSION        = ${FLASHER_INTERFACE_VERSION}
 
 
+SPIFLASH_NAME_SIZE         = ${SPIFLASH_NAME_SIZE}
+SPIFLASH_ID_SIZE           = ${SPIFLASH_ID_SIZE}
+OFFS_FLASH_ATTR            = ${OFFSETOF_DEVICE_DESCRIPTION_STRUCT_uInfo}
+                           + ${OFFSETOF_FLASHER_SPI_FLASH_STRUCT_tAttributes}
+OFFS_FLASH_ATTR_acName     = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_acName}
+OFFS_FLASH_ATTR_ulSize     = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_ulSize}
+OFFS_FLASH_ATTR_ucIdLength = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_ucIdLength}
+OFFS_FLASH_ATTR_aucIdSend  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdSend}
+OFFS_FLASH_ATTR_aucIdMask  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMask}
+OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagic}
+
 --------------------------------------------------------------------------
 -- callback/progress functions, 
 -- read/write image, call
@@ -166,7 +177,7 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 		strNetxName = 'netx4000'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
 		strNetxName = 'netx90_mpw'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
 		strNetxName = 'netx90'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
 		strNetxName = 'netiol'
@@ -540,6 +551,121 @@ end
 
 
 
+-- Extract the name string of an SPI flash from the device description.
+-- Returns a non-empty string, or nil
+function SpiFlash_getDeviceName(strDeviceDescriptor)
+	local strDeviceId = nil
+	
+	local iIdxStart = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_acName + 1
+	local iIdxEnd = iIdxStart
+	local iIdxMax = iIdxStart + SPIFLASH_NAME_SIZE + 1
+	while iIdxEnd<iIdxMax and string.byte(strDeviceDescriptor, iIdxEnd)~=0 do
+		iIdxEnd = iIdxEnd + 1
+	end
+	if iIdxEnd>iIdxStart then
+		strDeviceId = string.sub(strDeviceDescriptor, iIdxStart, iIdxEnd-1)
+	end
+	
+	return strDeviceId
+end
+
+function SpiFlash_getSize(strDeviceDesc)
+	return get_dword(strDeviceDesc, OFFS_FLASH_ATTR + OFFS_FLASH_ATTR_ulSize+1)
+end
+
+-- get hex representation (no spaces) of a byte string
+function getHexString(strBin)
+	local strHex = ""
+	for i=1, strBin:len() do
+		strHex = strHex .. string.format("%02x ", strBin:byte(i))
+	end
+	return strHex
+end
+
+
+-- Examine the identification sequence for a known SPI flash
+-- If the sequence starts with 0x9f, it is likely the JEDEC ID.
+-- At position 0:   send == 0x9f, mask == 0,    magic == 0.
+-- At positions >0: send == 0,    mask == 0xff, magic == xx
+-- Format of JEDEC ID: 0x12, 0x34, 0x56
+-- Returns a string containing at least two hex bytes, or nil
+function SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
+	local offs_len = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_ucIdLength
+	local offs_send = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdSend
+	local offs_mask = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdMask
+	local offs_magic = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdMagic
+	
+	local idLen = string.byte(strDeviceDesc, offs_len+1)
+	local aucIdSend = string.sub(strDeviceDesc, offs_send+1, offs_send+SPIFLASH_ID_SIZE)
+	local aucIdMask = string.sub(strDeviceDesc, offs_mask+1, offs_mask+SPIFLASH_ID_SIZE)
+	local aucIdMagic = string.sub(strDeviceDesc, offs_magic+1, offs_magic+SPIFLASH_ID_SIZE)
+	
+	-- print("Examining identification magic")
+	-- print("idLen:", idLen)
+	-- print("aucIdSend:", getHexString(aucIdSend))
+	-- print("aucIdMask:", getHexString(aucIdMask))
+	-- print("aucIdMagid:", getHexString(aucIdMagic))
+	
+	local strJedecId
+	if idLen >2 then
+		local fJedecIdValid = true
+		local astrJedecId = {}
+		
+		for i=1, idLen do
+			local bSend = string.byte(aucIdSend, i)
+			local bMask = string.byte(aucIdMask, i)
+			local bMagic = string.byte(aucIdMagic, i)
+			
+			if (i==1) then
+				if bSend ~= 0x9f or bMask ~= 0 or bMagic ~= 0 then
+					fJedecIdValid = false 
+					break
+				end
+			else 
+				if bSend ~= 0 or bMask ~= 0xff then 
+					fJedecIdValid = false 
+					break
+				else
+					table.insert(astrJedecId, string.format("0x%02x", bMagic))
+				end
+			end
+		end
+		
+		if fJedecIdValid == true then
+			strJedecId = table.concat(astrJedecId, ", ")
+			print("JEDEC ID from flash ID sequence: ", strJedecId)
+		else
+		
+			print("The ID sequence does not contain a JEDEC ID")
+		end
+	end 
+	
+	return strJedecId
+end
+
+-- Try to get the JEDEC ID for an SPI flash from the device description
+-- after it has been detected.
+-- If the device name is of the form SPDF_xxxxxx, xxxxxx is the JEDEC ID.
+-- If not, it is a known flash device detected using an identification 
+-- sequence. Try to get the ID from that.
+function SpiFlash_getNameAndId(strDeviceDesc)
+	local strDevName = SpiFlash_getDeviceName(strDeviceDesc)
+
+	local strJedecId = string.match(strDevName, "^SFDP_(%x+)$")
+	if strJedecId == nil then
+		strJedecId = SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
+	else 
+		local bytes = {}
+		local fn = function(x) table.insert(bytes, "0x"..x) end
+		string.gsub(strJedecId, "..", fn)
+		strJedecId = table.concat(bytes, ", ")
+		print("JEDEC ID from SFDP device name:", strJedecId)
+	end
+	
+	return strDevName, strJedecId
+end
+
+
 ---------------------------------------------------------------------------------
 -- The following functions assume that detect has been run and there is a
 -- valid device description in the memory.
@@ -661,6 +787,14 @@ end
 -- TODO: return nil if the call fails (e.g. because ulEraseEnd is too large)
 function isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	local fIsErased = false
+
+	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
+	if ulEraseEnd == 0xffffffff then
+		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+		if not (ulEraseStart and ulEraseEnd) then
+			return false, "getEraseArea failed!"
+		end
+	end
 
 	local aulParameter =
 	{

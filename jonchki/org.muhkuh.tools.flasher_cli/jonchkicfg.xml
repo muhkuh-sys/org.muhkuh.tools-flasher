@@ -17,12 +17,12 @@
 		</repository>
 
 		<!-- The bintray repository contains stable artifacts. -->
-		<repository id="bintray" type="url" cacheable="true" rescan="3600">
+<!--		<repository id="bintray" type="url" cacheable="true" rescan="3600">
 			<root>https://dl.bintray.com/muhkuh/jonchki</root>
 			<versions>[group]/[module]</versions>
 			<config>[group]/[module]/[version]/[artifact]-[version][platform].[extension]</config>
 			<artifact>[group]/[module]/[version]/[artifact]-[version][platform].[extension]</artifact>
-		</repository>
+		</repository> -->
 
 		<!-- The github repository contains stable artifacts. -->
 		<repository id="github" type="url" cacheable="true" rescan="3600">
@@ -32,12 +32,20 @@
 			<artifact>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</artifact>
 		</repository>
 
+		<!-- This is a workaround to get v2.3 of muhkuh_base_cli. -->
+<!--		<repository id="github_for_base_cli" type="url" cacheable="true" rescan="3600">
+			<root>https://github.com/muhkuh-sys</root>
+			<versions>[dotgroup]-[module]/releases?after=v2.4.0</versions>
+			<config>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</config>
+			<artifact>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</artifact>
+		</repository>-->
+
 		<!-- The sourceforge repository contains stable artifacts. -->
-		<repository id="sourceforge" type="url" cacheable="true" rescan="3600">
+<!--		<repository id="sourceforge" type="url" cacheable="true" rescan="3600">
 			<root>https://sourceforge.net/projects/muhkuh/files/jonchki</root>
 			<versions>[group]/[module]/</versions>
 			<config>[group]/[module]/[version]/[artifact]-[version].[extension][platform]/download</config>
 			<artifact>[group]/[module]/[version]/[artifact]-[version].[extension][platform]/download</artifact>
-		</repository>
+		</repository> -->
 	</repositories>
 </jonchkicfg>

@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------------
--- Copyright (C) 2017 Hilscher Gesellschaft f�r Systemautomation mbH
+-- Copyright (C) 2017 Hilscher Gesellschaft f�r Systemautomation mbH
 --
 -- Description:
 --   cli_flash.lua: command line flasher tool
@@ -12,6 +12,9 @@ SVN_VERSION="$Revision$"
 SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
+-- Uncomment to debug with LuaPanda
+-- require("LuaPanda").start("127.0.0.1",8818)
+
 -- Requires are below, because they cause a lot of text to be printed.
 
 
@@ -23,25 +26,34 @@ strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         
 Mode        Parameters                                                  
-flash       [p] dev [offset]      file   Write file to flash    
-read        [p] dev [offset] size file   Read flash and write to file      
-erase       [p] dev [offset] size        Erase area or whole flash       
-verify      [p] dev [offset]      file   Byte-by-byte compare
-verify_hash [p] dev [offset]      file   Quick compare using checksums
-hash        [p] dev [offset] size        Compute SHA1
-info        [p]                          Show busses/units/chip selects
-detect      [p] dev                      Check if flash is recognized
-test        [p] dev                      Test flasher      
-testcli     [p] dev                      Test cli flasher  
-list_interfaces                          List all usable interfaces
-detect_netx [p]                          Detect the netx chip type
--h                                       Show this help   
--version                                 Show flasher version 
+flash       [p][t][o] dev [offset]      file   Write file to flash    
+read        [p][t][o] dev [offset] size file   Read flash and write to file      
+erase       [p][t][o] dev [offset] size        Erase area or whole flash       
+verify      [p][t][o] dev [offset]      file   Byte-by-byte compare
+verify_hash [p][t][o] dev [offset]      file   Quick compare using checksums
+hash        [p][t][o] dev [offset] size        Compute SHA1
+info        [p][t][o]                          Show busses/units/chip selects
+detect      [p][t][o] dev                      Check if flash is recognized
+test        [p][t][o] dev                      Test flasher      
+testcli     [p][t][o] dev                      Test cli flasher  
+list_interfaces[t][o]                          List all usable interfaces
+detect_netx [p][t][o]                          Detect the netx chip type
+reset_netx  [p][t][o]                          Reset the netx 90
+-h                                             Show this help   
+-version                                       Show flasher version 
         
 p:    -p plugin_name
       select plugin
       example: -p romloader_usb_00_01
+      
+t:    -t plugin_type
+      select plugin type
+      example: -t romloader_jtag
         
+o:    [-jtag_khz frequency] [-jtag_reset mode]
+      -jtag_khz: override JTAG frequency 
+      -jtag_reset: hard(default)/soft/attach
+
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
       default: -u 0 -cs 0
@@ -53,7 +65,14 @@ size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
 
-                        
+
+Limitations:
+
+The reset_netx command currently supports only the netx 90.
+
+The hash and verify_hash commands do not support the netx 90 and netIOL.
+
+
 Examples:
 
 Write file to serial flash:
@@ -126,28 +145,102 @@ function printf(...) print(string.format(...)) end
 -- get plugin
 --------------------------------------------------------------------------
 
-function getPluginByName(strName)
-	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-		local iDetected
-		local aDetectedInterfaces = {}
-		print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
-		iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
-		print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
-		
+-- Show the available interfaces and let the user select one interactively.
+--
+-- strPattern is not evaluated.
+-- 
+-- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
+-- a plugin provider, e.g. "romloader_uart"), only this plugin provider
+-- is scanned.
+-- If strPluginType is nil, all plugin providers are scanned. 
+
+function SelectPlugin(strPattern, strPluginType, atPluginOptions)
+	local iInterfaceIdx
+	local aDetectedInterfaces
+	local tPlugin
+	local strPattern = strPattern or ".*"
+
+	show_plugin_options(atPluginOptions)
+	
+	repeat do
+		-- Detect all interfaces.
+		aDetectedInterfaces = {}
+		for i,v in ipairs(__MUHKUH_PLUGINS) do
+			if strPluginType == nil or strPluginType == v:GetID() then
+				local iDetected
+				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
+				iDetected = v:DetectInterfaces(aDetectedInterfaces,  atPluginOptions)
+				print(string.format("Found %d interfaces with plugin %s", iDetected, v:GetID()))
+			end
+		end
+		print(string.format("Found a total of %d interfaces with %d plugins", #aDetectedInterfaces, #__MUHKUH_PLUGINS))
+		print("")
+
+		-- Show all detected interfaces.
+		print("Please select the interface:")
 		for i,v in ipairs(aDetectedInterfaces) do
 			print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
-			if strName == v:GetName() then
-				if not v:IsValid() then
-					return nil, "Plugin is not valid"
-				elseif v:IsUsed() then
-					return nil, "Plugin is in use"
-				else
-					print("found plugin")
-					local tPlugin = v:Create()
-					if tPlugin then 
-						return tPlugin
+		end
+		print("R: rescan")
+		print("C: cancel")
+
+		-- Get the user input.
+		repeat do
+			io.write(">")
+			strInterface = io.read():lower()
+			iInterfaceIdx = tonumber(strInterface)
+		-- Ask again until...
+		--  1) the user requested a rescan ("r")
+		--  2) the user canceled the selection ("c")
+		--  3) the input is a number and it is an index to an entry in aDetectedInterfaces
+		end until strInterface=="r" or strInterface=="c" or (iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces)
+	-- Scan again if the user requested it.
+	end until strInterface~="r"
+
+	if strInterface~="c" then
+		-- Create the plugin.
+		tPlugin = aDetectedInterfaces[iInterfaceIdx]:Create()
+	else
+		tPlugin = nil
+	end
+
+	return tPlugin
+end
+
+-- Try to open a plugin for an interface with the given name.
+-- This function assumes that the name starts with the name of the interface,
+-- e.g. romloader_uart, and scans only for interfaces whose type is contained
+-- in the name string.
+function getPluginByName(strName, strPluginType, atPluginOptions)
+	show_plugin_options(atPluginOptions)
+	
+	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
+			local iDetected
+			local aDetectedInterfaces = {}
+	
+			local strPluginType = tPluginClass:GetID()
+			if strName:match(strPluginType) then
+				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
+				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
+				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
+			end
+			
+			for i,v in ipairs(aDetectedInterfaces) do
+				print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+				if strName == v:GetName() then
+					if not v:IsValid() then
+						return nil, "Plugin is not valid"
+					elseif v:IsUsed() then
+						return nil, "Plugin is in use"
 					else
-						return nil, "Error creating plugin instance"
+						print("found plugin")
+						local tPlugin = v:Create()
+						if tPlugin then 
+							return tPlugin
+						else
+							return nil, "Error creating plugin instance"
+						end
 					end
 				end
 			end
@@ -156,14 +249,22 @@ function getPluginByName(strName)
 	return nil, "plugin not found"
 end
 
-function getPlugin(strPluginName)
+-- If strPluginName is the name of an interface, try to create a plugin 
+-- instance for exactly the named interface.
+-- Otherwise, show a list of available interface and let the user select one.
+--
+-- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
+-- a plugin provider, e.g. "romloader_uart"), only this plugin provider
+-- is scanned.
+
+function getPlugin(strPluginName, strPluginType, atPluginOptions)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName)
+		tPlugin, strError = getPluginByName(strPluginName, strPluginType, atPluginOptions)
 	else
 		-- Ask the user to pick a plugin.
-		tPlugin = select_plugin.SelectPlugin()
+		tPlugin = SelectPlugin(nil, strPluginType, atPluginOptions)
 		if tPlugin == nil then
 			strError = "No plugin selected!"
 		end
@@ -174,11 +275,15 @@ end
 
 
 function printf(...) print(string.format(...)) end
-function list_interfaces()
+function list_interfaces(strPluginType, atPluginOptions)
+	show_plugin_options(atPluginOptions)
+
 	-- detect all interfaces
 	local aDetectedInterfaces = {}
 	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-		tPluginClass:DetectInterfaces(aDetectedInterfaces)
+		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
+			tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
+		end
 	end
 	-- filter used and non valid interfaces
 	local aUnusedInterfaces = {}
@@ -202,18 +307,51 @@ end
 
 function detect_chiptype(aArgs)
 	local strPluginName  = aArgs.strPluginName
+	local strPluginType  = aArgs.strPluginType
+	local atPluginOptions= aArgs.atPluginOptions
 	local fOk = false
-	local tPlugin, strMsg = getPlugin(strPluginName)
+	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	local fConnected = false
 	if tPlugin then
-		tPlugin:Connect()
+		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		
 		local iChiptype = tPlugin:GetChiptyp()
-		if iChiptype then
-			local strChipName = tPlugin:GetChiptypName(iChiptype)
+
+		-- Detect the PHY version to discriminate
+		-- between netX 90 Rev1 and netx 90 Rev1 PHY V3
+		if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+		iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+			if fConnected == true then
+				print("Detecting PHY version on netX 90 Rev1")
+				local bootpins = require("bootpins")
+				bootpins:_init()
+				local atResult = bootpins:read(tPlugin)
+				if atResult.chip_id == bootpins.atChipID.NETX90B then 
+					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90B
+				elseif atResult.chip_id == bootpins.atChipID.NETX90BPHYR3 then 
+					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90C
+				else
+					iChiptype = nil
+				end
+			else
+				iChiptype = nil
+			end
+		end
+
+		if iChiptype and iChiptype ~= romloader.ROMLOADER_CHIPTYP_UNKNOWN then
+			local strChipName
+			if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
+				strChipName = "netX90 Rev1 (PHY V2)"
+			else 
+				strChipName = tPlugin:GetChiptypName(iChiptype)
+			end
+			
 			print("")
 			printf("Chip type: (%d) %s", iChiptype, strChipName)
 			print("")
+			
 			fOk = true
+			
 		else
 			strMsg = "Failed to get chip type"
 		end -- if iChiptype
@@ -223,6 +361,160 @@ function detect_chiptype(aArgs)
 	
 	return fOk, strMsg
 end
+
+
+-- Sleep for a number of seconds
+-- (between seconds and seconds+1)
+function sleep_s(seconds)
+	local t1 = os.time()
+	local t2
+	repeat 
+		t2 = os.time()
+	until os.difftime(t2, t1) >= (seconds+1)
+end
+
+-- Set up the watchdog to reset after one second. 
+-- This gives us time to disconnect the plugin.
+--
+-- Notes: 
+-- Currently does not support netIOL (not tested)
+-- Does not work reliably via JTAG.
+--
+-- watchdog CTRL register: at base address + 0
+-- bit 31   write_enable 
+-- bit 29   wdg_active_enable_w (*)
+-- bit 28   wdg_counter_trigger_w
+-- bit 24   irq_req_watchdog 
+-- bit 19-0 access code
+-- 
+-- (*) Watchdog Active Enable. 
+-- If this bit is set, the WDGACT output signal(PIN D16) is enabled.
+-- Only on netx 500/100/50.
+-- 
+-- IRQ_TIMEOUT: at base address + 8
+-- bit 15-0 IRQ timeout in units of 100 µs
+-- 
+-- RES_TIMEOUT: at base address + 12 
+-- bit 15-0 RESET timeout in units of 100 µs
+
+function reset_netx_via_watchdog(aArgs)
+	local tPlugin
+	local fOk
+	local strMsg
+
+	local strPluginName  = aArgs.strPluginName
+	local strPluginType  = aArgs.strPluginType
+	local atPluginOptions= aArgs.atPluginOptions
+
+	local atChiptyp2WatchdogBase = {
+		-- [romloader.ROMLOADER_CHIPTYP_NETX500]          = 0x00100200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX100]          = 0x00100200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX50]           = 0x1c000200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX10]           = 0x101c0200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX56]           = 0x1018c5b0,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX56B]          = 0x1018c5b0,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED] = 0xf409c200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4000_FULL]    = 0xf409c200,
+		-- [romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL]   = 0xf409c200,
+		[romloader.ROMLOADER_CHIPTYP_NETX90_MPW]       = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90]           = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90B]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90C]          = 0xFF001640,
+		[romloader.ROMLOADER_CHIPTYP_NETX90D]          = 0xFF001640,
+		-- [romloader.ROMLOADER_CHIPTYP_NETIOLA]          = 0x00000500,
+		-- [romloader.ROMLOADER_CHIPTYP_NETIOLB]          = 0x00000500,
+	}
+
+	fOk = false
+	
+	-- open the plugin
+	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+
+	if tPlugin ~= nil then 
+		tPlugin:Connect()
+		local iChiptype = tPlugin:GetChiptyp()
+		local strChiptypName = tPlugin:GetChiptypName(iChiptype)
+		local ulWdgBaseAddr = atChiptyp2WatchdogBase[iChiptype]
+		
+		if ulWdgBaseAddr == nil then
+			-- unknown chip type or not supported
+			strMsg = string.format("The reset_netx command is not supported on %s (%d)", strChiptypName, iChiptype)
+			
+		elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLA or 
+			iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLB then 
+			-- Watchdog reset on netIOL
+
+			local ulAddr_wdg_sys_cfg            = ulWdgBaseAddr + 0
+			local ulAddr_wdg_sys_cmd            = ulWdgBaseAddr + 4
+			local ulAddr_wdg_sys_cnt_upper_rld  = ulWdgBaseAddr + 8
+			local ulAddr_wdg_sys_cnt_lower_rld  = ulWdgBaseAddr + 12
+			local ulPwd = 0x3fa * 4
+			local ulVal
+			
+			-- disable watchdog 
+			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd)
+			
+			-- check if it is disabled
+			ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
+			ulVal = ulVal % 2
+			--ulVal = bit.band(ulVal, 1)
+			if ulVal ~= 0 then
+				print("Warning: cannot disable watchdog on netIOL")
+			end
+			
+			-- todo: what values for prescaler/counter?
+			tPlugin:write_data16(ulAddr_wdg_sys_cnt_upper_rld, 0x07ff)
+			tPlugin:write_data16(ulAddr_wdg_sys_cnt_lower_rld, 0xffff)
+			
+			-- enable watchdog
+			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd + 1)
+			
+			-- trigger watchdog
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0x72b4)
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xde80)
+			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xd281)
+			
+			print ("The netX should reset after one second.")
+			fOk = true
+
+		else
+			-- watchdog reset on other netX types
+			local ulAddr_WdgCtrl       = ulWdgBaseAddr + 0
+			local ulAddr_WdgIrqTimeout = ulWdgBaseAddr + 8
+			local ulAddr_WdgResTimeout = ulWdgBaseAddr + 12
+			local ulVal
+			
+			-- Set write enable for the timeout regs
+			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+			ulVal = ulVal + 0x80000000
+			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+			
+			-- IRQ after 0.9 seconds (9000 * 100µs, not handled)
+			tPlugin:write_data32(ulAddr_WdgIrqTimeout, 9000)
+			-- reset 0.1 seconds later
+			tPlugin:write_data32(ulAddr_WdgResTimeout, 1000)
+
+			-- Trigger the watchdog once to start it
+			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+			ulVal = ulVal + 0x10000000
+			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+			
+			print ("The netX should reset after one second.")
+			fOk = true
+		end
+		
+		tPlugin:Disconnect()
+		tPlugin = nil
+		
+		-- Wait 1 second (actually between 1 and 2 seconds)
+		if (fOk == true) then
+			sleep_s(1)
+		end
+	end 
+	
+	return fOk, strMsg
+end
+
 
 
 --------------------------------------------------------------------------
@@ -241,6 +533,7 @@ MODE_HELP = 10
 MODE_LIST_INTERFACES = 15
 MODE_DETECT_CHIPTYPE = 16
 MODE_VERSION = 17
+MODE_RESET = 18
 -- test modes
 MODE_TEST = 11
 MODE_TEST_CLI = 12
@@ -250,18 +543,19 @@ MODE_GET_DEVICE_SIZE = 14
 
 
 atModeArgs = {
-	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
-	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p"}},
-	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p"}},
-	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
-	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p"}},
-	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p"}},
-	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p"}},
-	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p"}},
-	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p"}},
-	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p"}},
-	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {}},
-	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p"}},
+	flash           = { mode = MODE_FLASH,             required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	read            = { mode = MODE_READ,              required_args = {"b", "u", "cs", "s", "l", "f"}, optional_args = {"p", "t", "jf", "jr"}},
+	erase           = { mode = MODE_ERASE,             required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
+	verify          = { mode = MODE_VERIFY,            required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	verify_hash     = { mode = MODE_VERIFY_HASH,       required_args = {"b", "u", "cs", "s", "f"},      optional_args = {"p", "t", "jf", "jr"}},
+	hash            = { mode = MODE_HASH,              required_args = {"b", "u", "cs", "s", "l"},      optional_args = {"p", "t", "jf", "jr"}},
+	detect          = { mode = MODE_DETECT,            required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	test            = { mode = MODE_TEST,              required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	testcli         = { mode = MODE_TEST_CLI,          required_args = {"b", "u", "cs"},                optional_args = {"p", "t", "jf", "jr"}},
+	info            = { mode = MODE_INFO,              required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
+	list_interfaces = { mode = MODE_LIST_INTERFACES,   required_args = {},                              optional_args = {"t", "jf", "jr"}},
+	detect_netx     = { mode = MODE_DETECT_CHIPTYPE,   required_args = {},                              optional_args = {"p", "t", "jf", "jr"}}, 
+	reset_netx      = { mode = MODE_RESET,             required_args = {},                              optional_args = {"p", "t", "jf", "jr"}},
 	["-h"]          = { mode = MODE_HELP,              required_args = {},                              optional_args = {}},
 	["-version"]    = { mode = MODE_VERSION,           required_args = {},                              optional_args = {}},
 }
@@ -272,9 +566,16 @@ b  = {type = "number", clkey ="-b",  argkey = "iBus",              name="bus num
 u  = {type = "number", clkey ="-u",  argkey = "iUnit",             name="unit number",        default=0},
 cs = {type = "number", clkey ="-cs", argkey = "iChipSelect",       name="chip select number", default=0},
 p  = {type = "string", clkey ="-p",  argkey = "strPluginName",     name="plugin name"},
+t  = {type = "string", clkey ="-t",  argkey = "strPluginType",     name="plugin type"},
 s  = {type = "number", clkey ="-s",  argkey = "ulStartOffset",     name="start offset",       default=0},
 l  = {type = "number", clkey ="-l",  argkey = "ulLen",             name="number of bytes to read/erase/hash"},
-f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"}
+f  = {type = "string", clkey = "",   argkey = "strDataFileName",   name="file name"},
+
+jf = {type = "number", clkey = "-jtag_khz",   argkey = "iJtagKhz",     name="JTAG clock in kHz"},
+jr = {type = "choice", clkey = "-jtag_reset", argkey = "strJtagReset", name="JTAG reset method", 
+	choices = {hard = "HardReset", soft = "SoftReset", attach = "Attach"},
+	choices_help = "Possible values are: hard (default), soft, attach"
+	},
 }
 
 
@@ -335,6 +636,18 @@ function parseArg(aArgs, strMode, tModeArgs, strKey, strVal)
 		else
 			fOk = false
 			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
+		end
+	elseif tArgdef.type == "choice" then
+		local val = tArgdef.choices[strVal]
+		if val then
+			aArgs[tArgdef.argkey] = val
+			fOk = true
+		else
+			fOk = false
+			strMsg = string.format("Error parsing value for %s (%s)", tArgdef.name, tArgdef.clkey)
+			if tArgdef.choices_help then 
+				strMsg = strMsg .. " " .. tArgdef.choices_help
+			end
 		end
 	end
 	
@@ -434,12 +747,20 @@ function parseArgs()
 		end
 	end
 	
+	-- construct the argument list for DetectInterfaces
+	aArgs.atPluginOptions = {
+		romloader_jtag = {
+			jtag_reset = aArgs.strJtagReset,
+			jtag_frequency_khz = aArgs.iJtagKhz
+		}
+	}
+	
 	return fOk, aArgs, strMsg
 end
 
 
 function showArgs(aArgs)
-	local arg_order = {"p", "b", "u", "cs", "s", "l", "f"}
+	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf"}
 	local astrArgLines = {}
 		
 	for i, k in ipairs(arg_order) do
@@ -468,6 +789,16 @@ function showArgs(aArgs)
 		print(strLine)
 	end
 	print("")
+end
+
+function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			print(strKey, tVal)
+		end
+	end
 end
 
 --------------------------------------------------------------------------
@@ -534,12 +865,14 @@ end
 function exec(aArgs)
 	local iMode          = aArgs.iMode
 	local strPluginName  = aArgs.strPluginName
+	local strPluginType  = aArgs.strPluginType
 	local iBus           = aArgs.iBus
 	local iUnit          = aArgs.iUnit
 	local iChipSelect    = aArgs.iChipSelect
 	local ulStartOffset  = aArgs.ulStartOffset
 	local ulLen          = aArgs.ulLen
 	local strDataFileName= aArgs.strDataFileName
+	local atPluginOptions= aArgs.atPluginOptions
 	
 	local tPlugin
 	local aAttr
@@ -548,12 +881,13 @@ function exec(aArgs)
 	local strMsg
 	
 	local ulDeviceSize
+	local tDevInfo = {}
 	
 	local strFileHashBin, strFlashHashBin
 	local strFileHash , strFlashHash
 	
 	-- open the plugin
-	tPlugin, strMsg = getPlugin(strPluginName)
+	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
 		tPlugin:Connect()
 		fOk = true
@@ -613,6 +947,19 @@ function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to get a device description!"
 				else
+				
+					if iBus == flasher.BUS_Spi then
+						local strDevDesc = flasher.readDeviceDescriptor(tPlugin, aAttr)
+						if strDevDesc==nil then
+							strMsg = "Failed to read the flash device descriptor!"
+							fOk = false
+						else 
+							local strSpiDevName, strSpiDevId = flasher.SpiFlash_getNameAndId(strDevDesc)
+							tDevInfo.strDevName = strSpiDevName or "unknown"
+							tDevInfo.strDevId = strSpiDevId or "unknown"
+						end
+					end
+				
 					ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
 					if ulDeviceSize == nil then
 						fOk = false
@@ -724,9 +1071,9 @@ function exec(aArgs)
 	end
 	
 	if iMode == MODE_GET_DEVICE_SIZE then
-		return ulLen, strMsg
+		return ulLen, strMsg, tDevInfo
 	else
-		return fOk, strMsg
+		return fOk, strMsg, tDevInfo
 	end
 end
 
@@ -898,16 +1245,28 @@ elseif aArgs.iMode == MODE_VERSION then
     
 else
 	showArgs(aArgs)
-		
+	
 	require("muhkuh_cli_init")
 	require("mhash")
 	require("flasher")
 	require("flasher_test")
 	
 	if aArgs.iMode == MODE_LIST_INTERFACES then
-		list_interfaces()
+		list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
 		os.exit(0)
 	
+	elseif aArgs.iMode == MODE_RESET then
+		fOk, strMsg = reset_netx_via_watchdog(aArgs)
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			os.exit(0)
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			os.exit(1)
+		end
+		
 	elseif aArgs.iMode == MODE_DETECT_CHIPTYPE then
 		fOk, strMsg = detect_chiptype(aArgs)
 		if fOk then
@@ -923,11 +1282,27 @@ else
 	elseif aArgs.iMode == MODE_TEST_CLI then
 		flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
 		fOk, strMsg = flasher_test.testFlasher(flasher_interface)
-		print(fOk, strMsg)
-		os.exit(0)
+		if fOk then
+			if strMsg then 
+				print(strMsg)
+			end
+			print("Test PASSED")
+			os.exit(0)
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			print("Test FAILED")
+			os.exit(1)
+		end
 		
 	else
-		fOk, strMsg = exec(aArgs)
+		fOk, strMsg, tDevInfo = exec(aArgs)
+		
+		if tDevInfo.strDevName then
+			printf("Flash device name: %s", tDevInfo.strDevName)
+		end
+		if tDevInfo.strDevId then
+			printf("Flash device has JEDEC ID: %s", tDevInfo.strDevId)
+		end
 		
 		if fOk then
 			if strMsg then 

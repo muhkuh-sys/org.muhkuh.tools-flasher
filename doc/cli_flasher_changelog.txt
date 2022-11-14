@@ -1,0 +1,283 @@
+Updates in CLI Flasher v1.8.1
+==============================
+
+* Bugfix: detect_netx may hang with netx 90 Rev1 (PHY V2 or V3) 
+  over ethernet.
+
+Romloader v2.5.3:
+* Bugfix: Possible crash when connecting to the netX 90 Rev2
+  via UART or ethernet.
+
+USIPGen v0.2.1: 
+* Exit with error code 1 if the serial connection can not be opened
+  inside the load_usip function.
+
+USIP Player:
+* Do not verify the signature of the helper files if the read command 
+  is selected.
+
+
+
+Updates in CLI Flasher v1.8.0
+==============================
+
+* Add Support for new chip types:
+  netX 90 Rev1 with PHY v3 (Step C)
+  netX 90 Rev2 (Step D)
+
+* When detecting an SPI/SQI flash, detect and display the 
+  device name and its JEDEC ID, when possible.
+
+* 'detect_netx' command: when netX 90 Rev. 1 is found,
+  detect the PHY version.
+
+
+Romloader v2.5.2:
+* netX 90/JTAG: disable all IRQs if CPU is halted in undefined state 
+  (that is, when attach mode is selected or when the CPU does not halt 
+  in the breakpoint as expected after reset.)
+
+* netx 90 Rev1 and Rev2: When the netx is in the UART terminal console,
+  send a reset command which allows us to enter the machine interface.
+  (Previously, a manual reset was required).
+
+* UART machine interface:
+  During the connection setup, when the netx is repeatedly sending a packet
+  because it is waiting for an ack packet, send a cancel_operation request.
+
+* netX 90: When secure boot mode is detected, exit with an error.
+
+* Changed wording of some messages during chip type detection
+  more uniform messages
+  mention when chip type is potentially incorrect
+  mention open/secure boot mode
+
+
+WFP:
+* Added the 'read' command.
+  It allows to read data from the flash controlled by a WFP control file 
+  and store the resulting files in a WFP directory or a WFP archive.
+
+* Added the 'example' command.
+  It detects the chip type of a connected netx chip and creates an example
+  control XML file for this chip type.
+
+* Added summary output to the verify command.
+
+* Bugfix: Verify command fails for a wfp archive that uses a flash command 
+  for intflash01 before another flash command for intflash1 or intflash0.
+  (NXTFLASHER-432)
+
+* Bugfix: Add timestamps to the files in a created archive. (NXTFLASHER-426)
+
+
+USIP Player:
+* Added command 'set_kek'
+
+* Updated the read_sip binary
+  Invalidate the SIP copy in RAM and reset to prevent reading from an outdated copy.
+
+
+SIPper v0.2.3:
+* Changed uart_handler to version 1.2.1
+  Added support of new uart_handler receive routine to make the communication more robust
+
+* Added details to executable, which are shown when you hover over the exe file in Windows
+
+
+
+Updates in CLI Flasher v1.7.0
+==============================
+
+* USIP Player improvements:
+  When the command line option '--force_console' is present, 
+  scan only for UART interfaces as the interface must be UART.
+  When the command line option '--extend_exec' is present, 
+  scan only for JTAG interfaces as the interface must be JTAG.
+
+  Speed up scanning for interfaces by not scanning on ethernet.
+
+* Update SIPper to v0.2.1
+  Bugfix in analyze command.
+
+
+
+
+Updates in CLI Flasher v1.6.3
+==============================
+
+* CLI Flasher bugfix (NXTFLASHER-360):
+  netx 90 internal flash:
+  After accessing the bank 1 info page (-b 2 -u 1 -cs 1 or 2),	
+  a subsequent access to bank 3 (-b 2 -u 3) 
+  may return incorrect results or crash.
+  This does not occur when a reset was performed after accessing 
+  the info page.
+	
+* USIP player:
+  This is an extension that allows access to the secure info pages and 
+  execution of USIP images on the netX 90.
+
+  usip                  Load an usip file on the netX, reset the netX and 
+                        process the usip file to update the SecureInfoPage.
+  verify                Verify the content of a usip file against the 
+                        content of a secure info page.
+  read                  Read out the content of the secure infopage and 
+                        save it into a temporary folder.
+  set_sip_protection    Set the SipProtectionCookie, enable protection of SIPs.
+  detect_secure_mode    Detect the secure mode of the netX. 
+  get_uid               Get the unique ID.
+
+  Example:
+  lua5.1 usip_player.lua -h
+
+* Moved to OpenOCD 0.11.0/libUSB 1.0.24
+  Change in output formatting:
+  Trace messages passed up from the flasher running on the netX that previously
+  ended with a double line break, now end with a single line break.
+  Some trace messages from OpenOCD itself, e.g. register writes, that previously
+  ended with a single line break, now end with a double line break.
+  
+* JTAG: Add support for the netSHIELD 90 board 
+
+* Initialize the netIOL PLL
+
+* Improved stability of machine interface protocol 
+
+* JTAG: Disable breakpoints after running the flasher on netX  
+
+* JTAG: Update attach/reset procedure for netx 90:
+  Remove early breakpoint at 0x170
+  This breakpoint can be enabled manually in jtag_detect_init.tcl
+  Abort with an error if the CPU cannot be halted.
+
+* reset_netx 
+  This new command allows to reset the netX.
+  It works by triggering a watchdog reset.
+  This means that it does not require a hardware reset line, but does require
+  that the netX is accessible via a machine interface connection or via JTAG.
+  Limitation: When using JTAG, this command only supports the netX 90.
+  Example:
+  lua5.1 cli_flash.lua reset_netx 
+  
+* JTAG reset mode
+  This option allows selecting if/how the netX is reset when connecting
+  via JTAG:
+  hard: reset the netX using the SRST line of the JTAG adapter (default)
+  soft: reset the netX using the DPM reset request
+  attach: do not reset the netX
+  Example:
+  lua5.1 cli_flash.lua flash -jtag_reset hard -b 1 data.bin
+  
+* JTAG frequency 
+  This option allows selecting the frequency used for the JTAG interface.
+  Example:
+  lua5.1 cli_flash.lua flash -jtag_khz 6000 -b 1 data.bin
+
+* WFP: WFP files may contain multiple files with the same name
+  under different paths.
+  The file attribute of a Data node may now contain a filename with a path, if 
+  the FlasherPackage node includes the attribute has_subdirs="True".
+
+  When using 'has_subdirs' flag:
+   - the whole file path inside the wfp-control file is used as reference to 
+     check for multiple copies of the same file
+   - the archive will be packed with a hierarchy
+  When not using 'has_subdirs' flag:
+   - only the file name will be used as a reference for checking for multiple 
+     files with the same name
+   - multiple files with the same name in different subdirs will lead to an 
+     Error while packing
+   - the archive will be packed with a flat hierarchy
+
+* WFP verify bugfix: handle netx 90 intflash01 (-b 2 -u 3) correctly.
+
+Other changes:
+
+* Replace the netX4000 RELAXED with the netX4000 FULL
+
+* Build the GPIO drivers on ARM platforms.
+
+
+
+	
+Updates in CLI flasher v1.6.2
+==============================
+
+* Specify interface type to speed up scanning for interfaces
+  Both cli_flash.lua and wfp.lua now support the command line argument 
+  -t <plugin type> to specify the interface type.
+  This can speed up the scanning process.
+  
+  Example:
+  lua5.1 cli_flash.lua list_interfaces -t romloader_uart
+
+  The following interface types exist:
+  romloader_uart 
+  romloader_usb 
+  romloader_jtag
+  romloader_eth
+
+  -t may be combined with -p (specifying the interface name).
+
+* If an isErased check fails, the device offset of the first 
+  non-erased location is printed.
+
+* Bugfix: Verify error offset 
+  The verify function for serial flash reported an incorrect offset when a difference was found. (cli_flash.lua)
+
+
+Changes specific to JTAG:
+
+* Add support for the Segger J-Link JTAG adapter.
+  Support has been added for the following variants:
+  VID 0x1366 PID 0x0101 
+  VID 0x1366 PID 0x0105 
+  
+* Add support for the NXEB 90-SPE board.
+
+* Change the interface name of the NXHX90-DRIVE board to NXHX90-MC.
+
+* Removed delays in JTAG memory access functions. Poll faster for messages.
+
+* Bugfix: Spike on nSRST line
+  Fix a spike on the reset line that occurred on the nSRST line on FTDI-based
+  JTAG adapters when a reset was triggered.
+  
+  This change affects the following boards:
+  NXHX 90-JTAG
+  NXHX 90-MC
+  NXHX 90-SPE
+  NRPEB H90-RE
+  and the following adapters:
+  NXJTAG-USB 
+  NXJTAG-4000-USB
+
+
+
+Changes specific to WFP:
+
+* Add the verify command to check if a WFP was written to flash correctly.
+
+* Add "conditions" to the flash and verify commands
+  Conditions are variables that are set via the command line as key=value pairs. 
+  The instructions in the wfp.xml control file can be made dependent on the 
+  values of these variables.
+  For instance, this allows to use a single WFP file to flash different 
+  hardware configurations or firmware variants.
+
+* Add the 'erase' command to the wfp.xml control file.
+
+* Add simple WFPs
+  Add the flag -s/--simple to the pack command. 
+  This will create a SWFP file without compression.
+
+* Add version command 
+  Using the command -v or --version
+
+* It is now possible to use subdirectories in wfp.xml
+
+* Bugfix: wfp.lua returns return code 1 in case of errors.
+
+
+

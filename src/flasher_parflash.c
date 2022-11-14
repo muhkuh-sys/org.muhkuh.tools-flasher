@@ -559,12 +559,15 @@ NETX_CONSOLEAPP_RESULT_T parflash_isErased(const CMD_PARAMETER_ISERASED_T *ptPar
 	ulErased = 0xffU;
 	while( tCnt.puc<tEnd.puc )
 	{
-		ulErased &= *(tCnt.puc++);
+		ulErased &= *tCnt.puc;
 		if( ulErased!=0xff )
 		{
+			uprintf("! Memory not erased at address 0x%08x - expected: 0x%02x found: 0x%02x\n", tCnt.ul, 0xff, ulErased);
 			break;
 		}
-
+		
+		++tCnt.puc;
+		
 		/* Show progress every 64K bytes. */
 		if( (tCnt.ul&0xffff)==0 )
 		{
