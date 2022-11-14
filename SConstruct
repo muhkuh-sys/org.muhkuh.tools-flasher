@@ -627,7 +627,8 @@ if fBuildIsFull==True:
         'bootpins_netx90/bootpins_netx90.bin')
 
     tArcList.AddFiles('netx/hboot/unsigned/netx90/',
-        hboot_netx90_flasher_bin)
+        hboot_netx90_flasher_bin,
+        'start_mi_netx90/hboot_start_mi_netx90_com_intram.bin')
 
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
