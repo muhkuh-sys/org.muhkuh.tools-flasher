@@ -161,8 +161,8 @@ function call(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
 	return tPlugin:call(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
 end
 
-function call_hboot(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
-	return tPlugin:call_hboot(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
+function call_hboot(tPlugin, fnCallbackMessage)
+	return tPlugin:call_hboot(fnCallbackMessage or default_callback_message, 2)
 end
 
 function call_usip(tPlugin, fnCallbackMessage)
@@ -419,7 +419,7 @@ function callFlasher(tPlugin, aAttr, aulParams, fnCallbackMessage, fnCallbackPro
 	-- call
     if bHbootFlash == true then
         print("use hboot call method")
-        call_hboot(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage)
+        call_hboot(tPlugin, fnCallbackMessage)
     else
         print("use old call method")
         call(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage)
