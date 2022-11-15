@@ -938,7 +938,10 @@ function exec(aArgs)
 	local strDataFileName= aArgs.strDataFileName
 	local atPluginOptions= aArgs.atPluginOptions
     local bCompMode = aArgs.bCompMode
-	local strSecureOption = path.abspath(aArgs.strSecureOption)
+	local strSecureOption = nil
+	if aArgs.strSecureOption~= nil then
+		path.abspath(aArgs.strSecureOption)
+	end
 	
 	local tPlugin
 	local aAttr
