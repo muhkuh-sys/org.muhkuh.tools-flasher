@@ -249,7 +249,7 @@ static NETX_CONSOLEAPP_RESULT_T spi_verify_with_progress(const FLASHER_SPI_FLASH
 		{
 			if( pucCmp0[sizCmpCnt]!=pucCmp1[sizCmpCnt] )
 			{
-				uprintf(". verify error at offset 0x%08x. buffer: 0x%02x, flash: 0x%02x.\n", ulC + ulProgressCnt + sizCmpCnt, pucCmp1[sizCmpCnt], pucCmp0[sizCmpCnt]);
+				uprintf(". verify error at offset 0x%08x. buffer: 0x%02x, flash: 0x%02x.\n", ulC + sizCmpCnt, pucCmp1[sizCmpCnt], pucCmp0[sizCmpCnt]);
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
 			++sizCmpCnt;
@@ -771,11 +771,21 @@ NETX_CONSOLEAPP_RESULT_T spi_isErased(const FLASHER_SPI_FLASH_T *ptFlashDescript
 		pucEnd = pucSpiBuffer + ulSegSize;
 		while( pucCnt<pucEnd )
 		{
-			ulErased &= *(pucCnt++);
+			ulErased &= *pucCnt;
+			if( ulErased!=0xff )
+			{
+				uprintf("! Memory not erased at offset 0x%08x - expected: 0x%02x found: 0x%02x\n", 
+					ulCnt + (unsigned long)(pucCnt - pucSpiBuffer), 0xff, ulErased);
+				/* exit inner loop */
+				break;
+			}
+			
+			++pucCnt;
 		}
 
 		if( ulErased!=0xff )
 		{
+			/* exit outer loop */
 			break;
 		}
 
