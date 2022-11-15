@@ -940,7 +940,7 @@ function exec(aArgs)
     local bCompMode = aArgs.bCompMode
 	local strSecureOption = nil
 	if aArgs.strSecureOption~= nil then
-		path.abspath(aArgs.strSecureOption)
+		strSecureOption = path.abspath(aArgs.strSecureOption)
 	end
 	
 	local tPlugin
