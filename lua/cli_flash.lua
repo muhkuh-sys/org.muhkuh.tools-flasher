@@ -70,7 +70,7 @@ Limitations:
 
 The reset_netx command currently supports only the netx 90.
 
-The hash and verify_hash commands do not support the netx 90 and netIOL.
+The hash and verify_hash commands do not support netIOL.
 
 
 Examples:

@@ -22,7 +22,7 @@ void SHA1_Init(SHA_CTX *c)
 
 void SHA1_Update(SHA_CTX *c, const void *p, unsigned long n)
 {
-	uint32_t workspace[80];
+	uint32_t workspace[16];
 	unsigned int partial;
 	unsigned long done;
 
