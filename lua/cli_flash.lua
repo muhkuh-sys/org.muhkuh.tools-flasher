@@ -553,7 +553,7 @@ end
 
 function addBusOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
-    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
+    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber):require_command(true)
     tOption._mincount = 1
 end
 
