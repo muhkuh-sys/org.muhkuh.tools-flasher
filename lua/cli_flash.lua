@@ -1293,27 +1293,33 @@ function main()
 
     aArgs = tParser:parse()
 
-    local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
-
-    printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
-    local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
-    if strnetX90M2MImageBin then
-        printf("%d bytes loaded.", strnetX90M2MImageBin:len())
-    else 
-        printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
-        os.exit(1)
-    end 
-
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {
         romloader_jtag = {
             jtag_reset = aArgs.strJtagReset,
             jtag_frequency_khz = aArgs.iJtagKhz
-        },
-        romloader_uart = {
-            netx90_m2m_image = strnetX90M2MImageBin
         }
     }
+
+    if aArgs.strSecureOption ~= nil then
+
+        local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+        printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
+
+        local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
+
+        if strnetX90M2MImageBin then
+            printf("%d bytes loaded.", strnetX90M2MImageBin:len())
+            aArgs.atPluginOptions.romloader_uart = {
+                netx90_m2m_image = strnetX90M2MImageBin
+            }
+        else
+            printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+            os.exit(1)
+        end
+    end
+
+
     fOk = true
 
     -- showArgs(aArgs)
