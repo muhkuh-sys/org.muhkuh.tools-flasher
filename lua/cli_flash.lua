@@ -553,20 +553,20 @@ end
 
 function addBusOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
-    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber):require_command(true)
+    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
     tOption._mincount = 1
 end
 
 function addUnitOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-u --unit', 'unit number'):target('iUnit')
     tOption = tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0):convert(tonumber)
-    tOption._mincount = 1
+    -- tOption._mincount = 1
 end
 
 function addChipSelectOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-cs --chip_select', 'chip select number'):target('iChipSelect')
     tOption = tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0):convert(tonumber)
-    tOption._mincount = 1
+    -- tOption._mincount = 1
 end
 
 function addStartOffsetArg(tParserCommand)
