@@ -25,6 +25,14 @@ Updates in CLI Flasher v2.0.0-dev2
 * Updated libusb version to 1.0.26
   (todo: explain)
 
+USIP Player:
+* Add the parameter -t (plugin type)
+
+* Remove the option '--extend_exec' and set its functionality as the default for jtag interfaces 
+
+* Merge parameter '--sec' and '--sec_sp' to one parameter (NXTFLASHER-377)
+
+
 Updates in CLI Flasher v1.8.1
 ==============================
 
