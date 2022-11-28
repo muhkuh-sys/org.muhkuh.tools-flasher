@@ -20,6 +20,11 @@ SVN_AUTHOR ="$Author$"
 local stringx = require "pl.stringx"
 local tFlasher = require 'flasher'
 
+-- exit code for detect_netx
+STATUS_OK = 0
+STATUS_ERROR = 1
+STATUS_START_MI_IMAGE_FAILED = 2
+
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
@@ -311,18 +316,34 @@ function detect_chiptype(aArgs)
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
-	local fOk = false
+
+	local fConnected
+	local iChiptype
+	local strChipName
+	
+	local iRet = STATUS_OK -- assume success
+	
 	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
-	local fConnected = false
 	if tPlugin then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+		print("Connect() result: ", fConnected, strMsg)
 		
-		local iChiptype = tPlugin:GetChiptyp()
-
+		-- translate this message string to a specific return code
+		local strMsgComp = "start_mi image has been rejected or execution has failed."
+		if not fConnected and strMsg:find(strMsgComp) then
+			iRet = STATUS_START_MI_IMAGE_FAILED
+		end
+		
+		iChiptype = tPlugin:GetChiptyp()
+		strChipName = tPlugin:GetChiptypName(iChiptype)
+		
 		-- Detect the PHY version to discriminate
 		-- between netX 90 Rev1 and netx 90 Rev1 PHY V3
 		if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
 		iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+			strChipName = "netX90 Rev1 (suspicious, PHY version not checked)"
+		
+			-- Note: if the connection has failed, we keep the previously read chip type.
 			if fConnected == true then
 				print("Detecting PHY version on netX 90 Rev1")
 				local bootpins = require("bootpins")
@@ -330,38 +351,30 @@ function detect_chiptype(aArgs)
 				local atResult = bootpins:read(tPlugin)
 				if atResult.chip_id == bootpins.atChipID.NETX90B then 
 					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90B
+					strChipName = "netX90 Rev1 (PHY V2)"
 				elseif atResult.chip_id == bootpins.atChipID.NETX90BPHYR3 then 
 					iChiptype = romloader.ROMLOADER_CHIPTYP_NETX90C
-				else
-					iChiptype = nil
+					strChipName = tPlugin:GetChiptypName(iChiptype)
 				end
-			else
-				iChiptype = nil
 			end
 		end
 
 		if iChiptype and iChiptype ~= romloader.ROMLOADER_CHIPTYP_UNKNOWN then
-			local strChipName
-			if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B then
-				strChipName = "netX90 Rev1 (PHY V2)"
-			else 
-				strChipName = tPlugin:GetChiptypName(iChiptype)
-			end
 			
 			print("")
 			printf("Chip type: (%d) %s", iChiptype, strChipName)
 			print("")
 			
-			fOk = true
-			
 		else
 			strMsg = "Failed to get chip type"
+			iRet = STATUS_ERROR
 		end -- if iChiptype
 	else
 		strMsg = strMsg or "Could not connect to device"
+		iRet = STATUS_ERROR
 	end -- if tPlugin
 	
-	return fOk, strMsg
+	return iRet, strMsg
 end
 
 
@@ -433,86 +446,90 @@ function reset_netx_via_watchdog(aArgs)
 	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 
 	if tPlugin ~= nil then 
-		tPlugin:Connect()
-		local iChiptype = tPlugin:GetChiptyp()
-		local strChiptypName = tPlugin:GetChiptypName(iChiptype)
-		local ulWdgBaseAddr = atChiptyp2WatchdogBase[iChiptype]
-		
-		if ulWdgBaseAddr == nil then
-			-- unknown chip type or not supported
-			strMsg = string.format("The reset_netx command is not supported on %s (%d)", strChiptypName, iChiptype)
+		fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
+		if not fOk then 
+			strMsg = strMsg or "Failed to open connection"
+		else 
+			local iChiptype = tPlugin:GetChiptyp()
+			local strChiptypName = tPlugin:GetChiptypName(iChiptype)
+			local ulWdgBaseAddr = atChiptyp2WatchdogBase[iChiptype]
 			
-		elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLA or 
-			iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLB then 
-			-- Watchdog reset on netIOL
-
-			local ulAddr_wdg_sys_cfg            = ulWdgBaseAddr + 0
-			local ulAddr_wdg_sys_cmd            = ulWdgBaseAddr + 4
-			local ulAddr_wdg_sys_cnt_upper_rld  = ulWdgBaseAddr + 8
-			local ulAddr_wdg_sys_cnt_lower_rld  = ulWdgBaseAddr + 12
-			local ulPwd = 0x3fa * 4
-			local ulVal
-			
-			-- disable watchdog 
-			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd)
-			
-			-- check if it is disabled
-			ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
-			ulVal = ulVal % 2
-			--ulVal = bit.band(ulVal, 1)
-			if ulVal ~= 0 then
-				print("Warning: cannot disable watchdog on netIOL")
+			if ulWdgBaseAddr == nil then
+				-- unknown chip type or not supported
+				strMsg = string.format("The reset_netx command is not supported on %s (%d)", strChiptypName, iChiptype)
+				
+			elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLA or 
+				iChiptype == romloader.ROMLOADER_CHIPTYP_NETIOLB then 
+				-- Watchdog reset on netIOL
+	
+				local ulAddr_wdg_sys_cfg            = ulWdgBaseAddr + 0
+				local ulAddr_wdg_sys_cmd            = ulWdgBaseAddr + 4
+				local ulAddr_wdg_sys_cnt_upper_rld  = ulWdgBaseAddr + 8
+				local ulAddr_wdg_sys_cnt_lower_rld  = ulWdgBaseAddr + 12
+				local ulPwd = 0x3fa * 4
+				local ulVal
+				
+				-- disable watchdog 
+				tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd)
+				
+				-- check if it is disabled
+				ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
+				ulVal = ulVal % 2
+				--ulVal = bit.band(ulVal, 1)
+				if ulVal ~= 0 then
+					print("Warning: cannot disable watchdog on netIOL")
+				end
+				
+				-- todo: what values for prescaler/counter?
+				tPlugin:write_data16(ulAddr_wdg_sys_cnt_upper_rld, 0x07ff)
+				tPlugin:write_data16(ulAddr_wdg_sys_cnt_lower_rld, 0xffff)
+				
+				-- enable watchdog
+				tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd + 1)
+				
+				-- trigger watchdog
+				tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0x72b4)
+				tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xde80)
+				tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xd281)
+				
+				print ("The netX should reset after one second.")
+				fOk = true
+	
+			else
+				-- watchdog reset on other netX types
+				local ulAddr_WdgCtrl       = ulWdgBaseAddr + 0
+				local ulAddr_WdgIrqTimeout = ulWdgBaseAddr + 8
+				local ulAddr_WdgResTimeout = ulWdgBaseAddr + 12
+				local ulVal
+				
+				-- Set write enable for the timeout regs
+				ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+				ulVal = ulVal + 0x80000000
+				tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+				
+				-- IRQ after 0.9 seconds (9000 * 100µs, not handled)
+				tPlugin:write_data32(ulAddr_WdgIrqTimeout, 9000)
+				-- reset 0.1 seconds later
+				tPlugin:write_data32(ulAddr_WdgResTimeout, 1000)
+	
+				-- Trigger the watchdog once to start it
+				ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
+				ulVal = ulVal + 0x10000000
+				tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
+				
+				print ("The netX should reset after one second.")
+				fOk = true
 			end
 			
-			-- todo: what values for prescaler/counter?
-			tPlugin:write_data16(ulAddr_wdg_sys_cnt_upper_rld, 0x07ff)
-			tPlugin:write_data16(ulAddr_wdg_sys_cnt_lower_rld, 0xffff)
+			tPlugin:Disconnect()
+			tPlugin = nil
 			
-			-- enable watchdog
-			tPlugin:write_data16(ulAddr_wdg_sys_cfg, ulPwd + 1)
-			
-			-- trigger watchdog
-			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0x72b4)
-			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xde80)
-			tPlugin:write_data16(ulAddr_wdg_sys_cmd, 0xd281)
-			
-			print ("The netX should reset after one second.")
-			fOk = true
-
-		else
-			-- watchdog reset on other netX types
-			local ulAddr_WdgCtrl       = ulWdgBaseAddr + 0
-			local ulAddr_WdgIrqTimeout = ulWdgBaseAddr + 8
-			local ulAddr_WdgResTimeout = ulWdgBaseAddr + 12
-			local ulVal
-			
-			-- Set write enable for the timeout regs
-			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
-			ulVal = ulVal + 0x80000000
-			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
-			
-			-- IRQ after 0.9 seconds (9000 * 100µs, not handled)
-			tPlugin:write_data32(ulAddr_WdgIrqTimeout, 9000)
-			-- reset 0.1 seconds later
-			tPlugin:write_data32(ulAddr_WdgResTimeout, 1000)
-
-			-- Trigger the watchdog once to start it
-			ulVal = tPlugin:read_data32(ulAddr_WdgCtrl)
-			ulVal = ulVal + 0x10000000
-			tPlugin:write_data32(ulAddr_WdgCtrl, ulVal)
-			
-			print ("The netX should reset after one second.")
-			fOk = true
-		end
-		
-		tPlugin:Disconnect()
-		tPlugin = nil
-		
-		-- Wait 1 second (actually between 1 and 2 seconds)
-		if (fOk == true) then
-			sleep_s(1)
-		end
-	end 
+			-- Wait 1 second (actually between 1 and 2 seconds)
+			if (fOk == true) then
+				sleep_s(1)
+			end
+		end 
+	end
 	
 	return fOk, strMsg
 end
@@ -958,22 +975,27 @@ function exec(aArgs)
 	-- open the plugin
 	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
-		tPlugin:Connect()
-		fOk = true
+		fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
+		if not fOk then 
+			strMsg = strMsg or "Failed to open connection"
+		end
+		print("Connect() result: ", fOk, strMsg)
 		
 		-- On netx 4000, there may be a boot image in intram that makes it
 		-- impossible to boot a firmware from flash by resetting the hardware.
 		-- Therefore we clear the start of the intram boot image.
-		local iChiptype = tPlugin:GetChiptyp()
-		if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
-		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
-		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
-			print("Clear intram image on netx 4000")
-			for i=0, 3 do
-				local ulAddr = 0x05100000 + i*4
-				tPlugin:write_data32(ulAddr, 0)
+		if fOk then
+			local iChiptype = tPlugin:GetChiptyp()
+			if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
+			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
+			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
+				print("Clear intram image on netx 4000")
+				for i=0, 3 do
+					local ulAddr = 0x05100000 + i*4
+					tPlugin:write_data32(ulAddr, 0)
+				end
 			end
-		end
+		end 
 		
 		-- load input file  strDataFileName --> strData
 		if fOk and (aArgs.fCommandFlashSelected or aArgs.fCommandVerifySelected or aArgs.fCommandVerifyHashSelected) then
@@ -1349,16 +1371,15 @@ function main()
         end
 
     elseif aArgs.fCommandDetectNetxSelected then
-        fOk, strMsg = detect_chiptype(aArgs)
-        if fOk then
+        iRet, strMsg = detect_chiptype(aArgs)
+        if iRet==0 then
             if strMsg then
                 print(strMsg)
             end
-            os.exit(0)
         else
             printf("Error: %s", strMsg or "unknown error")
-            os.exit(1)
         end
+        os.exit(iRet)
 
     elseif aArgs.fCommandTestCliSelected then
         flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
