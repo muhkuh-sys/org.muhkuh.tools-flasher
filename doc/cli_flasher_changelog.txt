@@ -1,3 +1,27 @@
+
+
+Updates in CLI Flasher v2.0.0-dev3
+==============================
+
+netX 90 Rev.1/Rev.2:
+* the flasher can now connect to a netX 90 Rev.1 or Rev.2 in the UART terminal console
+  or secure boot mode by running a HBoot image that starts the machine interface (start_mi).
+  If the netX is in secure boot mode, this boot image needs to be signed with the firmware key.
+  
+* detect_netx now works when the netx is in the UART terminal console or in secure boot mode.
+  If the boot image to start the machine interface has been downloaded, but failed to execute,
+  because it is not signed or not correctly signed, the following error is returned: 
+  "start_mi image has been rejected or execution has failed." 
+  and the script exits with exit code 2.
+  (All other commands exit with exit code 1 when an error occurs.)
+
+  If a netx 90 Rev.1 was detected during Connect(), but no connection has been made (the machine 
+  interface could not be started), the exact chip type could not be determined. 
+  In this case, the "suspicious" chip type is printed:
+  netX90 Rev1 (suspicious, PHY version not checked)
+
+
+
 Updates in CLI Flasher v2.0.0-dev2
 ==============================
 
