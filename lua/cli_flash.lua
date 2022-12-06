@@ -562,6 +562,11 @@ MODE_TEST_CLI = 12
 MODE_IS_ERASED = 13
 MODE_GET_DEVICE_SIZE = 14
 
+aJtagResetOptions = {}
+aJtagResetOptions["hard"] = "HardReset"
+aJtagResetOptions["soft"] = "SoftReset"
+aJtagResetOptions["attach"] = "Attach"
+
 -- functions to add arguments to subcommands
 
 function addFilePathArg(tParserCommand)
@@ -621,7 +626,7 @@ end
 function addJtagResetArg(tParserCommand)
     tOption = tParserCommand:option('--jtag_reset',
             'JTAG reset method. Possible values are: hard (default), soft, attach'):target('strJtagReset')
-    tOption._options = {"HardReset", "SoftReset", "Attach" }
+    tOption.choices = {"hard", "soft", "attach" }
 end
 
 local argparse = require 'argparse'
@@ -1321,7 +1326,7 @@ function main()
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {
         romloader_jtag = {
-            jtag_reset = aArgs.strJtagReset,
+            jtag_reset = aJtagResetOptions[aArgs.strJtagReset],
             jtag_frequency_khz = aArgs.iJtagKhz
         }
     }
