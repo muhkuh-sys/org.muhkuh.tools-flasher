@@ -464,7 +464,7 @@ function detect_secure_boot_mode(aArgs)
 					print("Found machine interface v3.1 in secure mode.")
 					print("Attempting to run an unsigned boot image.")
 				
-					local strImagePath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90", "exec_bxlr.bin")
+					local strImagePath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90", "hboot_netx90_exec_bxlr.bin")
 					printf("Trying to load netX 90 exec_bxlr image from %s", strImagePath)
 			
 					strImageBin, strMsg = loadBin(strImagePath)
