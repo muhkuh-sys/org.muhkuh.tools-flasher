@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<!-- Call a bx lr instruction at 0x1ff00, then store the value 0 (32 bit) at location 0x22000.
+     Used by detect_secure_boot_mode. -->
+<HbootImage type="INTRAM" has_header="True" has_end="True" offset="0x20080000">
+	<Chunks>
+		<Execute start_app="false" lock_firewall="false" activate_debugging="false" apply_firewall_settings="false">
+			<Address>0x00001ff01</Address>
+		</Execute>
+		<Data>
+			<UInt32 address="0x22000">
+			0x0
+			</UInt32>
+		</Data>
+	</Chunks>
+</HbootImage>

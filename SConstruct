@@ -411,6 +411,16 @@ if 'NETX90' in atPickNetxForBuild:
         for f in [strKeyRomPath, tPublicOptionPatchTable]:
             print("    %s" % f)
             
+    # build hboot_netx90_exec_bxlr.bin
+    hboot_netx90_exec_bxlr_bin = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'hboot_netx90_exec_bxlr', 'hboot_netx90_exec_bxlr.bin'),
+        os.path.join('src', 'netx90', 'hboot_netx90_exec_bxlr.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
+ 
+ 
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_nodbg = env_netx56_default.Clone()
     env_netx56_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
@@ -628,6 +638,7 @@ if fBuildIsFull==True:
 
     tArcList.AddFiles('netx/hboot/unsigned/netx90/',
         hboot_netx90_flasher_bin,
+        hboot_netx90_exec_bxlr_bin,
         'start_mi_netx90/hboot_start_mi_netx90_com_intram.bin')
 
     tArcList.AddFiles('netx/debug/',
