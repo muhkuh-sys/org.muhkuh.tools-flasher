@@ -1,4 +1,21 @@
 
+Updates in CLI Flasher v2.0.0-dev4
+==============================
+
+netX 90 Rev.1/Rev.2:
+* Added the command detect_secure_boot_mode. 
+  This command tests the behaviour of the console and derives the secure boot settings.
+  The result is passed via the exit code:
+  SECURE_BOOT_DISABLED = 0: COM and APP CPUs are open
+  SECURE_BOOT_ENABLED = 5: COM CPU is secure, APP CPU unknown
+  SECURE_BOOT_ONLY_APP_ENABLED = 50: APP CPU is secure, COM CPU is not
+  SECURE_BOOT_UNKNOWN = 2: If the netX has just been reset into console mode 
+                           (SYS LED blinking), COM and APP CPU are in open 
+                           mode. Otherwise, the mode is unknown.
+  SECURE_BOOT_ERROR = 1: The secure boot mode could not be detected.
+  
+  This command works only with netX 90 Rev.1/2 and romloader_uart. 
+  
 
 Updates in CLI Flasher v2.0.0-dev3
 ==============================
