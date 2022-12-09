@@ -25,6 +25,13 @@ STATUS_OK = 0
 STATUS_ERROR = 1
 STATUS_START_MI_IMAGE_FAILED = 2
 
+-- exit codes for detect_secure_boot_mode
+SECURE_BOOT_DISABLED = 0
+SECURE_BOOT_ENABLED = 5
+SECURE_BOOT_ONLY_APP_ENABLED = 50
+SECURE_BOOT_UNKNOWN = 2
+SECURE_BOOT_ERROR = 1
+
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
@@ -376,6 +383,151 @@ function detect_chiptype(aArgs)
 	
 	return iRet, strMsg
 end
+
+
+function detect_secure_boot_mode(aArgs)
+	local strPluginName  = aArgs.strPluginName
+	local strPluginType  = aArgs.strPluginType
+	local atPluginOptions= aArgs.atPluginOptions
+	
+	local fConnected
+	local iChiptype
+	local strChipName
+	local fStartMiFailed
+	local tConsoleMode
+	local usMiVersionMaj
+	local usMiVersionMin
+	local strImageBin
+	
+	local iSecureBootStatus = SECURE_BOOT_ERROR
+	
+	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	if tPlugin == nil then 
+		strMsg = strMsg or "Could not connect to device."
+	elseif tPlugin:GetTyp() ~= "romloader_uart" then
+		strMsg = "Only romloader_uart is supported."
+	else 
+		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+		print("Connect() result: ", fConnected, strMsg)
+		
+		local strMsgComp = "start_mi image has been rejected or execution has failed."
+		if not fConnected and strMsg:find(strMsgComp) then
+			print("Failed to execute the boot image to start the machine interface.")
+			fStartMiFailed = true
+		else 
+			fStartMiFailed = false
+		end
+		
+		iChiptype = tPlugin:GetChiptyp()
+		strChipName = tPlugin:GetChiptypName(iChiptype)
+		if iChiptype then
+			printf("Chip type: %s (%d) (may be suspicious, PHY version not verified)", strChipName, iChiptype)
+		else 
+			print("Could not detect chip type")
+		end
+		
+		tConsoleMode = tPlugin:get_console_mode()
+		if tConsoleMode == romloader.CONSOLE_MODE_Open then
+			print("Console mode: open")
+		elseif tConsoleMode == romloader.CONSOLE_MODE_Secure then
+			print("Console mode: secure")
+		elseif tConsoleMode == romloader.CONSOLE_MODE_Unknown then
+			print("Console mode: unknown")
+		else 
+			printf("Console mode: ?? (%d)", tConsoleMode)
+		end
+		
+		usMiVersionMaj = tPlugin:get_mi_version_maj()
+		usMiVersionMin = tPlugin:get_mi_version_min()
+		printf("MI version: %d.%d", usMiVersionMaj, usMiVersionMin)
+
+		if iChiptype == nil or iChiptype == romloader.ROMLOADER_CHIPTYP_UNKNOWN then
+			strMsg = "Failed to get chip type"
+			
+		elseif iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90B
+		and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90C
+		and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90D then
+			strMsg = "detect_secure_boot_mode supports only netX 90 Rev.1 and 2"
+			
+		else
+			if tConsoleMode == romloader.CONSOLE_MODE_Open then
+				-- Console mode: open => secure boot is disabled.
+				iSecureBootStatus = SECURE_BOOT_DISABLED
+			elseif tConsoleMode == romloader.CONSOLE_MODE_Secure then 
+				if usMiVersionMaj == 0 and usMiVersionMin == 0  and fStartMiFailed then 
+					-- MI not active, boot image failed => COM CPU is in secure boot mode.
+					iSecureBootStatus = SECURE_BOOT_ENABLED
+				elseif usMiVersionMaj == 3 and usMiVersionMin == 0 then
+					-- MI 3.0, secure console => COM CPU is open, APP CPU is secure
+					iSecureBootStatus = SECURE_BOOT_ONLY_APP_ENABLED
+				elseif usMiVersionMaj == 3 and usMiVersionMin == 1 then 
+					print("Found machine interface v3.1 in secure mode.")
+					print("Attempting to run an unsigned boot image.")
+				
+					local strImagePath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90", "exec_bxlr.bin")
+					printf("Trying to load netX 90 exec_bxlr image from %s", strImagePath)
+			
+					strImageBin, strMsg = loadBin(strImagePath)
+			
+					if strImageBin == nil then
+						printf("Error: Failed to load netX 90 exec_bxlr image: %s", strMsg or "unknown error")
+					else
+						printf("%d bytes loaded.", strImageBin:len())
+						flasher.write_image(tPlugin, 0x200c0, strImageBin)
+						tPlugin:write_data32(0x22000, 0xffffffff)
+						local ulVal = tPlugin:read_data32(0x22000)
+						printf("Value at 0x22000 before running boot image: 0x%08x", ulVal)
+						local tRet = flasher.call_hboot(tPlugin)
+						print("return value from call_hboot:" , tRet)
+						local ulVal = tPlugin:read_data32(0x22000)
+						printf("Value at 0x22000 after running boot image: 0x%08x", ulVal)
+						
+						if (ulVal == 0) then
+							-- Unsigned image executed.=> The COM CPU is not in secure boot mode.
+							iSecureBootStatus = SECURE_BOOT_ONLY_APP_ENABLED
+						elseif (ulVal == 0xffffffff) then
+							-- Unsigned boot image not executed. => The COM CPU is in secure boot mode.
+							iSecureBootStatus = SECURE_BOOT_ENABLED
+						else 
+							strMsg = "Unexpected value from boot image."
+							print("Unexpected value from boot image. => Cannot detect secure boot mode.")
+						end
+					end
+				else 
+					strMsg = "Invalid MI version"
+				end
+			else -- console mode unknown
+				-- The console mode is iunknown and machine interface 3.0 is active.
+				-- If the console was in the initial "wait for knock" state after reset,
+				-- and started the machine interface during Connect(), secure boot is disabled.
+				-- However, it is possible that it already was in MI mode, and in that case 
+				-- we don't know how it got there.
+				if usMiVersionMaj == 3 and usMiVersionMin == 0 then
+					iSecureBootStatus = SECURE_BOOT_UNKNOWN
+				else
+					strMsg = "Unknown console mode"
+				end
+			end -- console mode
+		end -- chip type
+	end -- if tPlugin
+
+	if iSecureBootStatus==SECURE_BOOT_DISABLED then 
+		strMsg = "Secure boot mode disabled. COM and APP CPU are in open mode."
+	elseif iSecureBootStatus==SECURE_BOOT_ENABLED then 
+		strMsg = "Secure boot mode enabled. COM CPU is in secure boot mode, APP CPU is unknown."
+	elseif iSecureBootStatus==SECURE_BOOT_ONLY_APP_ENABLED then 
+		strMsg = "Secure boot mode enabled. COM CPU is in open mode, APP CPU is in secure boot mode."
+	elseif iSecureBootStatus==SECURE_BOOT_UNKNOWN then 
+		strMsg = "Cannot detect secure boot mode. "..
+		"If the netX was just reset, COM and APP are in open mode."
+	else 
+		strMsg = "Cannot detect secure boot mode: " .. strMsg or "unknown error"
+	end
+	
+	return iSecureBootStatus, strMsg
+	
+end
+
 
 
 -- Sleep for a number of seconds
@@ -809,6 +961,15 @@ addPluginTypeArg(tParserCommandDetectNetx)
 addJtagResetArg(tParserCommandDetectNetx)
 addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
+
+-- detect_secure_boot_mode
+local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode ds', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandDetectSecureBoot)
+addPluginTypeArg(tParserCommandDetectSecureBoot)
+addJtagResetArg(tParserCommandDetectSecureBoot)
+addJtagKhzArg(tParserCommandDetectSecureBoot)
+
 
 -- reset_netx
 local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandResetSelected')
@@ -1312,6 +1473,7 @@ FLASHER_PATH = "netx/"
 function main()
     local aArgs
     local fOk
+    local iRet
     local strMsg
 
     io.output():setvbuf("no")
@@ -1326,6 +1488,8 @@ function main()
         }
     }
 
+    -- todo: how to set this properly?
+    aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil then
 
         local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
@@ -1379,6 +1543,11 @@ function main()
         else
             printf("Error: %s", strMsg or "unknown error")
         end
+        os.exit(iRet)
+
+    elseif aArgs.fCommandDetectSecureBootSelected then
+        iRet, strMsg = detect_secure_boot_mode(aArgs)
+        print(strMsg)
         os.exit(iRet)
 
     elseif aArgs.fCommandTestCliSelected then
