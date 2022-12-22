@@ -13,6 +13,8 @@ local mhash = require 'mhash'
 local usipPlayerConf = require 'usip_player_conf'
 local tFlasher = require 'flasher'
 local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
+local usip_generator = require 'usip_generator'
+local sipper = require 'sipper'
 
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
@@ -285,6 +287,9 @@ local tLogWriterConsole = require 'log.writer.console'.new()
 local tLogWriterFilter = require 'log.writer.filter'.new(tArgs.strLogLevel, tLogWriterConsole)
 local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
 local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
+
+local tUsipGen = usip_generator(tLog)
+local tSipper = sipper(tLog)
 
 -- more requirements
 -- Set the search path for LUA plugins.
@@ -907,27 +912,13 @@ end
 -- The header is not rellevant at this point, because the header of the usip file is just checked once if
 -- the hash is correct and is not relevant for the usip process
 -- returns a list of all generated usip file paths and the output of the command
-function genMultiUsips(strUsipGenExePath, strTmpPath, strUsipConfigPath)
+function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     -- list of all generated usip file paths
     local astrUsipPathList = {}
-    -- generate the "gen_multi" command from the gen-usip-cli executable
-    local strCommand = string.format( '%s gen_multi -i "%s" -o "%s"',strUsipGenExePath, strUsipConfigPath, strTmpPath)
-    -- execute the command
-    local tUsipGenMultiResult, tUsipGenMultiOutput = executeCommand(strCommand, strTmpPath)
-    if tUsipGenMultiResult == 0 then
-        -- split the output in lines
-        astrLines = string.gmatch(tUsipGenMultiOutput, "[^\r\n]+")
-        -- search in each line for a generated usip path
-        for strLine in astrLines do
-            strPath = string.match( strLine, ".INFO. Generate USIP.File .> (.*)" )
-            -- insert the match into the usip path list
-            table.insert( astrUsipPathList, strPath )
-        end
-    else
-        tLog.error("Failed to generate multiple usip files from file -> %s", strUsipConfigPath)
-    end
 
-    return astrUsipPathList, tUsipGenMultiOutput, tUsipGenMultiResult
+    local tResult, aFileList = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
+
+    return tResult, aFileList
 end
 
 
@@ -1328,11 +1319,12 @@ function verifyContent(
     tPlugin,
     strTmpFolderPath,
     strSipperExePath,
-    strUsipConfigPath,
+    tUsipConfigDict,
     strResetBootswitchPath,
     strResetExecReturnPath
 )
     local fOk = false
+    local strErrorMsg
     local iValidCom
     local iValidApp
     local strComSipData
@@ -1353,6 +1345,7 @@ function verifyContent(
     else
         -- mask the kek
         strComSipData = string.sub(strComSipData, 0, 1855) .. string.rep(string.char(255), 192) .. string.sub(strComSipData, 2048)
+
         tLog.debug("Saving content to files...")
         -- save the content to a file if the flag is set
         -- set the sip file path to save the sip data
@@ -1369,24 +1362,11 @@ function verifyContent(
         tFile:write(strAppSipData)
         tFile:close()
 
-        -- check if the usip was processed correctly
-        local strCommand = string.format(
-            '%s verify_usip -i "%s" --com_bin "%s" --app_bin "%s"',
-            strSipperExePath,
-            strUsipConfigPath,
-            strComSipFilePath,
-            strAppSipFilePath
-        )
-        -- execute the command
-        local tVerifyUsipProcessedResult, tVerifyUsipProcessedOutput = executeCommand(strCommand, strTmpFolderPath)
-        if tVerifyUsipProcessedResult == 0 then
-            tLog.info(tVerifyUsipProcessedOutput)
-            -- check if the verification failed
-            if tVerifyUsipProcessedOutput:find "VERIFICATION SUCCESS" then
-                fOk = true
-            end
-        else
-            tLog.error(tVerifyUsipProcessedOutput)
+
+        fOk, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipFilePath, strAppSipFilePath, tPlugin)
+
+        if fOk ~= true then
+            self.tLog.error(strErrorMsg)
         end
     end
 
@@ -2713,16 +2693,9 @@ function verify_content(
     --------------------------------------------------------------------------
     -- analyze the usip file
     --------------------------------------------------------------------------
-    local strUsipConfigPath = path.join( strTempFolderPath, "usip_config.json")
-    -- analyze the usip file
-    local strCommand = string.format(
-        '%s analyze -i "%s" -o "%s"', strUsipGenExePath, strUsipFilePath, strUsipConfigPath
-    )
-    -- execute the command
-    local tUsipAnalyzeResult, tUsipAnalyzeOutput = executeCommand( strCommand, strTempFolderPath )
-    tLog.info(tUsipAnalyzeOutput)
-    if tUsipAnalyzeResult == 0 then
-        tLog.info(tUsipAnalyzeOutput)
+
+    local tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
+    if tResult == true then
 
         --------------------------------------------------------------------------
         -- verify the content
@@ -2730,7 +2703,7 @@ function verify_content(
         if fIsSecure then
             -- verify the content via the uart serial console
             fOk = verifyContentSecure(
-                strPluginName, strTempFolderPath, strReadSipPath, strSipperExePath, strUsipConfigPath
+                strPluginName, strTempFolderPath, strReadSipPath, strSipperExePath, tUsipConfigDict
             )
         else
             -- verify the content via the MI
@@ -2739,7 +2712,7 @@ function verify_content(
                 tPlugin,
                 strTempFolderPath,
                 strSipperExePath,
-                strUsipConfigPath,
+                tUsipConfigDict,
                 strResetBootswitchPath,
                 strResetExecReturnPath
             )
@@ -3081,28 +3054,19 @@ if tArgs.strUsipFilePath then
         strUsipConfigPath
     )
     -- execute the command
-    local iUsipAnalyzeResult, tUsipAnalyzeOutput = executeCommand(strCommand, strTmpFolderPath)
+    -- local iUsipAnalyzeResult, tUsipAnalyzeOutput = executeCommand(strCommand, strTmpFolderPath)
+    local tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
+
     -- print out the command output
-    tLog.info(tUsipAnalyzeOutput)
+    -- tLog.info(tUsipAnalyzeOutput)
     -- list of all usip files
     local iGenMultiResult
     -- check if multiple usip where found
-    if iUsipAnalyzeResult ~= 0 then
-        tLog.error("Could not analyze usip file.")
+    if tResult ~= true then
+        tLog.error(strErrorMsg)
         os.exit(1)
-    elseif tUsipAnalyzeOutput:find "multiple" and iUsipAnalyzeResult == 0 then
-        astrPathList, strMsg, iGenMultiResult = genMultiUsips(
-            strUsipGenExePath, strTmpFolderPath, strUsipConfigPath
-        )
-        if iGenMultiResult ~= 0 then
-            tLog.error(strMsg)
-            os.exit(1)
-        else
-            tLog.info(strMsg)
-        end
     else
-        -- if not multiple usip chunks were found insert just the one usip file
-        table.insert( astrPathList, strUsipFilePath )
+        iGenMultiResult, astrPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     end
 end
 
