@@ -310,10 +310,23 @@ flasher = require 'flasher'
 -- the jtag just attach to a device. This is necessary in case secure boot is enabled via an usip file. If the
 -- jtag plugin would perform a reset the usip flags would directly be activated and it could be possible that
 -- the debugging is disabled and the jtag is no longer available.
+local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+
+printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
+local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
+if strnetX90M2MImageBin then
+    printf("%d bytes loaded.", strnetX90M2MImageBin:len())
+else
+    printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+    os.exit(1)
+end
 local atPluginOptions = {
     romloader_jtag = {
     jtag_reset = "Attach", -- HardReset, SoftReset or Attach
     jtag_frequency_khz = 6000 -- optional
+    },
+    romloader_uart = {
+    netx90_m2m_image = strnetX90M2MImageBin
     }
 }
 
