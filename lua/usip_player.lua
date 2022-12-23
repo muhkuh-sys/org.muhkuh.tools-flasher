@@ -15,6 +15,7 @@ local tFlasher = require 'flasher'
 local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
 local usip_generator = require 'usip_generator'
 local sipper = require 'sipper'
+local tFlasherHelper = require 'flasher_helper'
 
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
@@ -404,42 +405,13 @@ function exists(folder)
  end
 
 
--- strData, strMsg loadBin(strFilePath)
--- Load a binary file.
--- returns
---   data if successful
---   nil, message if an error occurred
-function loadBin(strFilePath)
-    local strData
-    local tFile
-    local strMsg
-    -- open a file in binary mode
-    tFile, strMsg = io.open(strFilePath, "rb")
-    -- check if the file exists
-    if tFile then
-        -- read out all data
-        strData = tFile:read("*a")
-        tFile:close()
-        -- check if the file is empty
-        if strData == nil then
-            tLog.error("Could not read from file %s", strFilePath)
-        end
-    -- error message if the file does not exists
-    else
-        tLog.error("Could not open file %s: %s", strFilePath, strMsg or "Unknown error")
-    end
-
-    return strData
-end
-
-
 -- strEncodedData uuencode(strFilePath)
 -- UU-encode a binary file
 -- returns
 --   uuencoded data
 function uuencode(strFilePath)
     local strData
-    strData = loadBin(strFilePath)
+    strData = tFlasherHelper.loadBin(strFilePath)
 
     -- Create a new archive.
     local tArchive = archive.ArchiveWrite()
@@ -535,143 +507,6 @@ function getSerialPort(strPluginName)
     end
     return strSerialPort
 end
---------------------------------------------------------------------------
--- Romloader functions
---------------------------------------------------------------------------
-
---------------------------------------------------------------------------
--- get plugin (copied from cli_flash.lua)
---------------------------------------------------------------------------
-
--- Show the available interfaces and let the user select one interactively.
---
--- strPattern is not evaluated.
---
--- If strPluginType is a string (a plugin ID as obtained by calling GetID on
--- a plugin provider, e.g. "romloader_uart"), only this plugin provider
--- is scanned.
--- If strPluginType is nil, all plugin providers are scanned.
-function SelectPlugin(strPattern, strPluginType, atPlugOpts)
-	local iInterfaceIdx
-	local aDetectedInterfaces
-	local tPlugin
-	local strPattern = strPattern or ".*"
-
-	repeat do
-		-- Detect all interfaces.
-		aDetectedInterfaces = {}
-		for _, v in ipairs(__MUHKUH_PLUGINS) do
-            if strPluginType == nil or strPluginType == v:GetID() then
-                local iDetected
-                tLog.info("Detecting interfaces with plugin %s", v:GetID())
-                iDetected = v:DetectInterfaces(aDetectedInterfaces,  atPlugOpts)
-                tLog.info("Found %d interfaces with plugin %s", iDetected, v:GetID())
-            end
-		end
-		print(string.format("Found a total of %d interfaces with %d plugins", #aDetectedInterfaces, #__MUHKUH_PLUGINS))
-		print("")
-
-		-- Show all detected interfaces.
-		print("Please select the interface:")
-		for i,v in ipairs(aDetectedInterfaces) do
-            print( string.format(
-                "%d: %s (%s) Used: %s, Valid: %s",
-                i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())
-            ))
-		end
-		print("R: rescan")
-		print("C: cancel")
-
-		-- Get the user input.
-		repeat do
-			io.write(">")
-			strInterface = io.read():lower()
-			iInterfaceIdx = tonumber(strInterface)
-		-- Ask again until...
-		--  1) the user requested a rescan ("r")
-		--  2) the user canceled the selection ("c")
-		--  3) the input is a number and it is an index to an entry in aDetectedInterfaces
-		end until strInterface=="r" or strInterface=="c" or ( iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces )
-	-- Scan again if the user requested it.
-	end until strInterface~="r"
-
-	if strInterface~="c" then
-		-- Create the plugin.
-		tPlugin = aDetectedInterfaces[iInterfaceIdx]:Create()
-	else
-		tPlugin = nil
-	end
-
-	return tPlugin
-end
-
--- Try to open a plugin for an interface with the given name.
--- This function assumes that the name starts with the name of the interface,
--- e.g. romloader_uart, and scans only for interfaces whose type is contained
--- in the name string.
-function getPluginByName(strName, strPluginType, atPlugOpts)
-
-	for _, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
-			local iDetected
-			local aDetectedInterfaces = {}
-
-			local strPluginType = tPluginClass:GetID()
-			if strName:match(strPluginType) then
-				tLog.info("Detecting interfaces with plugin %s", tPluginClass:GetID())
-				iDetected = tPluginClass:DetectInterfaces( aDetectedInterfaces, atPlugOpts )
-				tLog.info("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID())
-			end
-
-			for i,v in ipairs(aDetectedInterfaces) do
-				tLog.info(
-                    "%d: %s (%s) Used: %s, Valid: %s",
-                    i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())
-                )
-				if strName == v:GetName() then
-					if not v:IsValid() then
-						return nil, "Plugin is not valid"
-					elseif v:IsUsed() then
-						return nil, "Plugin is in use"
-					else
-						tLog.info("found plugin")
-						local tPlugin = v:Create()
-						if tPlugin then
-							return tPlugin
-						else
-							return nil, "Error creating plugin instance"
-						end
-					end
-				end
-			end
-		end
-	end
-	return nil, "plugin not found"
-end
-
--- If strPluginName is the name of an interface, try to create a plugin
--- instance for exactly the named interface.
--- Otherwise, show a list of available interface and let the user select one.
---
--- If strPluginType is a string (a plugin ID as obtained by calling GetID on
--- a plugin provider, e.g. "romloader_uart"), only this plugin provider
--- is scanned.
-function getPlugin(strPluginName, strPluginType, atPlugOpts)
-	local tPlugin, strError
-	if strPluginName then
-		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName, strPluginType, atPlugOpts)
-	else
-		-- Ask the user to pick a plugin.
-		tPlugin = SelectPlugin(nil, strPluginType, atPlugOpts)
-		if tPlugin == nil then
-			strError = "No plugin selected!"
-		end
-	end
-
-	return tPlugin, strError
-end
-
 
 -- strNetxName chiptypeToName(iChiptype)
 -- transfer integer chiptype into a netx name
@@ -822,7 +657,7 @@ function resetNetX90InSecure(strPluginName, strUsipGenExePath, strTmpFolderPath,
     -- extend the bootswitch with the uart parameter and uu-encode it
     tLog.debug("reset netX in secure mode.")
 
-    strBootswitchData = loadBin(strBootswitchFilePath)
+    strBootswitchData = tFlasherHelper.loadBin(strBootswitchFilePath)
     -- this is always the uart parameter because in secure mode only uart is working
     strBootSwitchOnlyPornParam = string.char(0x14, 0x00, 0x00, 0x00)
     if string.len( strBootswitchData ) < 0x8000 then
@@ -893,6 +728,7 @@ function execBinViaIntram(tPlugin, strFilePath, ulIntramLoadAddress)
         -- write the data back
         tPlugin:write_data32(ulLoadAddress, data)
         -- reset via the watchdog
+        -- todo: switch to reset netx via watchdog from flasher_helper.lua
         resetNetx90ViaWdg(tPlugin)
     end
 
@@ -944,7 +780,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strS
     local ulVerifySigResultAdd = 0x000220b8
     local ulVerifySigDebugAdd = 0x000220bc
     -- get verifysig programm data only
-    local strVerifySigData, strMsg = loadBin(strVerifySigPath)
+    local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
     if strVerifySigData then
         -- cut out the programm data from the rest of the image
         -- this is the raw programm data
@@ -1090,11 +926,11 @@ function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, 
 
     -- read the usip content
     -- print("Loading USIP content ... ")
-    strUsipData, strMsg = loadBin(strUsipPath)
+    strUsipData, strMsg = tFlasherHelper.loadBin(strUsipPath)
     if strUsipData then
         -- read the bootswitch content
         -- print("Appending Bootswitch ... ")
-        strBootswitchData, strMsg = loadBin(strBootswitchFilePath)
+        strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
         if strBootswitchData then
             -- set the bootswitch parameter
             if strBootswitchParam == "ETH" then
@@ -1159,10 +995,10 @@ function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
     local strCombinedUsipPath
 
     -- read the usip content
-    strUsipData = loadBin(strUsipPath)
+    strUsipData = tFlasherHelper.loadBin(strUsipPath)
     if strUsipData then
         -- read the exec-return content
-        strExecReturnData = loadBin(strExecReturnFilePath)
+        strExecReturnData = tFlasherHelper.loadBin(strExecReturnFilePath)
         if strExecReturnData then
             -- cut the usip image ending and extend the exec-return content without the boot header
             -- the first 64 bytes are the boot header
@@ -1201,7 +1037,7 @@ function loadUsip(strFilePath, tPlugin, strPluginType)
             tPlugin:Disconnect()
             sleep(2)
             -- get the jtag plugin with the attach option to not reset the netX
-            tPlugin = getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+            tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
         end
     else
         if strPluginType == 'romloader_uart' then
@@ -1211,7 +1047,7 @@ function loadUsip(strFilePath, tPlugin, strPluginType)
                 tPlugin:Disconnect()
                 sleep(2)
                 -- get the uart plugin again
-                tPlugin = getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+                tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
             end
         elseif strPluginType == 'romloader_eth' then
             -- netX90 rev_1 and ethernet deteced, this function is not supported
@@ -1485,7 +1321,7 @@ function validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
     -- just necessary if the uart plugin in used
     -- jtag works without getting a new plugin
     if strPluginType == 'romloader_uart' then
-        tPlugin = getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+        tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
     end
     tPlugin:Connect()
     -- read out the potential sip content
@@ -1745,7 +1581,7 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
     -- this is necessary because the image must be loaded to 0x000203c0
     -- and not to 0x000200c0 like the "htbl" command does. If the image is
     -- loaded to that address it is not possible to start the image, the image is broken
-    local strHbootData, strMsg = loadBin(strCombinedHbootPath)
+    local strHbootData, strMsg = tFlasherHelper.loadBin(strCombinedHbootPath)
     if strHbootData then
         -- set the path for the strHbootData
         local strHbootDataPath = path.join( strTempPath, "set_kek_data.bin")
@@ -1793,7 +1629,7 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
                         tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
                         sleep(2)
                         -- get the uart plugin again
-                        tPlugin = getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
+                        tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
                         tPlugin:Connect()
                         ulHbootResultAddress = tPlugin:read_data32(ulDataStructureAddress)
                         local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
@@ -1990,7 +1826,7 @@ function usip(
                 -- just necessary if the uart plugin in used
                 -- jtag works without getting a new plugin
                 if strPluginType == 'romloader_uart' then
-                    tPlugin = getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+                    tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
                 end
             end
         -- reset via uart console mode
@@ -2058,7 +1894,7 @@ function set_sip_protection_cookie(tPlugin)
                 tLog.error( "Failed to get the device size!" )
             else
                 -- get the data to flash
-                strData, strMsg = loadBin(strFilePath)
+                strData, strMsg = tFlasherHelper.loadBin(strFilePath)
                 if not strData then
                     tLog.error(strMsg)
                 else
@@ -2135,7 +1971,7 @@ function set_kek(
         strFirstUsipPath = astrPathList[1]
         table.remove(astrPathList, 1)
         -- load usip data
-        strFirstUsipData, strMsg = loadBin(strFirstUsipPath)
+        strFirstUsipData, strMsg = tFlasherHelper.loadBin(strFirstUsipPath)
         if not strFirstUsipData then
             tLog.error(strMsg)
             fOk = false
@@ -2148,7 +1984,7 @@ function set_kek(
     -- KEK process
     ---------------------------------------------------------------
     -- load kek-image data
-    strKekHbootData, strMsg = loadBin(strKekHbootFilePath)
+    strKekHbootData, strMsg = tFlasherHelper.loadBin(strKekHbootFilePath)
     if not strKekHbootData and fOk then
         tLog.error(strMsg)
     else
@@ -2258,7 +2094,7 @@ function set_kek(
                     -- be pessimistic
                     fOk = false
                     -- load dummyUsip data
-                    strKekDummyUsipData, strMsg = loadBin(strKekDummyUsipFilePath)
+                    strKekDummyUsipData, strMsg = tFlasherHelper.loadBin(strKekDummyUsipFilePath)
                     if not strKekDummyUsipData then
                         tLog.error(strMsg)
                     else
@@ -2268,7 +2104,7 @@ function set_kek(
                             fOk = true
                         else
                             -- load usip data
-                            strFirstUsipData, strMsg = loadBin(strFirstUsipPath)
+                            strFirstUsipData, strMsg = tFlasherHelper.loadBin(strFirstUsipPath)
                             if not strFirstUsipData then
                                 tLog.error(strMsg)
                             else
@@ -2802,7 +2638,7 @@ end
 
 -- check for a Plugin
 -- get the plugin
-fCallSuccess, tPlugin = pcall(getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
+fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
 if fCallSuccess then
     if not tPlugin then
         tLog.error('No plugin selected, nothing to do!')
@@ -3047,14 +2883,6 @@ end
 if tArgs.strUsipFilePath then
     strUsipConfigPath = path.join( strTmpFolderPath, "usip_config.json")
     -- analyze the usip file
-    local strCommand = string.format(
-        '%s analyze -i "%s" -o "%s"',
-        strUsipGenExePath,
-        strUsipFilePath,
-        strUsipConfigPath
-    )
-    -- execute the command
-    -- local iUsipAnalyzeResult, tUsipAnalyzeOutput = executeCommand(strCommand, strTmpFolderPath)
     local tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
 
     -- print out the command output
