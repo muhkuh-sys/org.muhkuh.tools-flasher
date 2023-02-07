@@ -1265,7 +1265,7 @@ function exec(aArgs)
 		
 		-- for test mode
 		if fOk and aArgs.fCommandTestSelected then
-			flasher_test.flasher_interface:configure(tPlugin, FLASHER_PATH, iBus, iUnit, iChipSelect)
+			flasher_test.flasher_interface:configure(tPlugin, FLASHER_PATH, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
 			fOk, strMsg = flasher_test.testFlasher()
 		end
 		
@@ -1348,13 +1348,14 @@ end
 
 flasher_interface = {}
 
-function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSelect)
+function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
 		strPluginName = strPluginName,
 		iBus = iBus,
 		iUnit = iUnit,
 		iChipSelect = iChipSelect,
-		strDataFileName = "flashertest.bin"
+		strDataFileName = "flashertest.bin",
+		atPluginOptions = atPluginOptions
 		}
 end
 
@@ -1556,7 +1557,7 @@ function main()
         os.exit(iRet)
 
     elseif aArgs.fCommandTestCliSelected then
-        flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect)
+        flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)
         if fOk then
             if strMsg then
