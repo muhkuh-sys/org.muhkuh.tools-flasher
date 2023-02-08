@@ -207,6 +207,29 @@ function SelectPlugin(strPattern, strPluginType)
 	return tPlugin
 end
 
+-- strData, strMsg loadBin(strFilePath)
+-- Load a binary file.
+-- returns 
+--   data if successful 
+--   nil, message if an error occurred
+function loadBin(strFilePath)
+	local strData
+	local tFile
+	local strMsg
+	
+	tFile, strMsg = io.open(strFilePath, "rb")
+	if tFile then
+		strData = tFile:read("*a")
+		tFile:close()
+		if strData == nil then
+			strMsg = string.format("Could not read from file %s", strFilePath)
+		end
+	else
+		strMsg = string.format("Could not open file %s: %s", strFilePath, strMsg or "Unknown error")
+	end
+	return strData, strMsg
+end
+
 function printTable(tTable, ulIndent)
     local strIndentSpace = string.rep(" ", ulIndent)
     for key, value in pairs(tTable) do
@@ -244,7 +267,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         tPlugin = tester:getCommonPlugin()
     else
         local strError
-        tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+        tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
         if tPlugin then
             tPlugin:Connect()
         else
@@ -549,7 +572,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
-                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
                 if tPlugin then
                     tPlugin:Connect()
 				else
@@ -751,6 +774,9 @@ tParserCommandExample:option('-v --verbose'):description(string.format('Set the 
 
 local tArgs = tParser:parse()
 
+if tArgs.strSecureOption == nil then
+	tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+end
 
 -- moved requirements here to avoid prints before argparse
 require 'muhkuh_cli_init'
@@ -771,6 +797,25 @@ printArgs(tArgs, tLog)
 -- Ask the user to select a plugin.
 tester.fInteractivePluginSelection = true
 
+local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+
+tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
+local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
+if strnetX90M2MImageBin then
+    tLog.info("%d bytes loaded.", strnetX90M2MImageBin:len())
+else
+    tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+    os.exit(1)
+end
+local atPluginOptions = {
+    romloader_jtag = {
+    jtag_reset = "Attach", -- HardReset, SoftReset or Attach
+    jtag_frequency_khz = 6000 -- optional
+    },
+    romloader_uart = {
+    netx90_m2m_image = strnetX90M2MImageBin
+    }
+}
 
 atName2Bus = {
     ['Parflash'] = tFlasher.BUS_Parflash,
@@ -859,7 +904,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
-                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType)
+                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
                 if tPlugin then
                     tPlugin:Connect()
                 end
