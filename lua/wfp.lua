@@ -774,6 +774,9 @@ tParserCommandExample:option('-v --verbose'):description(string.format('Set the 
 
 local tArgs = tParser:parse()
 
+if tArgs.strSecureOption == nil then
+	tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+end
 
 -- moved requirements here to avoid prints before argparse
 require 'muhkuh_cli_init'
