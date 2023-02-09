@@ -1,4 +1,20 @@
 
+Updates in CLI Flasher v2.0.0-dev5
+==============================
+
+CLI flasher:
+* Bugfix: test and testcli commands
+* Bugfix: added command line arguments --comp and --sec to the commands 
+  verify_hash, hash and identify_netx
+  
+WFP: 
+* Bugfix: pack command did not work
+
+Update Romloader to v2.5.4-dev4:
+* Bugfix: Allow connecting to netx 90 Rev.2 in secure boot mode via ethernet 
+  if the ethernet machine interface is active.
+
+
 Updates in CLI Flasher v2.0.0-dev4
 ==============================
 
