@@ -887,6 +887,7 @@ addPluginNameArg(tParserCommandVerifyHash)
 addPluginTypeArg(tParserCommandVerifyHash)
 addJtagResetArg(tParserCommandVerifyHash)
 addJtagKhzArg(tParserCommandVerifyHash)
+addSecureArgs(tParserCommandVerifyHash)
 
 -- hash
 local tParserCommandHash = tParser:command('hash h', 'Compute SHA1'):target('fCommandHashSelected')
@@ -901,6 +902,7 @@ addPluginNameArg(tParserCommandHash)
 addPluginTypeArg(tParserCommandHash)
 addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
+addSecureArgs(tParserCommandHash)
 
 -- detect
 local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized'):target('fCommandDetectSelected')
@@ -985,13 +987,14 @@ addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
--- reset_netx
+-- identify_netx
 local tParserCommandIdentifyNetx = tParser:command('identify_netx i', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
 addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
+addSecureArgs(tParserCommandIdentifyNetx)
 
 
 
