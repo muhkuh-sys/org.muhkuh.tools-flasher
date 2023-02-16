@@ -1362,6 +1362,18 @@ function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSele
 		}
 end
 
+-- Since we're using a static argument list and iMode has been largely 
+-- replaced with individual flags for each operation, we need to clear 
+-- these flags after use or before re-using the argument list.
+function flasher_interface.clearArgs(aArgs)
+	aArgs.iMode = nil
+	aArgs.fCommandFlashSelected = nil
+	aArgs.fCommandVerifySelected = nil
+	aArgs.fCommandReadSelected = nil
+	aArgs.fCommandEraseSelected = nil
+	aArgs.ulStartOffset = nil
+	aArgs.ulLen = nil
+end
 
 function flasher_interface.init(self)
 	return true
@@ -1373,6 +1385,7 @@ end
 
 
 function flasher_interface.getDeviceSize(self)
+	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
 	return exec(self.aArgs)
 end
@@ -1404,6 +1417,7 @@ function flasher_interface.getEmptyByte(self)
 end
 
 function flasher_interface.flash(self, ulOffset, strData)
+	flasher_interface.clearArgs(self.aArgs)
 	local fOk, strMsg = writeBin(self.aArgs.strDataFileName, strData)
 	if fOk == false then
 		return false, strMsg
@@ -1416,6 +1430,7 @@ end
 
 
 function flasher_interface.verify(self, ulOffset, strData)
+	flasher_interface.clearArgs(self.aArgs)
 	local fOk, strMsg = writeBin(self.aArgs.strDataFileName, strData)
 	if fOk == false then
 		return false, strMsg
@@ -1427,7 +1442,8 @@ function flasher_interface.verify(self, ulOffset, strData)
 end
 
 function flasher_interface.read(self, ulOffset, ulSize)
-    self.aArgs.fCommandReadSelected = true
+	flasher_interface.clearArgs(self.aArgs)
+	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	
@@ -1444,7 +1460,8 @@ end
 
 
 function flasher_interface.erase(self, ulOffset, ulSize)
-    self.aArgs.fCommandEraseSelected = true
+	flasher_interface.clearArgs(self.aArgs)
+	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	return exec(self.aArgs)
@@ -1452,6 +1469,7 @@ end
 
 
 function flasher_interface.isErased(self, ulOffset, ulSize)
+	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
