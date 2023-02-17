@@ -1365,6 +1365,7 @@ end
 -- Since we're using a static argument list and iMode has been largely 
 -- replaced with individual flags for each operation, we need to clear 
 -- these flags after use or before re-using the argument list.
+-- Note: This function must be updated when the argument list changes
 function flasher_interface.clearArgs(aArgs)
 	aArgs.iMode = nil
 	aArgs.fCommandFlashSelected = nil
