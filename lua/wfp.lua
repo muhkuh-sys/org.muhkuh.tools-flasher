@@ -103,65 +103,91 @@ local atLogLevels = {
     'fatal'
 }
 
--- copied from cli_flash.lua!
--- this was necessarry because when importing it with "require 'cli_flash'" the argparser is overwritten
-function getPluginByName(strName, strPluginType)
-    for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-        if strPluginType == nil or strPluginType == tPluginClass:GetID() then
-            local iDetected
-            local aDetectedInterfaces = {}
-            print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
-            iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces)
-            print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
 
-            for i, v in ipairs(aDetectedInterfaces) do
-                print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
-                if strName == v:GetName() then
-                    if not v:IsValid() then
-                        return nil, "Plugin is not valid"
-                    elseif v:IsUsed() then
-                        return nil, "Plugin is in use"
-                    else
-                        print("found plugin")
-                        local tPlugin = v:Create()
-                        if tPlugin then
-                            return tPlugin
-                        else
-                            return nil, "Error creating plugin instance"
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil, "plugin not found"
+-- Try to open a plugin for an interface with the given name.
+-- This function assumes that the name starts with the name of the interface,
+-- e.g. romloader_uart, and scans only for interfaces whose type is contained
+-- in the name string.
+function getPluginByName(strName, strPluginType, atPluginOptions)
+	show_plugin_options(atPluginOptions)
+	
+	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
+			local iDetected
+			local aDetectedInterfaces = {}
+	
+			local strPluginType = tPluginClass:GetID()
+			if strName:match(strPluginType) then
+				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
+				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
+				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
+			end
+			
+			for i,v in ipairs(aDetectedInterfaces) do
+				print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+				if strName == v:GetName() then
+					if not v:IsValid() then
+						return nil, "Plugin is not valid"
+					elseif v:IsUsed() then
+						return nil, "Plugin is in use"
+					else
+						print("found plugin")
+						local tPlugin = v:Create()
+						if tPlugin then 
+							return tPlugin
+						else
+							return nil, "Error creating plugin instance"
+						end
+					end
+				end
+			end
+		end
+	end
+	return nil, "plugin not found"
 end
 
-function getPlugin(strPluginName, strPluginType)
-	print ("getPlugin")
-	print ("strPluginName:", strPluginName)
-	print ("strPluginType:", strPluginType)
+-- If strPluginName is the name of an interface, try to create a plugin 
+-- instance for exactly the named interface.
+-- Otherwise, show a list of available interface and let the user select one.
+--
+-- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
+-- a plugin provider, e.g. "romloader_uart"), only this plugin provider
+-- is scanned.
+
+function getPlugin(strPluginName, strPluginType, atPluginOptions)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName, strPluginType)
+		tPlugin, strError = getPluginByName(strPluginName, strPluginType, atPluginOptions)
 	else
 		-- Ask the user to pick a plugin.
-		tPlugin = SelectPlugin(nil, strPluginType)
+		tPlugin = SelectPlugin(nil, strPluginType, atPluginOptions)
 		if tPlugin == nil then
 			strError = "No plugin selected!"
 		end
 	end
-
+	
 	return tPlugin, strError
 end
 
-function SelectPlugin(strPattern, strPluginType)
+
+-- Show the available interfaces and let the user select one interactively.
+--
+-- strPattern is not evaluated.
+-- 
+-- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
+-- a plugin provider, e.g. "romloader_uart"), only this plugin provider
+-- is scanned.
+-- If strPluginType is nil, all plugin providers are scanned. 
+
+function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	local iInterfaceIdx
 	local aDetectedInterfaces
 	local tPlugin
 	local strPattern = strPattern or ".*"
 
+	show_plugin_options(atPluginOptions)
+	
 	repeat do
 		-- Detect all interfaces.
 		aDetectedInterfaces = {}
@@ -169,7 +195,7 @@ function SelectPlugin(strPattern, strPluginType)
 			if strPluginType == nil or strPluginType == v:GetID() then
 				local iDetected
 				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
-				iDetected = v:DetectInterfaces(aDetectedInterfaces)
+				iDetected = v:DetectInterfaces(aDetectedInterfaces,  atPluginOptions)
 				print(string.format("Found %d interfaces with plugin %s", iDetected, v:GetID()))
 			end
 		end
@@ -205,6 +231,18 @@ function SelectPlugin(strPattern, strPluginType)
 	end
 
 	return tPlugin
+end
+
+
+
+function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			print(strKey, tVal)
+		end
+	end
 end
 
 -- strData, strMsg loadBin(strFilePath)
