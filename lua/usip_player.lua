@@ -116,7 +116,7 @@ tParserCommandUsip:flag('--verify_sig'):description(
 tParserCommandUsip:flag('--no_verify'):description(
     "Do not verify the content of an usip image against a netX."
 ):target('fVerifyContentDisabled')
-tParserCommandUsip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserCommandUsip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserCommandUsip:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
@@ -175,7 +175,7 @@ tParserCommandKek:flag('--verify_sig'):description(
 tParserCommandKek:flag('--no_verify'):description(
     "Do not verify the content of an usip image against a netX."
 ):target('fVerifyContentDisabled')
-tParserCommandKek:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserCommandKek:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserCommandKek:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
@@ -197,7 +197,7 @@ tParserVerifyContent:option(
 tParserVerifyContent:option('-t'):description("plugin type"):target("strPluginType")
 tParserVerifyContent:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserVerifyContent:option('-i --input'):description("USIP binary file path"):target('strUsipFilePath')
-tParserVerifyContent:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserVerifyContent:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserVerifyContent:flag('--extend_exec'):description(
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
@@ -221,7 +221,7 @@ tParserReadSip:option('-o --output'):description(
 ):target("strOutputFolder"):default(tempFolderConfPath)
 tParserReadSip:option('-t'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserReadSip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserReadSip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserReadSip:flag('--extend_exec'):description(
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
@@ -255,7 +255,7 @@ tParserDetectSecure:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserDetectSecure:option('-t'):description("plugin type"):target("strPluginType")
 tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserDetectSecure:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserDetectSecure:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserDetectSecure:flag('--extend_exec'):description(
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
@@ -271,7 +271,7 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
-tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- parse args
 local tArgs = tParser:parse()
 
@@ -310,14 +310,14 @@ flasher = require 'flasher'
 -- the jtag just attach to a device. This is necessary in case secure boot is enabled via an usip file. If the
 -- jtag plugin would perform a reset the usip flags would directly be activated and it could be possible that
 -- the debugging is disabled and the jtag is no longer available.
-local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
 
-printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
-local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
+tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
+local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strnetX90M2MImagePath)
 if strnetX90M2MImageBin then
-    printf("%d bytes loaded.", strnetX90M2MImageBin:len())
+    tLog.info("%d bytes loaded.", strnetX90M2MImageBin:len())
 else
-    printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+    tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
     os.exit(1)
 end
 local atPluginOptions = {
@@ -329,6 +329,9 @@ local atPluginOptions = {
     netx90_m2m_image = strnetX90M2MImageBin
     }
 }
+
+-- todo add secure flag here
+-- fIsSecure, strErrorMsg = tFlasherHelper.detect_secure_boot_mode(aArgs)
 
 -- options for the jtag plugin
 -- these options are just used for the first connect, in the usip command call, to bring the netX, with a reset,
@@ -809,19 +812,16 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strS
             -- verify the signature
             local strDataBlockPath = path.join( strTempPath, "data_block.bin")
             -- generate data block
-            local strCommand = string.format(
-                '%s gen_data_block -i "%s" -o "%s"', strSipperExePath, strSingleFilePath, strDataBlockPath
-            )
-            -- execute the command
-            local tGenDataBlockResult, tGenDataBlockOutput = executeCommand(strCommand, strTempPath)
-            tLog.info(tGenDataBlockOutput)
+            local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockPath)
+
             -- check if the command executes without an error
-            if tGenDataBlockResult == 0 then
+            if tGenDataBlockResult == true then
                 -- execute verify signature binary
                 tLog.info("Start signature verification ...")
                 tLog.debug("Clearing result areas ...")
                 tPlugin:write_data32(ulVerifySigResultAdd, 0x00000000)
                 tPlugin:write_data32(ulVerifySigDebugAdd, 0x00000000)
+                -- todo add ethernet interface
                 if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' then
                     fOk = loadIntramImage( tPlugin, strDataBlockPath, ulDataBlockLoadAddress )
                     if fOk then
@@ -871,6 +871,7 @@ end
 --    strTmpFolderPath,
 --    strSipperExePath,
 -- )
+-- todo this will be removed as soon as the serial interface is removed from flasher commands
 -- verify the signature of every usip file in the list
 -- verifies the signature via the uart console interface.
 -- If secure boot is enabled the verify_sig binary have to be signed because it is executed with the 'htbl' command in
@@ -1039,6 +1040,7 @@ end
 -- tPlugin loadUsip(strFilePath, tPlugin, strPluginType)
 -- loads an usip file via a dedicated interface and checks if the chiptype is supported
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
+-- todo load usip with new m2m command if m2m version 3.1 and newer
 function loadUsip(strFilePath, tPlugin, strPluginType)
     local fOk
     tLog.info( "Loading Usip %s via %s",strFilePath, strPluginType )
@@ -1080,6 +1082,7 @@ end
 -- load an usip file via the native uart console to the netX
 -- returns
 --   usip load Output, message (from file write)
+-- todo remove
 function loadSecureUsip(strUsipPath, strPluginName, strUsipGenExePath, strTempPath)
     local strSerialPort
     local strUuencodedData
@@ -1227,6 +1230,7 @@ end
 -- compare the content of a usip file with the data in a secure info page to
 -- verify the usip process
 -- returns true if the verification process was a success, otherwise false
+-- todo remove
 function verifyContentSecure(strPluginName, strTmpFolderPath, strReadSipPath, strSipperExePath, strUsipConfigPath)
     local fOk = false
     local strComSipFilePath
@@ -1736,17 +1740,10 @@ function usip(
     --------------------------------------------------------------------------
     -- does the user want to verify the signature of the usip image?
     if tArgs.fVerifySigEnable then
-        if fIsSecure and strPluginType == "romloader_uart" then
-            -- check if every signature in the list is correct via uart serial console
-            fOk = verifySignatureSecure(
-                strPluginName, astrPathList, strVerifySigPath, strTmpFolderPath, strSipperExePath
-            )
-        else
-            -- check if every signature in the list is correct via MI
-            fOk = verifySignature(
-                tPlugin, strPluginType, astrPathList, strTmpFolderPath, strSipperExePath, strVerifySigPath
-            )
-        end
+        -- check if every signature in the list is correct via MI
+        fOk = verifySignature(
+            tPlugin, strPluginType, astrPathList, strTmpFolderPath, strSipperExePath, strVerifySigPath
+        )
     else
         -- set the signature verification to automatically to true
         fOk = true
@@ -1782,25 +1779,13 @@ function usip(
 
                 -- continue check
                 if fOk then
-                    -- load the usip
-                    if fIsSecure and strPluginType == "romloader_uart" then
-                        -- load a secure usip via the native uart console mode
-                        local strOutput, iLoadUsipResult = loadSecureUsip(
-                            strSingleUsipPath, strPluginName, strUsipGenExePath, strTmpFolderPath
-                        )
-                        if iLoadUsipResult == 0  then
-                            tLog.info(strOutput)
-                        else
-                            tLog.error(strOutput)
-                            fOk = false
-                        end
-                    else
-                        -- load an usip file via a dedicated interface
-                        fOk, tPlugin = loadUsip(strSingleUsipPath, tPlugin, strPluginType)
-                        -- NOTE: be aware after the loading the netX will make a reset
-                        --       but in the function the tPlugin will be reconncted!
-                        --       so after the function the tPlugin is connected!
-                    end
+
+                    -- load an usip file via a dedicated interface
+                    fOk, tPlugin = loadUsip(strSingleUsipPath, tPlugin, strPluginType)
+                    -- NOTE: be aware after the loading the netX will make a reset
+                    --       but in the function the tPlugin will be reconncted!
+                    --       so after the function the tPlugin is connected!
+
                 else
                     -- this is an error message from the extendExec function
                     tLog.error(strMsg)
@@ -1814,37 +1799,33 @@ function usip(
 
     -- check if a last reset is necessary to activate all data inside the secure info page
     if tArgs.strForceReset and fOk then
-        if not ( fIsSecure and strPluginType == "romloader_uart" ) then
-            local ulLoadAddress = 0x20080000
-            local strResetImagePath = ""
-            -- connect to the netX
-            tPlugin:Connect()
-            -- check if a bootswitch is necessary to force a dedicated interface after a reset
-            if tArgs.strBootswitchParams then
-                if tArgs.strBootswitchParams == "JTAG" then
-                    strResetImagePath = strResetExecReturnPath
-                else
-                    strResetImagePath = strResetBootswitchPath
-                end
 
-                fOk = loadIntramImage(tPlugin, strResetImagePath, ulLoadAddress )
+        local ulLoadAddress = 0x20080000
+        local strResetImagePath = ""
+        -- connect to the netX
+        tPlugin:Connect()
+        -- check if a bootswitch is necessary to force a dedicated interface after a reset
+        if tArgs.strBootswitchParams then
+            if tArgs.strBootswitchParams == "JTAG" then
+                strResetImagePath = strResetExecReturnPath
             else
-                tLog.debug("Just reset without any image in the intram.")
+                strResetImagePath = strResetBootswitchPath
             end
 
-            if fOk then
-                resetNetx90ViaWdg(tPlugin)
-                tPlugin:Disconnect()
-                sleep(2)
-                -- just necessary if the uart plugin in used
-                -- jtag works without getting a new plugin
-                if strPluginType == 'romloader_uart' then
-                    tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
-                end
-            end
-        -- reset via uart console mode
+            fOk = loadIntramImage(tPlugin, strResetImagePath, ulLoadAddress )
         else
-            fOk = resetNetX90InSecure(strPluginName, strUsipGenExePath, strTmpFolderPath, strResetBootswitchPath)
+            tLog.debug("Just reset without any image in the intram.")
+        end
+
+        if fOk then
+            resetNetx90ViaWdg(tPlugin)
+            tPlugin:Disconnect()
+            sleep(2)
+            -- just necessary if the uart plugin in used
+            -- jtag works without getting a new plugin
+            if strPluginType == 'romloader_uart' then
+                tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+            end
         end
     end
     -- just validate the content if the validation is enabled and no error occued during the loading process
@@ -1855,22 +1836,18 @@ function usip(
             if not strResetReadSipPath then
                 strResetReadSipPath = strReadSipPath
             end
-            if fIsSecure and strPluginType == "romloader_uart" then
-                fOk = verifyContentSecure(
-                    strPluginName, strTmpFolderPath, strResetReadSipPath, strSipperExePath, strUsipConfigPath
-                )
-            else
-                tPlugin:Connect()
-                fOk = verifyContent(
-                    strPluginType,
-                    tPlugin,
-                    strTmpFolderPath,
-                    strSipperExePath,
-                    strUsipConfigPath,
-                    strResetBootswitchPath,
-                    strResetExecReturnPath
-                )
-            end
+
+            tPlugin:Connect()
+            fOk = verifyContent(
+                strPluginType,
+                tPlugin,
+                strTmpFolderPath,
+                strSipperExePath,
+                strUsipConfigPath,
+                strResetBootswitchPath,
+                strResetExecReturnPath
+            )
+
         end
     end
 
@@ -2185,25 +2162,9 @@ function set_kek(
                                 tFile:write( strCombinedImageData )
                                 tFile:close()
                                 -- load the combined image to the netX
-                                if fIsSecure and strPluginType == "romloader_uart" then
-                                    tLog.info( "Using the UART in serial mode..." )
-                                    -- process the kek via the serial uart interface
-                                    strKekProcessOutput, iKekProcessResult = kekProcessViaUart(
-                                        strPluginName,
-                                        strSipperExePath,
-                                        strKekHbootCombPath,
-                                        strTmpFolderPath
-                                    )
-                                    if iKekProcessResult ~= 0 then
-                                        tLog.error(strKekProcessOutput)
-                                    else
-                                        tLog.info(strKekProcessOutput)
-                                        fOk = true
-                                    end
-                                else
-                                    tLog.info( "Using %s", strPluginType )
-                                    fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
-                                end
+                                tLog.info( "Using %s", strPluginType )
+                                fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
+
                                 if fOk then
                                     -- check if an input file path is set
                                     if not fProcessUsip then
@@ -2472,46 +2433,34 @@ function get_uid(tPlugin, strTempFolderPath, strSipperExePath)
     --------------------------------------------------------------------------
     -- PROCESS
     --------------------------------------------------------------------------
-    if tArgs.fForceConsole then
-        tLog.debug("Using uart interface")
-        iGetUidResult, strGetUidOutput = getUid(strPluginName, strSipperExePath, strTempFolderPath)
-        if iGetUidResult == 0 then
-            tLog.info(strGetUidOutput)
-            fOk = true
-        else
-            -- an error occurred
-            tLog.error("Failed to get the unique ID via the serial console")
+
+    tLog.debug( "Using %s interface", strPluginType )
+    -- what am i doing here...
+    -- catch the romloader error to handle it correctly
+    fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
+    if fCallSuccess then
+        -- get the chiptype
+        iChiptype = tPlugin:GetChiptyp()
+        tLog.debug( "Found Chip type: %d", iChiptype )
+        -- set the addresses
+        local ulUidStartAddr = 0xff40129c
+        local iUidSize = 0xc
+        local ulUidEndAddr = ulUidStartAddr + iUidSize -1
+
+        local strUidVal = ""
+
+        for ulReadAddr = ulUidStartAddr, ulUidEndAddr, 1 do
+            strUidVal = strUidVal .. string.format( "%02x", flasher.read_image(tPlugin, ulReadAddr, 0x1 ):byte(1))
         end
-    elseif strPluginType == "romloader_jtag" or strPluginType == "romloader_uart" then
-        tLog.debug( "Using %s interface", strPluginType )
-        -- what am i doing here...
-        -- catch the romloader error to handle it correctly
-        fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
-        if fCallSuccess then
-            -- get the chiptype
-            iChiptype = tPlugin:GetChiptyp()
-            tLog.debug( "Found Chip type: %d", iChiptype )
-            -- set the addresses
-            local ulUidStartAddr = 0xff40129c
-            local iUidSize = 0xc
-            local ulUidEndAddr = ulUidStartAddr + iUidSize -1
 
-            local strUidVal = ""
-
-            for ulReadAddr = ulUidStartAddr, ulUidEndAddr, 1 do
-                strUidVal = strUidVal .. string.format( "%02x", flasher.read_image(tPlugin, ulReadAddr, 0x1 ):byte(1))
-            end
-
-            -- print out the complete unique ID
-            tLog.info( " [UNIQUE_ID] %s", strUidVal )
-            fOk = true
-        else
-            tLog.debug(strError)
-            tLog.error( "Could not open %s interface.", strPluginType )
-        end
+        -- print out the complete unique ID
+        tLog.info( " [UNIQUE_ID] %s", strUidVal )
+        fOk = true
     else
-        tLog.error("Selected interface is not supported.")
+        tLog.debug(strError)
+        tLog.error( "Could not open %s interface.", strPluginType )
     end
+
 
     return fOk
 end
@@ -2549,23 +2498,17 @@ function verify_content(
         --------------------------------------------------------------------------
         -- verify the content
         --------------------------------------------------------------------------
-        if fIsSecure then
-            -- verify the content via the uart serial console
-            fOk = verifyContentSecure(
-                strPluginName, strTempFolderPath, strReadSipPath, strSipperExePath, tUsipConfigDict
-            )
-        else
-            -- verify the content via the MI
-            fOk = verifyContent(
-                strPluginType,
-                tPlugin,
-                strTempFolderPath,
-                strSipperExePath,
-                tUsipConfigDict,
-                strResetBootswitchPath,
-                strResetExecReturnPath
-            )
-        end
+
+        -- verify the content via the MI
+        fOk = verifyContent(
+            strPluginType,
+            tPlugin,
+            strTempFolderPath,
+            strSipperExePath,
+            tUsipConfigDict,
+            strResetBootswitchPath,
+            strResetExecReturnPath
+        )
 
     else
         tLog.error(tUsipAnalyzeOutput)
@@ -2617,23 +2560,16 @@ fFinalResult = false
 -- INITIAL VALUES
 --------------------------------------------------------------------------
 
+
+-- todo change this to detect_secure_mode?
 -- set secure mode
-if strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION or tArgs.fForceConsole then
+if strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
     fIsSecure = true
 else
     fIsSecure = false
 end
 
--- todo ??? should this be the strPluginType
--- this should instead throw an exception if an interface is selected, that is not compatible with another option
 
--- if the force_console option is selected the only the uart interface is supported
-if tArgs.fForceConsole and tArgs.strPluginType == nil then
-    tArgs.strPluginType = "romloader_uart"
--- if the extend_exec option is selected only the jtag interface is supported
-elseif tArgs.strBootswitchParams == "JTAG" and tArgs.strPluginType == nil then
-    tArgs.strPluginType = "romloader_jtag"
-end
 
 --------------------------------------------------------------------------
 -- INITIAL CHECKS
@@ -2662,16 +2598,9 @@ if fCallSuccess then
         strPluginType = tPlugin:GetTyp()
         -- get plugin name
         strPluginName = tPlugin:GetName()
-        -- get the chiptype
-        -- connect to netX
-        if not ( strPluginType == "romloader_uart" or strPluginType == "romloader_jtag" ) then
-            tLog.error( "The selected interface is not supported: %s ", strPluginType )
-            tLog.error( "Please use the UART or JTAG interface." )
-            os.exit(1)
-        end
-        print("fIsSecure")
-        print(fIsSecure)
-        if not (fIsSecure and strPluginType == "romloader_uart") and not tArgs.fCommandDetectSelected then
+
+
+        if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
             fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
             if fCallSuccess then
@@ -2839,20 +2768,6 @@ if tArgs.strBootswitchParams == "JTAG" then
     end
 end
 
--- check if the console is forced with the JTAG interface
-if tArgs.fForceConsole then
-    -- the --force_console option is not supported for the jtag interface
-    if strPluginType == "romloader_jtag" then
-        tLog.error( "The --force_console option is not available for the JTAG interface!" )
-        os.exit(1)
-    end
-    -- the --force_console option is not supported in secure mode
-    if strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
-        tLog.error( "The --force_console option is not available in secure mode." )
-        tLog.error( "Use --force_console to force the console in non-secure mode." )
-        os.exit(1)
-    end
-end
 
 -- check if valid bootswitch parameter are set
 if tArgs.strBootswitchParams then
@@ -2914,7 +2829,7 @@ end
 -- check if this is a secure run
 -- if the console mode is forced in non-secure mode, no signature verification is necessary
 -- do not verify the signature of the helper files if the read command is selected
-if (fIsSecure and not tArgs.fForceConsole) and not tArgs.fCommandReadSelected then
+if fIsSecure  and not tArgs.fCommandReadSelected then
     -- verify the signature of the used HTBL files
     -- make a list of necessary files
     local tblHtblFilePaths = {}
@@ -2945,17 +2860,12 @@ if (fIsSecure and not tArgs.fForceConsole) and not tArgs.fCommandReadSelected th
 
     if fDoVerify then
         tLog.info("Checking signatures of support files...")
-        if strPluginType == "romloader_uart" then
-            -- check if every signature in the list is correct via the uart console
-            fOk = verifySignatureSecure(
-                strPluginName, tblHtblFilePaths, strVerifySigPath, strTmpFolderPath, strSipperExePath
-            )
-        else
-            -- check if every signature in the list is correct via MI
-            fOk = verifySignature(
-                tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strSipperExePath, strVerifySigPath
-            )
-        end
+
+        -- check if every signature in the list is correct via MI
+        fOk = verifySignature(
+            tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strSipperExePath, strVerifySigPath
+        )
+
         if not fOk then
             tLog.error( "The Signatures of the support-files can not be verified." )
             tLog.error( "Please check if the supported files are signed correctly" )
