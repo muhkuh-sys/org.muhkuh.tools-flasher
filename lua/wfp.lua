@@ -845,7 +845,7 @@ else
     tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
     os.exit(1)
 end
-local atPluginOptions = {
+atPluginOptions = {
     romloader_jtag = {
     jtag_reset = "Attach", -- HardReset, SoftReset or Attach
     jtag_frequency_khz = 6000 -- optional
