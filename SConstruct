@@ -740,6 +740,9 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher.lua':                               lua_flasher,
         'targets/testbench/lua/wfp_control.lua':                           'lua/lua/wfp_control.lua',
         'targets/testbench/lua/bootpins.lua':                              'bootpins_netx90/bootpins.lua',
+        'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
+        'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
 
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,
@@ -776,7 +779,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/includes/flasher_spi.h':                      'src/flasher_spi.h',
         'targets/flasher_lib/includes/netx_consoleapp.h':                  'src/netx_consoleapp.h',
         'targets/flasher_lib/includes/sha1_arm/sha1.h':                    'src/sha1_arm/sha1.h',
-        'targets/flasher_lib/includes/sha1_netx/sha1.h':                    'src/sha1_netx/sha1.h',
+        'targets/flasher_lib/includes/sha1_netx/sha1.h':                   'src/sha1_netx/sha1.h',
         'targets/flasher_lib/includes/spi_flash.h':                        'src/spi_flash.h',
         'targets/flasher_lib/includes/flasher_version.h':                  'targets/version/flasher_version.h',
         'targets/flasher_lib/includes/spi_flash_types.h':                  'targets/netx50_nodbg/spi_flash_types/spi_flash_types.h',
