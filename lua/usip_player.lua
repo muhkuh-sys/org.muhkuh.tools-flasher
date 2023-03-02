@@ -936,7 +936,7 @@ end
 -- extend the usip file with an exec chunk that return immediately and activated the debugging
 -- returns true and the file path to the combined file in case no error occur, otherwith an false and nil
 -- returns always a info message.
-function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
+function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
     local fResult = false
     local strMsg
     local strUsipData
@@ -951,9 +951,14 @@ function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
         if strExecReturnData then
             -- cut the usip image ending and extend the exec-return content without the boot header
             -- the first 64 bytes are the boot header
+            -- todo: find better way to strip the last 0 values (end indication of hboot image)
             strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strExecReturnData, 65 )
             -- set combined file path
-            strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
+            if strOutputFileName == nil then
+                strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
+            else
+                strCombinedUsipPath = path.join( strTmpFolderPath, strOutputFileName)
+            end
             -- write the data back to the usip binary file
             local tFile
             tFile = io.open(strCombinedUsipPath, "wb")
@@ -977,37 +982,63 @@ end
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
 -- todo load usip with new m2m command if m2m version 3.1 and newer
 function loadUsip(strFilePath, tPlugin, strPluginType)
+
+    local ulRetries = 5
+
     local fOk
     tLog.info( "Loading Usip %s via %s",strFilePath, strPluginType )
     tPlugin:Connect()
-    if strPluginType == 'romloader_jtag' then
-        -- jtag has no usip command, load the image into the intram and reset the netX via WDG
-        fOk = execBinViaIntram(tPlugin, strFilePath)
+    local strPluginName = tPlugin:GetName()
+
+    local ulM2MMinor = tPlugin:get_mi_version_min()
+    local ulM2MMajor = tPlugin:get_mi_version_maj()
+    if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+        local ulUsipLoadAddress = 0x200C0
+        loadImage(tPlugin, strFilePath ,ulUsipLoadAddress)
+        tFlasher.call_usip(tPlugin)
+        fOk = true
         if fOk then
             tPlugin:Disconnect()
             sleep(2)
             -- get the jtag plugin with the attach option to not reset the netX
-            tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+            while ulRetries > 0 do
+                tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                ulRetries = ulRetries-1
+                if tPlugin ~= nil then
+                    break
+                end
+                tFlasherHelper.sleep(1)
+            end
         end
     else
-        if strPluginType == 'romloader_uart' then
-            -- netX90 rev_1 and uart detected, process the usip via the intram
+        -- we have a netx90 with either jtag or M2M interface older than 3.1
+        if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' then
             fOk = execBinViaIntram(tPlugin, strFilePath)
             if fOk then
                 tPlugin:Disconnect()
-                sleep(2)
-                -- get the uart plugin again
-                tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
+                sleep(3)
+                -- get the jtag plugin with the attach option to not reset the netX
+
+                while ulRetries > 0 do
+                    tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                    ulRetries = ulRetries-1
+                    if tPlugin ~= nil then
+                        break
+                    end
+                    tFlasherHelper.sleep(1)
+                end
             end
+
         elseif strPluginType == 'romloader_eth' then
-            -- netX90 rev_1 and ethernet deteced, this function is not supported
-            tLog.error("The current verison does not support the Ethernet in this feature!")
+            -- netX90 rev_1 and ethernet detected, this function is not supported
+            tLog.error("The current version does not support the Ethernet in this feature!")
         else
-            tLog.error("This feature is not supported yet.")
-            -- netX90 rev_2 detected, use the new usip commands
-            -- loadUsipImage(tPlugin, strFilePath)
-            -- call_usip(tPlugin)
+            tLog.error("Unknown plugin type '%s'!", strPluginType)
         end
+    end
+    if tPlugin == nil then
+        fOk = false
+        tLog.error("Could not get plugin again")
     end
     return fOk, tPlugin
 end
@@ -1025,10 +1056,8 @@ function verifyContent(
     strPluginType,
     tPlugin,
     strTmpFolderPath,
-    strSipperExePath,
-    tUsipConfigDict,
-    strResetBootswitchPath,
-    strResetExecReturnPath
+    strReadSipM2MPath,
+    tUsipConfigDict
 )
     local fOk = false
     local strErrorMsg
@@ -1043,15 +1072,13 @@ function verifyContent(
     -- validate the seucre info pages
     -- it is important to return the plugin at this point, because of the reset the romload_uart plugin
     -- changes
-    iValidCom, iValidApp, tPlugin = validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
+
     -- get the com sip data
-    strComSipData, strAppSipData = readOutSipContent(iValidCom, iValidApp, tPlugin)
+    fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(strReadSipM2MPath, tPlugin, strTmpFolderPath)
     -- check if for both sides a valid sip was found
     if strComSipData == nil or strAppSipData == nil then
         tLog.error("Unable to read out both SecureInfoPages.")
     else
-        -- mask the kek
-        strComSipData = string.sub(strComSipData, 0, 1855) .. string.rep(string.char(255), 192) .. string.sub(strComSipData, 2048)
 
         tLog.debug("Saving content to files...")
         -- save the content to a file if the flag is set
@@ -1073,13 +1100,12 @@ function verifyContent(
         fOk, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipFilePath, strAppSipFilePath, tPlugin)
 
         if fOk ~= true then
-            self.tLog.error(strErrorMsg)
+            tLog.error(strErrorMsg)
         end
     end
 
     return fOk
 end
-
 
 
 -- iValidCom, iValidApp, tPlugin validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
@@ -1351,52 +1377,6 @@ function readOutSipContent(iValidCom, iValidApp, tPlugin)
     return strComSipData, strAppSipData
 end
 
-
--- strDetectSecureOutput, iDetectSecureResult detectSecure(strPluginName, strSipperExePath, strTempPath)
--- detect the secure mode via the serial uart interface
--- the following secure states are possible
--- SECURE_BOOT_DISABLED (app and com side has no secure boot activate)
--- SECURE_BOOT_ENABLED (com side has secure boot enabled, app side secure state is unknown)
--- SECURE_BOOT_ONLY_APP_ENABLED (com side has not secure boot enabled, app side has secure boot enabled)
-function detectSecure(strPluginName, strSipperExePath, strTempPath)
-    local strSerialPort
-    local iDetectSecureResult
-    local strDetectSecureOutput
-    -- get the serial port
-    strSerialPort = getSerialPort(strPluginName)
-    -- load the usip file
-    local strCommand = string.format('%s detect_secure -p "%s"', strSipperExePath, strSerialPort)
-    -- execute the command
-    _, strDetectSecureOutput = executeCommand(strCommand, strTempPath)
-
-    if strDetectSecureOutput:find "SECURE_BOOT_DISABLED" then
-        iDetectSecureResult = 0
-    elseif strDetectSecureOutput:find "SECURE_BOOT_ENABLED" then
-        iDetectSecureResult = 5
-    elseif strDetectSecureOutput:find "SECURE_BOOT_ONLY_APP_ENABLED" then
-        iDetectSecureResult = 50
-    else
-        iDetectSecureResult = 1
-    end
-
-    return strDetectSecureOutput, iDetectSecureResult
-end
-
-
--- iGetUidResult, strGetUidOutput getUid(strPluginName, strSipperExePath, strTempPath)
--- get the uid via the serial uart console
-function getUid(strPluginName, strSipperExePath, strTempPath)
-    local strSerialPort
-    local iGetUidResult
-    local strGetUidOutput
-    -- get the serial port
-    strSerialPort = getSerialPort(strPluginName)
-    -- load the usip file
-    local strCommand = string.format('%s get_uid -p "%s"', strSipperExePath, strSerialPort)
-    -- execute the command
-    iGetUidResult, strGetUidOutput = executeCommand(strCommand, strTempPath)
-    return iGetUidResult, strGetUidOutput
-end
 
 
 function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
