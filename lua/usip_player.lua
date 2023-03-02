@@ -1539,7 +1539,7 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
     local ulDataStructureAddress = 0x000220c0
     local ulHbootResultAddress
     local fOk = false
-    -- seperate the image data and the option + usip from the image
+    -- separate the image data and the option + usip from the image
     -- this is necessary because the image must be loaded to 0x000203c0
     -- and not to 0x000200c0 like the "htbl" command does. If the image is
     -- loaded to that address it is not possible to start the image, the image is broken
@@ -1549,13 +1549,13 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
         local strHbootDataPath = path.join( strTempPath, "set_kek_data.bin")
         -- set the path for the strOptionUsipData
         local strOptionUsipDataPath = path.join( strTempPath, "opt_usip_data.bin")
-        -- seperate the data
+        -- separate the data
         -- get the set_kek data
-        -- this is the raw programm data
+        -- this is the raw program data
         local strSetKekData = string.sub(strHbootData, 1037, 5256)
         -- get the rest of the data (options and usip (incl. the image a second time and a second usip))
         local strOptionUsipData = string.sub(strHbootData, 8193)
-        -- save the data in two seperate files
+        -- save the data in two separate files
         local tFile
         tFile = io.open(strHbootDataPath, "wb")
         tFile:write(strSetKekData)
@@ -1581,11 +1581,25 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
                         ulHbootResultAddress = tPlugin:read_data32(ulDataStructureAddress)
                         tLog.debug("Delete result register")
                         tPlugin:write_data32(ulHbootResultAddress, 0)
-                        tPlugin:call(
-                            ulCombinedHbootLoadAddress + 1,
-                            ulDataStructureAddress,
-                            flasher.default_callback_message,
-                            2)
+                        local ulM2MMajor = tPlugin:get_mi_version_maj()
+                        local ulM2MMinor = tPlugin:get_mi_version_min()
+                        if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+                            tFlasher.call_hboot(tPlugin)
+                        elseif strPluginType ~= "romloader_jtag" then
+                            tPlugin:call_no_answer(
+                                    ulCombinedHbootLoadAddress + 1,
+                                    ulDataStructureAddress,
+                                    flasher.default_callback_message,
+                                    2
+                            )
+                        else
+                            tPlugin:call(
+                                ulCombinedHbootLoadAddress + 1,
+                                ulDataStructureAddress,
+                                flasher.default_callback_message,
+                                2
+                            )
+                        end
                         tLog.debug("Finished call, disconnecting")
                         tPlugin:Disconnect()
                         tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
@@ -1614,7 +1628,6 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
 
     return fOk, tPlugin
 end
-
 
 
 -----------------------------------------------------------------------------------------------------
@@ -2668,11 +2681,10 @@ elseif tArgs.fCommandKekSelected then
     fFinalResult = set_kek(
         tPlugin,
         strTmpFolderPath,
-        strUsipGenExePath,
-        strSipperExePath,
+        strVerifySigPath,
         astrPathList,
         fIsSecure,
-        strReadSipPath,
+        strReadSipM2MPath,
         strResetReadSipPath,
         strBootswitchFilePath,
         strResetBootswitchPath,
