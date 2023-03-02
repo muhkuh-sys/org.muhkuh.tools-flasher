@@ -161,8 +161,15 @@ function call(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
 	return tPlugin:call(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
 end
 
-function call_hboot(tPlugin, fnCallbackMessage)
-	return tPlugin:call_hboot(fnCallbackMessage or default_callback_message, 2)
+function call_no_answer(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
+	return tPlugin:call_no_answer(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message)
+end
+
+function call_hboot(tPlugin, fnCallbackMessage, fSkipAnswer)
+    if fSkipAnswer == nil then
+        fSkipAnswer = false
+    end
+	return tPlugin:call_hboot(fnCallbackMessage or default_callback_message, 2, fSkipAnswer)
 end
 
 function call_usip(tPlugin, fnCallbackMessage)
