@@ -73,6 +73,24 @@ function getHexString(strBin)
 	return strHex
 end
 
+function bytes_to_uint32(str)
+    local ulValue = 0
+    local aValues = {}
+    local val
+    local ulShifted
+    for i = 0, (string.len(str) - 1) do
+        val = string.byte(str, i + 1)
+        ulShifted = bit.lshift(val, (8 * i))
+        ulValue = ulValue + ulShifted
+    end
+
+    if ulValue < 0 then
+        ulValue = 4294967295 + ulValue
+    end
+    return ulValue
+
+end
+
 
 function printf(...) print(string.format(...)) end
 
@@ -140,6 +158,16 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	end
 
 	return tPlugin
+end
+
+function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			print(strKey, tVal)
+		end
+	end
 end
 
 -- Try to open a plugin for an interface with the given name.
@@ -606,3 +634,43 @@ function reset_netx_via_watchdog(aArgs)
 
 	return fOk, strMsg
 end
+
+function switch_endian(ulValue)
+    local ulNewValue = 0
+    local mskedVal
+    local shiftedVal
+
+    mskedVal = bit.band(ulValue, 0x000000ff)
+    shiftedVal = bit.lshift(mskedVal, 24)
+    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+
+	mskedVal = bit.band(ulValue, 0x0000ff00)
+    shiftedVal = bit.lshift(mskedVal, 8)
+    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+
+	mskedVal = bit.band(ulValue, 0x00ff0000)
+    shiftedVal = bit.rshift(mskedVal, 8)
+    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+
+	mskedVal = bit.band(ulValue, 0xff000000)
+    shiftedVal = bit.rshift(mskedVal, 24)
+    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+
+    return ulNewValue
+end
+
+function dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
+
+	local strOutputFilePath = path.join(strOutputFolder, strOutputFileName)
+
+	local strTraceDumpData = tPlugin:read_image(ulAddress, ulSize, tFlasher.default_callback_progress, ulSize)
+
+	writeBin(strOutputFilePath, strTraceDumpData)
+end
+
+function dump_trace(tPlugin, strOutputFolder, strOutputFileName)
+	local ulTraceAddress = 0x200a0000
+	local ulDumpSize = 0x8000
+	dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
+end
+
