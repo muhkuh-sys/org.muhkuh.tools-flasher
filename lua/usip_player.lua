@@ -1636,17 +1636,16 @@ end
 function usip(
     tPlugin,
     strTmpFolderPath,
-    strUsipGenExePath,
-    strSipperExePath,
+    strVerifySigHbootPath,
     astrPathList,
     fIsSecure,
-    strReadSipPath,
+    strReadSipM2MPath,
     strResetReadSipPath,
     strBootswitchFilePath,
     strResetBootswitchPath,
     strExecReturnFilePath,
     strResetExecReturnPath,
-    strUsipConfigPath
+    tUsipConfigDict
 )
 
     local fOk
@@ -1665,7 +1664,7 @@ function usip(
     if tArgs.fVerifySigEnable then
         -- check if every signature in the list is correct via MI
         fOk = verifySignature(
-            tPlugin, strPluginType, astrPathList, strTmpFolderPath, strSipperExePath, strVerifySigPath
+            tPlugin, strPluginType, astrPathList, strTmpFolderPath, strVerifySigPath
         )
     else
         -- set the signature verification to automatically to true
@@ -1677,46 +1676,36 @@ function usip(
         -- iterate over the usip file path list
         for _, strSingleUsipPath in ipairs(astrPathList) do
             -- check if usip needs extended by the bootswitch with parameters
-            if tArgs.strBootswitchParams then
+            if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
                 tLog.debug("Extending USIP file with bootswitch.")
                 fOk, strSingleUsipPath, strMsg = extendBootswitch(
                     strSingleUsipPath, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
                 )
                 tLog.debug(strMsg)
+            elseif tArgs.strBootswitchParams == "JTAG" then
+                tLog.debug("Extending USIP file with exec.")
+                fOk, strSingleUsipPath, strMsg = extendExecReturn(
+                    strSingleUsipPath, strTmpFolderPath, strExecReturnFilePath
+                )
             else
+                -- tLog.debug(strMsg)
                 fOk = true
             end
 
             -- continue check
             if fOk then
-                -- check if the usip must be extended with an exec-return chunk
-                if tArgs.strBootswitchParams == "JTAG" then
-                    tLog.debug("Extending USIP file with exec.")
-                    fOk, strSingleUsipPath, strMsg = extendExecReturn(
-                        strSingleUsipPath, strTmpFolderPath, strExecReturnFilePath
-                    )
-                    tLog.debug(strMsg)
-                else
-                    fOk = true
-                end
 
-                -- continue check
-                if fOk then
+                -- load an usip file via a dedicated interface
+                fOk, tPlugin = loadUsip(strSingleUsipPath, tPlugin, strPluginType)
+                -- NOTE: be aware after the loading the netX will make a reset
+                --       but in the function the tPlugin will be reconncted!
+                --       so after the function the tPlugin is connected!
 
-                    -- load an usip file via a dedicated interface
-                    fOk, tPlugin = loadUsip(strSingleUsipPath, tPlugin, strPluginType)
-                    -- NOTE: be aware after the loading the netX will make a reset
-                    --       but in the function the tPlugin will be reconncted!
-                    --       so after the function the tPlugin is connected!
-
-                else
-                    -- this is an error message from the extendExec function
-                    tLog.error(strMsg)
-                end
             else
-                -- this is an error message from the extendBootswitch function
+                -- this is an error message from the extendExec function
                 tLog.error(strMsg)
             end
+
         end
     end
 
@@ -1746,7 +1735,7 @@ function usip(
             sleep(2)
             -- just necessary if the uart plugin in used
             -- jtag works without getting a new plugin
-            if strPluginType == 'romloader_uart' then
+            if strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
                 tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
             end
         end
@@ -1757,7 +1746,7 @@ function usip(
             -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
             -- this is the case if the content should be verified without a reset at the end
             if not strResetReadSipPath then
-                strResetReadSipPath = strReadSipPath
+                strResetReadSipPath = strReadSipM2MPath
             end
 
             tPlugin:Connect()
@@ -1765,8 +1754,8 @@ function usip(
                 strPluginType,
                 tPlugin,
                 strTmpFolderPath,
-                strSipperExePath,
-                strUsipConfigPath,
+                strReadSipM2MPath,
+                tUsipConfigDict,
                 strResetBootswitchPath,
                 strResetExecReturnPath
             )
@@ -1842,11 +1831,10 @@ end
 function set_kek(
     tPlugin,
     strTmpFolderPath,
-    strUsipGenExePath,
-    strSipperExePath,
+    strVerifySigHbootPath,
     astrPathList,
     fIsSecure,
-    strReadSipPath,
+    strReadSipM2MPath,
     strResetReadSipPath,
     strBootswitchFilePath,
     strResetBootswitchPath,
@@ -2099,11 +2087,10 @@ function set_kek(
                                         fOk = usip(
                                             tPlugin,
                                             strTmpFolderPath,
-                                            strUsipGenExePath,
-                                            strSipperExePath,
+                                            strVerifySigHbootPath,
                                             astrPathList,
                                             fIsSecure,
-                                            strReadSipPath,
+                                            strReadSipM2MPath,
                                             strResetReadSipPath,
                                             strBootswitchFilePath,
                                             strResetBootswitchPath,
@@ -2648,17 +2635,16 @@ if tArgs.fCommandUsipSelected then
     fFinalResult = usip(
         tPlugin,
         strTmpFolderPath,
-        strUsipGenExePath,
-        strSipperExePath,
+        strVerifySigPath,
         astrPathList,
         fIsSecure,
-        strReadSipPath,
+        strReadSipM2MPath,
         strResetReadSipPath,
         strBootswitchFilePath,
         strResetBootswitchPath,
         strExecReturnFilePath,
         strResetExecReturnPath,
-        strUsipConfigPath
+        tUsipConfigDict
     )
 
 --------------------------------------------------------------------------
