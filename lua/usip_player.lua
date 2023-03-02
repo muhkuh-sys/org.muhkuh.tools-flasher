@@ -271,9 +271,15 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
+tParserGetUid:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- parse args
 local tArgs = tParser:parse()
+
+if tArgs.strSecureOption == nil then
+    tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+end
 
 -- convert the parameter strBootswitchParams to all upper case
 if tArgs.strBootswitchParams ~= nil then
@@ -300,8 +306,10 @@ package.cpath = package.cpath .. ";lua_plugins/?.dll"
 package.path = package.path .. ";lua/?.lua;lua/?/init.lua"
 
 -- Load the common romloader plugins.
+require("romloader_eth")
 require("romloader_uart")
 require("romloader_jtag")
+
 
 flasher = require 'flasher'
 
@@ -341,6 +349,9 @@ local atPluginOptionsFirstConnect = {
     romloader_jtag = {
     jtag_reset = "HardReset", -- HardReset, SoftReset or Attach
     jtag_frequency_khz = 6000 -- optional
+    },
+    romloader_uart = {
+    netx90_m2m_image = strnetX90M2MImageBin
     }
 }
 
@@ -486,31 +497,6 @@ function printTable(tTable, ulIndent)
     if next(tTable) == nil then
         tLog.info( "%s%s",strIndentSpace, " -- empty --" )
     end
-end
-
-
--- fCommandResult, strOutput executeCommand(strCommand)
--- executes a command in the shell
--- returns the command return code and the command output as a string
-function executeCommand(strCommand, strTempFolderPath)
-    local fCommandResult
-    local strOutput = ""
-    -- set temp file path for the output
-    local strTempFilePath = path.join(strTempFolderPath, "command_output.txt")
-    if not fileExists(strTempFilePath) then
-        local tFile = io.open(strTempFilePath, "wb")
-        tFile:close()
-    end
-
-    -- execute the command and redirect the output into a file
-    fCommandResult = os.execute (string.format("%s > %s", strCommand, strTempFilePath ))
-
-    -- display output
-    for line in io.lines (strTempFilePath) do
-      strOutput = strOutput .. line .. "\n"
-    end
-
-    return fCommandResult, strOutput
 end
 
 
@@ -761,13 +747,11 @@ end
 -- )
 -- generates depending on the usip-config json file multiple usip files. The config json file is generated
 -- with the usip generator. Every single generated usip file has the same header and differs just in the body part.
--- The header is not rellevant at this point, because the header of the usip file is just checked once if
+-- The header is not relevant at this point, because the header of the usip file is just checked once if
 -- the hash is correct and is not relevant for the usip process
 -- returns a list of all generated usip file paths and the output of the command
 function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     -- list of all generated usip file paths
-    local astrUsipPathList = {}
-
     local tResult, aFileList = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
 
     return tResult, aFileList
@@ -775,12 +759,12 @@ end
 
 
 -- fOk verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
--- verify the signautre of every usip file in the list
+-- verify the signature of every usip file in the list
 -- the SIPper is used for the data-block generation only
--- the verify_sig binary does not need to be sined, because the image is called directly via the tPlugin:call command.
+-- the verify_sig binary does not need to be signed, because the image is called directly via the tPlugin:call command.
 -- both addresses for the result and debug registers are hard coded inside the verify_sig program. To change these
 -- addresses the binary needs to be build again.
--- For every single usip in the list a new data block have to be generated and an individually signautre verification is
+-- For every single usip in the list a new data block have to be generated and an individually signature verification is
 -- performed. Every signature is checked even if one already failed.
 -- returns true if every signature is correct, otherwise false
 function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
@@ -864,63 +848,6 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strS
     return fOk
 end
 
--- fResult verifySignatureSecure(
---    strPluginName,
---    astrPathList,
---    strVerifySigPath,
---    strTmpFolderPath,
---    strSipperExePath,
--- )
--- todo this will be removed as soon as the serial interface is removed from flasher commands
--- verify the signature of every usip file in the list
--- verifies the signature via the uart console interface.
--- If secure boot is enabled the verify_sig binary have to be signed because it is executed with the 'htbl' command in
--- the (secure-)console. If the signature of the verify_sig bianry is not correct or no signature is available, in
--- secure mode, the signautre verification will automatically fail.
--- The data block generation is performed inside the SIPper --verify_sig command.
--- returns true if every signature is correct, otherwise false
-function verifySignatureSecure(strPluginName, astrPathList, strVerifySigPath, strTmpFolderPath, strSipperExePath)
-    -- be optimistic
-    local fResult = true
-    local strSerialPort
-    local iVerifySigResult
-    local tVerifySigOutput
-    -- iterate through the list of all files
-    -- every file signautre is verified
-    for _, strSingleFilePath in ipairs(astrPathList) do
-        -- verify the signature
-        -- set data block path
-        local strDataBlockPath = path.join( strTmpFolderPath, "data_block.bin")
-        -- set the serial port name
-        strSerialPort = getSerialPort(strPluginName)
-        -- load the usip file
-        local strCommand = string.format(
-            '%s verify_sig -p "%s" -i "%s" -o "%s" --verify_sig "%s"',
-            strSipperExePath,
-            strSerialPort,
-            strSingleFilePath,
-            strDataBlockPath,
-            strVerifySigPath
-        )
-        -- execute the command
-        -- verify the signature against the netX
-        iVerifySigResult, tVerifySigOutput = executeCommand(strCommand, strTmpFolderPath)
-        tLog.info(tVerifySigOutput)
-        -- check if the command returns with a 0
-        -- if that is the case the siganture verification was a success
-        -- the SIPper returns a 1 if the siganture_verification failes
-        if iVerifySigResult == 0 then
-            tLog.info( "Successfully verified the signature of file: %s", strSingleFilePath )
-            fResult = fResult and true
-        else
-            tLog.error( "Failed to verify signature for file -> %s", strSingleFilePath )
-            fResult = false
-        end
-    end
-    sleep(1)
-
-    return fResult
-end
 
 -- fResult, strMsg extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, strBootswitchParam)
 -- extend the usip file with the bootswitch and the bootswitch parameter
@@ -1078,90 +1005,10 @@ function loadUsip(strFilePath, tPlugin, strPluginType)
 end
 
 
--- tUsipLoadOutput, iLoadUsipResult loadSecureUsip(strUsipPath, strPluginName, strUsipGenExePath, strTempPath)
--- load an usip file via the native uart console to the netX
--- returns
---   usip load Output, message (from file write)
--- todo remove
-function loadSecureUsip(strUsipPath, strPluginName, strUsipGenExePath, strTempPath)
-    local strSerialPort
-    local strUuencodedData
-    local strUuencodedPath
-    local tUsipLoadOutput
-    local iLoadUsipResult
-    strUuencodedPath = path.join( strTempPath, "uue_usip.uue")
-    strUuencodedData = uuencode(strUsipPath)
-    -- open a file in binary mode
-    local tFile = io.open(strUuencodedPath, "wb")
-    -- check if the file exists
-    if tFile then
-        -- write all data to file
-        tFile:write(strUuencodedData)
-        tFile:close()
-        -- get the serial port
-        strSerialPort = getSerialPort(strPluginName)
-        -- load the usip file
-        local strCommand = string.format(
-            '%s load -f "%s" -p "%s"',
-            strUsipGenExePath,
-            strUuencodedPath,
-            strSerialPort
-        )
-        -- execute the command
-        -- load the usip via the uart console mode with the "usip" command call
-        -- the "usip" command call resets the netX automatically
-        iLoadUsipResult, tUsipLoadOutput = executeCommand(strCommand, strTempPath)
-    else
-        tUsipLoadOutput = "Could not uu-encode the usip binary."
-        iLoadUsipResult = 1
-    end
 
     return tUsipLoadOutput, iLoadUsipResult
 end
 
-
--- tReadSipOutput, iReadSipResult readSipViaUart(strHbootPath, strPluginName, strSipperExePath, strTempPath)
--- load an hboot file via the native uart console to the netX
--- the hboot reads out the secure info page content and saves the content in a folder as
--- com.bin and app.bin
--- If secure boot is on the read_sip binary needs to be singed
--- returns
---   htbl Output, message (from file write)
-function readSipViaUart(strHbootPath, strPluginName, strSipperExePath, strTempPath)
-    local strSerialPort
-    local strUuencodedData
-    local strUuencodedPath
-    local iReadSipResult
-    local tReadSipOutput
-    strUuencodedPath = path.join( strTempPath, "uue_hboot.uue")
-    -- uu-encode the read-sip binary file
-    -- the file needs to be uu-encoded because it is send with the 'htbl' command via the native uart console
-    strUuencodedData = uuencode( strHbootPath )
-    -- open a file in binary mode
-    local tFile = io.open( strUuencodedPath, "wb" )
-    -- check if the file exists
-    if tFile then
-        -- write all data to file
-        tFile:write( strUuencodedData )
-        tFile:close()
-        -- get the serial port
-        strSerialPort = getSerialPort(strPluginName)
-        -- load the usip file
-        local strCommand = string.format(
-            '%s read_sip -p "%s" -o "%s" --read_sip "%s"',
-            strSipperExePath, strSerialPort,
-            strTempPath,
-            strUuencodedPath
-        )
-        -- execute the command
-        iReadSipResult, tReadSipOutput = executeCommand(strCommand, strTempPath)
-    else
-        tReadSipOutput = "Could not uu-encode the read-sip binary."
-        iReadSipResult = 1
-    end
-
-    return tReadSipOutput, iReadSipResult
-end
 
 -- fOk verifyContent(strPluginType, tPlugin, strTmpFolderPath, strSipperExePath, strUsipConfigPath)
 -- compare the content of a usip file with the data in a secure info page to verify the usip process
@@ -1225,50 +1072,6 @@ function verifyContent(
     return fOk
 end
 
-
--- fOk verifyContentSecure(strPluginName, strTmpFolderPath, strReadSipPath, strSipperExePath, strUsipConfigPath)
--- compare the content of a usip file with the data in a secure info page to
--- verify the usip process
--- returns true if the verification process was a success, otherwise false
--- todo remove
-function verifyContentSecure(strPluginName, strTmpFolderPath, strReadSipPath, strSipperExePath, strUsipConfigPath)
-    local fOk = false
-    local strComSipFilePath
-    local strAppSipFilePath
-    tLog.info("Verify USIP content ... ")
-    -- validate the seucre info pages and read out the sip content
-    local strOutput, iReadSipResult = readSipViaUart(strReadSipPath, strPluginName, strSipperExePath, strTmpFolderPath)
-    if iReadSipResult == 0 then
-        tLog.info(strOutput)
-        strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
-        strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
-
-        -- check if the usip was processed correctly
-        local strCommand = string.format(
-            '%s verify_usip -i "%s" --com_bin "%s" --app_bin "%s"',
-            strSipperExePath,
-            strUsipConfigPath,
-            strComSipFilePath,
-            strAppSipFilePath
-        )
-        -- execute the command
-        local tVerifyUsipProcessedResult, tVerifyUsipProcessedOutput = executeCommand(strCommand, strTmpFolderPath)
-        tLog.info(tVerifyUsipProcessedOutput)
-        if tVerifyUsipProcessedResult == 0 then
-            tLog.info(tVerifyUsipProcessedOutput)
-            -- check if the verification success
-            if tVerifyUsipProcessedOutput:find "VERIFICATION SUCCESS" then
-                fOk = true
-            end
-        else
-            tLog.error(tVerifyUsipProcessedOutput)
-        end
-    else
-        tLog.error(strOutput)
-    end
-
-    return fOk
-end
 
 
 -- iValidCom, iValidApp, tPlugin validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
@@ -1671,41 +1474,6 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
 end
 
 
-function kekProcessViaUart(strPluginName, strSipperExePath, strCombinedHbootPath, strTempPath)
-    local strUuencodedPath
-    local strUuencodedData
-    local strSerialPort
-    local iSetKekResult
-    local strSetKekOutput
-
-    strUuencodedPath = path.join( strTempPath, "kek_hboot_comb.uue")
-    strUuencodedData = uuencode(strCombinedHbootPath)
-    -- open a file in binary mode
-    local tFile = io.open(strUuencodedPath, "wb")
-    -- check if the file exists
-    if not tFile then
-        strSetKekOutput = "Could not uu-encode the kek_hboot binary."
-        iSetKekResult = 1
-    else
-        -- write all data to file
-        tFile:write(strUuencodedData)
-        tFile:close()
-        -- get the serial port
-        strSerialPort = getSerialPort(strPluginName)
-        -- load the usip file
-        local strCommand = string.format(
-            '%s load_htbl -p "%s" -i "%s"',
-            strSipperExePath,
-            strSerialPort,
-            strUuencodedPath
-        )
-        -- execute the command
-        iSetKekResult, strSetKekOutput = executeCommand(strCommand, strTempPath)
-        tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
-        sleep(2)
-    end
-    return strSetKekOutput, iSetKekResult
-end
 
 -----------------------------------------------------------------------------------------------------
 -- FUNCTIONS
