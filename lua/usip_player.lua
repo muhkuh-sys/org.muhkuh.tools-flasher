@@ -767,8 +767,8 @@ end
 -- For every single usip in the list a new data block have to be generated and an individually signature verification is
 -- performed. Every signature is checked even if one already failed.
 -- returns true if every signature is correct, otherwise false
-function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
-    -- NOTE: For more information of how the verify_sig program works and how the data block is structed and how the
+function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strVerifySigPath)
+    -- NOTE: For more information of how the verify_sig program works and how the data block is structured and how the
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
     -- be pessimistic
     local fOk = false
@@ -776,61 +776,69 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strS
     local ulVerifySigDebug
     local strVerifySigDataPath
     local ulVerifySigDataLoadAddress = 0x000203c0
+    local ulVerifySigHbootLoadAddress = 0x000200c0
     local ulDataBlockLoadAddress = 0x000220c0
-    local ulVerifySigResultAdd = 0x000220b8
-    local ulVerifySigDebugAdd = 0x000220bc
-    -- get verifysig programm data only
+    local ulVerifySigResultAddress = 0x000220b8
+    local ulVerifySigDebugAddress = 0x000220bc
+    local ulM2MMajor = tPlugin:get_mi_version_maj()
+    local ulM2MMinor = tPlugin:get_mi_version_min()
+
+    -- get verify sig program data only
     local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
     if strVerifySigData then
-        -- cut out the programm data from the rest of the image
-        -- this is the raw programm data
-        strVerifySigData = string.sub(strVerifySigData, 1037, 3428)
-        -- set the path for the verifySigData
-        strVerifySigDataPath = path.join( strTempPath, "verify_sig_data.bin")
-        local tFile
-        tFile = io.open(strVerifySigDataPath, "wb")
-        tFile:write(strVerifySigData)
-        tFile:close()
+        -- cut out the program data from the rest of the image
+        -- this is the raw program data
+        local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
+        if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+            -- use the whole hboot image
+            flasher.write_image(tPlugin, ulVerifySigHbootLoadAddress, strVerifySigData)
+        else
+
+            strVerifySigData = string.sub(strVerifySigData, 1037, 3428)
+            flasher.write_image(tPlugin, ulVerifySigDataLoadAddress, strVerifySigData)
+        end
+
         -- iterate over the path list to check the signature of every usip file
-        for _, strSingleFilePath in ipairs(astrPathList) do
-            -- verify the signature
-            local strDataBlockPath = path.join( strTempPath, "data_block.bin")
+        for idx, strSingleFilePath in ipairs(astrPathList) do
+            local strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
             -- generate data block
-            local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockPath)
+            local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockTmpPath)
 
             -- check if the command executes without an error
             if tGenDataBlockResult == true then
                 -- execute verify signature binary
                 tLog.info("Start signature verification ...")
                 tLog.debug("Clearing result areas ...")
-                tPlugin:write_data32(ulVerifySigResultAdd, 0x00000000)
-                tPlugin:write_data32(ulVerifySigDebugAdd, 0x00000000)
-                -- todo add ethernet interface
-                if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' then
-                    fOk = loadIntramImage( tPlugin, strDataBlockPath, ulDataBlockLoadAddress )
-                    if fOk then
-                        fOk = loadIntramImage( tPlugin, strVerifySigDataPath, ulVerifySigDataLoadAddress )
-                        if fOk then
-                            tPlugin:call(
-                                ulVerifySigDataLoadAddress + 1,
-                                ulDataBlockLoadAddress ,
-                                flasher.default_callback_message,
-                                2)
-
-                            ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAdd)
-                            ulVerifySigDebug = tPlugin:read_data32(ulVerifySigDebugAdd)
-                            tLog.debug( "ulVerifySigDebug: %s ", ulVerifySigDebug )
-                            tLog.debug( "ulVerifySigResult: %s ", ulVerifySigResult )
-                            -- if the verify sig program runs without errors the result
-                            -- register has a value of 0x00000701
-                            if ulVerifySigResult == 0x701 then
-                                tLog.info( "Successfully verified the signature of file: %s", strSingleFilePath )
-                            else
-                                fOk = false
-                                tLog.error( "Failed to verify the signature of file: %s", strSingleFilePath )
-                            end
-                        end
+                tPlugin:write_data32(ulVerifySigResultAddress, 0x00000000)
+                tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
+                if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
+                    flasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
+                    if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+                        tFlasher.call_hboot(tPlugin)
+                    else
+                        tPlugin:call(
+                            ulVerifySigDataLoadAddress + 1,
+                            ulDataBlockLoadAddress,
+                            flasher.default_callback_message,
+                            2
+                        )
                     end
+
+
+                    ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAddress)
+                    ulVerifySigDebug = tPlugin:read_data32(ulVerifySigDebugAddress)
+                    tLog.debug( "ulVerifySigDebug: 0x%08x ", ulVerifySigDebug )
+                    tLog.debug( "ulVerifySigResult: 0x%08x", ulVerifySigResult )
+                    -- if the verify sig program runs without errors the result
+                    -- register has a value of 0x00000701
+                    if ulVerifySigResult == 0x701 then
+                        tLog.info( "Successfully verified the signature of file: %s", strSingleFilePath )
+                        fOk = true
+                    else
+                        fOk = false
+                        tLog.error( "Failed to verify the signature of file: %s", strSingleFilePath )
+                    end
+
                 else
                     -- netX90 rev_1 and ethernet deteced, this function is not supported
                     tLog.error( "This Interface is not yet supported! -> %s", strPluginType )
