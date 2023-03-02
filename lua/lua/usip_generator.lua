@@ -60,7 +60,7 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     local aOutputList = {}
     for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
         local strOutputFilePath = pl.path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
-        aOutputList[iIdx] = strOutputFilePath
+        table.insert(aOutputList, strOutputFilePath)
 
         local tChunkContent = tUsipConfigDict['content'][iIdx]
 
