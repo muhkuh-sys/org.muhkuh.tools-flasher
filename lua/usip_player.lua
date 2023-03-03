@@ -2342,24 +2342,6 @@ if tArgs.strBootswitchParams then
     end
 end
 
--- check if the executables are available
-
--- check for usip generator executable
-strUsipGenExePath =  path.join( "ext", "USIP_Generator_CLI", "USIP_Generator_CLI")
-if not fileExeExists(strUsipGenExePath) then
-    tLog.error( "Can not find the USIP-Generator executable at: %s", strUsipGenExePath )
-    -- return here because of initial error
-    os.exit(1)
-end
-
--- check for sipper executable
-strSipperExePath =  path.join( "ext", "SIPper", "SIPper")
-if not fileExeExists(strSipperExePath) then
-    tLog.error( "Can not find the SIPper executable at: %s", strSipperExePath )
-    -- return here because of initial error
-    os.exit(1)
-end
-
 -- check if the temp folder exists, if it does not exists, create it
 if not exists(strTmpFolderPath) then
     -- (!) TODO: This is not os independent! (!)
