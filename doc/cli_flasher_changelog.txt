@@ -1,4 +1,19 @@
 
+Updates in CLI Flasher v2.0.0-dev6
+==============================
+CLI flasher:
+* Bugfix: testcli command was failing
+
+WFP:
+* Bugfix: plugin options not working in commands read and example
+
+Update Romloader to v2.5.4-dev5:
+* Bugfix: Fix a bug causing memory corruption when exiting the application
+  when romloader_uart was loaded (since 2.5.4-dev1).
+  
+* Add a version of start_mi image that does not clear the working area.
+
+
 Updates in CLI Flasher v2.0.0-dev5
 ==============================
 
