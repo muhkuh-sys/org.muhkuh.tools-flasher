@@ -99,6 +99,7 @@ local bHbootFlash = false
 local path = require "pl.path"
 local FLASHER_DIR = path.currentdir()
 DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
+HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
 
 --------------------------------------------------------------------------
 -- callback/progress functions, 
