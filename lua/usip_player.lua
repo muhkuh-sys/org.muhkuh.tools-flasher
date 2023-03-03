@@ -227,6 +227,8 @@ tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('str
 -- ):target('fExtendExec')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserReadSip:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserReadSip:flag('--read_cal'):description(
+        "additional read out and store the cal secure info page"):target('fReadCal')
 
 -- Add the "detect_secure_mode" command and all its options.
 strDetectSecureModeHelp = [[
@@ -272,7 +274,9 @@ tParserGetUid:option(
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-
+tParserGetUid:flag('--no_verify'):description(
+    "Do not verify the content of an usip image against a netX."
+):target('fVerifyContentDisabled')
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- parse args
 local tArgs = tParser:parse()
@@ -1917,7 +1921,8 @@ function read_sip(
     strReadSipM2MPath,
     strResetBootswitchPath,
     strResetExecReturnPath,
-    strOutputFolderPath
+    strOutputFolderPath,
+    fReadCal
 )
 
     local fOk = false
@@ -1960,6 +1965,15 @@ function read_sip(
         tFile:write(strAppSipData)
         tFile:close()
         fOk = true
+
+        if fReadCal then
+            strCalSipFilePath = path.join( strOutputFolderPath, "cal_sip.bin")
+            -- write the com sip data to a file
+            tLog.info("Saving CAL SIP to %s ", strCalSipFilePath)
+            local tFile = io.open(strCalSipFilePath, "wb")
+            tFile:write(strCalSipData)
+            tFile:close()
+        end
     else
         tLog.error(strErrorMsg)
     end
@@ -2503,7 +2517,8 @@ elseif tArgs.fCommandReadSelected then
         strReadSipM2MPath,
         strResetBootswitchPath,
         strResetExecReturnPath,
-        strOutputFolderPath
+        strOutputFolderPath,
+        tArgs.fReadCal
     )
 --------------------------------------------------------------------------
 -- DETECT SECURE MODE
