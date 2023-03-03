@@ -775,7 +775,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
     local ulVerifySigResult
     local ulVerifySigDebug
     local strVerifySigDataPath
-    local ulVerifySigDataLoadAddress = 0x000203c0
+    local ulVerifySigDataLoadAddress = 0x00060000
     local ulVerifySigHbootLoadAddress = 0x000200c0
     local ulDataBlockLoadAddress = 0x000220c0
     local ulVerifySigResultAddress = 0x000220b8
@@ -788,13 +788,13 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
     if strVerifySigData then
         -- cut out the program data from the rest of the image
         -- this is the raw program data
-        local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
+        -- local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
         if ulM2MMajor == 3 and ulM2MMinor >= 1 then
             -- use the whole hboot image
             flasher.write_image(tPlugin, ulVerifySigHbootLoadAddress, strVerifySigData)
         else
 
-            strVerifySigData = string.sub(strVerifySigData, 1037, 3428)
+            strVerifySigData = string.sub(strVerifySigData, 1037, 0x2000)
             flasher.write_image(tPlugin, ulVerifySigDataLoadAddress, strVerifySigData)
         end
 
@@ -807,12 +807,16 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
             -- check if the command executes without an error
             if tGenDataBlockResult == true then
                 -- execute verify signature binary
-                tLog.info("Start signature verification ...")
+
                 tLog.debug("Clearing result areas ...")
                 tPlugin:write_data32(ulVerifySigResultAddress, 0x00000000)
                 tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
+
                 if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
+                    tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
                     flasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
+                    tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_before.bin")
+                    tLog.info("Start signature verification ...")
                     if ulM2MMajor == 3 and ulM2MMinor >= 1 then
                         tFlasher.call_hboot(tPlugin)
                     else
@@ -823,6 +827,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
                             2
                         )
                     end
+                    tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_after.bin")
 
 
                     ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAddress)
@@ -1098,6 +1103,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
         -- reset the value of the read sip result address
         tLog.info(" reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
         tPlugin:write_data32(ulReadSipResultAddress, 0x00000000)
+        tPlugin:write_data32(ulReadSipMagicAddress, 0x00000000)
+
         if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
             if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= 'romloader_jtag' then
                 tLog.info("Start read sip hboot image inside intram")
@@ -1112,7 +1119,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
                 tFlasher.call_no_answer(
                         tPlugin,
                         ulDataLoadAddress + 1,
-                        ulDataStructureAddress
+                        ulReadSipResultAddress
                 )
             else -- jtag interface
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
@@ -1121,58 +1128,58 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
                 flasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
                 tFlasherHelper.sleep_s(2)
                 tLog.info("Start read sip binary via call")
-                tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_before_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_before_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x8000, strTmpFolderPath, "dump_intram_0x200c0_before_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_before_call.bin")
+                --tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_before_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_before_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x8000, strTmpFolderPath, "dump_intram_0x200c0_before_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_before_call.bin")
                 tFlasher.call(
                         tPlugin,
                         ulDataLoadAddress + 1,
-                        ulDataStructureAddress
+                        ulReadSipResultAddress
                 )
-                tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_after_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x1000, strTmpFolderPath, "dump_intram_0x200c0_after_call.bin")
-                tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_after_call.bin")
+                --tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_after_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x1000, strTmpFolderPath, "dump_intram_0x200c0_after_call.bin")
+                --tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_after_call.bin")
             end
 
             tFlasherHelper.sleep_s(2)
             tLog.info("Disconnect from Plugin and reconnect again")
             tPlugin:Disconnect()
-            tFlasherHelper.sleep_s(5)
-            if strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
-                while uLRetries > 0 do
-                    tLog.info("try to get the Plugin again after read sip reset")
-                    tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
-                    if tPlugin ~= nil then
-                        break
-                    end
-                    uLRetries = uLRetries - 1
-                    tFlasherHelper.sleep_s(1)
+            tFlasherHelper.sleep_s(3)
+
+            while uLRetries > 0 do
+                tLog.info("try to get the Plugin again after read sip reset")
+                tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                if tPlugin ~= nil then
+                    break
                 end
+                uLRetries = uLRetries - 1
+                tFlasherHelper.sleep_s(1)
             end
+
             if tPlugin then
                 tPlugin:Connect()
             else
                 strErrorMsg = "Could not reach plugin after reset"
                 fResult = false
             end
+
             uLRetries = 5
             local ulMagicResult
             if fResult then
-                while uLRetries > 0 and ulMagicResult ~= MAGIC_COOKIE_EN do
-                    ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
-                    if ulMagicResult == MAGIC_COOKIE_END then
-                        fResult = true
-                    elseif ulMagicResult == MAGIC_COOKIE_INIT then
-                        tLog.info("Read sip is not done yet! Wait a second")
-                        tFlasherHelper.sleep_s(1)
-                        fResult = false
-                    else
-                        strErrorMsg = "Could not find MAGIC_COOKIE_END"
-                        fResult = false
-                    end
-                    uLRetries = uLRetries - 1
+                ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
+                ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
+                if ulMagicResult == MAGIC_COOKIE_END then
+                    fResult = true
+                    tLog.info("Found MAGIC_COOKIE_END")
+                elseif ulMagicResult == MAGIC_COOKIE_INIT then
+                    tLog.info("Read sip is not done yet! Wait a second")
+                    tFlasherHelper.sleep_s(1)
+                    fResult = false
+                else
+                    strErrorMsg = "Could not find MAGIC_COOKIE"
+                    fResult = false
                 end
             end
             if fResult then
@@ -1239,6 +1246,8 @@ function verifyContent(
         -- set the sip file path to save the sip data
         strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
         strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
+
+
         -- write the com sip data to a file
         tLog.debug("Saving COM SIP to %s ", strComSipFilePath)
         local tFile = io.open(strComSipFilePath, "wb")
@@ -1259,216 +1268,6 @@ function verifyContent(
     end
 
     return fOk
-end
-
-
--- iValidCom, iValidApp, tPlugin validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
--- check if a valid secure info page is available and can be used on the netX for further operations
--- a sip is valid if it is copied, not copied and not hidden
--- a sip is not valid if it is not copied and hidden, then a external process can not
--- use the sip content for fruther oprtations
--- returns a tuple (iValidCom, iValidApp) with the following pattern:
--- 1 if sip copy is valid (if a valid copy was found the sip in flash is not checked anymore)
--- 2 if sip in flash is valid
--- otherwise -1
-function validateSip(tPlugin, strResetBootswitchPath, strResetExecReturnPath)
-    local fCallSuccess
-    local iValidCom = -1
-    local iValidApp = -1
-    -- check the sip copy at first
-    tLog.info("Validating SecureInfoPages")
-    tLog.debug("Validate Sip-Copies inside intram")
-    -- create a mhash state for the com side
-    mh_com = mhash.mhash_state()
-    -- initialize the mhash state for a sha384
-    mh_com:init(mhash.MHASH_SHA384)
-    -- create a mhash state for the app side
-    mh_app = mhash.mhash_state()
-    -- initialize the mhash state for a sha384
-    mh_app:init(mhash.MHASH_SHA384)
-    -- set the copy addresses and sip size
-    local ulComSipCopyAddr = 0x200a7000
-    local ulAppSipCopyAddr = 0x200a6000
-    local ulSipCopySize = 0x1000
-    local ulHashSize = 0x20
-    local strComSipContent
-    local strAppSipContent
-    local strResetImagePath
-    -- get the plugin type
-    local strPluginType = tPlugin:GetTyp()
-    -- invalidate the secure info page copies and reset the netX to be sure the SIP copy is valid
-    -- invalidte the hash of both secure info page copies
-    local ulHashComSipCopyAddr = ulComSipCopyAddr + ulSipCopySize - ulHashSize
-    local ulHashAppSipCopyAddr = ulAppSipCopyAddr + ulSipCopySize - ulHashSize
-    -- invalidate the copy by writing zeros inside the hash area
-    for i=0, ulHashSize, 4 do
-        tPlugin:write_data32(ulHashComSipCopyAddr + i, 0)
-        tPlugin:write_data32(ulHashAppSipCopyAddr + i, 0)
-    end
-
-    if tArgs.strBootswitchParams then
-        if tArgs.strBootswitchParams == "JTAG" then
-            -- use strResetExecReturnPath as if 'extend_exec' was selected
-            strResetImagePath = strResetExecReturnPath
-        else
-            strResetImagePath = strResetBootswitchPath
-        end
-    end
-
-    -- load the reset image
-    if tArgs.strBootswitchParams then
-        local ulLoadAddress = 0x20080000
-        fOk = loadIntramImage(tPlugin, strResetImagePath, ulLoadAddress )
-    else
-        tLog.debug("Just reset without any image in the intram.")
-    end
-    -- reset via watchdog
-    resetNetx90ViaWdg(tPlugin)
-    tPlugin:Disconnect()
-    sleep(2)
-    -- just necessary if the uart plugin in used
-    -- jtag works without getting a new plugin
-    if strPluginType == 'romloader_uart' then
-        tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), strPluginType, atPluginOptions)
-    end
-    tPlugin:Connect()
-    -- read out the potential sip content
-    tLog.debug("Read out Sip-Copies")
-    strComSipContent = flasher.read_image(tPlugin, ulComSipCopyAddr, ulSipCopySize )
-    strAppSipContent = flasher.read_image(tPlugin, ulAppSipCopyAddr, ulSipCopySize )
-    -- seperate the sip data from the sip hash
-    -- the sip hash are the last 48 bytes of the SecureInfoPage the rest is SecureInfoPage data
-    -- get the com sip data
-    local strComSipData = string.sub(strComSipContent, 1, 4048)
-    -- get the com sip hash
-    local strComSipHash = string.sub(strComSipContent, 4049)
-    -- get the app sip data
-    local strAppSipData = string.sub(strAppSipContent, 1, 4048)
-    -- get the app sip hash
-    local strAppSipHash = string.sub(strAppSipContent, 4049)
-    -- calculate the com sip hash with the com sip data
-    mh_com:hash(strComSipData)
-    -- get the com hash value
-    sha384_hash_com = mh_com:hash_end()
-    -- calculate the app sip hash with the app sip data
-    mh_app:hash(strAppSipData)
-    -- get the app hash value
-    sha384_hash_app = mh_app:hash_end()
-
-    -- compare the calculated com hash with the read out com hash
-    -- if both hashs match the com sip copy is valid
-    if sha384_hash_com == strComSipHash then
-        tLog.debug("Com SecureInfoPage copy is valid.")
-        -- set the com valid to 1 because the com sip is valid
-        iValidCom = 1
-    end
-
-    -- compare the calculated app hash with the read out app hash
-    -- if both hashs match the app sip copy is valid
-    if sha384_hash_app == strAppSipHash then
-        tLog.debug("App SecureInfoPage copy is valid.")
-        -- set the com valid to 1 because the app sip is valid
-        iValidApp = 1
-    end
-
-    -- if the hashes does not match the sip copy is not valid
-    -- if iValidCom is not set the sip copy is not valid,  next check the sip
-    -- inside the flash is valid
-    if iValidCom ~= 1 then
-        tLog.debug("Validate Com sip inside the flash.")
-        -- initialize the mhash state for a sha384
-        mh_com:init(mhash.MHASH_SHA384)
-        -- show the com sip
-        tPlugin:write_data32(0xff001cbc, 1)
-        -- set the copy addresses and sip size
-        local ulComSipAddr = 0x180000
-        -- read out the potential sip content
-        -- strComSipContent = flasher.read_image(tPlugin, ulComSipAddr, ulSipCopySize )
-        fCallSuccess, strComSipContent = pcall(flasher.read_image, tPlugin, ulComSipAddr, ulSipCopySize )
-        if fCallSuccess then
-            -- seperate the sip data from the sip hash
-            -- the sip hash are the last 48 bytes of the SecureInfoPage the rest is SecureInfoPage data
-            -- get the com sip data
-            strComSipData = string.sub(strComSipContent, 1, 4048)
-            -- get the com sip hash
-            strComSipHash = string.sub(strComSipContent, 4049)
-            -- calculate the com sip hash with the com sip data
-            mh_com:hash(strComSipData)
-            -- get the com hash value
-            sha384_hash_com = mh_com:hash_end()
-            -- compare the calculated com hash with the read out com hash
-            -- if both hashs match the com sip copy is valid
-            if sha384_hash_com == strComSipHash then
-                tLog.debug("Com SecureInfoPage is valid.")
-                -- set the com valid to 1 because the com sip is valid
-                iValidCom = 2
-            else
-                -- no valid com sip was found
-                tLog.warning("Could not find valid Com SecureInfoPage.")
-                iValidCom = -1
-            end
-        else
-            -- no valid com sip was found
-            tLog.error("Could not find valid Com SecureInfoPage.")
-            iValidCom = -1
-        end
-        -- hide the com sip
-        -- use a protected call to catch exeption
-        pcall( function () tPlugin:write_data32(0xff001cbc, 1) end)
-    end
-
-    -- if the hashes does not match the sip copy is not valid
-    -- if iValidApp is not set the sip copy is not valid,  next check the sip
-    -- inside the flash is valid
-    if iValidApp ~= 1 then
-        tLog.debug("Validate App sip inside the flash.")
-        -- initialize the mhash state for a sha384
-        mh_app:init(mhash.MHASH_SHA384)
-        -- show the app sip
-        fCallSuccess = pcall( function () tPlugin:write_data32(0xff40143c, 1) end)
-        if fCallSuccess then
-            -- set the copy addresses and sip size
-            local ulAppSipAddr = 0x200000
-            -- read out the potential sip content
-            fCallSuccess, strAppSipContent = pcall(flasher.read_image, tPlugin, ulAppSipAddr, ulSipCopySize )
-            if fCallSuccess then
-                -- seperate the sip data from the sip hash
-                -- the sip hash are the last 48 bytes of the SecureInfoPage the rest is SecureInfoPage data
-                -- get the app sip data
-                strAppSipData = string.sub(strAppSipContent, 1, 4048)
-                -- get the app sip hash
-                strAppSipHash = string.sub(strAppSipContent, 4049)
-                -- calculate the app sip hash with the app sip data
-                mh_app:hash(strAppSipData)
-                -- get the app hash value
-                sha384_hash_app = mh_app:hash_end()
-                -- compare the calculated app hash with the read out app hash
-                -- if both hashs match the app sip copy is valid
-                if sha384_hash_app == strAppSipHash then
-                    tLog.debug("App SecureInfoPage is valid.")
-                    -- set the app valid to 1 because the app sip is valid
-                    iValidApp = 2
-                else
-                    -- no valid app sip was found
-                    tLog.warning("Could not find valid App SecureInfoPage.")
-                    iValidApp = -1
-                end
-            else
-                -- no valid app sip was found
-                tLog.warning("Could not find valid App SecureInfoPage.")
-                iValidApp = -1
-            end
-        else
-            -- no valid app sip was found
-            tLog.error("Could not find valid App SecureInfoPage.")
-            iValidApp = -1
-        end
-        -- hide the app sip
-        -- use a protected call to catch exeption
-        pcall( function () tPlugin:write_data32(0xff40143c, 0) end)
-    end
-
-    return iValidCom, iValidApp, tPlugin
 end
 
 
@@ -1730,7 +1529,7 @@ function usip(
         end
 
         if fOk then
-            resetNetx90ViaWdg(tPlugin)
+            resetNetx90ViaWdg(tPlugin) -- todo replace for rev2 uart m2m in secure
             tPlugin:Disconnect()
             sleep(2)
             -- just necessary if the uart plugin in used
@@ -1779,7 +1578,7 @@ function set_sip_protection_cookie(tPlugin)
     -- be pessimistic
     local fOk = false
 
-    strFilePath = path.join( "netx", "sip", "com_default_rom_init_ff_netx90_rev2.bin")
+    strFilePath = path.join( "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
     -- Download the flasher.
     aAttr = flasher.download(tPlugin, flasher_path, nil, nil)
     -- if flasher returns with nil, flasher binary could not be downloaded
@@ -2147,6 +1946,7 @@ function read_sip(
             path.mkdir(strOutputFolderPath)
         end
 
+
         strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
         strAppSipFilePath = path.join( strOutputFolderPath, "app_sip.bin")
         -- write the com sip data to a file
@@ -2204,13 +2004,15 @@ function get_uid(tPlugin, strTempFolderPath, strSipperExePath, strReadSipM2MPath
     local iReadSipResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData, aStrUUIDs = readSip(
             strReadSipM2MPath, tPlugin, strTempFolderPath
         )
-    strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
+    if iReadSipResult then
+            strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
 
-    -- print out the complete unique ID
-    tLog.info( " [UNIQUE_ID] %s", strUidVal )
-    fOk = true
-
-
+        -- print out the complete unique ID
+        tLog.info( " [UNIQUE_ID] %s", strUidVal )
+        fOk = true
+    else
+       tLog.error(strErrorMsg)
+    end
 
     return fOk
 end
