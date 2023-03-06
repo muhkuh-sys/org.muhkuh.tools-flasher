@@ -11,6 +11,7 @@ local xml = require 'pl.xml'
 
 --local tFlasher = require 'flasher'(tLog)
 local tFlasher = require 'flasher'
+local tFlasherHelper = require 'flasher_helper'
 
 
 
@@ -103,138 +104,6 @@ local atLogLevels = {
     'fatal'
 }
 
-
--- Try to open a plugin for an interface with the given name.
--- This function assumes that the name starts with the name of the interface,
--- e.g. romloader_uart, and scans only for interfaces whose type is contained
--- in the name string.
-function getPluginByName(strName, strPluginType, atPluginOptions)
-	show_plugin_options(atPluginOptions)
-	
-	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
-		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
-			local iDetected
-			local aDetectedInterfaces = {}
-	
-			local strPluginType = tPluginClass:GetID()
-			if strName:match(strPluginType) then
-				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
-				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
-				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
-			end
-			
-			for i,v in ipairs(aDetectedInterfaces) do
-				print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
-				if strName == v:GetName() then
-					if not v:IsValid() then
-						return nil, "Plugin is not valid"
-					elseif v:IsUsed() then
-						return nil, "Plugin is in use"
-					else
-						print("found plugin")
-						local tPlugin = v:Create()
-						if tPlugin then 
-							return tPlugin
-						else
-							return nil, "Error creating plugin instance"
-						end
-					end
-				end
-			end
-		end
-	end
-	return nil, "plugin not found"
-end
-
--- If strPluginName is the name of an interface, try to create a plugin 
--- instance for exactly the named interface.
--- Otherwise, show a list of available interface and let the user select one.
---
--- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
--- a plugin provider, e.g. "romloader_uart"), only this plugin provider
--- is scanned.
-
-function getPlugin(strPluginName, strPluginType, atPluginOptions)
-	local tPlugin, strError
-	if strPluginName then
-		-- get the plugin by name
-		tPlugin, strError = getPluginByName(strPluginName, strPluginType, atPluginOptions)
-	else
-		-- Ask the user to pick a plugin.
-		tPlugin = SelectPlugin(nil, strPluginType, atPluginOptions)
-		if tPlugin == nil then
-			strError = "No plugin selected!"
-		end
-	end
-	
-	return tPlugin, strError
-end
-
-
--- Show the available interfaces and let the user select one interactively.
---
--- strPattern is not evaluated.
--- 
--- If strPluginType is a string (a plugin ID as obtained by calling GetID on 
--- a plugin provider, e.g. "romloader_uart"), only this plugin provider
--- is scanned.
--- If strPluginType is nil, all plugin providers are scanned. 
-
-function SelectPlugin(strPattern, strPluginType, atPluginOptions)
-	local iInterfaceIdx
-	local aDetectedInterfaces
-	local tPlugin
-	local strPattern = strPattern or ".*"
-
-	show_plugin_options(atPluginOptions)
-	
-	repeat do
-		-- Detect all interfaces.
-		aDetectedInterfaces = {}
-		for i,v in ipairs(__MUHKUH_PLUGINS) do
-			if strPluginType == nil or strPluginType == v:GetID() then
-				local iDetected
-				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
-				iDetected = v:DetectInterfaces(aDetectedInterfaces,  atPluginOptions)
-				print(string.format("Found %d interfaces with plugin %s", iDetected, v:GetID()))
-			end
-		end
-		print(string.format("Found a total of %d interfaces with %d plugins", #aDetectedInterfaces, #__MUHKUH_PLUGINS))
-		print("")
-
-		-- Show all detected interfaces.
-		print("Please select the interface:")
-		for i,v in ipairs(aDetectedInterfaces) do
-			print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
-		end
-		print("R: rescan")
-		print("C: cancel")
-
-		-- Get the user input.
-		repeat do
-			io.write(">")
-			strInterface = io.read():lower()
-			iInterfaceIdx = tonumber(strInterface)
-		-- Ask again until...
-		--  1) the user requested a rescan ("r")
-		--  2) the user canceled the selection ("c")
-		--  3) the input is a number and it is an index to an entry in aDetectedInterfaces
-		end until strInterface=="r" or strInterface=="c" or (iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces)
-	-- Scan again if the user requested it.
-	end until strInterface~="r"
-
-	if strInterface~="c" then
-		-- Create the plugin.
-		tPlugin = aDetectedInterfaces[iInterfaceIdx]:Create()
-	else
-		tPlugin = nil
-	end
-
-	return tPlugin
-end
-
-
-
 function show_plugin_options(tOpts)
 	print("Plugin options:")
 	for strPluginId, tPluginOptions in pairs(tOpts) do
@@ -305,7 +174,9 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         tPlugin = tester:getCommonPlugin()
     else
         local strError
-        tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
+        tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
         if tPlugin then
             tPlugin:Connect()
         else
@@ -610,7 +481,9 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
-                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
+                tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
                 if tPlugin then
                     tPlugin:Connect()
 				else
@@ -809,7 +682,6 @@ tParserCommandExample:option("-p --plugin_name"):description("plugin name"):targ
 tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
-
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -838,7 +710,9 @@ tester.fInteractivePluginSelection = true
 local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
 
 tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
-local strnetX90M2MImageBin, strMsg = loadBin(strnetX90M2MImagePath)
+
+local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strnetX90M2MImagePath)
+
 if strnetX90M2MImageBin then
     tLog.info("%d bytes loaded.", strnetX90M2MImageBin:len())
 else
@@ -942,7 +816,9 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tPlugin = tester:getCommonPlugin()
             else
                 local strError
-                tPlugin, strError = getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
+                tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+
                 if tPlugin then
                     tPlugin:Connect()
                 end

@@ -638,9 +638,17 @@ if fBuildIsFull==True:
 
     tArcList.AddFiles('netx/hboot/unsigned/netx90/',
         hboot_netx90_flasher_bin,
+        'helper_binaries/netx90/bootswitch.bin',
+        'helper_binaries/netx90/read_sip_M2M.bin',
+        'helper_binaries/netx90/return_exec.bin',
+        'helper_binaries/netx90/set_kek.bin',
+        'helper_binaries/netx90/verify_sig.bin',
+        'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
+        
+    tArcList.AddFiles('netx/helper/netx90/',
         hboot_netx90_exec_bxlr_bin,
-        'start_mi_netx90/hboot_start_mi_netx90_com_intram.bin')
-
+        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin')
+    
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
         bin_netx500_dbg,
@@ -662,10 +670,17 @@ if fBuildIsFull==True:
         'lua/flasher_test.lua',
         'lua/lua/Version.lua',
         'lua/lua/wfp_control.lua', 
-        'bootpins_netx90/bootpins.lua')
+        'bootpins_netx90/bootpins.lua',
+        'lua/lua/flasher_helper.lua', 
+        'lua/lua/sipper.lua',
+        'lua/lua/usip_generator.lua',
+        'lua/lua/usip_player_conf.lua',
+        )
+
 
     tArcList.AddFiles('demo/',
         'lua/cli_flash.lua',
+        'lua/usip_player.lua',
         'lua/demo_getBoardInfo.lua',
         'lua/erase_complete_flash.lua',
         'lua/erase_first_flash_sector.lua',
@@ -740,6 +755,11 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher.lua':                               lua_flasher,
         'targets/testbench/lua/wfp_control.lua':                           'lua/lua/wfp_control.lua',
         'targets/testbench/lua/bootpins.lua':                              'bootpins_netx90/bootpins.lua',
+        'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
+        'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
+        'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
+        'targets/testbench/lua/usip_player.lua':                           'lua/usip_player.lua',
 
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,
@@ -776,7 +796,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/includes/flasher_spi.h':                      'src/flasher_spi.h',
         'targets/flasher_lib/includes/netx_consoleapp.h':                  'src/netx_consoleapp.h',
         'targets/flasher_lib/includes/sha1_arm/sha1.h':                    'src/sha1_arm/sha1.h',
-        'targets/flasher_lib/includes/sha1_netx/sha1.h':                    'src/sha1_netx/sha1.h',
+        'targets/flasher_lib/includes/sha1_netx/sha1.h':                   'src/sha1_netx/sha1.h',
         'targets/flasher_lib/includes/spi_flash.h':                        'src/spi_flash.h',
         'targets/flasher_lib/includes/flasher_version.h':                  'targets/version/flasher_version.h',
         'targets/flasher_lib/includes/spi_flash_types.h':                  'targets/netx50_nodbg/spi_flash_types/spi_flash_types.h',

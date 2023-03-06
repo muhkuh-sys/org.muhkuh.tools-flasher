@@ -99,6 +99,7 @@ local bHbootFlash = false
 local path = require "pl.path"
 local FLASHER_DIR = path.currentdir()
 DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
+HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
 
 --------------------------------------------------------------------------
 -- callback/progress functions, 
@@ -161,8 +162,15 @@ function call(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
 	return tPlugin:call(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message, 2)
 end
 
-function call_hboot(tPlugin, fnCallbackMessage)
-	return tPlugin:call_hboot(fnCallbackMessage or default_callback_message, 2)
+function call_no_answer(tPlugin, ulExecAddress, ulParameterAddress, fnCallbackMessage)
+	return tPlugin:call_no_answer(ulExecAddress, ulParameterAddress, fnCallbackMessage or default_callback_message)
+end
+
+function call_hboot(tPlugin, fnCallbackMessage, fSkipAnswer)
+    if fSkipAnswer == nil then
+        fSkipAnswer = false
+    end
+	return tPlugin:call_hboot(fnCallbackMessage or default_callback_message, 2, fSkipAnswer)
 end
 
 function call_usip(tPlugin, fnCallbackMessage)
