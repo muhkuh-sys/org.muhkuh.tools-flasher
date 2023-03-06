@@ -39,8 +39,8 @@
 		<repository id="github2" type="url" cacheable="true" rescan="3600">
 			<root>https://github.com/muhkuh-sys</root>
 			<versions>[dotgroup]-romloader/releases</versions>
-			  <config>[dotgroup]-romloader/releases/download/v[version]-dev3/[artifact]-[version][platform].[extension]</config>
-			<artifact>[dotgroup]-romloader/releases/download/v[version]-dev3/[artifact]-[version][platform].[extension]</artifact>
+			  <config>[dotgroup]-romloader/releases/download/v[version]-dev5/[artifact]-[version][platform].[extension]</config>
+			<artifact>[dotgroup]-romloader/releases/download/v[version]-dev5/[artifact]-[version][platform].[extension]</artifact>
 		</repository>
 
 		<!-- This is a workaround to get v2.3 of muhkuh_base_cli. -->

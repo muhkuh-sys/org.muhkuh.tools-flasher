@@ -291,6 +291,7 @@ addPluginNameArg(tParserCommandVerifyHash)
 addPluginTypeArg(tParserCommandVerifyHash)
 addJtagResetArg(tParserCommandVerifyHash)
 addJtagKhzArg(tParserCommandVerifyHash)
+addSecureArgs(tParserCommandVerifyHash)
 
 -- hash
 local tParserCommandHash = tParser:command('hash h', 'Compute SHA1'):target('fCommandHashSelected')
@@ -305,6 +306,7 @@ addPluginNameArg(tParserCommandHash)
 addPluginTypeArg(tParserCommandHash)
 addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
+addSecureArgs(tParserCommandHash)
 
 -- detect
 local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized'):target('fCommandDetectSelected')
@@ -389,13 +391,14 @@ addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
--- reset_netx
+-- identify_netx
 local tParserCommandIdentifyNetx = tParser:command('identify_netx i', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
 addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
+addSecureArgs(tParserCommandIdentifyNetx)
 
 
 
@@ -661,7 +664,7 @@ function exec(aArgs)
 		
 		-- for test mode
 		if fOk and aArgs.fCommandTestSelected then
-			flasher_test.flasher_interface:configure(tPlugin, FLASHER_PATH, iBus, iUnit, iChipSelect)
+			flasher_test.flasher_interface:configure(tPlugin, FLASHER_PATH, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
 			fOk, strMsg = flasher_test.testFlasher()
 		end
 		
@@ -751,10 +754,24 @@ function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSele
 		iUnit = iUnit,
 		iChipSelect = iChipSelect,
 		strDataFileName = "flashertest.bin",
-        atPluginOptions = atPluginOptions
+
+		atPluginOptions = atPluginOptions
 		}
 end
 
+-- Since we're using a static argument list and iMode has been largely 
+-- replaced with individual flags for each operation, we need to clear 
+-- these flags after use or before re-using the argument list.
+-- Note: This function must be updated when the argument list changes
+function flasher_interface.clearArgs(aArgs)
+	aArgs.iMode = nil
+	aArgs.fCommandFlashSelected = nil
+	aArgs.fCommandVerifySelected = nil
+	aArgs.fCommandReadSelected = nil
+	aArgs.fCommandEraseSelected = nil
+	aArgs.ulStartOffset = nil
+	aArgs.ulLen = nil
+end
 
 function flasher_interface.init(self)
 	return true
@@ -766,6 +783,7 @@ end
 
 
 function flasher_interface.getDeviceSize(self)
+	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
 	return exec(self.aArgs)
 end
@@ -797,7 +815,9 @@ function flasher_interface.getEmptyByte(self)
 end
 
 function flasher_interface.flash(self, ulOffset, strData)
+
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
+
 	if fOk == false then
 		return false, strMsg
 	end
@@ -809,7 +829,9 @@ end
 
 
 function flasher_interface.verify(self, ulOffset, strData)
+
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
+
 	if fOk == false then
 		return false, strMsg
 	end
@@ -820,7 +842,8 @@ function flasher_interface.verify(self, ulOffset, strData)
 end
 
 function flasher_interface.read(self, ulOffset, ulSize)
-    self.aArgs.fCommandReadSelected = true
+	flasher_interface.clearArgs(self.aArgs)
+	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 
@@ -837,7 +860,8 @@ end
 
 
 function flasher_interface.erase(self, ulOffset, ulSize)
-    self.aArgs.fCommandEraseSelected = true
+	flasher_interface.clearArgs(self.aArgs)
+	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	return exec(self.aArgs)
@@ -845,6 +869,7 @@ end
 
 
 function flasher_interface.isErased(self, ulOffset, ulSize)
+	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize

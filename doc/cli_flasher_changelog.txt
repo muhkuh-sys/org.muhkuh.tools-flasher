@@ -1,4 +1,35 @@
 
+Updates in CLI Flasher v2.0.0-dev6
+==============================
+CLI flasher:
+* Bugfix: testcli command was failing
+
+WFP:
+* Bugfix: plugin options not working in commands read and example
+
+Update Romloader to v2.5.4-dev5:
+* Bugfix: Fix a bug causing memory corruption when exiting the application
+  when romloader_uart was loaded (since 2.5.4-dev1).
+  
+* Add a version of start_mi image that does not clear the working area.
+
+
+Updates in CLI Flasher v2.0.0-dev5
+==============================
+
+CLI flasher:
+* Bugfix: test and testcli commands
+* Bugfix: added command line arguments --comp and --sec to the commands 
+  verify_hash, hash and identify_netx
+  
+WFP: 
+* Bugfix: pack command did not work
+
+Update Romloader to v2.5.4-dev4:
+* Bugfix: Allow connecting to netx 90 Rev.2 in secure boot mode via ethernet 
+  if the ethernet machine interface is active.
+
+
 Updates in CLI Flasher v2.0.0-dev4
 ==============================
 
