@@ -1,4 +1,10 @@
 
+Updates in CLI Flasher v2.0.0-dev7
+==============================
+
+* Added version check for helper files
+
+
 Updates in CLI Flasher v2.0.0-dev6
 ==============================
 CLI flasher:
