@@ -19,6 +19,7 @@ SVN_AUTHOR ="$Author$"
 
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
+local tHelperFiles = require 'helper_files'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -399,6 +400,10 @@ addPluginTypeArg(tParserCommandIdentifyNetx)
 addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
+
+-- check_helper_files
+local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
+addSecureArgs(tParserCommandCheckHelperFiles)
 
 
 
@@ -917,15 +922,12 @@ function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
-    if aArgs.strSecureOption ~= nil then
+    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
 
-        local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
-        printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
-
-        local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strnetX90M2MImagePath)
+        local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90")
+        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile("start_mi", strnetX90M2MImagePath)
 
         if strnetX90M2MImageBin then
-            printf("%d bytes loaded.", strnetX90M2MImageBin:len())
             aArgs.atPluginOptions.romloader_uart = {
                 netx90_m2m_image = strnetX90M2MImageBin
             }
@@ -977,6 +979,11 @@ function main()
         print(strMsg)
         os.exit(iRet)
 
+    elseif aArgs.fCommandCheckHelperFilesSelected then
+        local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
+        fOk = tHelperFiles.checkAllHelpers(strnetX90HelperPath)
+        os.exit(fOk and 0 or 1)
+        
     elseif aArgs.fCommandTestCliSelected then
         flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)
