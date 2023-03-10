@@ -218,6 +218,12 @@ tParser:flag "-v --version":description "Show version info and exit. ":action(fu
     os.exit(0)
 end)
 
+tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+    helper_files.disableHelperFileChecks()
+end)
+
+
+
 -- 	flashfCommandFlashSelected
 local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX'):target('fCommandFlashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"},
@@ -923,9 +929,24 @@ function main()
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
+        local strnetX90HelperPath_Default = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+        local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
-        local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90")
-        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile("start_mi", strnetX90M2MImagePath)
+        print()
+        print("checkHelperFiles")
+        tHelperFiles.checkHelperFiles({strnetX90HelperPath_Default, strnetX90HelperPath}, {"start_mi", "bootswitch"})
+
+        print()
+        print("getHelperFile without checking (false)")
+        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", false)
+
+        print()
+        print("getHelperFile with checking (true) (if globally enabled)")
+        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
+
+        print()
+        print("getHelperFile with checking (nil) (default)")
+        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
 
         if strnetX90M2MImageBin then
             aArgs.atPluginOptions.romloader_uart = {
@@ -980,8 +1001,14 @@ function main()
         os.exit(iRet)
 
     elseif aArgs.fCommandCheckHelperFilesSelected then
+        local t1 = os.time()
+        
+        local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
-        fOk = tHelperFiles.checkAllHelpers(strnetX90HelperPath)
+        fOk = tHelperFiles.checkAllHelperFiles({strnetX90UnsignedHelperPath, strnetX90HelperPath})
+        local t2 = os.time()
+        local dt = os.difftime(t2, t1)
+        printf("Time: %d seconds", dt)
         os.exit(fOk and 0 or 1)
         
     elseif aArgs.fCommandTestCliSelected then
