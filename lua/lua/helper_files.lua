@@ -199,8 +199,8 @@ function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     for iDir = 1, table.maxn(astrHelperDirs) do
         local strDir = astrHelperDirs[iDir]
         if strDir ~= nil and atCheckedDirs[strDir] == nil then 
+            print()
             printf("Checking helper files in %s", strDir)
-            --local fDirOk = checkAllHelpers(strDir)
             
             for iName, strName in ipairs(astrHelperNames) do
                 print()
