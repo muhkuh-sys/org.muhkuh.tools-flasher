@@ -2,8 +2,20 @@
 Updates in CLI Flasher v2.0.0-dev7
 ==============================
 
-* Added version check for helper files
-
+* Added version check for helper files that may be changed by the user.
+  This applies to the boot images that may be signed by the user.
+  
+  Generally, before any of these helper files are used, their version is checked.
+  This check may be suppressed by adding the command line flag 
+  --disable_helper_file_check
+  or by settin the environment variable 
+  CLI_FL_DISABLE_HELPER_FILE_CHECK
+  to any value.
+  
+  The new command 
+  check_helper_files
+  checks all helper files explicitly.
+  
 
 Updates in CLI Flasher v2.0.0-dev6
 ==============================
