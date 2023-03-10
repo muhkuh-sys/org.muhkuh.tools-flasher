@@ -7,6 +7,35 @@ local tFlasherHelper = require 'flasher_helper'
 function printf(...) print(string.format(...)) end
 
 
+-- Checking is enabled by default.
+fEnableHelperFileChecks = true
+
+-- When the module is loaded:
+-- If the environment variable CLI_FL_DISABLE_HELPER_FILE_CHECK
+-- is set to any value, disable the checks 
+strEnvVar = "CLI_FL_DISABLE_HELPER_FILE_CHECK"
+local strEnvEnable=os.getenv(strEnvVar)
+if strEnvEnable == nil then 
+    printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
+    fEnableHelperFileChecks = true
+else 
+    printf("Environment variable %s is set - disabling automatic helper file checks", strEnvVar)
+    fEnableHelperFileChecks = false
+end
+
+-- Disable the checks
+function disableHelperFileChecks()
+    print("Disabling automatic helper file checks")
+    fEnableHelperFileChecks = false
+end
+
+-- Enable the checks
+function enableHelperFileChecks()
+    print("Enabling automatic helper file checks")
+    fEnableHelperFileChecks = true
+end
+
+
 
 -- ==========================================================================
 -- The list of known helper files.
@@ -91,9 +120,10 @@ atHelperFileVersions = {
 
 -- ==========================================================================
 -- Load a helper file and check its version.
+-- strDir: directory where the file is located
 -- strKey: short name for the binary, e.g. "start_mi"
--- strDir: directory where the binary is located
--- fDontCheckversion: if true, the version check is skipped
+-- fCheckversion: if true/nil, always check the version
+--                if false, the version check is skipped
 -- 
 -- Returns:
 -- a binary string of the helper file, if it was found and has the 
@@ -102,36 +132,38 @@ atHelperFileVersions = {
 --     - unknown key
 --     - file not found 
 --     - version did not match
-    
-function getHelperFile(strKey, strDir, fDontCheckversion)
+
+function checkHelperFileIntern(strDir, strKey, fCheckversion)
     local strBin, strMsg 
     
-    fDontCheckversion = fDontCheckversion or false
+    if fCheckversion == nil then 
+        fCheckversion = true
+    end
     
     tEntry = atHelperFileVersions[strKey]
     if tEntry == nil then
-        strMsg = string.format("Unknown helper name: %s", strKey)
+        strMsg = string.format("Unknown helper name: '%s'", strKey)
     else
         -- build the path
         local strPath = path.join(strDir, tEntry.filename)
         local strVersion = tEntry.version
         local iOffset = tEntry.version_offset
-        printf("Loading helper file %s from path path %s", strKey, strPath)
+        printf("Loading helper file '%s' from path %s", strKey, strPath)
         
         -- read the file
         strBin, strMsg = tFlasherHelper.loadBin(strPath)
         
         -- failed to read the file 
         if strBin == nil then
-            strMsg = string.format("Failed to load helper file %s: %s",
+            strMsg = string.format("Failed to load helper file '%s': %s",
                 strKey, strMsg)
             print(strMsg)
                 
         -- 
         else
-            printf("Helper file %s loaded (%d bytes)", strKey, strBin:len())
+            printf("Helper file '%s' loaded (%d bytes)", strKey, strBin:len())
             
-            if fDontCheckversion ~= true then
+            if fCheckversion == true then
                 local fOk
                 if iOffset ~= nil then
                     local iStartOffset = iOffset+1
@@ -145,10 +177,10 @@ function getHelperFile(strKey, strDir, fDontCheckversion)
                 
                 if fOk then
                     strMsg = nil
-                    printf("Helper file %s has the expected version (%s) - OK", strKey, strVersion)
+                    printf("Helper file '%s' has the expected version (%s) - OK", strKey, strVersion)
                 else 
                     strBin = nil
-                    strMsg = string.format("Helper file %s does not have the expected version (%s).", strKey, strVersion)
+                    strMsg = string.format("Helper file '%s' does not have the expected version (%s).", strKey, strVersion)
                     print(strMsg)
                 end
             end
@@ -158,25 +190,97 @@ function getHelperFile(strKey, strDir, fDontCheckversion)
     return strBin, strMsg
 end
 
--- ==========================================================================
--- Verify if all helper files have the correct version.
--- Returns true or false.
 
-function checkAllHelpers(strDir)
-    local fOk = true
-    for strKey, _ in pairs(atHelperFileVersions) do
-        print()
-        strBin, strMsg = getHelperFile(strKey, strDir)
-        if strBin == nil then
-            fOk = false
+-- Verify multiple helper directories. 
+function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
+    local fAllOk = true
+    local atCheckedDirs = {}
+    
+    for iDir = 1, table.maxn(astrHelperDirs) do
+        local strDir = astrHelperDirs[iDir]
+        if strDir ~= nil and atCheckedDirs[strDir] == nil then 
+            printf("Checking helper files in %s", strDir)
+            --local fDirOk = checkAllHelpers(strDir)
+            
+            for iName, strName in ipairs(astrHelperNames) do
+                print()
+                local strBin, strMsg = checkHelperFileIntern(strDir, strName, true)
+                if strBin == nil then 
+                    fAllOk = false
+                end
+            end
+            
+            atCheckedDirs[strDir] = true
         end
     end
-    print()
     
-    if fOk == true then
-        printf("%s: All helper files were found and have the correct version.", strDir)
-    else 
-        printf("%s: Some helper files were not found or do not have the correct version.", strDir)
-    end 
+    return fAllOk
+end
+
+
+
+-- ===================================================================================
+
+-- API
+
+-- Get a single helper from a directory
+-- Returns a string with the contents of the helper file 
+-- or nil and an error message.
+--
+-- fCheck (optional):
+-- fCheck == true (default): check the file if checks are enabled
+-- fCheck == false: always skip the check
+function getHelperFile(strDirectory, strHelperName, fCheck)
+    if (fCheck == nil) or (fCheck == true) then 
+        fCheck = fEnableHelperFileChecks
+    end
+    
+    return checkHelperFileIntern(strDirectory, strHelperName, fCheck)
+end
+
+
+-- Check the specified helper files in the specified directories,
+-- if the checks are enabled.
+-- Returns true or false
+function checkHelperFiles(astrDirectories, astrHelperNames)
+    local fOk
+    if fEnableHelperFileChecks then
+        fOk = checkHelperFilesIntern(astrDirectories, astrHelperNames)
+        print()
+        if fOk == true then
+            print("All of the requested helper files were found and have the correct version.")
+        else 
+            print("Some of the requested helper files were not found or do not have the correct version.")
+        end 
+        print()
+        
+    else
+        print("Skipping helper file checks")
+        fOk = true
+    end
+    
     return fOk
 end
+
+-- Check all helper files in the specified directories.
+-- The checks are always performed, even if they were disabled.
+-- Returns true or false
+function checkAllHelperFiles(astrDirectories)
+    local astrHelperNames = {}
+    for strKey, strVal in pairs(atHelperFileVersions) do
+        table.insert(astrHelperNames, strKey)
+    end
+
+    local fOk = checkHelperFilesIntern(astrDirectories, astrHelperNames)
+    
+    print()
+    if fOk == true then
+        print("All helper files were found and have the correct version.")
+    else 
+        print("Some helper files were not found or do not have the correct version.")
+    end 
+    print()
+    
+    return fOk
+end
+
