@@ -1,4 +1,10 @@
 
+Updates in CLI Flasher v2.0.0-dev7
+==============================
+
+* Add support for the SEGGER J-Link adapter with VID 0x1366/PID 0x1020.
+  
+
 Updates in CLI Flasher v2.0.0-dev6
 ==============================
 CLI flasher:
