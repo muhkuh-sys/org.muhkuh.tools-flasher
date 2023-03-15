@@ -420,6 +420,20 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
  
+    # build hboot image return_exec.bin
+
+    # Replace the version placeholder in the hboot XML file.
+    return_exec_hboot_xml_template = os.path.join('src', 'netx90', 'return_exec.xml')
+    return_exec_hboot_xml = os.path.join('targets', 'return_exec', 'return_exec.xml')
+    atEnv.DEFAULT.Version(return_exec_hboot_xml, return_exec_hboot_xml_template)
+
+    hboot_netx90_exec_bxlr_bin = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'return_exec', 'return_exec.bin'),
+        os.path.join(return_exec_hboot_xml),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
  
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_nodbg = env_netx56_default.Clone()
