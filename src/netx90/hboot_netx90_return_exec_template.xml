@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<HbootImage type="INTRAM" has_header="True" has_end="True" offset="0x20080000">
+	<Chunks>
+		<!-- Reserve next 1k for secure boot hash table -->
+        <Skip absolute="0x20080400" fill="0x27" />
+		<!-- invalidate the header of the image inside intram3 manually -->
+		<!-- due to the fact that this image is created for intram3 and ends in a endless loop. -->
+		<!-- the romcode does not invalide the image header. -->
+		<!-- Copy 16 bytes from 0x1ff00 to 0x20080000. -->
+		<!-- 0x1ff00 blxr area -->
+		<Text>Ver:${PROJECT_VERSION_VCS}:reV</Text>
+		<Data>
+			<Hex address="0x00022000">
+				0548064a42f8040b42f8040b42f8040b42f8040bfee700000000000000000820
+			</Hex>
+		</Data>
+		<Execute start_app="false" lock_firewall="false" activate_debugging="true" apply_firewall_settings="false">
+			<Address>0x00022001</Address>
+		</Execute>
+	</Chunks>
+</HbootImage>
