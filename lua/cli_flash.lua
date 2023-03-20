@@ -950,7 +950,20 @@ function main()
         os.exit(0)
 
     elseif aArgs.fCommandResetSelected then
-        fOk, strMsg = tFlasherHelper.reset_netx_via_watchdog(aArgs)
+
+        tPlugin, strMsg = getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
+        local strPluginType = tPlugin:GetTyp()
+        local ulM2MMajor = tPlugin:get_mi_version_maj()
+        local ulM2MMinor = tPlugin:get_mi_version_min()
+        if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
+            tLog.debug("use call usip command to reset netx")
+            tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same image again
+            tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
+        else
+            tLog.debug("reset netx via watchdog")
+            tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
+        end
+
         if fOk then
             if strMsg then
                 print(strMsg)

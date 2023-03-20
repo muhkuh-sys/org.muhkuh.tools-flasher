@@ -134,6 +134,7 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
         tUsipFileHandle:write(tChunkContent['signature'])
         -- add 4 zeros
         tUsipFileHandle:write(string.char(0x00, 0x00, 0x00, 0x00))
+        tUsipFileHandle:close()
     end
     return tResult, aOutputList
 end
@@ -458,7 +459,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                 tUsipFileContent[iUsipChunkIdx]["ulDataCount"] = iDataIdx
 
                 -- add the padding size to the patched data size
-                local ulPaddingSize = ulPatchedDataSize % 4
+                local ulPaddingSize = (4 - (ulPatchedDataSize % 4) ) % 4
+
                 local strPadding = tUsipFileHandle:read(ulPaddingSize)
                 local ulPadding = tFlasherHelper.bytes_to_uint32(strPadding)
                 if ulPadding == 0 and ulPadding ~= nil then
@@ -467,7 +469,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["padding"] = ""
                 end
 
-                local current = tUsipFileHandle:seek() 
+                local current = tUsipFileHandle:seek()
                 local strSignature = tUsipFileHandle:read(ulSignatureSize)
                 local ulSignature = tFlasherHelper.bytes_to_uint32(strSignature)
                 tUsipFileContent[iUsipChunkIdx]["signature"] = strSignature

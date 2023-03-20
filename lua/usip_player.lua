@@ -16,6 +16,7 @@ local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
 local usip_generator = require 'usip_generator'
 local sipper = require 'sipper'
 local tFlasherHelper = require 'flasher_helper'
+local path = require 'pl.path'
 
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
@@ -314,9 +315,6 @@ require("romloader_eth")
 require("romloader_uart")
 require("romloader_jtag")
 
-
-flasher = require 'flasher'
-
 -- options for the jtag plugin
 -- with this option the jtag plug does no soft or hard reset in the connect routine of the jtag interface plugin
 -- the jtag just attach to a device. This is necessary in case secure boot is enabled via an usip file. If the
@@ -556,29 +554,36 @@ end
 -- LoadImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
 -- load an image to a dedicated address
 -- returns nothing, in case of a romlaoder error MUHKUH_PLUGIN_ERROR <- ??
-function loadImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
+function loadImage(tPlugin, strPath, ulLoadAddress)
     local fResult = false
-    tLog.info( "Loading image path: '%s'", strPath )
-    -- get the binary data from the file
-    local tFile, strMsg = io.open(strPath, 'rb')
-    -- check if the file exists
-    if tFile then
-        -- read out all the binary data
-        local strFileData = tFile:read('*a')
-        tFile:close()
-        if strFileData then
-            tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
-            -- write the image to the netX
-            flasher.write_image(tPlugin, ulLoadAddress, strFileData, fnCallbackProgress)
-            tLog.info("Writing image complete!")
-            fResult = true
+
+
+    if path.exists(strPath) then
+        tLog.info( "Loading image path: '%s'", strPath )
+
+        -- get the binary data from the file
+        local tFile, strMsg = io.open(strPath, 'rb')
+        -- check if the file exists
+        if tFile then
+            -- read out all the binary data
+            local strFileData = tFile:read('*all')
+            tFile:close()
+            if strFileData ~= nil and strFileData ~= "" then
+                tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
+                -- write the image to the netX
+                tFlasher.write_image(tPlugin, ulLoadAddress, strFileData)
+                tLog.info("Writing image complete!")
+                fResult = true
+            else
+                tLog.error( "Could not read from file %s", strPath )
+            end
+        -- error message if the file does not exist
         else
-            tLog.error( "Could not read from file %s", strPath )
+            tLog.error( 'Failed to open file "%s" for reading: %s', strPath, strMsg )
         end
-    -- error message if the file does not exist
-    else
-        tLog.error( 'Failed to open file "%s" for reading: %s', strPath, strMsg )
     end
+
+   
 
     return fResult
 end
@@ -591,17 +596,17 @@ function loadUsipImage(tPlugin, strPath, fnCallbackProgress)
     local fResult
     -- this address is necessary for the new usip commands in the MI-Interfaces
     local ulLoadAddress = 0x000200C0
-    fResult = loadImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
+    fResult = loadImage(tPlugin, strPath, ulLoadAddress)
 
     return fResult
 end
 
 
--- fResult LoadIntramImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
+-- fResult LoadIntramImage(tPlugin, strPath, ulLoadAddress)
 -- Load an image in the intram to probe it after an reset
 -- intram3 address is 0x20080000
 -- return true if the image was loaded correctly otherwise false
-function loadIntramImage(tPlugin, strPath, ulIntramLoadAddress, fnCallbackProgress)
+function loadIntramImage(tPlugin, strPath, ulIntramLoadAddress)
     local fResult
     local ulLoadAddress
     if ulIntramLoadAddress  then
@@ -610,7 +615,7 @@ function loadIntramImage(tPlugin, strPath, ulIntramLoadAddress, fnCallbackProgre
         -- this address is the intram 3 address. This address will be probed at the startup
         ulLoadAddress = 0x20080000
     end
-    fResult = loadImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
+    fResult = loadImage(tPlugin, strPath, ulLoadAddress)
 
     return fResult
 end
@@ -734,8 +739,9 @@ function execBinViaIntram(tPlugin, strFilePath, ulIntramLoadAddress)
         -- write the data back
         tPlugin:write_data32(ulLoadAddress, data)
         -- reset via the watchdog
-        -- todo: switch to reset netx via watchdog from flasher_helper.lua
-        resetNetx90ViaWdg(tPlugin)
+
+        -- resetNetx90ViaWdg(tPlugin)
+        tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
     end
 
     return fResult
@@ -795,11 +801,11 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
         -- local strVerifySigData, strMsg = tFlasherHelper.loadBin(strVerifySigPath)
         if ulM2MMajor == 3 and ulM2MMinor >= 1 then
             -- use the whole hboot image
-            flasher.write_image(tPlugin, ulVerifySigHbootLoadAddress, strVerifySigData)
+            tFlasher.write_image(tPlugin, ulVerifySigHbootLoadAddress, strVerifySigData)
         else
 
             strVerifySigData = string.sub(strVerifySigData, 1037, 0x2000)
-            flasher.write_image(tPlugin, ulVerifySigDataLoadAddress, strVerifySigData)
+            tFlasher.write_image(tPlugin, ulVerifySigDataLoadAddress, strVerifySigData)
         end
 
         -- iterate over the path list to check the signature of every usip file
@@ -818,7 +824,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
 
                 if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
                     tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
-                    flasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
+                    tFlasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
                     tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_before.bin")
                     tLog.info("Start signature verification ...")
                     if ulM2MMajor == 3 and ulM2MMinor >= 1 then
@@ -827,7 +833,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
                         tPlugin:call(
                             ulVerifySigDataLoadAddress + 1,
                             ulDataBlockLoadAddress,
-                            flasher.default_callback_message,
+                            tFlasher.default_callback_message,
                             2
                         )
                     end
@@ -987,6 +993,7 @@ end
 
 
 -- tPlugin loadUsip(strFilePath, tPlugin, strPluginType)
+-- loading an usip file
 -- loads an usip file via a dedicated interface and checks if the chiptype is supported
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
 -- todo load usip with new m2m command if m2m version 3.1 and newer
@@ -1101,23 +1108,23 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
     local strReadSipData, strMsg = tFlasherHelper.loadBin(strHbootPath)
     if strReadSipData then
         tLog.info("download read_sip hboot image to 0x%08x", ulHbootLoadAddress)
-        flasher.write_image(tPlugin, ulHbootLoadAddress, strReadSipData)
+        tFlasher.write_image(tPlugin, ulHbootLoadAddress, strReadSipData)
 
 
         -- reset the value of the read sip result address
-        tLog.info(" reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
+        tLog.info("reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
         tPlugin:write_data32(ulReadSipResultAddress, 0x00000000)
         tPlugin:write_data32(ulReadSipMagicAddress, 0x00000000)
 
         if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
-            if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= 'romloader_jtag' then
+            if ulM2MMajor == 3 and ulM2MMinor >= 1 then
                 tLog.info("Start read sip hboot image inside intram")
                 tFlasher.call_hboot(tPlugin, nil, true)
             elseif strPluginType ~= 'romloader_jtag' then
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
-                flasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
+                tFlasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
                 tFlasherHelper.sleep_s(2)
                 tLog.info("Start read sip binary via call no answer")
                 tFlasher.call_no_answer(
@@ -1129,28 +1136,20 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
-                flasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
+                tFlasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
                 tFlasherHelper.sleep_s(2)
                 tLog.info("Start read sip binary via call")
-                --tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_before_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_before_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x8000, strTmpFolderPath, "dump_intram_0x200c0_before_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_before_call.bin")
                 tFlasher.call(
                         tPlugin,
                         ulDataLoadAddress + 1,
                         ulReadSipResultAddress
                 )
-                --tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x60000, 0x8000, strTmpFolderPath, "dump_intram_0x60000_after_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x200c0, 0x1000, strTmpFolderPath, "dump_intram_0x200c0_after_call.bin")
-                --tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x8000, strTmpFolderPath, "dump_intram_0x20080000_after_call.bin")
             end
 
-            tFlasherHelper.sleep_s(2)
+            tFlasherHelper.sleep_s(5)
             tLog.info("Disconnect from Plugin and reconnect again")
             tPlugin:Disconnect()
-            tFlasherHelper.sleep_s(3)
+            tFlasherHelper.sleep_s(8)
 
             while uLRetries > 0 do
                 tLog.info("try to get the Plugin again after read sip reset")
@@ -1168,12 +1167,9 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
                 strErrorMsg = "Could not reach plugin after reset"
                 fResult = false
             end
-
-            uLRetries = 5
             local ulMagicResult
             if fResult then
                 ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
-                ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
                 if ulMagicResult == MAGIC_COOKIE_END then
                     fResult = true
                     tLog.info("Found MAGIC_COOKIE_END")
@@ -1190,9 +1186,9 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath)
                 ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
                 if (bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, COM_SIP_VALID_MSK)) and
                         (bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, APP_SIP_VALID_MSK)) then
-                    strCalSipData = flasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
-                    strComSipData = flasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
-                    strAppSipData = flasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
+                    strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
+                    strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
+                    strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 
                     aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
                     aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
@@ -1241,7 +1237,7 @@ function verifyContent(
     -- get the com sip data
     fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(strReadSipM2MPath, tPlugin, strTmpFolderPath)
     -- check if for both sides a valid sip was found
-    if strComSipData == nil or strAppSipData == nil then
+    if fOk~= true or strComSipData == nil or strAppSipData == nil then
         tLog.error("Unable to read out both SecureInfoPages.")
     else
 
@@ -1286,7 +1282,7 @@ function readOutSipContent(iValidCom, iValidApp, tPlugin)
         if iValidCom == 1 then
             tLog.info("Found valid COM copy Secure info page.")
             -- read out the copy com sip area
-            strComSipData = flasher.read_image(tPlugin, 0x200a7000, 0x1000)
+            strComSipData = tFlasher.read_image(tPlugin, 0x200a7000, 0x1000)
         else
             -- the copy com sip area has no valid sip check if a valid sip is in the flash
             if iValidCom == 2 then
@@ -1295,7 +1291,7 @@ function readOutSipContent(iValidCom, iValidApp, tPlugin)
                 -- show the sip
                 tPlugin:write_data32(0xff001cbc, 1)
                 -- read out the sip
-                strComSipData = flasher.read_image(tPlugin, 0x180000, 0x1000)
+                strComSipData = tFlasher.read_image(tPlugin, 0x180000, 0x1000)
                 -- hide the sip
                 tPlugin:write_data32(0xff001cbc, 0)
             -- no valid com sip found, set the strComSipData to nil
@@ -1310,7 +1306,7 @@ function readOutSipContent(iValidCom, iValidApp, tPlugin)
         if iValidApp == 1 then
             tLog.info("Found valid APP copy Secure info page.")
             -- read out the copy app sip area
-            strAppSipData = flasher.read_image(tPlugin, 0x200a6000, 0x1000)
+            strAppSipData = tFlasher.read_image(tPlugin, 0x200a6000, 0x1000)
         else
             -- the copy app sip area has no valid sip check if a valid sip is in the flash
             if iValidApp == 2 then
@@ -1319,7 +1315,7 @@ function readOutSipContent(iValidCom, iValidApp, tPlugin)
                 -- show the sip
                 tPlugin:write_data32(0xff40143c, 1)
                 -- read out the sip
-                strAppSipData = flasher.read_image(tPlugin, 0x200000, 0x1000)
+                strAppSipData = tFlasher.read_image(tPlugin, 0x200000, 0x1000)
                 -- hide the sip
                 tPlugin:write_data32(0xff40143c, 0)
             -- no valid app sip found, set the strAppSipData to nil
@@ -1392,14 +1388,14 @@ function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
                             tPlugin:call_no_answer(
                                     ulCombinedHbootLoadAddress + 1,
                                     ulDataStructureAddress,
-                                    flasher.default_callback_message,
+                                    tFlasher.default_callback_message,
                                     2
                             )
                         else
                             tPlugin:call(
                                 ulCombinedHbootLoadAddress + 1,
                                 ulDataStructureAddress,
-                                flasher.default_callback_message,
+                                tFlasher.default_callback_message,
                                 2
                             )
                         end
@@ -1454,6 +1450,8 @@ function usip(
     local fOk
     local strPluginType
     local strPluginName
+    local ulM2MMajor = tPlugin:get_mi_version_maj()
+    local ulM2MMinor = tPlugin:get_mi_version_min()
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
@@ -1503,7 +1501,6 @@ function usip(
                 -- NOTE: be aware after the loading the netX will make a reset
                 --       but in the function the tPlugin will be reconncted!
                 --       so after the function the tPlugin is connected!
-
             else
                 -- this is an error message from the extendExec function
                 tLog.error(strMsg)
@@ -1517,8 +1514,18 @@ function usip(
 
         local ulLoadAddress = 0x20080000
         local strResetImagePath = ""
+
+        -- netx90 rev2 uses call_usip command to reset, therefore we copy the image into USER_DATA_AREA
+        if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+            ulLoadAddress = 0x000200C0
+        else
+            ulLoadAddress = 0x20080000
+        end
+
         -- connect to the netX
         tPlugin:Connect()
+        tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_usip.bin")
+        tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x1000, strTmpFolderPath, "dump_after_usip.bin")
         -- check if a bootswitch is necessary to force a dedicated interface after a reset
         if tArgs.strBootswitchParams then
             if tArgs.strBootswitchParams == "JTAG" then
@@ -1533,7 +1540,15 @@ function usip(
         end
 
         if fOk then
-            resetNetx90ViaWdg(tPlugin) -- todo replace for rev2 uart m2m in secure
+
+            if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+                tLog.debug("use call usip command to reset netx")
+                tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
+            else
+                tLog.debug("reset netx via watchdog")
+                tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
+            end
+
             tPlugin:Disconnect()
             sleep(2)
             -- just necessary if the uart plugin in used
@@ -1584,17 +1599,17 @@ function set_sip_protection_cookie(tPlugin)
 
     strFilePath = path.join( "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
     -- Download the flasher.
-    aAttr = flasher.download(tPlugin, flasher_path, nil, nil)
+    aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil)
     -- if flasher returns with nil, flasher binary could not be downloaded
     if not aAttr then
         tLog.error("Error while downloading flasher binary")
     else
         -- check if the selected flash is present
-        fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+        fOk = tFlasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
         if not fOk then
             tLog.error("No Flash connected!")
         else
-            ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
+            ulDeviceSize = tFlasher.getFlashSize(tPlugin, aAttr)
             if not ulDeviceSize then
                 tLog.error( "Failed to get the device size!" )
             else
@@ -1614,10 +1629,10 @@ function set_sip_protection_cookie(tPlugin)
             end
         end
         if fOk then
-            fOk, strMsg = flasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
+            fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
         end
         if fOk then
-            fOk, strMsg = flasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
+            fOk, strMsg = tFlasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
             if not fOk then
                 tLog.error(strMsg)
             else
@@ -2320,7 +2335,7 @@ if tArgs.strBootswitchParams == "JTAG" then
         local strTempReadSipPath = path.join(strTmpFolderPath, "read_sip_bootswitch.bin")
 
     else
-        tLog.error( "The --extend_exec option is only available for the JTAG interface!" )
+        tLog.error( "The --extend_exec option is only available for the JTAG interface!" )  -- todo change
         os.exit(1)
     end
 end
@@ -2366,7 +2381,7 @@ if tArgs.strUsipFilePath then
         tLog.error(strErrorMsg)
         os.exit(1)
     else
-        if iChiptype == 14 then
+        if iChiptype == 14  or iChiptype == 17 and tUsipConfigDict["num_of_chunks"] > 1  then
             iGenMultiResult, astrPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
         else
             astrPathList = {strUsipFilePath}
@@ -2383,7 +2398,7 @@ if fIsSecure  and not tArgs.fCommandReadSelected then
     -- make a list of necessary files
     local tblHtblFilePaths = {}
     local fDoVerify = false
-    if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) and strPluginType == "romloader_uart" then
+    if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
         fDoVerify = true
         table.insert( tblHtblFilePaths, strReadSipM2MPath )
     end
@@ -2396,7 +2411,7 @@ if fIsSecure  and not tArgs.fCommandReadSelected then
         end
     end
 
-
+    -- TODO why not verify set_kek.bin even if no bootswitch was selected?
     table.insert( tblHtblFilePaths, strKekHbootFilePath )
     
     -- TODO: how to be sure that the verify sig will work correct?
@@ -2506,19 +2521,8 @@ elseif tArgs.fCommandReadSelected then
 -- DETECT SECURE MODE
 --------------------------------------------------------------------------
 elseif tArgs.fCommandDetectSelected then
-    tLog.info("######################################")
-    tLog.info("# RUNNING DETECT SECURE MODE COMMAND #")
-    tLog.info("######################################")
-    fFinalResult = detect_secure_mode(
-        tPlugin,
-        strTmpFolderPath,
-        strSipperExePath,
-        fIsSecure,
-        strResetBootswitchPath,
-        strResetExecReturnPath
-    )
-    -- the os.exit at this point is mandatory to get a clear output of the command
-    os.exit(fFinalResult)
+    tLog.warning("Command detect_secure_mode was moved to cli_flash.lua")
+    os.exit(1)
 
 --------------------------------------------------------------------------
 -- GET UNIQUE ID

@@ -513,14 +513,17 @@ end
 -- RES_TIMEOUT: at base address + 12
 -- bit 15-0 RESET timeout in units of 100 µs
 
-function reset_netx_via_watchdog(aArgs)
-	local tPlugin
+function reset_netx_via_watchdog(aArgs, tPlugin)
 	local fOk
 	local strMsg
 
-	local strPluginName  = aArgs.strPluginName
-	local strPluginType  = aArgs.strPluginType
-	local atPluginOptions= aArgs.atPluginOptions
+    if tPlugin == nil then
+        local strPluginName  = aArgs.strPluginName
+        local strPluginType  = aArgs.strPluginType
+        local atPluginOptions= aArgs.atPluginOptions
+        -- open the plugin
+        tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+    end
 
 	local atChiptyp2WatchdogBase = {
 		-- [romloader.ROMLOADER_CHIPTYP_NETX500]          = 0x00100200,
@@ -542,9 +545,6 @@ function reset_netx_via_watchdog(aArgs)
 	}
 
 	fOk = false
-
-	-- open the plugin
-	tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 
 	if tPlugin ~= nil then
 		fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
