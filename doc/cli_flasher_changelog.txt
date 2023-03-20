@@ -4,10 +4,15 @@ Updates in CLI Flasher v2.0.0-dev7
 
 * Add support for the SEGGER J-Link adapter with VID 0x1366/PID 0x1020.
   
+USIP Player:
+* Integrate first version of USIP Player that replaces the python executables of Sipper and USIP Generator by lua implementations.
+* USIP Player does not depend on the UART protocol, now working with previously opened UART text and M2M console protocol.  
+
+
 
 Updates in CLI Flasher v2.0.0-dev6
 ==============================
-CLI flasher:
+CLI Flasher:
 * Bugfix: testcli command was failing
 
 WFP:
@@ -23,7 +28,7 @@ Update Romloader to v2.5.4-dev5:
 Updates in CLI Flasher v2.0.0-dev5
 ==============================
 
-CLI flasher:
+CLI Flasher:
 * Bugfix: test and testcli commands
 * Bugfix: added command line arguments --comp and --sec to the commands 
   verify_hash, hash and identify_netx
