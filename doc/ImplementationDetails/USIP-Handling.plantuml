@@ -1,0 +1,122 @@
+@startuml
+
+' USIP-Handling
+' Sequence diagram
+
+/'
+
+'/
+
+title USIP packet with APP and COM USIP chunks in one single USIP packet
+
+note over PC, netX: Updating with FIRST set of secure boot mode keys 
+
+loop over all helper files
+  rnote across
+    Helper files are ONLY verfied, if path to signed helper files is provided!
+  endrnote
+
+  PC -> netX: Request Verification of helper file
+  netX -> netX: Verify helper file
+  netX -> PC: Response with Result of verification
+
+  hnote over PC
+    Exit with an Error message, if the helper is not accepted by netX
+  endhnote
+end
+
+PC -> PC: split USIP packet into individual USIP chunks
+note left
+USIP packet has two USIP chunks
+- first USIP chunk is for APP SIP
+- second USIP chunk is for COM SIP
+end note
+
+
+loop over all individual USIP chunks
+  rnote over PC
+    build hboot_image from USIP chunk and optional bootSwitch
+  endrnote
+  
+  PC -> netX: Setup new connection
+  
+  PC -> netX: Send hboot_image with USIP chunk
+  
+  group Wait for USIP processing
+  
+
+    PC -> PC: Wait for netX
+    note over PC
+      CLI Flasher waits until
+      - netX has finished the USIP processing AND
+      - netX has provided the console mode
+  
+      most likely wait a fix time (e.g. 2sec)
+    end note
+  
+    netX -> netX: reset netX
+    note right
+      USIP processing only possible under control of
+        ROM code after reset
+    
+      ONLY during this time frame, it is safe / allowed
+        to modify the SIP content
+    end note
+    
+    netX -> netX: ROMcode processes SIP content
+    note right
+      Original unmodified SIP content
+    end note
+    
+    netX -> netX: ROMcode processes USIP chunk (hboot_image)
+     note right
+      Write new content into SIP
+      New SIP content is activated after the next reset
+      Whole processing is done with the old SIP content
+    end note
+
+    netX -> netX: ROMcode processes bootSwitch (hboot_image)
+    
+    netX -> netX: Provide console mode
+  end
+
+end
+
+note across: Verifying with SECOND set of secure boot mode keys 
+
+loop over all helper files
+  rnote across
+    Helper files are ONLY verfied, if path to signed helper files is provided!
+  endrnote
+
+  PC -> netX: Request Verification of helper file
+  netX -> netX: Verify helper file
+  netX -> PC: Response with Result of verification
+
+  hnote over PC
+    Exit with an Error message, if the helper is not accepted by netX
+  endhnote
+end
+
+group verify USIP
+
+  PC -> netX: Setup new connection
+
+  PC -> netX: Send hboot_image with "Read SIP content"
+
+  netX -> netX: prepare reset
+  note right
+    invalidate internal copies of SIP content before the reset is executed
+  end note
+
+  netX -> netX: reset netX
+
+  netX -> netX: Identify valid SIP content
+
+  netX -> PC: Provide SIP content
+
+  PC -> PC: verify USIP content with SIP content
+
+end
+
+@enduml
