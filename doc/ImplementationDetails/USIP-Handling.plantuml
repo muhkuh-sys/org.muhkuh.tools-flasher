@@ -9,7 +9,9 @@
 
 title USIP packet with APP and COM USIP chunks in one single USIP packet
 
-note over PC, netX: Updating with FIRST set of secure boot mode keys 
+== Phase 1 ==
+note over PC, netX: Modifying SIP content with  FIRST set of secure boot mode keys 
+...
 
 loop over all helper files
   rnote across
@@ -20,9 +22,8 @@ loop over all helper files
   netX -> netX: Verify helper file
   netX -> PC: Response with Result of verification
 
-  hnote over PC
-    Exit with an Error message, if the helper is not accepted by netX
-  endhnote
+  PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
+
 end
 
 PC -> PC: split USIP packet into individual USIP chunks
@@ -82,41 +83,97 @@ loop over all individual USIP chunks
 
 end
 
-note across: Verifying with SECOND set of secure boot mode keys 
+/' check different command options
+  --reset perform a reset
 
-loop over all helper files
-  rnote across
-    Helper files are ONLY verfied, if path to signed helper files is provided!
-  endrnote
+'/
 
-  PC -> netX: Request Verification of helper file
-  netX -> netX: Verify helper file
-  netX -> PC: Response with Result of verification
+alt option --no-verify 
 
-  hnote over PC
-    Exit with an Error message, if the helper is not accepted by netX
-  endhnote
-end
+  PC ->o] : terminate here
 
-group verify USIP
+else option --reset\nwithout bootswitch parameter
 
   PC -> netX: Setup new connection
 
-  PC -> netX: Send hboot_image with "Read SIP content"
+  PC -> netX: Request reset netX
 
-  netX -> netX: prepare reset
-  note right
-    invalidate internal copies of SIP content before the reset is executed
-  end note
+  group Wait for reset processing
 
-  netX -> netX: reset netX
+      PC -> PC: wait some time
+      netX -> netX : reset netX
 
-  netX -> netX: Identify valid SIP content
+  end
 
-  netX -> PC: Provide SIP content
+  PC ->o] : terminate
 
-  PC -> PC: verify USIP content with SIP content
+...
+== Phase 2 ==
+  note across: Verification of helper files with SECOND set of secure boot keys is required
+...
 
+' string "--" should be written as <U+002D>-
+' if the string "--"" occurs two times, than it is translated to cross the word inbetween
+else option <U+002D>-reset <U+002D>-bootswitch <select>
+
+  PC -> PC: prepare hboot_image with reset command and append the signed bootswitch
+
+  PC -> netX: Setup new connection
+
+  PC -> netX: Request reset netX via hboot_image
+
+  group Wait for reset processing
+
+      PC -> PC: wait some time
+      netX -> netX : reset netX
+
+  end
+
+  PC ->o] : terminate
+
+
+' do a verification
+else others : verification is NOT disabled
+    
+  loop over all helper files
+    rnote across
+      Helper files are ONLY verfied, if path to signed helper files is provided!
+    endrnote
+  
+    PC -> netX: Request Verification of helper file
+    netX -> netX: Verify helper file
+    netX -> PC: Response with Result of verification
+  
+    PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
+  end
+  
+  group verify USIP
+  
+    PC -> netX: Setup new connection
+  
+    PC -> PC: prepare hboot_image with read_sip command and append the signed bootswitch
+
+    PC -> netX: Send hboot_image with "Read SIP content"
+  
+    netX -> netX: prepare reset
+    note right
+      invalidate internal copies of SIP content before the reset is executed
+    end note
+  
+    netX -> netX: reset netX
+
+    PC -> PC: Wait until reset is performed
+  
+    netX -> netX: Identify valid SIP content
+  
+    PC -> netX: Setup new connection
+ 
+    netX -> PC: Provide SIP content
+  
+    PC -> PC: verify USIP content with SIP content
+  
+  end
+  
 end
-
+  
 @enduml
