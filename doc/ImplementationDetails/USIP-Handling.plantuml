@@ -1,4 +1,4 @@
-@startuml
+@startuml  USIP-Handling.svg
 
 ' USIP-Handling
 ' Sequence diagram
@@ -83,97 +83,114 @@ loop over all individual USIP chunks
 
 end
 
-/' check different command options
-  --reset perform a reset
+rnote over PC, netX
+ check different command options
+  --no-reset-no-verify  : SKIP reset and verification
+  --no-verify           : reset but skip verification
+  --others              : reset and verify the SIP content
+endrnote
 
-'/
-
-alt option --no-verify 
+alt if (option == --no-reset-no-verify)
 
   PC ->o] : terminate here
+  note over PC
+    Skip reset and verification of USIP content against SIP page
+    latest SIP content is NOT activated
+  end note
 
-else option --reset\nwithout bootswitch parameter
-
-  PC -> netX: Setup new connection
-
-  PC -> netX: Request reset netX
-
-  group Wait for reset processing
-
-      PC -> PC: wait some time
-      netX -> netX : reset netX
-
-  end
-
-  PC ->o] : terminate
+end
 
 ...
-== Phase 2 ==
-  note across: Verification of helper files with SECOND set of secure boot keys is required
+
+== Switch to phase 2 ==
+
 ...
 
-' string "--" should be written as <U+002D>-
-' if the string "--"" occurs two times, than it is translated to cross the word inbetween
-else option <U+002D>-reset <U+002D>-bootswitch <select>
-
-  PC -> PC: prepare hboot_image with reset command and append the signed bootswitch
-
-  PC -> netX: Setup new connection
-
-  PC -> netX: Request reset netX via hboot_image
-
-  group Wait for reset processing
-
-      PC -> PC: wait some time
-      netX -> netX : reset netX
-
-  end
-
-  PC ->o] : terminate
-
+note across
+  Start verification of helper files
+end note
 
 ' do a verification
-else others : verification is NOT disabled
-    
-  loop over all helper files
-    rnote across
-      Helper files are ONLY verfied, if path to signed helper files is provided!
-    endrnote
-  
-    PC -> netX: Request Verification of helper file
-    netX -> netX: Verify helper file
-    netX -> PC: Response with Result of verification
-  
-    PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
-  end
-  
-  group verify USIP
-  
-    PC -> netX: Setup new connection
-  
-    PC -> PC: prepare hboot_image with read_sip command and append the signed bootswitch
+loop over all helper files
+  rnote across
+     TODO: Verification will be implemented, in a future version
+  endrnote
 
-    PC -> netX: Send hboot_image with "Read SIP content"
-  
-    netX -> netX: prepare reset
-    note right
-      invalidate internal copies of SIP content before the reset is executed
-    end note
-  
-    netX -> netX: reset netX
+  PC -> netX: Request Verification of helper file
+  netX -> netX: Verify helper file
+  netX -> PC: Response with Result of verification
 
-    PC -> PC: Wait until reset is performed
-  
-    netX -> netX: Identify valid SIP content
-  
-    PC -> netX: Setup new connection
+  PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
+end
+
+
+PC -> netX: Setup new connection
+PC -> netX: Request reset netX
+
+
+group Wait for reset processing
+  PC -> PC: wait some time
  
-    netX -> PC: Provide SIP content
+  rnote over PC, netX
+    reset netX
+    Activate SIP content
+  endrnote
+
+  netX -> netX : reset netX
+  note right
+     TODO: Check if an optional BootSwitch is not checked 
+  end note
+end
+
+...
+
+alt if (option == --no_verify)
+
+  PC ->o] : terminate
+  note over PC
+    Skip verification of USIP content against SIP page
+    latest SIP content is activated
+  end note
+
+end
+
+== Phase 2 ==
+
+note across
+  Verification of helper files with SECOND set of secure boot keys is required
+
+  SECOND set:
+  - helper file available in path --sec_p2 <path to helper files>
+  - latest SIP content is activated
+end note  
+
+...
+
+note across
+  Start verification of SIP content against USIP packet
+end note
+group verify USIP
   
-    PC -> PC: verify USIP content with SIP content
-  
-  end
-  
+  PC -> netX: Setup new connection
+
+  PC -> PC: prepare hboot_image with read_sip command and append the signed bootswitch
+  PC -> netX: Send hboot_image with "Read SIP content"
+
+  netX -> netX: prepare reset
+  note right
+    invalidate internal copies of SIP content before the reset is executed
+  end note
+
+  netX -> netX: reset netX
+  PC -> PC: Wait until reset is performed
+
+  netX -> netX: Identify valid SIP content
+
+  PC -> netX: Setup new connection
+  netX -> PC: Provide SIP content
+
+  PC -> PC: verify USIP content with SIP content
+    
 end
   
 @enduml
