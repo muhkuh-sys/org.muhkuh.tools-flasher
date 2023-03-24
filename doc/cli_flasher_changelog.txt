@@ -1,13 +1,33 @@
 
+Updates in CLI Flasher v2.0.0-dev8
+==============================
+CLI Flasher:
+* Added version check for helper files that may be changed by the user.
+  This applies to the boot images that may be signed by the user.
+  
+  Generally, before any of these helper files are used, their version is checked.
+  This check may be suppressed by adding the command line flag 
+  --disable_helper_file_check
+  or by settin the environment variable 
+  CLI_FL_DISABLE_HELPER_FILE_CHECK
+  to any value.
+  
+  The new command 
+  check_helper_files
+  checks all helper files explicitly.
+
+* Updated the helper files
+
+
 Updates in CLI Flasher v2.0.0-dev7
 ==============================
 
+Update romloader to v2.5.4-dev6:
 * Add support for the SEGGER J-Link adapter with VID 0x1366/PID 0x1020.
   
 USIP Player:
 * Integrate first version of USIP Player that replaces the python executables of Sipper and USIP Generator by lua implementations.
 * USIP Player does not depend on the UART protocol, now working with previously opened UART text and M2M console protocol.  
-
 
 
 Updates in CLI Flasher v2.0.0-dev6
