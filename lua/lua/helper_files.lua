@@ -53,39 +53,39 @@ atHelperFileVersions = {
         version_offset = 0x4bc
     },
 
-    -- read_sip_m2m = {
-    --     filename = "read_sip_M2M.bin",
-    --     version = "",
-    --     version_offset = 0x
-    -- },
-    -- 
-    -- return_exec = {
-    --     filename = "return_exec.bin",
-    --     version = "",
-    --     version_offset = 0x
-    -- },
-    -- 
-    -- set_kek = {
-    --     filename = "set_kek.bin",
-    --     version = "",
-    --     version_offset = 0x
-    -- },
-    -- 
-    -- verify_sig = {
-    --     filename = "verify_sig.bin",
-    --     version = "",
-    --     version_offset = 0x
-    -- },
+    read_sip_m2m = {
+        filename = "read_sip_M2M.bin",
+        version = "Ver:GITv1.0.0-dev1-0-g47c4b7123d81:reV",
+        version_offset = 0x1050
+    },
+    
+    return_exec = {
+        filename = "return_exec.bin",
+        version = "Ver:GITv2.0.0-dev6-11-gfd886c9286bf:reV",
+        version_offset = 0x45c
+    },
+    
+    set_kek = {
+        filename = "set_kek.bin",
+        version = "Ver:GITv1.0.0-dev1-0-gc7eb60636d66:reV",
+        version_offset = 0xa0c
+    },
+    
+    verify_sig = {
+        filename = "verify_sig.bin",
+        version = "Ver:GITv1.0.0-dev1-0-g321fdefa4304:reV",
+        version_offset = 0x934
+    },
 
     flasher_netx90_hboot = {
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.0-dev6-0", 
+        version = "GITv2.0.0-dev7-0", 
         version_offset = 0x0410
     },
 
     start_mi = {
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-dev5-2-g7c67f4dc7910+:reV",
+        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
         version_offset = 0x0454
     },
 
