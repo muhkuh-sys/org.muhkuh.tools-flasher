@@ -47,72 +47,84 @@ end
 -- version string. 
 
 atHelperFileVersions = {
-    bootswitch = {
+    {
+        key = "bootswitch",
         filename = "bootswitch.bin",
         version = "GITV1.0.2-0-gec97ccacc78d",
         version_offset = 0x4bc
     },
 
-    read_sip_m2m = {
+    {
+        key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
         version = "Ver:GITv1.0.0-dev1-0-g47c4b7123d81:reV",
         version_offset = 0x1050
     },
     
-    return_exec = {
+    {
+        key = "return_exec",
         filename = "return_exec.bin",
         version = "Ver:GITv2.0.0-dev6-11-gfd886c9286bf:reV",
         version_offset = 0x45c
     },
     
-    set_kek = {
+    {
+        key = "set_kek",
         filename = "set_kek.bin",
         version = "Ver:GITv1.0.0-dev1-0-gc7eb60636d66:reV",
         version_offset = 0xa0c
     },
     
-    verify_sig = {
+    {
+        key = "verify_sig",
         filename = "verify_sig.bin",
         version = "Ver:GITv1.0.0-dev1-0-g321fdefa4304:reV",
         version_offset = 0x934
     },
 
-    flasher_netx90_hboot = {
+    {
+        key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
         version = "GITv2.0.0-dev7-0", 
         version_offset = 0x0410
     },
 
-    start_mi = {
+    {
+        key = "start_mi",
         filename = "hboot_start_mi_netx90_com_intram.bin",
         version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
         version_offset = 0x0454
     },
 
     -- testing
-    start_mi__wrong_filename = {
+    {
+        key = "start_mi__wrong_filename",
         filename = "hboot_start_mi_netx90_com_intram__.bin",
-        version = "Ver:GITv2.5.4-dev5-2-g7c67f4dc7910+:reV",
+        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
         version_offset = 0x0454
     },
-    start_mi__wrong_offset = {
+    {
+        key = "start_mi__wrong_offset",
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-dev5-2-g7c67f4dc7910+:reV",
+        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
         version_offset = 0x0458
     },
-    start_mi__wrong_version = {
+    {
+        key = "start_mi__wrong_version",
         filename = "hboot_start_mi_netx90_com_intram.bin",
         version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
         version_offset = 0x0454
     },
     
-    start_mi_clr = {
-        filename = "hboot_start_mi_netx90_com_intram_clear_workarea.bin",
-        version = "Ver:GITv2.5.4-dev5-2-g7c67f4dc7910+:reV",
+    {
+        key = "start_mi__no_version_offset",
+        filename = "hboot_start_mi_netx90_com_intram.bin",
+        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
     },
     
-    start_mi_clr_wrong_version = {
-        filename = "hboot_start_mi_netx90_com_intram_clear_workarea.bin",
+    {
+        key = "start_mi__no_version_offset_wrong_version",
+        filename = "hboot_start_mi_netx90_com_intram.bin",
         version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
     }
 }
@@ -135,12 +147,19 @@ atHelperFileVersions = {
 
 function checkHelperFileIntern(strDir, strKey, fCheckversion)
     local strBin, strMsg 
+    local tEntry 
     
     if fCheckversion == nil then 
         fCheckversion = true
     end
     
-    tEntry = atHelperFileVersions[strKey]
+    for i, e in ipairs(atHelperFileVersions) do
+        if e.key == strKey then
+            tEntry = e 
+            break
+        end 
+    end
+    
     if tEntry == nil then
         strMsg = string.format("Unknown helper name: '%s'", strKey)
     else
@@ -267,8 +286,8 @@ end
 -- Returns true or false
 function checkAllHelperFiles(astrDirectories)
     local astrHelperNames = {}
-    for strKey, strVal in pairs(atHelperFileVersions) do
-        table.insert(astrHelperNames, strKey)
+    for i, e in ipairs(atHelperFileVersions) do
+        table.insert(astrHelperNames, e.key)
     end
 
     local fOk = checkHelperFilesIntern(astrDirectories, astrHelperNames)
