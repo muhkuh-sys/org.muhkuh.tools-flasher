@@ -6,9 +6,19 @@
 		<!-- invalidate the header of the image inside intram3 manually -->
 		<!-- due to the fact that this image is created for intram3 and ends in a endless loop. -->
 		<!-- the romcode does not invalide the image header. -->
-		<!-- Copy 16 bytes from 0x1ff00 to 0x20080000. -->
-		<!-- 0x1ff00 blxr area -->
-		<Text>Ver:${PROJECT_VERSION_VCS}:reV</Text>
+		
+		<!-- Write four zero dwords at 0x20080000 and loop endlessly. -->
+		<!-- 0548      ldr r0, [pc, #0x14]; @ r0 value = 0 (fill value)          -->
+		<!-- 064a      ldr r2, [pc, #0x18]; @ r2 value = address of intram image -->
+		<!-- 42f8040b  str r0, [r2], #4                                          -->
+		<!-- 42f8040b  str r0, [r2], #4                                          -->
+		<!-- 42f8040b  str r0, [r2], #4                                          -->
+		<!-- 42f8040b  str r0, [r2], #4                                          -->
+		<!-- fee7      loop: b loop                                              -->
+		<!-- 0000      .short 0                                                  -->
+		<!-- 00000000  .word 0                                                   -->
+		<!-- 00000820  .word 0x20080000                                          -->
+		
 		<Data>
 			<Hex address="0x00022000">
 				0548064a42f8040b42f8040b42f8040b42f8040bfee700000000000000000820
@@ -17,5 +27,6 @@
 		<Execute start_app="false" lock_firewall="false" activate_debugging="true" apply_firewall_settings="false">
 			<Address>0x00022001</Address>
 		</Execute>
+        <Text>Ver:${PROJECT_VERSION_VCS}:reV</Text>
 	</Chunks>
 </HbootImage>
