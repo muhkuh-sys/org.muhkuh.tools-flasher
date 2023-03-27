@@ -13,3 +13,6 @@
 
 
 /regression/test.log
+.idea
+/.tmp
+*.bak
