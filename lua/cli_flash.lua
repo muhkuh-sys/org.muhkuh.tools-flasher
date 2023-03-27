@@ -932,17 +932,18 @@ function main()
         local strnetX90HelperPath_Default = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
-        print()
-        print("checkHelperFiles")
-        tHelperFiles.checkHelperFiles({strnetX90HelperPath_Default, strnetX90HelperPath}, {"start_mi", "bootswitch"})
-
-        print()
-        print("getHelperFile without checking (false)")
-        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", false)
-
-        print()
-        print("getHelperFile with checking (true) (if globally enabled)")
-        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
+--        Test code - todo: remove
+--        print()
+--        print("checkHelperFiles")
+--        tHelperFiles.checkHelperFiles({strnetX90HelperPath_Default, strnetX90HelperPath}, {"start_mi", "bootswitch"})
+--
+--        print()
+--        print("getHelperFile without checking (false)")
+--        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", false)
+--
+--        print()
+--        print("getHelperFile with checking (true) (if globally enabled)")
+--        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
 
         print()
         print("getHelperFile with checking (nil) (default)")

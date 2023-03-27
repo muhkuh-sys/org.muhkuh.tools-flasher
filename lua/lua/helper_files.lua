@@ -55,37 +55,37 @@ atHelperFileVersions = {
     },
 
     {
-        key = "read_sip_m2m",
-        filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev1-0-g47c4b7123d81:reV",
-        version_offset = 0x1050
+        key = "return_exec",
+        filename = "return_exec.bin",
+        version = "Ver:GITV1.0.3-0-ge6ba63142ffe:reV",
+        version_offset = 0x408
     },
     
     {
-        key = "return_exec",
-        filename = "return_exec.bin",
-        version = "Ver:GITv2.0.0-dev6-11-gfd886c9286bf:reV",
-        version_offset = 0x45c
+        key = "read_sip_m2m",
+        filename = "read_sip_M2M.bin",
+        version = "Ver:GITv1.0.0-dev3-0-g00b77f6d7bcf:reV",
+        version_offset = 0x102c
     },
     
     {
         key = "set_kek",
         filename = "set_kek.bin",
-        version = "Ver:GITv1.0.0-dev1-0-gc7eb60636d66:reV",
-        version_offset = 0xa0c
+        version = "Ver:GITv1.0.0-dev2-0-g0389874dec34:reV",
+        version_offset = 0x9e8
     },
     
-    {
-        key = "verify_sig",
+    {   -- This is verify_sig_intram from the build
+        key = "verify_sig",  
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev1-0-g321fdefa4304:reV",
-        version_offset = 0x934
+        version = "Ver:GITv1.0.0-dev2-0-g140a678c784b:reV",
+        version_offset = 0x910
     },
 
-    {
+    {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.0-dev7-0", 
+        version = "GITv2.0.0-dev8-0", 
         version_offset = 0x0410
     },
 
@@ -96,37 +96,38 @@ atHelperFileVersions = {
         version_offset = 0x0454
     },
 
-    -- testing
-    {
-        key = "start_mi__wrong_filename",
-        filename = "hboot_start_mi_netx90_com_intram__.bin",
-        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
-        version_offset = 0x0454
-    },
-    {
-        key = "start_mi__wrong_offset",
-        filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
-        version_offset = 0x0458
-    },
-    {
-        key = "start_mi__wrong_version",
-        filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
-        version_offset = 0x0454
-    },
-    
-    {
-        key = "start_mi__no_version_offset",
-        filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
-    },
-    
-    {
-        key = "start_mi__no_version_offset_wrong_version",
-        filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
-    }
+
+--        Test code - todo: remove
+--    {
+--        key = "start_mi__wrong_filename",
+--        filename = "hboot_start_mi_netx90_com_intram__.bin",
+--        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
+--        version_offset = 0x0454
+--    },
+--    {
+--        key = "start_mi__wrong_offset",
+--        filename = "hboot_start_mi_netx90_com_intram.bin",
+--        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
+--        version_offset = 0x0458
+--    },
+--    {
+--        key = "start_mi__wrong_version",
+--        filename = "hboot_start_mi_netx90_com_intram.bin",
+--        version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
+--        version_offset = 0x0454
+--    },
+--    
+--    {
+--        key = "start_mi__no_version_offset",
+--        filename = "hboot_start_mi_netx90_com_intram.bin",
+--        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
+--    },
+--    
+--    {
+--        key = "start_mi__no_version_offset_wrong_version",
+--        filename = "hboot_start_mi_netx90_com_intram.bin",
+--        version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
+--    }
 }
 
 
@@ -199,7 +200,7 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
                     printf("Helper file '%s' has the expected version (%s) - OK", strKey, strVersion)
                 else 
                     strBin = nil
-                    strMsg = string.format("Helper file '%s' does not have the expected version (%s).", strKey, strVersion)
+                    strMsg = string.format("Helper file '%s' does not have the expected version (%s) - ERROR", strKey, strVersion)
                     print(strMsg)
                 end
             end
