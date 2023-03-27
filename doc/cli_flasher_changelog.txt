@@ -16,6 +16,11 @@ CLI Flasher:
   check_helper_files
   checks all helper files explicitly.
 
+  Note: 
+  The check_helper_files command is implemented,
+  the option to disable the checks is implemented,
+  the checks when helper files are loaded are only partially implemented.
+
 * Updated the helper files
 
 
