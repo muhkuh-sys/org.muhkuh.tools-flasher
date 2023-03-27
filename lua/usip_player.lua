@@ -74,6 +74,7 @@ strUsipPlayerGeneralHelp = [[
     - verify_sig.bin
     - bootswitch.bin
 ]]
+
 local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
 
 -- Add the "usip" command and all its options.
