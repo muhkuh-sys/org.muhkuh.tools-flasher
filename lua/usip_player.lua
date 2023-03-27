@@ -87,14 +87,9 @@ strBootswitchHelp = [[
      - 'JTAG' (Use an execute-chunk to activate JTAG)
 ]]
 
-    -- todo change help string
-strResetHelp = [[
-    Force a reset after the last usip is send to activate the updated SIP.
-
-
-    Options:
-    - 'unsigned'
-    - '<security-folder-search-path + security-folder-name>'
+-- todo change help string
+strHelpSecP2 = [[
+    Path to helper files that are used after the last usip was executed.
 ]]
 
 
@@ -125,10 +120,11 @@ tParserCommandUsip:flag('--no_verify'):description(
 -- ):target('fExtendExec')
 tParserCommandUsip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
-tParserCommandUsip:option('--reset'):description(strResetHelp):target('strForceReset'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-
 tParserCommandUsip:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-
+tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandUsip:flag('--no_reset'
+):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
+):target('fDisableReset'):default(false)
 
 -- Add the "set_sip_protection" command and all its options.
 strSetSipProtectionHelp = [[
@@ -184,8 +180,13 @@ tParserCommandKek:flag('--no_verify'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
 tParserCommandKek:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserCommandKek:option('--reset'):description(strResetHelp):target('strForceReset'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandKek:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandKek:option('--sec'):description("path to signed image directory"):target('strSecureOption'
+):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandKek:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'
+):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandKek:flag('--no_reset'
+):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
+):target('fDisableReset'):default(false)
 -- Add the "verify_content" command and all its options.
 strVerifyHelp = [[
     Verify the content of a usip file against the content of a secure info page
@@ -286,8 +287,8 @@ local tArgs = tParser:parse()
 if tArgs.strSecureOption == nil then
     tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
 end
-if tArgs.strForceReset == nil then
-    tArgs.strForceReset = tFlasher.DEFAULT_HBOOT_OPTION
+if tArgs.strSecureOptionPhaseTwo == nil then
+    tArgs.strSecureOptionPhaseTwo = tFlasher.DEFAULT_HBOOT_OPTION
 end
 -- convert the parameter strBootswitchParams to all upper case
 if tArgs.strBootswitchParams ~= nil then
@@ -345,9 +346,9 @@ local atPluginOptions = {
 
 local atResetPluginOptions
 
-if tArgs.strSecureOption ~= tArgs.strForceReset then
+if tArgs.strSecureOption ~= tArgs.strSecureOptionPhaseTwo then
 
-    local strNetX90ResetM2MImagePath = path.join(tArgs.strForceReset, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+    local strNetX90ResetM2MImagePath = path.join(tArgs.strSecureOptionPhaseTwo, "netx90", "hboot_start_mi_netx90_com_intram.bin")
     tLog.info("Trying to load netX 90 M2M image from %s", strNetX90ResetM2MImagePath)
     local strNetX90ResetM2MImageBin, strMsg = tFlasherHelper.loadBin(strNetX90ResetM2MImagePath)
     if strNetX90ResetM2MImageBin then
@@ -1481,9 +1482,10 @@ function usip(
 
         end
     end
-
-    -- check if a last reset is necessary to activate all data inside the secure info page
-    if not tArgs.fVerifyContentDisabled and fOk then
+	-- Phase 2 starts after this reset
+	-- For phase 2 we use the helpfer images from tArgs.strSecureOptionPhaseTwo argument
+    -- Check if a last reset is necessary to activate all data inside the secure info page
+    if not tArgs.fDisableReset and fOk then
 
         local ulLoadAddress = 0x20080000
         local strResetImagePath = ""
@@ -1530,7 +1532,9 @@ function usip(
                 tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atResetPluginOptions)
             end
         end
+    end
 
+    if not tArgs.fVerifyContentDisabled and not not tArgs.fDisableReset then
         -- just validate the content if the validation is enabled and no error occued during the loading process
 
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
@@ -2204,21 +2208,21 @@ check_file(strExecReturnPath)
 check_file(strVerifySigPath)
 check_file(strBootswitchFilePath)
 
-if tArgs.strForceReset ~= strSecureOption then
+if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     -- set paths for second process after last reset
 
     -- set verify sig path for after last reset
-    strResetVerifySigPath = path.join(tArgs.strForceReset, strNetxName, "verify_sig.bin")
+    strResetVerifySigPath = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName, "verify_sig.bin")
     -- check if the verify_sig file exists
 
     strResetExecReturnPath = path.join(
-    tArgs.strForceReset, strNetxName, "return_exec.bin"
+    tArgs.strSecureOptionPhaseTwo, strNetxName, "return_exec.bin"
     )
     strResetBootswitchPath = path.join(
-        tArgs.strForceReset, strNetxName, "bootswitch.bin"
+        tArgs.strSecureOptionPhaseTwo, strNetxName, "bootswitch.bin"
     )
     strResetReadSipPath = path.join(
-        tArgs.strForceReset, strNetxName, "read_sip_M2M.bin"
+        tArgs.strSecureOptionPhaseTwo, strNetxName, "read_sip_M2M.bin"
     )
 
     check_file(strResetVerifySigPath)
