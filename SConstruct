@@ -250,7 +250,7 @@ atEnv.DEFAULT.Version('targets/version/flasher_version.xsl', 'templates/flasher_
 from datetime import datetime
 tBuildTime = datetime.now()
 strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
-tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': '-dev7'}
+tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': '-dev8'}
 lua_flasher_version_tmp = atEnv.DEFAULT.Version('targets/version/flasher_version_TMP.lua', 'templates/flasher_version.lua')
 lua_flasher_version = atEnv.DEFAULT.Filter('#/targets/version/flasher_version.lua', lua_flasher_version_tmp, SUBSTITUTIONS=tDict)
 
@@ -672,6 +672,7 @@ if fBuildIsFull==True:
     tArcList.AddFiles('lua/',
         lua_flasher,
         'lua/flasher_test.lua',
+        'lua/lua/helper_files.lua',
         'lua/lua/Version.lua',
         'lua/lua/wfp_control.lua', 
         'bootpins_netx90/bootpins.lua',
@@ -760,6 +761,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/wfp_control.lua':                           'lua/lua/wfp_control.lua',
         'targets/testbench/lua/bootpins.lua':                              'bootpins_netx90/bootpins.lua',
         'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
+        'targets/testbench/lua/helper_files.lua':                          'lua/lua/helper_files.lua', 
         'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
