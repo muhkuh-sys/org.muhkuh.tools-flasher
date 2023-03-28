@@ -1535,7 +1535,7 @@ function usip(
         end
     end
 
-    if not tArgs.fVerifyContentDisabled and not not tArgs.fDisableReset then
+    if not tArgs.fVerifyContentDisabled and not tArgs.fDisableReset then
         -- just validate the content if the validation is enabled and no error occued during the loading process
 
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
