@@ -412,48 +412,38 @@ addSecureArgs(tParserCommandCheckHelperFiles)
 
 
 
--- return true if list l contains element e 
-function list_contains(l, e)
-	for _k, v in ipairs(l) do
-		if v==e then 
-			return true
-		end
-	end
-	return false
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+function printArgs(tArguments)
+    print("")
+    print("Running CLI flasher with the following args:")
+    print("--------------------------------------------")
+    printTable(tArguments, 0)
+    print("")
 end
 
 
-function showArgs(aArgs)
-	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf"}
-	local astrArgLines = {}
-		
-	for i, k in ipairs(arg_order) do
-		local tArgdef = argdefs[k]
-		local tVal = aArgs[tArgdef.argkey]
-		local strVal 
-		local strLine
-		if tVal ~= nil then
-			if type(tVal) == "number" then 
-				strVal = string.format("0x%x", tVal)
-			else
-				strVal = tostring(tVal)
-			end
-			strLine = string.format("%-40s %-s", tArgdef.name, strVal)
-			table.insert(astrArgLines, strLine)
-		end
-	end
-	
-	if #astrArgLines == 0 then
-		table.insert(astrArgLines, "none")
-	end
-	
-	print("")
-	print("Arguments:")
-	for i, strLine in ipairs(astrArgLines) do
-		print(strLine)
-	end
-	print("")
+-- printTable(tTable, ulIndent)
+-- Print all elements from a table
+-- returns
+--   nothing
+function printTable(tTable, ulIndent)
+    local strIndentSpace = string.rep(" ", ulIndent)
+    for key, value in pairs(tTable) do
+        if type(value) == "table" then
+            printf( "%s%s",strIndentSpace, key )
+            printTable(value, ulIndent + 4)
+        else
+            printf( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
+        end
+    end
+    if next(tTable) == nil then
+        printf( "%s%s",strIndentSpace, " -- empty --" )
+    end
 end
+
 
 
 
@@ -964,9 +954,9 @@ function main()
     end
 
 
-    fOk = true
+    printArgs(aArgs)
 
-    -- showArgs(aArgs)
+    fOk = true
 
     require("muhkuh_cli_init")
     require("mhash")
