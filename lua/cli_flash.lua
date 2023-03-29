@@ -19,7 +19,6 @@ SVN_AUTHOR ="$Author$"
 
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
-local tHelperFiles = require 'helper_files'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -917,6 +916,11 @@ function main()
     io.output():setvbuf("no")
 
     aArgs = tParser:parse()
+    
+    -- Load this module after parsing the command line args.
+    -- If -h or --version is specified, we do not arrive here,
+    -- as the parser takes a shortcut, prints the help or version and exits.
+    local tHelperFiles = require 'helper_files'
 
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {

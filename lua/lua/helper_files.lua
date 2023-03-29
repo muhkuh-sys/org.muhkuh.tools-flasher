@@ -16,7 +16,7 @@ fEnableHelperFileChecks = true
 strEnvVar = "CLI_FL_DISABLE_HELPER_FILE_CHECK"
 local strEnvEnable=os.getenv(strEnvVar)
 if strEnvEnable == nil then 
-    printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
+    -- printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
     fEnableHelperFileChecks = true
 else 
     printf("Environment variable %s is set - disabling automatic helper file checks", strEnvVar)
