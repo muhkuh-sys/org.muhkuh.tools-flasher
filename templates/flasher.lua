@@ -29,6 +29,7 @@ require("bit")
 require("romloader")
 require("pl")
 path = require("pl.path")
+local tHelperFiles = require 'helper_files'
 
 -----------------------------------------------------------------------------
 --                           Definitions
@@ -321,7 +322,7 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
         print(string.format("Using secure option files from: %s", strSecureOption))
         
         if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
-            strFlasherBin, strMsg = helper_files.getHelperFile(strSecureOption, "flasher_netx90_hboot")
+            strFlasherBin, strMsg = tHelperFiles.getHelperFile(strSecureOption, "flasher_netx90_hboot")
         else
             strMsg = "Unknown or unsupported chiptyp! " .. tostring(iChiptype)
         end
