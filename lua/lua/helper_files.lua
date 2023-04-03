@@ -19,23 +19,38 @@ if strEnvEnable == nil then
     -- printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
     fEnableHelperFileChecks = true
 else 
-    printf("Environment variable %s is set - disabling automatic helper file checks", strEnvVar)
+    -- printf("Environment variable %s is set - disabling automatic helper file checks", strEnvVar)
     fEnableHelperFileChecks = false
 end
 
 -- Disable the checks
 function disableHelperFileChecks()
-    print("Disabling automatic helper file checks")
+    -- print("Disabling automatic helper file checks")
     fEnableHelperFileChecks = false
 end
 
 -- Enable the checks
 function enableHelperFileChecks()
-    print("Enabling automatic helper file checks")
+    -- print("Enabling automatic helper file checks")
     fEnableHelperFileChecks = true
 end
 
-
+function getStatusString()
+    local strStatus
+    if fEnableHelperFileChecks then 
+        strStatus = "Automatic helper file checks are enabled."
+    else 
+        strStatus = "Automatic helper file checks are disabled."
+    end
+    
+    if strEnvEnable == nil then 
+        strStatus = strStatus .. string.format(" Environment variable %s is not set.", strEnvVar)
+    else 
+        strStatus = strStatus .. string.format(" Environment variable %s is set.", strEnvVar)
+    end 
+    
+    return strStatus
+end
 
 -- ==========================================================================
 -- The list of known helper files.
@@ -278,7 +293,7 @@ function checkHelperFiles(astrDirectories, astrHelperNames)
         print("Skipping helper file checks")
         fOk = true
     end
-    
+
     return fOk
 end
 

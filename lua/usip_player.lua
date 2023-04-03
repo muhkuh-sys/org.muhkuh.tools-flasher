@@ -17,6 +17,7 @@ local usip_generator = require 'usip_generator'
 local sipper = require 'sipper'
 local tFlasherHelper = require 'flasher_helper'
 local path = require 'pl.path'
+local tHelperFiles = require 'helper_files'
 
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
@@ -77,6 +78,11 @@ strUsipPlayerGeneralHelp = [[
 
 local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
 
+-- Add a flag to disable helper checks
+tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+    tHelperFiles.disableHelperFileChecks()
+end)
+
 -- Add the "usip" command and all its options.
 strBootswitchHelp = [[
     Control the bootprocess after the execution of the sip update.
@@ -98,6 +104,7 @@ strUsipHelp = [[
     Loads an usip file on the netX, reset the netX and process
     the usip file to update the SecureInfoPage and continue standard boot process.
 ]]
+
 local tParserCommandUsip = tParser:command('u usip', strUsipHelp):target('fCommandUsipSelected')
 tParserCommandUsip:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
 tParserCommandUsip:option(
@@ -325,16 +332,18 @@ require("romloader_jtag")
 -- the jtag just attach to a device. This is necessary in case secure boot is enabled via an usip file. If the
 -- jtag plugin would perform a reset the usip flags would directly be activated and it could be possible that
 -- the debugging is disabled and the jtag is no longer available.
-local strNetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
 
-tLog.info("Trying to load netX 90 M2M image from %s", strNetX90M2MImagePath)
-local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strNetX90M2MImagePath)
-if strnetX90M2MImageBin then
-    tLog.info("%d bytes loaded.", strnetX90M2MImageBin:len())
-else
-    tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+-- options for the UART plugin
+-- Pass a boot image that starts the machine interface if the netx is in the UART terminal console. 
+
+local strnetX90HelperPath = path.join(tArgs.strSecureOption, "netx90")
+local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
+
+if strnetX90M2MImageBin == nil then 
+    tLog.info(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
     os.exit(1)
 end
+
 local atPluginOptions = {
     romloader_jtag = {
     jtag_reset = "Attach", -- HardReset, SoftReset or Attach
@@ -862,7 +871,13 @@ function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, 
     if strUsipData then
         -- read the bootswitch content
         -- print("Appending Bootswitch ... ")
-        strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
+        -- strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
+        strBootswitchData, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "bootswitch")
+        if strBootswitchData == nil then 
+            tLog.info(strMsg or "Error: Failed to load bootswitch (unknown error)")
+            os.exit(1)
+        end
+        -- note: the case that bootswitch cannot be found/loaded is not handled.
         if strBootswitchData then
             -- set the bootswitch parameter
             if strBootswitchParam == "ETH" then
@@ -2053,6 +2068,9 @@ end
 
 -- print args
 printArgs(tArgs, tLog)
+local strHelperFileStatus = tHelperFiles.getStatusString()
+tLog.info(strHelperFileStatus)
+tLog.info("")
 
 --------------------------------------------------------------------------
 -- variables
@@ -2116,6 +2134,7 @@ if tArgs.strUsipFilePath and not path.exists(tArgs.strUsipFilePath) then
     -- return here because of initial error
     os.exit(1)
 else
+    -- note: this is also entered if tArgs.strUsipFilePath is not set.
     tLog.info("Found USIP file ... ")
     strUsipFilePath = tArgs.strUsipFilePath
 end
@@ -2194,7 +2213,6 @@ else
     tLog.warning("Behavior is undefined if connected to a different netX then netX90!")
 end
 
-
 -- set read sip path
 strReadSipPath = path.join(strSecureOption, strNetxName, "read_sip_M2M.bin")
 -- set exec return path
@@ -2204,10 +2222,22 @@ strVerifySigPath = path.join(strSecureOption, strNetxName, "verify_sig.bin")
 -- set bootswitch path
 strBootswitchFilePath = path.join(strSecureOption, strNetxName, "bootswitch.bin")
 
+-- check if the files exist
 check_file(strReadSipPath)
 check_file(strExecReturnPath)
 check_file(strVerifySigPath)
 check_file(strBootswitchFilePath)
+
+-- check the file versions
+-- todo: combine both checks
+local strSecureOptionDir = path.join(strSecureOption, strNetxName)
+local astrHelpersToCheck = {"read_sip_m2m", "return_exec", "verify_sig", "bootswitch"}
+
+local fHelpersOk = tHelperFiles.checkHelperFiles({strSecureOptionDir}, astrHelpersToCheck)
+if not fHelpersOk then
+    tLog.error("Error during file version checks.")
+    os.exit(1)
+end
 
 if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     -- set paths for second process after last reset
@@ -2231,6 +2261,13 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     check_file(strResetBootswitchPath)
     check_file(strResetReadSipPath)
 
+    strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
+    local fHelpersOk = tHelperFiles.checkHelperFiles({strSecureOptionPhaseTwoDir}, astrHelpersToCheck)
+    if not fHelpersOk then
+        tLog.error("Error during file version checks.")
+        os.exit(1)
+    end
+    
 else
     -- if the files for the second process after the last reset are the same, we can use the same helper files
     strResetReadSipPath = strReadSipPath
@@ -2247,6 +2284,14 @@ if tArgs.fCommandKekSelected then
     -- check if the set_kek file exists
     if not path.exists(strKekHbootFilePath) then
         tLog.error( "Set-KEK binary is not available at: %s", strKekHbootFilePath )
+        -- return here because of initial error
+        os.exit(1)
+    end
+    -- todo: check version
+    local strSetKekBin, strMsg = getHelperFile(strSecureOptionDir, "set_kek")
+    if not strSetKekBin then
+        tLog.error(strMsg or "unknown error")
+        tLog.error("Error during file version checks.")
         -- return here because of initial error
         os.exit(1)
     end

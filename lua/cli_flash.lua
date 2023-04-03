@@ -19,6 +19,7 @@ SVN_AUTHOR ="$Author$"
 
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
+local tHelperFiles = require 'helper_files'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -218,7 +219,7 @@ tParser:flag "-v --version":description "Show version info and exit. ":action(fu
 end)
 
 tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
-    helper_files.disableHelperFileChecks()
+    tHelperFiles.disableHelperFileChecks()
 end)
 
 
@@ -907,11 +908,6 @@ function main()
 
     aArgs = tParser:parse()
     
-    -- Load this module after parsing the command line args.
-    -- If -h or --version is specified, we do not arrive here,
-    -- as the parser takes a shortcut, prints the help or version and exits.
-    local tHelperFiles = require 'helper_files'
-
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {
         romloader_jtag = {
@@ -940,7 +936,7 @@ function main()
 --        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
 
         print()
-        print("getHelperFile with checking (nil) (default)")
+        -- print("getHelperFile with checking (nil) (default)")
         strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
 
         if strnetX90M2MImageBin then
@@ -948,13 +944,18 @@ function main()
                 netx90_m2m_image = strnetX90M2MImageBin
             }
         else
-            printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+            printf(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
+            --printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
             os.exit(1)
         end
     end
 
 
     printArgs(aArgs)
+    local strHelperFileStatus = tHelperFiles.getStatusString()
+    print(strHelperFileStatus)
+    print()
+    
 
     fOk = true
 
@@ -974,11 +975,11 @@ function main()
         local ulM2MMajor = tPlugin:get_mi_version_maj()
         local ulM2MMinor = tPlugin:get_mi_version_min()
         if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
-            tLog.debug("use call usip command to reset netx")
+            print("use call usip command to reset netx")
             tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same image again
             tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
         else
-            tLog.debug("reset netx via watchdog")
+            print("reset netx via watchdog")
             tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
         end
 
