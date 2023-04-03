@@ -85,7 +85,7 @@ function bytes_to_uint32(str)
     end
 
     if ulValue < 0 then
-        ulValue = 4294967295 + ulValue
+        ulValue = 4294967296 + ulValue
     end
     return ulValue
 
