@@ -74,7 +74,6 @@ strUsipPlayerGeneralHelp = [[
     - verify_sig.bin
     - bootswitch.bin
 ]]
-
 local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
 
 -- Add the "usip" command and all its options.
@@ -237,19 +236,9 @@ tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
 
 -- Add the "detect_secure_mode" command and all its options.
+
 strDetectSecureModeHelp = [[
-Detect the secure boot mode of the netX. The secure boot mode descrips
-if the booting process is in secure mode. Each side (COM/APP) can be
-indivudally in secure boot mode. If secure boot mode is enabled the
-firmware or any used helper hboot-image have to be signed.
-Options:
-- SECURE_BOOT_ENABLED            COM and APP is in secure boot mode.
-- SECURE_BOOT_ENABLED            COM is in secure boot mode, APP is unknown.
-- SECURE_BOOT_ONLY_APP_ENABLED   Only APP is in secure boot mode.
-- SECURE_BOOT_DISABLED           COM and APP is not in secure boot mode.
-NOTE: The secure boot mode does not identify which security level is set.
-      That means the detect_secure_mode call is not an indicator to
-      decide if an USIP file have to be signed.
+This command was moved into cli_flash.lua.
 ]]
 local tParserDetectSecure = tParser:command(
     'detect_secure_mode', strDetectSecureModeHelp
@@ -897,7 +886,7 @@ function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, 
 
             if string.len( strUsipData ) == 0x8000 then
                 -- set combined file path
-                strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
+                strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")  -- todo use handover parameter for file name
                 -- write the data back to the usip binary file
                 local tFile
                 tFile = io.open(strCombinedUsipPath, "wb")
@@ -1005,7 +994,7 @@ function loadUsip(strFilePath, tPlugin, strPluginType)
             if tPlugin ~= nil then
                 break
             end
-            tFlasherHelper.sleep(1)
+            tFlasherHelper.sleep(1)  -- todo use the same sleep everywhere
         end
     end
 
@@ -1157,8 +1146,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
             end
             if fResult then
                 ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
-                if (bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, COM_SIP_VALID_MSK)) and
-                        (bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, APP_SIP_VALID_MSK)) then
+                if (bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0) and
+                        (bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0) then
                     strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
                     strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
                     strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
@@ -1512,6 +1501,10 @@ function usip(
 
             fOk = loadIntramImage(tPlugin, strResetImagePath, ulLoadAddress )
         else
+            -- overwrite possible boot cookie to avoid accidentaly booting an old image
+            tPlugin:write_data32(ulLoadAddress, 0x00000000)
+            tPlugin:write_data32(ulLoadAddress + 4, 0x00000000)
+            tPlugin:write_data32(ulLoadAddress + 8, 0x00000000)
             tLog.debug("Just reset without any image in the intram.")
         end
 
@@ -1529,15 +1522,15 @@ function usip(
             sleep(2)
             -- just necessary if the uart plugin in used
             -- jtag works without getting a new plugin
-            if strPluginType ~= 'romloader_jtag' then
-                tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atResetPluginOptions)
-            end
+
         end
     end
 
     if not tArgs.fVerifyContentDisabled and not not tArgs.fDisableReset then
         -- just validate the content if the validation is enabled and no error occued during the loading process
-
+        if strPluginType ~= 'romloader_jtag' then
+            tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atResetPluginOptions)
+        end
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
         -- this is the case if the content should be verified without a reset at the end
 
@@ -1989,7 +1982,7 @@ function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, str
 
     local iReadSipResult, strErrorMsg, _, _, _, aStrUUIDs = readSip(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
-        
+
     if iReadSipResult then
             strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
 
@@ -2180,7 +2173,7 @@ if iChiptype then
         tLog.error("The connected netX (%s) is not supported.", strNetxName)
         tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
         os.exit(1)
-    elseif iChiptype == 14 then
+    elseif iChiptype == 14 or iChiptype == 17 then -- todo replace with romloader constants
         tLog.debug("Detected netX90 rev1")
         fIsRev2 = false
     elseif iChiptype == 18 then
@@ -2305,16 +2298,16 @@ if tArgs.strUsipFilePath then
 end
 
 -- check if this is a secure run
--- if the console mode is forced in non-secure mode, no signature verification is necessary
 -- do not verify the signature of the helper files if the read command is selected
-if fIsSecure  and not tArgs.fCommandReadSelected then
+-- old: if fIsSecure  and not tArgs.fCommandReadSelected then
+if fIsSecure then
     -- verify the signature of the used HTBL files
     -- make a list of necessary files
     local tblHtblFilePaths = {}
     local fDoVerify = false
     if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
         fDoVerify = true
-        table.insert( tblHtblFilePaths, strReadSipPath)
+        table.insert(tblHtblFilePaths, strReadSipPath)
     end
     if tArgs.strBootswitchParams then
         fDoVerify = true
@@ -2326,7 +2319,8 @@ if fIsSecure  and not tArgs.fCommandReadSelected then
     end
 
     -- TODO why not verify set_kek.bin even if no bootswitch was selected?
-    table.insert( tblHtblFilePaths, strKekHbootFilePath )
+    -- maybe only verify if set kek command selected
+    table.insert(tblHtblFilePaths, strKekHbootFilePath)
     
     -- TODO: how to be sure that the verify sig will work correct?
     -- NOTE: If the verify_sig file is not signed correctly the process will fail
@@ -2395,7 +2389,7 @@ elseif tArgs.fCommandKekSelected then
         strVerifySigPath,
         astrPathList,
         fIsSecure,
-            strReadSipPath,
+        strReadSipPath,
         strResetReadSipPath,
         strBootswitchFilePath,
         strResetBootswitchPath,
@@ -2481,6 +2475,8 @@ else
     fFinalResult = false
 end
 
+tPlugin:Disconnect()
+tPlugin = nil
 -- print OK if everything works
 if fFinalResult then
     tLog.info('')
