@@ -75,20 +75,12 @@ end
 
 function bytes_to_uint32(str)
     local ulValue = 0
-    local aValues = {}
-    local val
-    local ulShifted
-    for i = 0, (string.len(str) - 1) do
-        val = string.byte(str, i + 1)
-        ulShifted = bit.lshift(val, (8 * i))
-        ulValue = ulValue + ulShifted
+
+    for i= str:len(), 1, -1 do
+        ulValue = ulValue * 256 + str:byte(i)
     end
 
-    if ulValue < 0 then
-        ulValue = 4294967295 + ulValue
-    end
     return ulValue
-
 end
 
 
