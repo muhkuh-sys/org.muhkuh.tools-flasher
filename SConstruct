@@ -651,7 +651,8 @@ if fBuildIsFull==True:
         
     tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
         'helper_binaries/netx90_usip/disable_secure_boot_app.usp',
-        'helper_binaries/netx90_usip/disable_secure_boot_com.usp')
+        'helper_binaries/netx90_usip/disable_secure_boot_com.usp',
+        'helper_binaries/netx90/set_kek.usp')
     
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
