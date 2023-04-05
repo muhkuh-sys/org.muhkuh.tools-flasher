@@ -172,7 +172,7 @@ end
 function addSecureArgs(tParserCommand)
     tParserCommand:mutex(
             tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-            tParserCommand:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+            tParserCommand:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     )
 end
 
@@ -919,7 +919,7 @@ function main()
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
-        local strnetX90HelperPath_Default = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
 --        Test code - todo: remove

@@ -631,7 +631,7 @@ tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target
 tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandFlash:mutex(
         tParserCommandFlash:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandFlash:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+        tParserCommandFlash:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
 
 local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
@@ -642,7 +642,7 @@ tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):targe
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandVerify:mutex(
         tParserCommandVerify:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandVerify:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+        tParserCommandVerify:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
 
 -- Add the "Read" command and all its options.
@@ -665,7 +665,7 @@ tParserCommandRead:flag("-o --overwrite"):description(
 ):default(false):target("fOverwrite")
 tParserCommandRead:mutex(
         tParserCommandRead:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandRead:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+        tParserCommandRead:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
 
 -- Add the "list" command and all its options.

@@ -311,6 +311,7 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
     local strFlasherBin, strMsg 
     local usMiVersionMin = get_mi_version_min(tPlugin)
     local usMiVersionMaj = get_mi_version_maj(tPlugin)
+    local strnetX90HelperPath = path.join(strSecureOption, "netx90")
 
     print(string.format("usMiVersionMaj 0x%04x", usMiVersionMaj))
     print(string.format("usMiVersionMin 0x%04x", usMiVersionMin))
@@ -322,7 +323,7 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
         print(string.format("Using secure option files from: %s", strSecureOption))
         
         if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
-            strFlasherBin, strMsg = tHelperFiles.getHelperFile(strSecureOption, "flasher_netx90_hboot")
+            strFlasherBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "flasher_netx90_hboot")
         else
             strMsg = "Unknown or unsupported chiptyp! " .. tostring(iChiptype)
         end

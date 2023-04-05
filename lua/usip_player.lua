@@ -127,7 +127,7 @@ tParserCommandUsip:flag('--no_verify'):description(
 -- ):target('fExtendExec')
 tParserCommandUsip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
-tParserCommandUsip:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandUsip:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
@@ -187,7 +187,7 @@ tParserCommandKek:flag('--no_verify'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
 tParserCommandKek:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserCommandKek:option('--sec'):description("path to signed image directory"):target('strSecureOption'
+tParserCommandKek:option('--sec'):description("Path to signed image directory"):target('strSecureOption'
 ):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandKek:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'
 ):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -214,7 +214,7 @@ tParserVerifyContent:option('-i --input'):description("USIP binary file path"):t
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
 tParserVerifyContent:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserVerifyContent:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- Add the "read_sip" command and all its options.
 strReadHelp = [[
@@ -238,7 +238,7 @@ tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('str
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserReadSip:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
 
@@ -275,7 +275,7 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
-tParserGetUid:option('--sec'):description("path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- parse args
