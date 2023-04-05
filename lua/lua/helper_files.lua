@@ -79,7 +79,7 @@ atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev3-0-g00b77f6d7bcf:reV",
+        version = "Ver:GITv1.0.0-dev4-0-ga66fb60ea736:reV",
         version_offset = 0x102c
     },
     
