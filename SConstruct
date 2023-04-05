@@ -647,7 +647,8 @@ if fBuildIsFull==True:
         
     tArcList.AddFiles('netx/helper/netx90/',
         hboot_netx90_exec_bxlr_bin,
-        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin')
+        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+        'helper_binaries/netx90/set_kek.usp')
         
     tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
         'helper_binaries/netx90_usip/disable_secure_boot_app.usp',
