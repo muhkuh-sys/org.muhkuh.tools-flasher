@@ -12,6 +12,7 @@ local xml = require 'pl.xml'
 --local tFlasher = require 'flasher'(tLog)
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
+local tHelperFiles = require 'helper_files'
 
 
 
@@ -616,6 +617,10 @@ tParser:flag "--version":description "Show version info and exit. ":action(funct
     os.exit(0)
 end)
 
+tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+    tHelperFiles.disableHelperFileChecks()
+end)
+
 -- Add the "flash" command and all its options.
 local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.'):target('fCommandFlashSelected')
 tParserCommandFlash:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
@@ -700,6 +705,9 @@ local tLog = require 'log'.new('trace',
     require 'log.formatter.format'.new())
 
 printArgs(tArgs, tLog)
+local strHelperFileStatus = tHelperFiles.getStatusString()
+print(strHelperFileStatus)
+print()
 
 -- Register the CLI tester.
 -- tester = require 'tester_cli'(tLog)
@@ -707,18 +715,17 @@ printArgs(tArgs, tLog)
 -- Ask the user to select a plugin.
 tester.fInteractivePluginSelection = true
 
-local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
+local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90")
 
 tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
 
-local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strnetX90M2MImagePath)
-
-if strnetX90M2MImageBin then
-    tLog.info("%d bytes loaded.", strnetX90M2MImageBin:len())
-else
-    tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90M2MImagePath, "start_mi")
+if strnetX90M2MImageBin == nil then
+    tLog.info(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
+    -- tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
     os.exit(1)
 end
+
 atPluginOptions = {
     romloader_jtag = {
     jtag_reset = "Attach", -- HardReset, SoftReset or Attach

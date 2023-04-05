@@ -19,6 +19,7 @@ SVN_AUTHOR ="$Author$"
 
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
+local tHelperFiles = require 'helper_files'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -192,7 +193,7 @@ Limitations:
 
 The reset_netx command currently supports only the netx 90.
 
-The hash and verify_hash commands do not support the netx 90 and netIOL.
+The hash and verify_hash commands do not support the netIOL.
 
 The secure mode features ('--sec' and '--comp') are only valid for netx90
 
@@ -216,6 +217,12 @@ tParser:flag "-v --version":description "Show version info and exit. ":action(fu
     print(FLASHER_VERSION_STRING)
     os.exit(0)
 end)
+
+tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+    tHelperFiles.disableHelperFileChecks()
+end)
+
+
 
 -- 	flashfCommandFlashSelected
 local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX'):target('fCommandFlashSelected')
@@ -400,50 +407,44 @@ addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
+-- check_helper_files
+local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
+addSecureArgs(tParserCommandCheckHelperFiles)
 
 
--- return true if list l contains element e 
-function list_contains(l, e)
-	for _k, v in ipairs(l) do
-		if v==e then 
-			return true
-		end
-	end
-	return false
+
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+function printArgs(tArguments)
+    print("")
+    print("Running CLI flasher with the following args:")
+    print("--------------------------------------------")
+    printTable(tArguments, 0)
+    print("")
 end
 
 
-function showArgs(aArgs)
-	local arg_order = {"p", "t", "b", "u", "cs", "s", "l", "f", "jr", "jf"}
-	local astrArgLines = {}
-		
-	for i, k in ipairs(arg_order) do
-		local tArgdef = argdefs[k]
-		local tVal = aArgs[tArgdef.argkey]
-		local strVal 
-		local strLine
-		if tVal ~= nil then
-			if type(tVal) == "number" then 
-				strVal = string.format("0x%x", tVal)
-			else
-				strVal = tostring(tVal)
-			end
-			strLine = string.format("%-40s %-s", tArgdef.name, strVal)
-			table.insert(astrArgLines, strLine)
-		end
-	end
-	
-	if #astrArgLines == 0 then
-		table.insert(astrArgLines, "none")
-	end
-	
-	print("")
-	print("Arguments:")
-	for i, strLine in ipairs(astrArgLines) do
-		print(strLine)
-	end
-	print("")
+-- printTable(tTable, ulIndent)
+-- Print all elements from a table
+-- returns
+--   nothing
+function printTable(tTable, ulIndent)
+    local strIndentSpace = string.rep(" ", ulIndent)
+    for key, value in pairs(tTable) do
+        if type(value) == "table" then
+            printf( "%s%s",strIndentSpace, key )
+            printTable(value, ulIndent + 4)
+        else
+            printf( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
+        end
+    end
+    if next(tTable) == nil then
+        printf( "%s%s",strIndentSpace, " -- empty --" )
+    end
 end
+
 
 
 
@@ -906,7 +907,7 @@ function main()
     io.output():setvbuf("no")
 
     aArgs = tParser:parse()
-
+    
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {
         romloader_jtag = {
@@ -917,28 +918,46 @@ function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
-    if aArgs.strSecureOption ~= nil then
+    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
+        local strnetX90HelperPath_Default = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+        local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
-        local strnetX90M2MImagePath = path.join(aArgs.strSecureOption, "netx90", "hboot_start_mi_netx90_com_intram.bin")
-        printf("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
+--        Test code - todo: remove
+--        print()
+--        print("checkHelperFiles")
+--        tHelperFiles.checkHelperFiles({strnetX90HelperPath_Default, strnetX90HelperPath}, {"start_mi", "bootswitch"})
+--
+--        print()
+--        print("getHelperFile without checking (false)")
+--        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", false)
+--
+--        print()
+--        print("getHelperFile with checking (true) (if globally enabled)")
+--        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
 
-        local strnetX90M2MImageBin, strMsg = tFlasherHelper.loadBin(strnetX90M2MImagePath)
+        print()
+        -- print("getHelperFile with checking (nil) (default)")
+        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
 
         if strnetX90M2MImageBin then
-            printf("%d bytes loaded.", strnetX90M2MImageBin:len())
             aArgs.atPluginOptions.romloader_uart = {
                 netx90_m2m_image = strnetX90M2MImageBin
             }
         else
-            printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
+            printf(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
+            --printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
             os.exit(1)
         end
     end
 
 
-    fOk = true
+    printArgs(aArgs)
+    local strHelperFileStatus = tHelperFiles.getStatusString()
+    print(strHelperFileStatus)
+    print()
+    
 
-    -- showArgs(aArgs)
+    fOk = true
 
     require("muhkuh_cli_init")
     require("mhash")
@@ -956,11 +975,11 @@ function main()
         local ulM2MMajor = tPlugin:get_mi_version_maj()
         local ulM2MMinor = tPlugin:get_mi_version_min()
         if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
-            tLog.debug("use call usip command to reset netx")
+            print("use call usip command to reset netx")
             tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same image again
             tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
         else
-            tLog.debug("reset netx via watchdog")
+            print("reset netx via watchdog")
             tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
         end
 
@@ -990,6 +1009,17 @@ function main()
         print(strMsg)
         os.exit(iRet)
 
+    elseif aArgs.fCommandCheckHelperFilesSelected then
+        local t1 = os.time()
+        
+        local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+        local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
+        fOk = tHelperFiles.checkAllHelperFiles({strnetX90UnsignedHelperPath, strnetX90HelperPath})
+        local t2 = os.time()
+        local dt = os.difftime(t2, t1)
+        printf("Time: %d seconds", dt)
+        os.exit(fOk and 0 or 1)
+        
     elseif aArgs.fCommandTestCliSelected then
         flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)

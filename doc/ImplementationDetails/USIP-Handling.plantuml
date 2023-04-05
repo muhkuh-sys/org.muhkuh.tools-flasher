@@ -1,0 +1,196 @@
+@startuml  USIP-Handling.svg
+
+' USIP-Handling
+' Sequence diagram
+
+/'
+
+'/
+
+title USIP packet with APP and COM USIP chunks in one single USIP packet
+
+== Phase 1 ==
+note over PC, netX: Modifying SIP content with  FIRST set of secure boot mode keys 
+...
+
+loop over all helper files
+  rnote across
+    Helper files are ONLY verfied, if path to signed helper files is provided!
+  endrnote
+
+  PC -> netX: Request Verification of helper file
+  netX -> netX: Verify helper file
+  netX -> PC: Response with Result of verification
+
+  PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
+
+end
+
+PC -> PC: split USIP packet into individual USIP chunks
+note left
+USIP packet has two USIP chunks
+- first USIP chunk is for APP SIP
+- second USIP chunk is for COM SIP
+end note
+
+
+loop over all individual USIP chunks
+  rnote over PC
+    build hboot_image from USIP chunk and optional bootSwitch
+  endrnote
+  
+  PC -> netX: Setup new connection
+  
+  PC -> netX: Send hboot_image with USIP chunk
+  
+  group Wait for USIP processing
+  
+
+    PC -> PC: Wait for netX
+    note over PC
+      CLI Flasher waits until
+      - netX has finished the USIP processing AND
+      - netX has provided the console mode
+  
+      most likely wait a fix time (e.g. 2sec)
+    end note
+  
+    netX -> netX: reset netX
+    note right
+      USIP processing only possible under control of
+        ROM code after reset
+    
+      ONLY during this time frame, it is safe / allowed
+        to modify the SIP content
+    end note
+    
+    netX -> netX: ROMcode processes SIP content
+    note right
+      Original unmodified SIP content
+    end note
+    
+    netX -> netX: ROMcode processes USIP chunk (hboot_image)
+     note right
+      Write new content into SIP
+      New SIP content is activated after the next reset
+      Whole processing is done with the old SIP content
+    end note
+
+    netX -> netX: ROMcode processes bootSwitch (hboot_image)
+    
+    netX -> netX: Provide console mode
+  end
+
+end
+
+rnote over PC, netX
+ check different command options
+  --no-reset-no-verify  : SKIP reset and verification
+  --no-verify           : reset but skip verification
+  --others              : reset and verify the SIP content
+endrnote
+
+alt if (option == --no-reset-no-verify)
+
+  PC ->o] : terminate here
+  note over PC
+    Skip reset and verification of USIP content against SIP page
+    latest SIP content is NOT activated
+  end note
+
+end
+
+...
+
+== Switch to phase 2 ==
+
+...
+
+note across
+  Start verification of helper files
+end note
+
+' do a verification
+loop over all helper files
+  rnote across
+     TODO: Verification will be implemented, in a future version
+  endrnote
+
+  PC -> netX: Request Verification of helper file
+  netX -> netX: Verify helper file
+  netX -> PC: Response with Result of verification
+
+  PC ->]: Exit with an ERROR message, if the helper is not accepted by netX
+end
+
+
+PC -> netX: Setup new connection
+PC -> netX: Request reset netX
+
+
+group Wait for reset processing
+  PC -> PC: wait some time
+ 
+  rnote over PC, netX
+    reset netX
+    Activate SIP content
+  endrnote
+
+  netX -> netX : reset netX
+  note right
+     TODO: Check if an optional BootSwitch is not checked 
+  end note
+end
+
+...
+
+alt if (option == --no_verify)
+
+  PC ->o] : terminate
+  note over PC
+    Skip verification of USIP content against SIP page
+    latest SIP content is activated
+  end note
+
+end
+
+== Phase 2 ==
+
+note across
+  Verification of helper files with SECOND set of secure boot keys is required
+
+  SECOND set:
+  - helper file available in path --sec_p2 <path to helper files>
+  - latest SIP content is activated
+end note  
+
+...
+
+note across
+  Start verification of SIP content against USIP packet
+end note
+group verify USIP
+  
+  PC -> netX: Setup new connection
+
+  PC -> PC: prepare hboot_image with read_sip command and append the signed bootswitch
+  PC -> netX: Send hboot_image with "Read SIP content"
+
+  netX -> netX: prepare reset
+  note right
+    invalidate internal copies of SIP content before the reset is executed
+  end note
+
+  netX -> netX: reset netX
+  PC -> PC: Wait until reset is performed
+
+  netX -> netX: Identify valid SIP content
+
+  PC -> netX: Setup new connection
+  netX -> PC: Provide SIP content
+
+  PC -> PC: verify USIP content with SIP content
+    
+end
+  
+@enduml

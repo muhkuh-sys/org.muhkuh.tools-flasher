@@ -29,6 +29,7 @@ require("bit")
 require("romloader")
 require("pl")
 path = require("pl.path")
+local tHelperFiles = require 'helper_files'
 
 -----------------------------------------------------------------------------
 --                           Definitions
@@ -230,46 +231,6 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 end
 
 
--- prefix must include a trailing backslash if it's a directory
-function get_flasher_hboot_path(iChiptype, fDebug, strSecureOption)
-	local strNetxName
-	local strDebug = fDebug and "_debug" or ""
-    local strSubdirName
-    local strFileName
-    local strPath
-    local strPathDir
-    print("secure option path")
-    print(strSecureOption)
-
-    print(string.format("iChiptype:          %s", iChiptype))
-    print(string.format("Using secure option files from: %s", strSecureOption))
-
-	-- First catch the unlikely case that "iChiptype" is nil.
-	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
-    if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
-            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
-		strNetxName = 'netx90'
-        strSubdirName = 'netx90' -- will be an other name in the future
-    else
-        strNetxName = nil
-    end
-
-	if not strNetxName then
-		error("Unknown or unsupported chiptyp! " .. tostring(iChiptype))
-    end
-    strPathDir = path.join(strSecureOption, strSubdirName)
-    print(string.format("strPathDir : %s",strPathDir))
-
-    strFileName = "flasher_" .. strNetxName .. "_hboot.bin"
-	print(string.format("strFileName : %s",strFileName))
-
-    strFilePath = path.join(strPathDir, strFileName)
-	print(string.format("file path full : %s",strFilePath))
-
-	return strFilePath
-end
-
-
 local function get_dword(strData, ulOffset)
 	return strData:byte(ulOffset) + strData:byte(ulOffset+1)*0x00000100 + strData:byte(ulOffset+2)*0x00010000 + strData:byte(ulOffset+3)*0x01000000
 end
@@ -347,7 +308,7 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
 	local iChiptype = tPlugin:GetChiptyp()
 	local fDebug = false
     local strPath
-
+    local strFlasherBin, strMsg 
     local usMiVersionMin = get_mi_version_min(tPlugin)
     local usMiVersionMaj = get_mi_version_maj(tPlugin)
 
@@ -356,16 +317,30 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
 
     if (usMiVersionMaj == 3 and usMiVersionMin >=1 or usMiVersionMaj > 3) and bCompMode == false then
         bHbootFlash = true
-        strPath = get_flasher_hboot_path(iChiptype, fDebug, strSecureOption)
+        
+        print(string.format("iChiptype:          %s", iChiptype))
+        print(string.format("Using secure option files from: %s", strSecureOption))
+        
+        if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
+            strFlasherBin, strMsg = tHelperFiles.getHelperFile(strSecureOption, "flasher_netx90_hboot")
+        else
+            strMsg = "Unknown or unsupported chiptyp! " .. tostring(iChiptype)
+        end
+        
+        if strFlasherBin == nil then
+            strMsg = strMsg or "Failed to load flasher_netx90_hboot"
+            error(strMsg)
+        end
+        
     else
-	    strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
+        strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
+        local tFile, strMsg = io.open(strPath, 'rb')
+        if tFile==nil then
+            error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
+        end
+        strFlasherBin = tFile:read('*a')
+        tFile:close()
     end
-	local tFile, strMsg = io.open(strPath, 'rb')
-	if tFile==nil then
-		error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
-	end
-	local strFlasherBin = tFile:read('*a')
-	tFile:close()
 
 	local aAttr = get_flasher_binary_attributes(strFlasherBin)
 	aAttr.strBinaryName = strFlasherBin
