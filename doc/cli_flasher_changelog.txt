@@ -1,3 +1,15 @@
+Updates in CLI Flasher v2.0.0-dev9
+==============================
+CLI Flasher:
+* Print input arguments at start of every command.
+
+USIP Player:
+* Use helper file version check in USIP Player
+* re-added set_kek.usp image with distribution
+* update read_sip_M2M.bin from version v1.0.0-dev3 to v1.0.0-dev4
+
+WFP:
+* Use helper file version check in USIP Player
 
 Updates in CLI Flasher v2.0.0-dev8
 ==============================
