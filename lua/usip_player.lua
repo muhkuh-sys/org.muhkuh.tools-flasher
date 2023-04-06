@@ -1313,97 +1313,68 @@ end
 
 
 
-function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
-    local ulCombinedHbootLoadAddress = 0x000203c0
-    local ulOptionUsipDataLoadAddress = 0x000220c0
+--function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
+function kekProcess(tPlugin, strCombinedImageData, strTempPath)
+
+    local ulHbootLoadAddress = 0x000200c0 -- boot address for start_hboot command
+    local ulHbootDataLoadAddress = 0x00060000 -- address where the set_kek boot image is copied and executed
     local ulDataStructureAddress = 0x000220c0
-    local ulHbootResultAddress
+    local ulHbootResultAddress = 0x00065000
     local fOk = false
     -- separate the image data and the option + usip from the image
     -- this is necessary because the image must be loaded to 0x000203c0
     -- and not to 0x000200c0 like the "htbl" command does. If the image is
     -- loaded to that address it is not possible to start the image, the image is broken
-    local strHbootData, strMsg = tFlasherHelper.loadBin(strCombinedHbootPath)
-    if strHbootData then
-        -- set the path for the strHbootData
-        local strHbootDataPath = path.join( strTempPath, "set_kek_data.bin")
-        -- set the path for the strOptionUsipData
-        local strOptionUsipDataPath = path.join( strTempPath, "opt_usip_data.bin")
-        -- separate the data
-        -- get the set_kek data
-        -- this is the raw program data
-        local strSetKekData = string.sub(strHbootData, 1037, 5256)
-        -- get the rest of the data (options and usip (incl. the image a second time and a second usip))
-        local strOptionUsipData = string.sub(strHbootData, 8193)
-        -- save the data in two separate files
-        local tFile
-        tFile = io.open(strHbootDataPath, "wb")
-        tFile:write(strSetKekData)
-        tFile:close()
-        if not tFile then
-            tLog.error("Could not save set_kek data to a temp file: %s.", strHbootDataPath)
-        else
-            tFile = io.open(strOptionUsipDataPath, "wb")
-            tFile:write(strOptionUsipData)
-            tFile:close()
-            if not tFile then
-                tLog.error("Could not save option and usip data to temp file: %s", strOptionUsipDataPath)
-            else
-                fOk = loadIntramImage(tPlugin, strHbootDataPath, ulCombinedHbootLoadAddress)
-                if not fOk then
-                    tLog.error("Could not load the intram image to address: %s", ulCombinedHbootLoadAddress)
-                else
-                    fOk = loadIntramImage(tPlugin, strOptionUsipDataPath, ulOptionUsipDataLoadAddress)
-                    if not fOk then
-                        tLog.error("Could not load the intram image to address: %s", ulOptionUsipDataLoadAddress)
-                    else
-                        tLog.info("Start setting KEK ...")
-                        ulHbootResultAddress = tPlugin:read_data32(ulDataStructureAddress)
-                        tLog.debug("Delete result register")
-                        tPlugin:write_data32(ulHbootResultAddress, 0)
-                        local ulM2MMajor = tPlugin:get_mi_version_maj()
-                        local ulM2MMinor = tPlugin:get_mi_version_min()
-                        if ulM2MMajor == 3 and ulM2MMinor >= 1 then
-                            tFlasher.call_hboot(tPlugin)
-                        elseif strPluginType ~= "romloader_jtag" then
-                            tPlugin:call_no_answer(
-                                    ulCombinedHbootLoadAddress + 1,
-                                    ulDataStructureAddress,
-                                    tFlasher.default_callback_message,
-                                    2
-                            )
-                        else
-                            tPlugin:call(
-                                ulCombinedHbootLoadAddress + 1,
-                                ulDataStructureAddress,
-                                tFlasher.default_callback_message,
-                                2
-                            )
-                        end
-                        tLog.debug("Finished call, disconnecting")
-                        tPlugin:Disconnect()
-                        tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
-                        sleep(2)
-                        -- get the uart plugin again
-                        tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
-                        tPlugin:Connect()
-                        ulHbootResultAddress = tPlugin:read_data32(ulDataStructureAddress)
-                        local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
-                        tLog.debug( "ulHbootResult: %s ", ulHbootResult )
-                        ulHbootResult = bit.band(ulHbootResult, 0x107)
-                        -- TODO: include description
-                        if ulHbootResult == 0x107 then
-                            tLog.info( "Successfully set KEK" )
-                        else
-                            tLog.error( "Failed to set KEK" )
-                            fOk = false
-                        end
-                    end
-                end
-            end
-        end
+
+
+    tFlasher.write_image(tPlugin, ulHbootLoadAddress, strCombinedImageData)
+
+    -- reset result value
+    tPlugin:write_data32(ulHbootResultAddress, 0)
+
+    local ulM2MMajor = tPlugin:get_mi_version_maj()
+    local ulM2MMinor = tPlugin:get_mi_version_min()
+    if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+        tFlasher.call_hboot(tPlugin)
     else
-        tLog.error(strMsg)
+        local strSetKekData = string.sub(strCombinedImageData, 1037, 5256)
+        tFlasher.write_image(tPlugin, ulHbootDataLoadAddress, strSetKekData)
+
+        if strPluginType ~= "romloader_jtag" then
+            tPlugin:call_no_answer(
+                ulHbootDataLoadAddress + 1,
+                ulDataStructureAddress,
+                tFlasher.default_callback_message,
+                2
+            )
+        else
+            tPlugin:call(
+                ulHbootDataLoadAddress + 1,
+                ulDataStructureAddress,
+                tFlasher.default_callback_message,
+                2
+            )
+        end
+    end
+    tLog.debug("Finished call, disconnecting")
+    tPlugin:Disconnect()
+    tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
+    sleep(2)
+    -- todo check results of connect and getPlugin before continuing
+    -- get the uart plugin again
+    tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
+    tPlugin:Connect()
+
+    local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
+
+    tLog.debug( "ulHbootResult: %s ", ulHbootResult )
+    ulHbootResult = bit.band(ulHbootResult, 0x107)
+    -- TODO: include description
+    if ulHbootResult == 0x107 then
+        tLog.info( "Successfully set KEK" )
+    else
+        tLog.error( "Failed to set KEK" )
+        fOk = false
     end
 
     return fOk, tPlugin
@@ -1643,7 +1614,7 @@ function set_kek(
     strResetBootswitchPath,
     strExecReturnFilePath,
     strResetExecReturnPath,
-    strUsipConfigPath,
+    tUsipConfigDict,
     strKekHbootFilePath,
     strKekDummyUsipFilePath
 )
@@ -1651,6 +1622,7 @@ function set_kek(
     -- be optimistic
     local fOk = true
     local strPluginType
+    local strPluginName
     local strKekHbootData
     local strKekDummyUsipData
     local strKekProcessOutput
@@ -1660,14 +1632,16 @@ function set_kek(
     local strUsipToExtend
     local fProcessUsip = false
     local strMsg
+    local strFirstUsipData
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
     -- get plugin name
     strPluginName = tPlugin:GetName()
     -- the signature of the dummy USIP must not be verified because the data of the USIP
-    -- are repaced by the new generated KEK and so the signature will change too
+    -- are replaced by the new generated KEK and so the signature will change too
 
+    -- check if an USIP file was provided
     if next(astrPathList) then
         fProcessUsip = true
         tLog.debug("Found general USIP to process.")
@@ -1706,9 +1680,10 @@ function set_kek(
             strFillUpData = string.rep(string.char(255), ulFillUpLength)
             -- TODO: Add comment
             strCombinedImageData = strKekHbootData .. strFillUpData
-            -- set option at the end of the fillup data
-            -- result register address = 0x00024FE0
-            local strSetKekOptions = string.char(0x00, 0xE0, 0x05, 0x00)
+            -- set option at the end of the fill up data
+
+            -- result register address = 0x00065000
+            local strSetKekOptions = string.char(0x00, 0x50, 0x06, 0x00)
             -- load address = 0x000200c0
             strSetKekOptions = strSetKekOptions .. string.char(0xC0, 0x00, 0x02, 0x00)
             -- offset
@@ -1723,6 +1698,7 @@ function set_kek(
             -- reserved      0x0040
             -- reserved      0x0080
             if fProcessUsip then
+                -- todo add switch case for netx90 revision to support netx90 rev2
                 strSetKekOptions = strSetKekOptions .. string.char(0x11, 0x00)
                 -- size of copied data
                 local iCopySizeInBytes = iMaxImageSizeInBytes + string.len(strFirstUsipData) + iMaxOptionSizeInBytes
@@ -1751,13 +1727,13 @@ function set_kek(
             strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
             -- reserved
             strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
-            -- fill options to 1000k bytes
+            -- fill options to 4k bytes
             strSetKekOptions = strSetKekOptions .. string.rep(
                 string.char(255), iMaxOptionSizeInBytes - string.len(strSetKekOptions)
             )
             -- TODO: Add comment
             strCombinedImageData = strCombinedImageData .. strSetKekOptions
-            -- USIP image have an offset of 3k from the loadaddress of the set_kek image
+            -- USIP image has an offset of 3k from the load address of the set_kek image
             if fProcessUsip then
                 tLog.debug("Getting first USIP from Usiplist.")
                 tLog.debug("Set general USIP as extending USIP.")
@@ -1768,27 +1744,26 @@ function set_kek(
             end
             -- extend usip with bootswitch/exec_return data if necessary
             -- check if usip needs extended by the bootswitch with parameters
-            if tArgs.strBootswitchParams then
+            if tArgs.strBootswitchParams == "JTAG" then
+                tLog.debug("Extending USIP file with exec.")
+                fOk, strUsipToExtend, strMsg = extendExecReturn(
+                        strUsipToExtend, strTmpFolderPath, strExecReturnFilePath
+                )
+                tLog.debug(strMsg)
+            else if tArgs.strBootswitchParams ~= nil then
                 tLog.debug("Extending USIP file with bootswitch.")
                 fOk, strUsipToExtend, strMsg = extendBootswitch(
-                    strUsipToExtend, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
+                        strUsipToExtend, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
                 )
                 tLog.debug(strMsg)
             else
                 fOk = true
             end
+
+            end
             -- continue check
             if fOk then
-                -- check if the usip must be extended with a exec-return chunk
-                if tArgs.strBootswitchParams == "JTAG" then
-                    tLog.debug("Extending USIP file with exec.")
-                    fOk, strUsipToExtend, strMsg = extendExecReturn(
-                        strUsipToExtend, strTmpFolderPath, strExecReturnFilePath
-                    )
-                    tLog.debug(strMsg)
-                else
-                    fOk = true
-                end
+
                 if fProcessUsip then
                     strFirstUsipPath = strUsipToExtend
                 else
@@ -1820,15 +1795,22 @@ function set_kek(
                                 -- cut the header of the hboot image and add it
                                 strCombinedImageData = strCombinedImageData .. string.sub( strKekHbootData, 65 )
                                 -- add the fill data
-                                -- calcualte fillUp data to have the same offset to the usip file with the
+                                -- calculate fillUp data to have the same offset to the usip file with the
                                 -- combined image. 68 is the number of bytes of a cut header and a cut end
                                 ulFillUpLength = iMaxImageSizeInBytes - string.len(strKekHbootData) -
                                     string.len(strKekDummyUsipData) + 68
                                 strFillUpData = string.rep(string.char(255), ulFillUpLength)
                                 strCombinedImageData = strCombinedImageData .. strFillUpData
-                                -- set option at the end of the fillup data
-                                -- result register address = 0x00024FE0
-                                strSetKekOptions = string.char(0x00, 0xE0, 0x05, 0x00)
+                                -- set option at the end of the fill up data
+
+                                -- todo if we want to actually use the second options:
+                                --      we have to implement a copy function inside set_kek.bin
+                                --      that copies the second options from offset 0x250c0 to offset 0x220c0
+                                --      before copying the usip to intram3
+                                --      both options must use the same value for result register address
+
+                                -- result register address = 0x00065000
+                                local strSetKekOptions = string.char(0x00, 0x50, 0x06, 0x00)
                                 -- load address = 0x000200c0
                                 strSetKekOptions = strSetKekOptions .. string.char(0xC0, 0x00, 0x02, 0x00)
                                 -- offset
@@ -1853,7 +1835,7 @@ function set_kek(
                                 strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
                                 -- reserved
                                 strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
-                                -- fill options to 1000k bytes
+                                -- fill options to 4k bytes
                                 strSetKekOptions = strSetKekOptions .. string.rep(
                                     string.char(255), iMaxOptionSizeInBytes - string.len(strSetKekOptions)
                                 )
@@ -1877,7 +1859,10 @@ function set_kek(
                                 tFile:close()
                                 -- load the combined image to the netX
                                 tLog.info( "Using %s", strPluginType )
-                                fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
+                                --fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
+                                fOk, tPlugin = kekProcess(tPlugin, strCombinedImageData, strTmpFolderPath)
+
+                                -- todo if not further usip are provided we do not make a final reset to activate the last usip file
 
                                 if fOk then
                                     -- check if an input file path is set
@@ -2324,7 +2309,6 @@ end
 --------------------------------------------------------------------------
 if tArgs.strUsipFilePath then
 
-    strUsipConfigPath = path.join( strTmpFolderPath, "usip_config.json")
     -- analyze the usip file
     tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
 
@@ -2444,7 +2428,7 @@ elseif tArgs.fCommandKekSelected then
         strResetBootswitchPath,
         strExecReturnFilePath,
         strResetExecReturnPath,
-        strUsipConfigPath,
+        tUsipConfigDict,
         strKekHbootFilePath,
         strKekDummyUsipFilePath
     )
