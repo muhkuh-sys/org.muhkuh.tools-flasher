@@ -1572,15 +1572,16 @@ function set_sip_protection_cookie(tPlugin)
     local iChipSelect = 1
     local strData
     local strMsg
+    local ulLen
     local aAttr
     local ulDeviceSize
     local flasher_path = "netx/"
     -- be pessimistic
     local fOk = false
 
-    strFilePath = path.join( "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
+    strFilePath = path.join("netx", "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
     -- Download the flasher.
-    aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil)
+    aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil, tArgs.strSecureOption)
     -- if flasher returns with nil, flasher binary could not be downloaded
     if not aAttr then
         tLog.error("Error while downloading flasher binary")
@@ -1593,16 +1594,19 @@ function set_sip_protection_cookie(tPlugin)
             ulDeviceSize = tFlasher.getFlashSize(tPlugin, aAttr)
             if not ulDeviceSize then
                 tLog.error( "Failed to get the device size!" )
+                fOk = false
             else
                 -- get the data to flash
                 strData, strMsg = tFlasherHelper.loadBin(strFilePath)
                 if not strData then
                     tLog.error(strMsg)
+                    fOk = false
                 else
                     ulLen = strData:len()
                     -- if offset/len are set, we require that offset+len is less than or equal the device size
                     if ulStartOffset~= nil and ulLen~= nil and ulStartOffset+ulLen > ulDeviceSize and ulLen ~= 0xffffffff and fOk == true then
                         tLog.error( "Offset+size exceeds flash device size: 0x%08x bytes", ulDeviceSize )
+                        fOk = false
                     else
                         tLog.info( "Flash device size: %d/0x%08x bytes", ulDeviceSize, ulDeviceSize )
                     end
