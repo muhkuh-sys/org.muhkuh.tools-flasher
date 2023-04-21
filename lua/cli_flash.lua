@@ -970,7 +970,7 @@ function main()
 
     elseif aArgs.fCommandResetSelected then
 
-        tPlugin, strMsg = getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
+        tPlugin, strMsg = tFlasherHelper.getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
         local strPluginType = tPlugin:GetTyp()
         local ulM2MMajor = tPlugin:get_mi_version_maj()
         local ulM2MMinor = tPlugin:get_mi_version_min()
