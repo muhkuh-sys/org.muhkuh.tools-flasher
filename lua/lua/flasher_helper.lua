@@ -360,12 +360,13 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	local strAppSipData
 	local tRes
 
-	local ulIflash0ProtectionInfo = tPlugin:read_data32(0xff001c48)
-	local ulIflash1ProtectionInfo = tPlugin:read_data32(0xff001cc8)
-	local ulIflash2ProtectionInfo = tPlugin:read_data32(0xff401448)
-	printf("intflash 0 protection info: 0x%08x", ulIflash0ProtectionInfo)
-	printf("intflash 1 protection info: 0x%08x", ulIflash1ProtectionInfo)
-	printf("intflash 2 protection info: 0x%08x", ulIflash2ProtectionInfo)
+	-- for debugging
+	-- local ulIflash0ProtectionInfo = tPlugin:read_data32(0xff001c48)
+	-- local ulIflash1ProtectionInfo = tPlugin:read_data32(0xff001cc8)
+	-- local ulIflash2ProtectionInfo = tPlugin:read_data32(0xff401448)
+	-- printf("intflash 0 protection info: 0x%08x", ulIflash0ProtectionInfo)
+	-- printf("intflash 1 protection info: 0x%08x", ulIflash1ProtectionInfo)
+	-- printf("intflash 2 protection info: 0x%08x", ulIflash2ProtectionInfo)
 
 	-- extract the executable portion of the read_sip image from the data chunk 
 	-- and download it to RAM.
@@ -384,7 +385,7 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 
 	--sleep_s(2) -- what for?
 	
-	print("Start read sip binary via call")
+	print("Start read_sip binary via call")
 	tFlasher.call(
 			tPlugin,
 			ulReadSipExeAddress + 1,
@@ -393,14 +394,15 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 
 	ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
 	ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
-	printf("read_sip magic cookie value: 0x%08x", ulMagicResult)
-	printf("read_sip result: 0x%08x", ulReadSipResult)
+	-- printf("read_sip magic cookie value: 0x%08x", ulMagicResult)
+	-- printf("read_sip result: 0x%08x", ulReadSipResult)
 	
 	if ulMagicResult ~= MAGIC_COOKIE_END then
-		strErrorMsg = "Could not find MAGIC_COOKIE_END - read_sip has not finished normally."
+		strErrorMsg = "An error has occurred while executing read_sip (MAGIC_COOKIE_END not found)."
 	else 
-		printf("Found MAGIC_COOKIE_END, read_sip has finished.")
+		printf("read_sip has finished (found MAGIC_COOKIE_END).")
 	
+		-- ignore the CAL page.
 		--strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
 
 		fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
@@ -415,7 +417,7 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			print("The COM SIP copy is invalid.")
 			print("The COM SIP is available and valid.")
 		else
-			print("The COM SIOP copy is invalid.")
+			print("The COM SIP copy is invalid.")
 			print("The COM SIP is not available.")
 		end
 
@@ -431,7 +433,7 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			print("The APP SIP Copy is invalid.")
 			print("The APP SIP is available and valid.")
 		else
-			print("The APP SIOP Copy is invalid.")
+			print("The APP SIP Copy is invalid.")
 			print("The APP SIP is not available.")
 		end
 
@@ -440,7 +442,7 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			fComCopyOk = fComCopyOk,
 			fAppSipOk  = fAppSipOk,
 			fAppCopyOk = fAppCopyOk,
-			--strCalSipData = strCalSipData,
+			--strCalSipData = strCalSipData, -- ignore the CAL page.
 			strComSipData = strComSipData,
 			strAppSipData = strAppSipData
 		}
@@ -648,7 +650,6 @@ function detect_secure_boot_mode(aArgs)
 		
 									if tRes == nil then 
 										print(strMsg)
-										iSecureBootStatus = SECURE_BOOT_ERROR
 									else
 										-- Get the secure boot flags from the info pages.
 										OFF_COM_SIP_PROTECTION_FLAGS = 556+1
@@ -661,13 +662,13 @@ function detect_secure_boot_mode(aArgs)
 									
 										if tRes.strComSipData ~= nil then 
 											local bSecureBootCOM = tRes.strComSipData:byte(OFF_COM_SIP_PROTECTION_FLAGS)
-											printf("COM secure boot options bit 0-7: 0x%02x", bSecureBootCOM)
+											-- printf("COM secure boot options bit 0-7: 0x%02x", bSecureBootCOM)
 											fSecureBootCOM = (bit.band(bSecureBootCOM, MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT)
 										end 
 										
 										if tRes.strAppSipData ~= nil then 
 											local bSecureBootAPP = tRes.strAppSipData:byte(OFF_APP_SIP_PROTECTION_FLAGS)
-											printf("APP secure boot options bit 0-7: 0x%02x", bSecureBootAPP)
+											-- printf("APP secure boot options bit 0-7: 0x%02x", bSecureBootAPP)
 											fSecureBootAPP = (bit.band(bSecureBootAPP, MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT)
 										end 
 		
@@ -701,8 +702,10 @@ function detect_secure_boot_mode(aArgs)
 	elseif iSecureBootStatus==SECURE_BOOT_ONLY_APP_ENABLED then
 		strMsg = "Secure boot mode enabled. COM CPU is in open mode, APP CPU is in secure boot mode."
 	elseif iSecureBootStatus==SECURE_BOOT_UNKNOWN then
-		strMsg = "Cannot detect secure boot mode. "..
-		"If the netX was just reset, COM and APP are in open mode."
+		strMsg = "Cannot detect secure boot mode. "
+		if tPlugin:GetTyp() == "romloader_uart" then
+			strMsg = strMsg .. "If the netX was just reset, COM and APP are in open mode."
+		end
 	else
 		strMsg = "Cannot detect secure boot mode: " .. (strMsg or "unknown error")
 	end
