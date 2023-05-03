@@ -78,7 +78,7 @@ strUsipPlayerGeneralHelp = [[
 local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
 
 -- Add a flag to disable helper checks
-tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+tParser:flag "-d --disable_helper_version_check":description "Disable version checks on helper files.":action(function()
     tHelperFiles.disableHelperFileChecks()
 end)
 

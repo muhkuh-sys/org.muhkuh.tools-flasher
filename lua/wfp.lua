@@ -617,7 +617,7 @@ tParser:flag "--version":description "Show version info and exit. ":action(funct
     os.exit(0)
 end)
 
-tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
+tParser:flag "-d --disable_helper_version_check":description "Disable version checks on helper files.":action(function()
     tHelperFiles.disableHelperFileChecks()
 end)
 
