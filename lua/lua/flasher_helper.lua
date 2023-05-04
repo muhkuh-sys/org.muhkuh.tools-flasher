@@ -74,6 +74,8 @@ function getHexString(strBin)
 	return strHex
 end
 
+-- Convert a binary string to an unsigned integer.
+-- str must be 1 to 4 bytes long and in little-endian byte order.
 function bytes_to_uint32(str)
     local ulValue = 0
 
