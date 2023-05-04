@@ -191,12 +191,12 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
                     print("strKeyAlgorithm offset " ..tBinFileHandle:seek())
                     -- extract the key algorithm
                     strKeyAlgorithm = tBinFileHandle:read(1)
-                    ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm, 'little', 'unsigned')
+                    ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm)
 
                     print("strKeyStrength offset " ..tBinFileHandle:seek())
                     -- extract key strength
                     local strKeyStrength = tBinFileHandle:read(1)
-                    local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength, 'little', 'unsigned')
+                    local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength)
 
                     tBinFileHandle:seek("set", tBinFileHandle:seek()-2)
                     print("strPaddedKey offset " ..tBinFileHandle:seek())
