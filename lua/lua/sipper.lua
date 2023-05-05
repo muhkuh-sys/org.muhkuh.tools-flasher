@@ -62,6 +62,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePat
                 break
             end
         end
+        tSipFile:close()
     end
     return tResult, strErrorMsg
 end
@@ -357,6 +358,8 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
                 tOutputFileHandle:write(strDataBlock)
                 tOutputFileHandle:close()
             end
+            
+            tBinFileHandle:close()
         end
     else
         tResult = false
