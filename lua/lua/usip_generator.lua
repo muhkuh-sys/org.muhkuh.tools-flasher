@@ -410,14 +410,14 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     local ulDataOffset = tFlasherHelper.bytes_to_uint32(strDataOffset)
                     mh_sha384:hash(strDataOffset)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset"] = strDataOffset
-                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset_int"] = tFlasherHelper.bytes_to_uint32(strDataOffset)
+                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset_int"] = ulDataOffset
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
                     local strDataSize = tUsipFileHandle:read(2)
                     local ulDataSize = tFlasherHelper.bytes_to_uint32(strDataSize)
                     mh_sha384:hash(strDataSize)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size"] = strDataSize
-                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = tFlasherHelper.bytes_to_uint32(strDataSize)
+                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = ulDataSize
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
                     local current = tUsipFileHandle:seek()
@@ -453,7 +453,6 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
                 local current = tUsipFileHandle:seek()
                 local strSignature = tUsipFileHandle:read(ulSignatureSize)
-                local ulSignature = tFlasherHelper.bytes_to_uint32(strSignature)
                 tUsipFileContent[iUsipChunkIdx]["signature"] = strSignature
 
                 tUsipFileContent[iUsipChunkIdx]["sha384_hash"] = mh_sha384:hash_end()
