@@ -617,9 +617,12 @@ tParser:flag "--version":description "Show version info and exit. ":action(funct
     os.exit(0)
 end)
 
-tParser:flag "-d --disable_helper_version_check":description "Disable version checks on helper files.":action(function()
-    tHelperFiles.disableHelperFileChecks()
-end)
+-- Add a hidden flag to disable the version checks on helper files.
+tParser:flag "--disable_helper_version_check":hidden(true)
+    :description "Disable version checks on helper files."
+    :action(function()
+        tHelperFiles.disableHelperFileChecks()
+    end)
 
 -- Add the "flash" command and all its options.
 local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.'):target('fCommandFlashSelected')
