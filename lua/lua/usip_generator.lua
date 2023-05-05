@@ -253,6 +253,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
 
         -- read whole file and find the first USIP chunk
+        -- Note: this will cause an error if the string "USIP" occurs 
+        -- somewhere before the first USIP chunk.
         local strUsipFileContent = tUsipFileHandle:read("*a")
         i, j = string.find(strUsipFileContent, "USIP")
         iUsipFileOffset = i - 1
