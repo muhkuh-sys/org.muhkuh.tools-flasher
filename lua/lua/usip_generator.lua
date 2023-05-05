@@ -277,7 +277,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
                 print(string.format("Skip over '%s' chunk", strChunkId))
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
 
             elseif strChunkId == "USIP" then
                 self.tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
