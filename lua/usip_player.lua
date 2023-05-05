@@ -121,6 +121,11 @@ tParserCommandUsip:flag('--verify_sig'):description(
 tParserCommandUsip:flag('--no_verify'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
 ):target('fVerifyContentDisabled')
+tParserCommandUsip:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
 -- tParserCommandUsip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserCommandUsip:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
@@ -158,6 +163,12 @@ tParserCommandSip:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandSip:option('-t'):description("plugin type"):target("strPluginType")
 tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandSip:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
+
 -- Add the "set_kek" command and all its options.
 strSetKekHelp = [[
     Set the KEK (Key exchange key).
@@ -182,6 +193,10 @@ tParserCommandKek:flag('--verify_sig'):description(
 tParserCommandKek:flag('--no_verify'):description(
     "Do not verify the content of an usip image against a netX."
 ):target('fVerifyContentDisabled')
+tParserCommandKek:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 -- tParserCommandKek:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserCommandKek:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
@@ -215,6 +230,11 @@ tParserVerifyContent:option('-i --input'):description("USIP binary file path"):t
 -- ):target('fExtendExec')
 tParserVerifyContent:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserVerifyContent:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
 
 -- Add the "read_sip" command and all its options.
 strReadHelp = [[
@@ -241,6 +261,11 @@ tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('str
 tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
+tParserReadSip:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
 
 -- Add the "detect_secure_mode" command and all its options.
 
@@ -276,6 +301,11 @@ tParserGetUid:option(
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserGetUid:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
 
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- parse args
@@ -2346,46 +2376,51 @@ end
 -- do not verify the signature of the helper files if the read command is selected
 -- old: if fIsSecure  and not tArgs.fCommandReadSelected then
 if fIsSecure then
-    -- verify the signature of the used HTBL files
-    -- make a list of necessary files
-    local tblHtblFilePaths = {}
-    local fDoVerify = false
-    if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
-        fDoVerify = true
-        table.insert(tblHtblFilePaths, strReadSipPath)
-    end
-    if tArgs.strBootswitchParams then
-        fDoVerify = true
-        if tArgs.strBootswitchParams == "JTAG" then
-            table.insert( tblHtblFilePaths, strExecReturnFilePath )
-        else
-            table.insert( tblHtblFilePaths, strBootswitchFilePath )
+    if tArgs.fDisableHelperSignatureChecks==true then
+        tLog.info("Skipping signature checks for support files.")
+        
+    else 
+        -- verify the signature of the used HTBL files
+        -- make a list of necessary files
+        local tblHtblFilePaths = {}
+        local fDoVerify = false
+        if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
+            fDoVerify = true
+            table.insert(tblHtblFilePaths, strReadSipPath)
         end
-    end
-
-    -- TODO why not verify set_kek.bin even if no bootswitch was selected?
-    -- maybe only verify if set kek command selected
-    table.insert(tblHtblFilePaths, strKekHbootFilePath)
+        if tArgs.strBootswitchParams then
+            fDoVerify = true
+            if tArgs.strBootswitchParams == "JTAG" then
+                table.insert( tblHtblFilePaths, strExecReturnFilePath )
+            else
+                table.insert( tblHtblFilePaths, strBootswitchFilePath )
+            end
+        end
     
-    -- TODO: how to be sure that the verify sig will work correct?
-    -- NOTE: If the verify_sig file is not signed correctly the process will fail
-    -- is there a way to verify the signature of the verify_sig itself?
-    -- if tArgs.fVerifySigEnable then
-    --     fDoVerify = true
-    --     table.insert( tblHtblFilePaths, strVerifySigPath )
-
-    if fDoVerify then
-        tLog.info("Checking signatures of support files...")
-
-        -- check if every signature in the list is correct via MI
-        fOk = verifySignature(
-            tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strVerifySigPath
-        )
-
-        if not fOk then
-            tLog.error( "The Signatures of the support-files can not be verified." )
-            tLog.error( "Please check if the supported files are signed correctly" )
-            os.exit(1)
+        -- TODO why not verify set_kek.bin even if no bootswitch was selected?
+        -- maybe only verify if set kek command selected
+        table.insert(tblHtblFilePaths, strKekHbootFilePath)
+        
+        -- TODO: how to be sure that the verify sig will work correct?
+        -- NOTE: If the verify_sig file is not signed correctly the process will fail
+        -- is there a way to verify the signature of the verify_sig itself?
+        -- if tArgs.fVerifySigEnable then
+        --     fDoVerify = true
+        --     table.insert( tblHtblFilePaths, strVerifySigPath )
+    
+        if fDoVerify then
+            tLog.info("Checking signatures of support files...")
+    
+            -- check if every signature in the list is correct via MI
+            fOk = verifySignature(
+                tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strVerifySigPath
+            )
+    
+            if not fOk then
+                tLog.error( "The Signatures of the support-files can not be verified." )
+                tLog.error( "Please check if the supported files are signed correctly" )
+                os.exit(1)
+            end
         end
     end
 end
