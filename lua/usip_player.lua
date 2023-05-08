@@ -133,6 +133,66 @@ tParserCommandUsip:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
 
+
+
+-- TODO: Add disable_security command
+-- NXTFLASHER-603
+-- NXTFLASHER-550
+
+-- Add the "disable_security" command and all its options.
+strDisableSecurityHelp = [[
+    Disable security settings at COM and APP SIPs.
+
+    Following parameter will be set:
+    COM SIP:
+    - Security Access Level (SAL): OFF
+    - Secure Boot Mode (SBM) :     OFF
+    - SIP will be copied
+    - SIP will be visible
+    - (ENABLE_MI_UART_IN_SECURE :  OFF)  reserved for netX 90 rev2
+
+    APP SIP:
+    - Security Access Level (SAL): OFF
+    - Secure Boot Mode (SBM) :     OFF
+    - SIP will be copied
+    - SIP will be visible
+    - (ASIG_SIGNED_BINDING :       OFF) reserved for netX 90 rev2
+
+]]
+
+local tParserCommandDisableSecurity = tParser:command('disable_security', strDisableSecurityHelp):target('fCommandDisableSecurity')
+tParserCommandDisableSecurity:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandDisableSecurity:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandDisableSecurity:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandDisableSecurity:flag('--no_verify_USIP_sig'):description(
+    "Verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
+):target('fVerifyUsipSigDisable')
+tParserCommandDisableSecurity:flag('--no_verify_SIP_content'):description(
+    "Do not verify the content of an usip image against a netX SIP content after writing the usip."
+):target('fVerifySipContentDisabled')
+-- tParserCommandDisableSecurity:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+-- tParserCommandDisableSecurity:flag('--extend_exec'):description(
+--     "Extends the usip file with an execute-chunk to activate JTAG."
+-- ):target('fExtendExec')
+tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
+-- todo add more help here
+tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandDisableSecurity:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandDisableSecurity:flag('--no_reset'
+):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
+):target('fDisableReset'):default(false)
+
+
+
+-- TODO: Add disable_security command
+-- E N D
+
 -- Add the "set_sip_protection" command and all its options.
 strSetSipProtectionHelp = [[
     Set the SipProtectionCookie, enable protection of SIPs.
@@ -148,6 +208,7 @@ strSetSipProtectionHelp = [[
         - SIPs will not be copied
         - SIPs will be visiable
 ]]
+
 local tParserCommandSip = tParser:command('set_sip_protection', strSetSipProtectionHelp):target('fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
@@ -2412,6 +2473,34 @@ if tArgs.fCommandUsipSelected then
     )
 
 --------------------------------------------------------------------------
+-- Disable Security COMMAND
+--------------------------------------------------------------------------
+if tArgs.fCommandUsipSelected then
+    tLog.info("##############################################")
+    tLog.info("# RUNNING Disable Security Setting COMMAND   #")
+    tLog.info("##############################################")
+
+    strFilePathApp = path.join( "helper", "netx90_usip", "disable_security_settings_app.usp")
+    strFilePathCom = path.join( "helper", "netx90_usip", "disable_security_settings_com.usp")
+
+    -- TODO: how to combine two USIP files into one USIP call ?
+    -- TODO: Update the parameter list for the USIP command with the DisableSecrity parameter
+
+    fFinalResult = usip(
+        tPlugin,
+        strFilePathApp,
+        tUsipConfigDict,
+        strTmpFolderPath,
+        strExecReturnPath,
+        strVerifySigPath,
+        strBootswitchFilePath,
+        strResetExecReturnPath,
+        strResetBootswitchPath,
+        strResetReadSipPath
+    )
+
+
+    --------------------------------------------------------------------------
 -- Set SIP Command
 --------------------------------------------------------------------------
 elseif tArgs.fCommandSipSelected then
