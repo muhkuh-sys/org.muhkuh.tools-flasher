@@ -2506,7 +2506,7 @@ elseif tArgs.fCommandGetUidSelected then
 --------------------------------------------------------------------------
 elseif tArgs.fCommandVerifySelected then
     tLog.info("######################################")
-    tLog.info("# RUNNINF VERIFY CONTENT COMMAND     #")
+    tLog.info("# RUNNING VERIFY CONTENT COMMAND     #")
     tLog.info("######################################")
     fFinalResult = verify_content(
         tPlugin,
