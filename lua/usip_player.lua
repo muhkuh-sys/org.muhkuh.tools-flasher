@@ -160,7 +160,7 @@ strDisableSecurityHelp = [[
 
 ]]
 
-local tParserCommandDisableSecurity = tParser:command('disable_security', strDisableSecurityHelp):target('fCommandDisableSecurity')
+local tParserCommandDisableSecurity = tParser:command('ds disable_security', strDisableSecurityHelp):target('fCommandDisableSecurity')
 tParserCommandDisableSecurity:option(
     '-V --verbose'
 ):description(
@@ -176,10 +176,6 @@ tParserCommandDisableSecurity:flag('--no_verify_USIP_sig'):description(
 tParserCommandDisableSecurity:flag('--no_verify_SIP_content'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
 ):target('fVerifySipContentDisabled')
--- tParserCommandDisableSecurity:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
--- tParserCommandDisableSecurity:flag('--extend_exec'):description(
---     "Extends the usip file with an execute-chunk to activate JTAG."
--- ):target('fExtendExec')
 tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
 tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -187,11 +183,9 @@ tParserCommandDisableSecurity:option('--sec_phase2 --sec_p2'):description(strHel
 tParserCommandDisableSecurity:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
+tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "helper", "netx90_usip", "disable_security_settings.usp"))
 
 
-
--- TODO: Add disable_security command
--- E N D
 
 -- Add the "set_sip_protection" command and all its options.
 strSetSipProtectionHelp = [[
@@ -2394,7 +2388,7 @@ if tArgs.strUsipFilePath then
         tLog.error(strErrorMsg)
         os.exit(1)
     else
-        if iChiptype == 14  or iChiptype == 17 and tUsipConfigDict["num_of_chunks"] > 1  then
+        if (iChiptype == 14  or iChiptype == 17) and tUsipConfigDict["num_of_chunks"] > 1  then
             iGenMultiResult, astrPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
         else
             astrPathList = {strUsipFilePath}
@@ -2475,20 +2469,14 @@ if tArgs.fCommandUsipSelected then
 --------------------------------------------------------------------------
 -- Disable Security COMMAND
 --------------------------------------------------------------------------
-if tArgs.fCommandUsipSelected then
+elseif tArgs.fCommandDisableSecurity then
     tLog.info("##############################################")
     tLog.info("# RUNNING Disable Security Setting COMMAND   #")
     tLog.info("##############################################")
 
-    strFilePathApp = path.join( "helper", "netx90_usip", "disable_security_settings_app.usp")
-    strFilePathCom = path.join( "helper", "netx90_usip", "disable_security_settings_com.usp")
-
-    -- TODO: how to combine two USIP files into one USIP call ?
-    -- TODO: Update the parameter list for the USIP command with the DisableSecrity parameter
-
     fFinalResult = usip(
         tPlugin,
-        strFilePathApp,
+        astrPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
