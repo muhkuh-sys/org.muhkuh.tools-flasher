@@ -169,7 +169,7 @@ tParserCommandDisableSecurity:option(
 tParserCommandDisableSecurity:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandDisableSecurity:option('-t'):description("plugin type"):target("strPluginType")
 tParserCommandDisableSecurity:flag('--no_verify_USIP_sig'):description(
-    "Verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
+    "Do not verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
 ):target('fVerifyUsipSigDisable')
 tParserCommandDisableSecurity:flag('--no_verify_SIP_content'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
@@ -181,7 +181,7 @@ tParserCommandDisableSecurity:option('--sec_phase2 --sec_p2'):description(strHel
 tParserCommandDisableSecurity:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
-tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "helper", "netx90_usip", "disable_security_settings.usp"))
+tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
 
 
 
