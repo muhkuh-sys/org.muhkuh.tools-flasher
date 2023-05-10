@@ -134,8 +134,6 @@ tParserCommandUsip:flag('--no_reset'
 ):target('fDisableReset'):default(false)
 
 
-
--- TODO: Add disable_security command
 -- NXTFLASHER-603
 -- NXTFLASHER-550
 
@@ -2488,7 +2486,7 @@ elseif tArgs.fCommandDisableSecurity then
     )
 
 
-    --------------------------------------------------------------------------
+--------------------------------------------------------------------------
 -- Set SIP Command
 --------------------------------------------------------------------------
 elseif tArgs.fCommandSipSelected then
