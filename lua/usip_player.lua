@@ -163,10 +163,6 @@ tParserCommandSip:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandSip:option('-t'):description("plugin type"):target("strPluginType")
 tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandSip:flag('--disable_helper_signature_check')
-    :description('Disable signature checks on helper files.')
-    :target('fDisableHelperSignatureChecks')
-    :default(false)
 
 
 -- Add the "set_kek" command and all its options.
