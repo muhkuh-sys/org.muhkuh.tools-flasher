@@ -84,7 +84,7 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
 
     local tResult = true
     local strErrorMsg = ""
-    local strFileType = None
+    local strChunkID = None
     local strSkipSize
     local ulSkipSize
     local strChunkSize
@@ -119,36 +119,36 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
         else
             -- read file type at offset 64
             tBinFileHandle:seek("set", 64)
-            strFileType = tBinFileHandle:read(4)
+            strChunkID = tBinFileHandle:read(4)
 
             -- check the second expected offset for a secure chunk
             --  - if the first chunk is a skip-chunk it could be possible that this chunk used for the FHV3-Header, skip that
             -- chunk and check the next possible area for a secure chunk. The FHV3-Header-Skip chunk has always the same length!
             --  - if the FHV3-Header is already set no skip chunk is found but also no secure chunk is found, check the next area
             -- in this case.
-            if strFileType == nil or strFileType == "SKIP" then
+            if strChunkID == nil or strChunkID == "SKIP" then
                 strSkipSize = tBinFileHandle:read(4)
                 ulSkipSize = tFlasherHelper.bytes_to_uint32(strSkipSize) * 4
                 local newOffset = tBinFileHandle:seek() + ulSkipSize
                 
                 tBinFileHandle:seek("set", newOffset)
-                strFileType = tBinFileHandle:read(4)
+                strChunkID = tBinFileHandle:read(4)
 
             end
 
-            if strFileType == "SKIP" then
+            if strChunkID == "SKIP" then
                 tResult = false
-                strErrorMsg = string.format("Found s chunk that is no security chunk. Found a SKIP Chunk, be sure the image is signed")
-            elseif strFileType ~= "USIP" and strFileType ~= "HTBL" then
+                strErrorMsg = string.format("Found SKIP chunk, which is no security chunk. Make sure the image is signed.")
+            elseif strChunkID ~= "USIP" and strChunkID ~= "HTBL" then
                 tResult = false
-                strErrorMsg = string.format("Found s chunk that is no security chunk. Found a %s Chunk", strFileType)
-            elseif strFileType == "USIP" then
+               strErrorMsg = string.format("Found a %s chunk, which is no security chunk.", strChunkID)
+            elseif strChunkID == "USIP" then
 
                 self.tLog.info("found USIP chunk")
 
 
                 -- update the hash with chunk id
-                tChunkHash:hash(strFileType)
+                tChunkHash:hash(strChunkID)
 
                 -- update the hash with chunk size
                 strChunkSize = tBinFileHandle:read(4)
@@ -228,12 +228,12 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
                     end
                 end
                 strChunkHash = tChunkHash:hash_end()
-            elseif strFileType =="HTBL" then
+            elseif strChunkID =="HTBL" then
                 self.tLog.info("found HTBL chunk")
                 local ulReadSize = 0
 
                 -- update the hash with chunk id
-                tChunkHash:hash(strFileType)
+                tChunkHash:hash(strChunkID)
                 ulReadSize = ulReadSize + 4
 
                 -- update the hash with chunk size
@@ -290,72 +290,74 @@ function Sipper:gen_data_block(strBinFilePath, strOutputBinPath)
                 strSignature = tBinFileHandle:read(ulSignatureSize)
             end
 
-            -- create the data block with the collected data
-            if ulPageSelect == 1 and ulKeyIdx == 16 then
-                strDataBlock = strDataBlock .. string.char(0x03, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x04, 0x00)
-            elseif ulPageSelect == 1 and ulKeyIdx == 17 then
-                strDataBlock = strDataBlock .. string.char(0x02, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x01, 0x00)
-            elseif ulPageSelect == 2 and ulKeyIdx == 16 then
-                strDataBlock = strDataBlock .. string.char(0x04, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x08, 0x00)
-            elseif ulPageSelect == 2 and ulKeyIdx == 17 then
-                strDataBlock = strDataBlock .. string.char(0x00, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x02, 0x00)
-            else
-                strDataBlock = strDataBlock .. string.char(0x00, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x00, 0x00)
-            end
-
-            strDataBlock = strDataBlock .. strChunkHash
-
-            local strBindingData = ""
-            if ulPageSelect == 1 then
-                strBindingData = strBindingData .. strUUID
+            if tResult == true then
+                -- create the data block with the collected data
+                if ulPageSelect == 1 and ulKeyIdx == 16 then
+                    strDataBlock = strDataBlock .. string.char(0x03, 0x01)
+                    strDataBlock = strDataBlock .. string.char(0x04, 0x00)
+                elseif ulPageSelect == 1 and ulKeyIdx == 17 then
+                    strDataBlock = strDataBlock .. string.char(0x02, 0x01)
+                    strDataBlock = strDataBlock .. string.char(0x01, 0x00)
+                elseif ulPageSelect == 2 and ulKeyIdx == 16 then
+                    strDataBlock = strDataBlock .. string.char(0x04, 0x01)
+                    strDataBlock = strDataBlock .. string.char(0x08, 0x00)
+                elseif ulPageSelect == 2 and ulKeyIdx == 17 then
+                    strDataBlock = strDataBlock .. string.char(0x00, 0x01)
+                    strDataBlock = strDataBlock .. string.char(0x02, 0x00)
+                else
+                    strDataBlock = strDataBlock .. string.char(0x00, 0x01)
+                    strDataBlock = strDataBlock .. string.char(0x00, 0x00)
+                end
+    
+                strDataBlock = strDataBlock .. strChunkHash
+    
+                local strBindingData = ""
+                if ulPageSelect == 1 then
+                    strBindingData = strBindingData .. strUUID
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. strAnchor
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. strUUIDMask
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. strAnchorMask
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0)
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                    print(string.len(strBindingData))
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0)
+                    print(string.len(strBindingData))
+                elseif ulPageSelect == 2 then
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0)
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                    strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0)
+                    strBindingData = strBindingData .. strUUID
+                    strBindingData = strBindingData .. strAnchor
+                    strBindingData = strBindingData .. strUUIDMask
+                    strBindingData = strBindingData .. strAnchorMask
+                else
+                    tResult = false
+                    strErrorMsg = string.format("The selected secure info '%s' page is not supported", ulPageSelect)
+                end
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. strAnchor
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. strUUIDMask
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. strAnchorMask
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                 0x0, 0x0, 0x0, 0x0)
-                 print(string.len(strBindingData))
-                 strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                 print(string.len(strBindingData))
-                 strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                 0x0, 0x0, 0x0, 0x0)
-                 print(string.len(strBindingData))
-            elseif ulPageSelect == 2 then
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                 0x0, 0x0, 0x0, 0x0)
-                 strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                 strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                 0x0, 0x0, 0x0, 0x0)
-                 strBindingData = strBindingData .. strUUID
-                 strBindingData = strBindingData .. strAnchor
-                 strBindingData = strBindingData .. strUUIDMask
-                 strBindingData = strBindingData .. strAnchorMask
-            else
-                tResult = false
-                strErrorMsg = string.format("The selected secure info '%s' page is not supported", ulPageSelect)
-            end
-            print(string.len(strBindingData))
-            strDataBlock = strDataBlock .. strBindingData
-            strDataBlock = strDataBlock .. strSignature
-
-            -- add padding to flush the intram data
-            strDataBlock = strDataBlock .. string.char(0x00, 0x00, 0x00, 0x00)
-
-            if strOutputBinPath ~= nil then
-                local tOutputFileHandle = io.open(strOutputBinPath, 'wb')
-                tOutputFileHandle:write(strDataBlock)
-                tOutputFileHandle:close()
+                strDataBlock = strDataBlock .. strBindingData
+                strDataBlock = strDataBlock .. strSignature
+    
+                -- add padding to flush the intram data
+                strDataBlock = strDataBlock .. string.char(0x00, 0x00, 0x00, 0x00)
+    
+                if strOutputBinPath ~= nil then
+                    local tOutputFileHandle = io.open(strOutputBinPath, 'wb')
+                    tOutputFileHandle:write(strDataBlock)
+                    tOutputFileHandle:close()
+                end
             end
         end
     else
