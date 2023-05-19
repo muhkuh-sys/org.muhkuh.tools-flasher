@@ -282,17 +282,17 @@ tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
-local tParserCommandUsip = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
-tParserCommandUsip:option(
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
     string.format(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandUsip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandUsip:option('-t'):description("plugin type"):target("strPluginType")
-tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- parse args
