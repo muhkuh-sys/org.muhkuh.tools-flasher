@@ -107,6 +107,7 @@ strUsipHelp = [[
     the usip file to update the SecureInfoPage and continue standard boot process.
 ]]
 
+
 local tParserCommandUsip = tParser:command('u usip', strUsipHelp):target('fCommandUsipSelected')
 tParserCommandUsip:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
 tParserCommandUsip:option(
@@ -279,8 +280,21 @@ tParserGetUid:option(
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
+
+local tParserCommandUsip = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+tParserCommandUsip:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandUsip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandUsip:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+
+
 -- parse args
 local tArgs = tParser:parse()
 
@@ -738,20 +752,32 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
 end
 
 
--- fOk verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
--- verify the signature of every usip file in the list
--- the SIPper is used for the data-block generation only
--- the verify_sig binary does not need to be signed, because the image is called directly via the tPlugin:call command.
--- both addresses for the result and debug registers are hard coded inside the verify_sig program. To change these
--- addresses the binary needs to be build again.
--- For every single usip in the list a new data block have to be generated and an individually signature verification is
--- performed. Every signature is checked even if one already failed.
--- returns true if every signature is correct, otherwise false
+-- fOk, atResults verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
+-- Verify the signature of every usip file in the list
+-- The SIPper is used for the data-block generation only
+-- The verify_sig binary does not need to be signed if it is used via JTAG, 
+-- because the image is called directly via the tPlugin:call command.
+-- Both addresses for the result and debug registers are hard coded inside the verify_sig program. 
+-- To change these addresses the binary needs to be build  again.
+-- For every single usip in the list, a data block is generated and signature verification 
+-- is performed individually. 
+-- Every signature is checked even if one has already failed.
+--
+-- Returns true if every signature is correct, otherwise false
+-- Also returns a list of the results for each file.
+-- Each entry has the following format:
+--   path: the full path to and name of the file
+--   check: the type of check ("signature")
+--   ok: true/false
+--   message: optional a message string
+
 function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strVerifySigPath)
     -- NOTE: For more information of how the verify_sig program works and how the data block is structured and how the
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
-    -- be pessimistic
-    local fOk = false
+    
+    -- be optimistic
+    local fOk = true
+    local atResults = {}
     local ulVerifySigResult
     local ulVerifySigDebug
     local ulVerifySigDataLoadAddress = 0x00060000
@@ -782,7 +808,13 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
             local strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
             -- generate data block
             local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockTmpPath)
-
+            local tResult = {
+                path = strSingleFilePath, 
+                check = "signature",
+                ok = true,
+                message = nil
+                }
+            
             -- check if the command executes without an error
             if tGenDataBlockResult == true then
                 -- execute verify signature binary
@@ -791,6 +823,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
                 tPlugin:write_data32(ulVerifySigResultAddress, 0x00000000)
                 tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
 
+                -- todo: why is the plugin type checked inside the loop?
                 if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
                     tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
                     tFlasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
@@ -817,29 +850,51 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
                     -- register has a value of 0x00000701
                     if ulVerifySigResult == 0x701 then
                         tLog.info( "Successfully verified the signature of file: %s", strSingleFilePath )
-                        fOk = true
+                        tResult.ok = true
                     else
                         fOk = false
                         tLog.error( "Failed to verify the signature of file: %s", strSingleFilePath )
+                        tResult.ok = false
+                        tResult.message = "Signature verification failed."
                     end
 
                 else
-                    -- netX90 rev_1 and ethernet deteced, this function is not supported
+                    -- netX90 rev_1 and ethernet detected, this function is not supported
                     tLog.error( "This Interface is not yet supported! -> %s", strPluginType )
                 end
             else
-                tLog.error( tGenDataBlockOutput )
+                fOk = false
+                tLog.error( strErrorMsg ) 
                 tLog.error( "Failed to generate data_block for file: %s ", strSingleFilePath )
+                tResult.ok = false
+                tResult.message = strErrorMsg 
             end
+            
+            table.insert(atResults, tResult)
         end
     else
         tLog.error(strMsg)
         tLog.error( "Could not load data from file: %s", strVerifySigPath )
     end
 
-    return fOk
+    print(string.rep('-', 80))
+    print("Signature verification results:")
+    for i, tEntry in ipairs(atResults) do
+        local strOk
+        if tEntry.ok then 
+            strOk = "Signature check successful."
+        else    
+            strOk = "Signature check failed."
+        end 
+        if tEntry.message then
+            print(tEntry.path, strOk, tEntry.message)        
+        else
+            print(tEntry.path, strOk)
+        end
+    end
+    print(string.rep('-', 80))
+    return fOk, atResults
 end
-
 
 -- fResult, strMsg extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, strBootswitchParam)
 -- extend the usip file with the bootswitch and the bootswitch parameter
@@ -2224,6 +2279,7 @@ check_file(strExecReturnPath)
 check_file(strVerifySigPath)
 check_file(strBootswitchFilePath)
 
+
 -- check the file versions
 -- todo: combine both checks
 local strSecureOptionDir = path.join(strSecureOption, strNetxName)
@@ -2252,6 +2308,7 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
         tArgs.strSecureOptionPhaseTwo, strNetxName, "read_sip_M2M.bin"
     )
 
+    -- TODO: check only the files that are actually required.
     check_file(strResetVerifySigPath)
     check_file(strResetExecReturnPath)
     check_file(strResetBootswitchPath)
@@ -2346,9 +2403,10 @@ if tArgs.strUsipFilePath then
 end
 
 -- check if this is a secure run
--- do not verify the signature of the helper files if the read command is selected
+-- do not verify the signature of the helper files if the read command is selected  -- why?
+-- todo: this seems incomplete, e.g. no checks are made for the verify command.
 -- old: if fIsSecure  and not tArgs.fCommandReadSelected then
-if fIsSecure then
+if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
     -- verify the signature of the used HTBL files
     -- make a list of necessary files
     local tblHtblFilePaths = {}
@@ -2392,6 +2450,7 @@ if fIsSecure then
         end
     end
 end
+
 
 -- check if the usip command is selected
 --------------------------------------------------------------------------
@@ -2517,6 +2576,36 @@ elseif tArgs.fCommandVerifySelected then
         strExecReturnPath
     )
     
+
+--------------------------------------------------------------------------
+-- VERIFY_HELPER_SIGNATURE COMMAND
+--------------------------------------------------------------------------
+elseif tArgs.fCommandVerifyHelperSignaturesSelected then 
+    tLog.info("############################################")
+    tLog.info("# RUNNING VERIFY_HELPER_SIGNATURES COMMAND #")
+    tLog.info("############################################")
+
+    tLog.info("Checking signatures of support files...**")
+    
+    local astrDirs = {}
+    if tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+        local strPath = path.join(tArgs.strSecureOption, "netx90")
+        table.insert(astrDirs, strPath)
+    end
+        
+    local astrSigCheckPaths = tHelperFiles.getAllHelperPaths(astrDirs)
+    
+    local fFinalResult, atResults = verifySignature(
+        tPlugin, strPluginType, astrSigCheckPaths, strTmpFolderPath, strVerifySigPath
+    )
+    
+    tHelperFiles.showFileCheckResults(atResults)
+
+    if not fFinalResult then
+        tLog.error( "The Signatures of the support-files can not be verified." )
+        tLog.error( "Please check if the supported files are signed correctly" )
+        --os.exit(1)
+    end
 
 else
     tLog.error("No valid command. Use -h/--help for help.")
