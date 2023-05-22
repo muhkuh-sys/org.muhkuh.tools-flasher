@@ -20,6 +20,7 @@ SVN_AUTHOR ="$Author$"
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
+local tVerifySignature = require 'verify_signature'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -414,6 +415,17 @@ addSecureArgs(tParserCommandIdentifyNetx)
 local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
 addSecureArgs(tParserCommandCheckHelperFiles)
 
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+-- tParserCommandVerifyHelperSig:option(
+--     '-V --verbose'
+-- ):description(
+--     string.format(
+--         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+--     )
+-- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- printArgs(tArguments)
@@ -1023,6 +1035,12 @@ function main()
         printf("Time: %d seconds", dt)
         os.exit(fOk and 0 or 1)
         
+    elseif aArgs.fCommandVerifyHelperSignaturesSelected then 
+        fOk = tVerifySignature.verifyHelperSignatures(
+            aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions, aArgs.strSecureOption)
+        -- verifyHelperSignatures has printed a success/failure message
+        os.exit(fOk and 0 or 1)
+            
     elseif aArgs.fCommandTestCliSelected then
         flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)
