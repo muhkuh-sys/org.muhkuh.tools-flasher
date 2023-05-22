@@ -2336,7 +2336,7 @@ if tArgs.strUsipFilePath then
         tLog.error(strErrorMsg)
         os.exit(1)
     else
-        if iChiptype == 14  or iChiptype == 17 and tUsipConfigDict["num_of_chunks"] > 1  then
+        if (iChiptype == 14 or iChiptype == 17) and tUsipConfigDict["num_of_chunks"] > 1  then
             iGenMultiResult, astrPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
         else
             astrPathList = {strUsipFilePath}
