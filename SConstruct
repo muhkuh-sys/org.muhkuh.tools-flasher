@@ -681,6 +681,7 @@ if fBuildIsFull==True:
         'lua/lua/sipper.lua',
         'lua/lua/usip_generator.lua',
         'lua/lua/usip_player_conf.lua',
+        'lua/lua/verify_signature.lua',
         )
 
 
@@ -764,6 +765,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
         'targets/testbench/lua/helper_files.lua':                          'lua/lua/helper_files.lua', 
         'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/verify_signature.lua':                      'lua/lua/verify_signature.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
         'targets/testbench/lua/usip_player.lua':                           'lua/usip_player.lua',

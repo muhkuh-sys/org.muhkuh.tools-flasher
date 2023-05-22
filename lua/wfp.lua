@@ -14,6 +14,7 @@ local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
 
+local tVerifySignature = require 'verify_signature'
 
 
 
@@ -690,6 +691,19 @@ tParserCommandExample:option("-p --plugin_name"):description("plugin name"):targ
 tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
+
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+tParserCommandVerifyHelperSig:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -1028,6 +1042,10 @@ elseif tArgs.fCommandListSelected == true then
 elseif tArgs.fCommandPackSelected == true then
     fOk=pack(tArgs.strWfpArchiveFile,tArgs.strWfpControlFile,tWfpControl,tLog,tArgs.fOverwrite,tArgs.fBuildSWFP)
 
+elseif tArgs.fCommandVerifyHelperSignaturesSelected then 
+    tArgs.atPluginOptions = atPluginOptions
+    fOk = tVerifySignature.verifyHelperSignatures(
+        tArgs.strPluginName, tArgs.strPluginType, tArgs.atPluginOptions, tArgs.strSecureOption)
 end
 
 
