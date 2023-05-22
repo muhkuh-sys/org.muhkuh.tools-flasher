@@ -2,6 +2,32 @@ Updates in CLI Flasher v2.0.0-dev11
 ==============================
 CLI Flasher:
 * Bugfix: reset_netx command did not work
+* detect_secure_boot_mode command works via JTAG
+* Rename the command line flag --disable_helper_file_check to 
+  --disable_helper_version_check and hide it from the command line documentation.
+  Remove the short form '-d'.
+
+USIP Player:
+* Add the command verify_helper_signatures.
+  This command takes a directory containing signed helper binaries 
+  and validates the signatures against the keys stored in the netx.
+* Add the command disable_security.
+  This command applies an USIP file that 
+  - disables secure boot on the COM and APP CPU,
+  - enables the copying and disables the hiding of the COM and APP info pages 
+  - disables the security level on the COM and APP info pages
+* Add the flag --disable_helper_signature_check
+* Rename the command line flag --disable_helper_file_check to 
+  --disable_helper_version_check and hide it from the command line documentation.
+  Remove the short form '-d'.
+* Avoid unneccessary splitting of USIP images (SIPper)
+* Bugfix: some input files were not closed in SIPper
+* Bugfix: Possible error when skipping non-usip chunks. (USIP Generator)
+
+WFP:
+* Rename the command line flag --disable_helper_file_check to 
+  --disable_helper_version_check and hide it from the command line documentation.
+* Remove the short form '-d'.
 
 
 Updates in CLI Flasher v2.0.0-dev10
