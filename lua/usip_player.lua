@@ -152,7 +152,7 @@ tParserCommandUsip:flag('--no_reset'
 strDisableSecurityHelp = [[
     Disable security settings at COM and APP SIPs.
 
-    Following parameter will be set:
+    The following parameters will be set:
     COM SIP:
     - Security Access Level (SAL): OFF
     - Secure Boot Mode (SBM) :     OFF
