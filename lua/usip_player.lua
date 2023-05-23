@@ -144,6 +144,57 @@ tParserCommandUsip:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
 
+
+-- NXTFLASHER-603
+-- NXTFLASHER-550
+
+-- Add the "disable_security" command and all its options.
+strDisableSecurityHelp = [[
+    Disable security settings at COM and APP SIPs.
+
+    The following parameters will be set:
+    COM SIP:
+    - Security Access Level (SAL): OFF
+    - Secure Boot Mode (SBM) :     OFF
+    - SIP will be copied
+    - SIP will be visible
+    - (ENABLE_MI_UART_IN_SECURE :  OFF)  reserved for netX 90 rev2
+
+    APP SIP:
+    - Security Access Level (SAL): OFF
+    - Secure Boot Mode (SBM) :     OFF
+    - SIP will be copied
+    - SIP will be visible
+    - (ASIG_SIGNED_BINDING :       OFF) reserved for netX 90 rev2
+
+]]
+
+local tParserCommandDisableSecurity = tParser:command('ds disable_security', strDisableSecurityHelp):target('fCommandDisableSecurity')
+tParserCommandDisableSecurity:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandDisableSecurity:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandDisableSecurity:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandDisableSecurity:flag('--no_verify_usip_sig'):description(
+    "Do not verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
+):target('fVerifyUsipSigDisable')
+tParserCommandDisableSecurity:flag('--no_verify_sip_content'):description(
+    "Do not verify the content of an usip image against a netX SIP content after writing the usip."
+):target('fVerifySipContentDisabled')
+tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
+-- todo add more help here
+tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandDisableSecurity:flag('--no_reset'
+):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
+):target('fDisableReset'):default(false)
+tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
+
+
+
 -- Add the "set_sip_protection" command and all its options.
 strSetSipProtectionHelp = [[
     Set the SipProtectionCookie, enable protection of SIPs.
@@ -159,6 +210,7 @@ strSetSipProtectionHelp = [[
         - SIPs will not be copied
         - SIPs will be visiable
 ]]
+
 local tParserCommandSip = tParser:command('set_sip_protection', strSetSipProtectionHelp):target('fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
@@ -2360,6 +2412,28 @@ if tArgs.fCommandUsipSelected then
         strResetBootswitchPath,
         strResetReadSipPath
     )
+
+--------------------------------------------------------------------------
+-- Disable Security COMMAND
+--------------------------------------------------------------------------
+elseif tArgs.fCommandDisableSecurity then
+    tLog.info("##############################################")
+    tLog.info("# RUNNING Disable Security Setting COMMAND   #")
+    tLog.info("##############################################")
+
+    fFinalResult = usip(
+        tPlugin,
+        astrPathList,
+        tUsipConfigDict,
+        strTmpFolderPath,
+        strExecReturnPath,
+        strVerifySigPath,
+        strBootswitchFilePath,
+        strResetExecReturnPath,
+        strResetBootswitchPath,
+        strResetReadSipPath
+    )
+
 
 --------------------------------------------------------------------------
 -- Set SIP Command
