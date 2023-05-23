@@ -188,7 +188,6 @@ tParserCommandDisableSecurity:flag('--no_verify_SIP_content'):description(
 tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
 tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandDisableSecurity:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandDisableSecurity:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
