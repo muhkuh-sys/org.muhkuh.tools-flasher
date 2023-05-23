@@ -1,0 +1,55 @@
+@startuml
+
+title Program flow from CLI Flasher point of view
+
+start
+
+-> knock knock;
+':Initialize hardware;
+
+if (machine interface protocol active?) then (yes)
+
+  :try to connect to netx via different
+   serial terminal protocolls;
+  :detect secure boot mode;
+  note right
+    Detect secure boot mode is supported
+    for netX 90 rev1 and rev2
+  end note
+
+  :switch to MI protocol;
+
+endif
+
+if (MI == 3.0) then (MI 3.0)
+
+  : MI 3.0;
+  note right
+    No additional information about secure boot mode
+    can be extracted via MI 3.0
+  end note
+
+elseif (MI == 3.1) then (MI 3.1)
+
+  : MI 3.1;
+  note right
+    use info command to get information
+    about secure boot mode
+  end note
+  
+
+else (not supported)
+
+  :Other MI protocol versions
+    not supported ;
+
+  stop
+
+endif
+
+
+:continue with MI version
+  3.0 or 3.1;
+
+
+@enduml

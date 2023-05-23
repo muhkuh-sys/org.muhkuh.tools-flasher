@@ -420,7 +420,32 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
  
+    # build disable_security_settings.usp
+    disable_security_settings_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
  
+    disable_security_settings_app_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings_app.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_app.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
+ 
+    disable_security_settings_com_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings_com.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_com.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
+ 
+
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_nodbg = env_netx56_default.Clone()
     env_netx56_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
@@ -651,8 +676,9 @@ if fBuildIsFull==True:
         'helper_binaries/netx90/set_kek.usp')
         
     tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
-        'helper_binaries/netx90_usip/disable_secure_boot_app.usp',
-        'helper_binaries/netx90_usip/disable_secure_boot_com.usp')
+        disable_security_settings_usp,
+        disable_security_settings_com_usp,
+        disable_security_settings_app_usp)
     
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,

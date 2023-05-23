@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<HbootImage has_end="True" has_header="True" type="INTRAM">
+	<Chunks>
+		<UpdateSecureInfoPage>
+			<TargetInfoPage>COM</TargetInfoPage>
+			<Data>
+				<Concat>
+					<!-- PROTECTION OPTION FLAGS -->
+					<!-- 0x01 SECURITY_LEVEL1                    OFF -->
+					<!-- 0x02 SECURITY_LEVEL2                    OFF -->
+					<!-- 0x04 SECURE_BOOT_VIA_SIGNATURE          OFF -->
+					<!-- 0x08 ENABLE_MI_UART_IN_SECURE           OFF support starts with netX 90 rev 2 -->
+					<!-- 0x10 HIDE_COM_LOWER_PART                OFF -->
+					<!-- 0x20 HIDE_COM_UPPER_PART                OFF -->
+					<!-- 0x40 COPY_COM_LOWER_PART_TO_INTRAM      ON  -->
+					<!-- 0x80 COPY_COM_UPPER_PART_TO_INTRAM      ON  -->
+
+					<!-- ## data offset ## -->
+					<UInt16>556</UInt16>
+
+					<!-- ## data size ## -->
+					<UInt16>1</UInt16>
+
+					<!-- ## data value ## -->
+					<Hex>C0</Hex>
+					
+				</Concat>
+			</Data>
+		</UpdateSecureInfoPage>
+
+		<UpdateSecureInfoPage>
+			<TargetInfoPage>APP</TargetInfoPage>
+			<Data>
+				<Concat>
+					<!-- PROTECTION OPTION FLAGS -->
+					<!-- 0x01 SECURITY_LEVEL1                    OFF -->
+					<!-- 0x02 SECURITY_LEVEL2                    OFF -->
+					<!-- 0x04 SECURE_BOOT_VIA_SIGNATURE          OFF -->
+					<!-- 0x08 ASIG_SIGNED_BINDING                OFF support starts with netX 90 rev 2 -->
+					<!-- 0x10 HIDE_APP_LOWER_PART                OFF -->
+					<!-- 0x20 HIDE_APP_UPPER_PART                OFF -->
+					<!-- 0x40 COPY_APP_LOWER_PART_TO_INTRAM      ON  -->
+					<!-- 0x80 COPY_APP_UPPER_PART_TO_INTRAM      ON  -->
+
+					<!-- ## data offset ## -->
+					<UInt16>552</UInt16>
+
+					<!-- ## data size ## -->
+					<UInt16>1</UInt16>
+
+					<!-- ## data value ## -->
+					<Hex>C0</Hex>
+
+				</Concat>
+			</Data>
+		</UpdateSecureInfoPage>		
+	</Chunks>
+</HbootImage>	
