@@ -179,10 +179,10 @@ tParserCommandDisableSecurity:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandDisableSecurity:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandDisableSecurity:option('-t'):description("plugin type"):target("strPluginType")
-tParserCommandDisableSecurity:flag('--no_verify_USIP_sig'):description(
+tParserCommandDisableSecurity:flag('--no_verify_usip_sig'):description(
     "Do not verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
 ):target('fVerifyUsipSigDisable')
-tParserCommandDisableSecurity:flag('--no_verify_SIP_content'):description(
+tParserCommandDisableSecurity:flag('--no_verify_sip_content'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
 ):target('fVerifySipContentDisabled')
 tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
