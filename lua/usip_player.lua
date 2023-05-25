@@ -1436,7 +1436,7 @@ function usip(
     -- does the user want to verify the signature of the usip image?
     if tArgs.fVerifySigEnable then
         -- check if every signature in the list is correct via MI
-        fOk = verifySignature(
+        fOk = tVerifySignature.verifySignature(
             tPlugin, strPluginType, astrPathList, strTmpFolderPath, strVerifySigPath
         )
     else
@@ -2378,7 +2378,7 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
             tLog.info("Checking signatures of support files...")
     
             -- check if every signature in the list is correct via MI
-            fOk = verifySignature(
+            fOk = tVerifySignature.verifySignature(
                 tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strVerifySigPath
             )
     
@@ -2560,7 +2560,7 @@ elseif tArgs.fCommandVerifyHelperSignaturesSelected then
     local atResults
     local strPluginType = tPlugin:GetTyp()
     
-    fFinalResult, atResults = verify_signature.verifySignature(
+    fFinalResult, atResults = tVerifySignature.verifySignature(
         tPlugin, strPluginType, astrSigCheckPaths, strTmpFolderPath, strVerifySigPath
     )
     
