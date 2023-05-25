@@ -8,6 +8,7 @@ module("flasher_helper", package.seeall)
 -----------------------------------------------------------------------------
 
 local tFlasher = require 'flasher'
+local bit = require 'bit'
 
 -- exit code for detect_netx
 STATUS_OK = 0
@@ -73,6 +74,8 @@ function getHexString(strBin)
 	return strHex
 end
 
+-- Convert a binary string to an unsigned integer.
+-- str must be 1 to 4 bytes long and in little-endian byte order.
 function bytes_to_uint32(str)
     local ulValue = 0
 
@@ -326,6 +329,130 @@ function detect_chiptype(aArgs)
 end
 
 
+
+
+-- return tRes OR nil, strErrorMsg
+function readSip_via_jtag(tPlugin, strReadSipHbootImg)
+	local strErrorMsg = ""
+
+	local strReadSipExe
+	local ulReadSipExeAddress    = 0x00060000 -- Load address for the read_sip executable
+	local ulReadSipDataAddress   = 0x00062000 -- Location where read_sip stores the SIP pages.
+
+	-- The magic cookie is set by the read_sip program to indicate its state.
+	local ulReadSipMagicAddress  = 0x00065004 -- Location of the read_sip magic cookie 
+	local MAGIC_COOKIE_INIT      = 0x5541494d -- (MIAU) read_sip has entered pass 1, before resetting
+	local MAGIC_COOKIE_END       = 0x464f4f57 -- (WOOF) read_sip has finished pass 2, info pages validated/copied.
+
+	-- read sip result address and bit masks to interpret the result
+	local ulReadSipResultAddress = 0x00065000
+	local COM_SIP_CPY_VALID_MSK  = 0x00000001
+	local COM_SIP_VALID_MSK      = 0x00000002
+	local UID_CPY_MSK            = 0x00000004
+	local COM_SIP_INVALID_MSK    = 0x00000010
+	local APP_SIP_CPY_VALID_MSK  = 0x00000100
+	local APP_SIP_VALID_MSK      = 0x00000200
+	local APP_SIP_INVALID_MSK    = 0x00001000
+	local FIRST_RUN_DONE         = 0x00010000 -- read_sip pass 1 done, shortly before reset
+
+	local ulReadSipResult
+	local ulMagicResult
+	local strCalSipData
+	local strComSipData
+	local strAppSipData
+	local tRes
+
+	-- for debugging
+	-- local ulIflash0ProtectionInfo = tPlugin:read_data32(0xff001c48)
+	-- local ulIflash1ProtectionInfo = tPlugin:read_data32(0xff001cc8)
+	-- local ulIflash2ProtectionInfo = tPlugin:read_data32(0xff401448)
+	-- printf("intflash 0 protection info: 0x%08x", ulIflash0ProtectionInfo)
+	-- printf("intflash 1 protection info: 0x%08x", ulIflash1ProtectionInfo)
+	-- printf("intflash 2 protection info: 0x%08x", ulIflash2ProtectionInfo)
+
+	-- extract the executable portion of the read_sip image from the data chunk 
+	-- and download it to RAM.
+	printf("download the read_sip binary to0x%08x", ulReadSipExeAddress)
+	local strReadSipExe = string.sub(strReadSipHbootImg, 0x40D)
+	tFlasher.write_image(tPlugin, ulReadSipExeAddress, strReadSipExe)
+	
+	-- Set the FIRST_RUN_DONE flag in ReadSipResult. 
+	-- This prevents read_sip from performing a reset.
+	printf("reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
+	tPlugin:write_data32(ulReadSipResultAddress, FIRST_RUN_DONE)
+
+	-- Set the cookie to MAGIC_COOKIE_INIT. 
+	-- This prevents read_sip from clearing the ReadSipResult.
+	tPlugin:write_data32(ulReadSipMagicAddress, MAGIC_COOKIE_INIT)
+
+	--sleep_s(2) -- what for?
+	
+	print("Start read_sip binary via call")
+	tFlasher.call(
+			tPlugin,
+			ulReadSipExeAddress + 1,
+			ulReadSipResultAddress
+	)
+
+	ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
+	ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
+	-- printf("read_sip magic cookie value: 0x%08x", ulMagicResult)
+	-- printf("read_sip result: 0x%08x", ulReadSipResult)
+	
+	if ulMagicResult ~= MAGIC_COOKIE_END then
+		strErrorMsg = "An error has occurred while executing read_sip (MAGIC_COOKIE_END not found)."
+	else 
+		printf("read_sip has finished (found MAGIC_COOKIE_END).")
+	
+		-- ignore the CAL page.
+		--strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
+
+		fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
+		fComCopyOk = bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 
+		if fComSipOk or fComCopyOk then
+			strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
+		end
+		
+		if fComCopyOk then 
+			print("The COM SIP copy is valid.")
+		elseif fComSipOk then
+			print("The COM SIP copy is invalid.")
+			print("The COM SIP is available and valid.")
+		else
+			print("The COM SIP copy is invalid.")
+			print("The COM SIP is not available.")
+		end
+
+		fAppSipOk = bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0
+		fAppCopyOk = bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 
+		if fAppSipOk or fAppCopyOk then
+			strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
+		end
+
+		if fAppCopyOk then 
+			print("The APP SIP Copy is valid.")
+		elseif fAppSipOk then
+			print("The APP SIP Copy is invalid.")
+			print("The APP SIP is available and valid.")
+		else
+			print("The APP SIP Copy is invalid.")
+			print("The APP SIP is not available.")
+		end
+
+		tRes = {
+			fComSipOk  = fComSipOk,
+			fComCopyOk = fComCopyOk,
+			fAppSipOk  = fAppSipOk,
+			fAppCopyOk = fAppCopyOk,
+			--strCalSipData = strCalSipData, -- ignore the CAL page.
+			strComSipData = strComSipData,
+			strAppSipData = strAppSipData
+		}
+	end
+	
+	return tRes, strErrorMsg
+end
+
 function detect_secure_boot_mode(aArgs)
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -345,9 +472,8 @@ function detect_secure_boot_mode(aArgs)
 	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
-	elseif tPlugin:GetTyp() ~= "romloader_uart" then
-		strMsg = "Only romloader_uart is supported."
-	else
+		
+	elseif tPlugin:GetTyp() == "romloader_uart" then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
@@ -450,6 +576,125 @@ function detect_secure_boot_mode(aArgs)
 				end
 			end -- console mode
 		end -- chip type
+
+	elseif tPlugin:GetTyp() == "romloader_jtag" then
+		local strReadSipPath = path.join("netx", "hboot", "unsigned", "netx90", "read_sip_M2M.bin")  --tFlasher.HELPER_FILES_PATH, 
+		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
+		strReadSipBin, strMsg = loadBin(strReadSipPath)
+		if strReadSipBin == nil then 
+			print(strMsg)
+		else
+			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+			print("Connect() result: ", fConnected, strMsg)
+	
+			if not fConnected then
+				print("Failed to connect.")
+			else
+				iChiptype = tPlugin:GetChiptyp()
+				strChipName = tPlugin:GetChiptypName(iChiptype)
+	
+				if iChiptype == nil or iChiptype == romloader.ROMLOADER_CHIPTYP_UNKNOWN then
+					print("Could not detect chip type")
+					strMsg = "Failed to get chip type"
+	
+				elseif iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90B
+				and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90C
+				and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90D then
+					strMsg = "detect_secure_boot_mode supports only netX 90 Rev.1 and 2"
+	
+				else
+					printf("Chip type: %s (%d) (may be suspicious, PHY version not verified)", strChipName, iChiptype)
+					
+					-- Make sure that the SIP copies in RAM are updated, if they are enabled at all.
+					-- We do this by clearing the hashes of the SIP copies and then triggering a reset 
+					-- by closing and re-opening the JTAG connection.
+					-- The reset mechanism built into read_sip is NOT used, because that would require 
+					-- read_sip to be signed if secure boot is on.
+	
+					local COM_SIP_COPY_ADDR = 0x200a7000 -- address of the copied com secure info page
+					local APP_SIP_COPY_ADDR = 0x200a6000 -- address of the copied app secure info page
+					local OFF_COM_SIP_HASH = 0x0fd0
+					local OFF_APP_SIP_HASH = 0x0fd0
+					local SIZ_COM_SIP_HASH = 0x30
+					local SIZ_APP_SIP_HASH = 0x30
+					
+					local strZero = string.rep(string.char(0x55), SIZ_COM_SIP_HASH)
+					flasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
+					local strReadback = flasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
+					if strReadback ~= strZero then 
+						printf("Failed to clear COM SIP hash")
+					else
+						local strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
+						flasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
+						local strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
+						if strReadback ~= strZero then 
+							printf("Failed to clear APP SIP hash")
+						else
+							tPlugin:Disconnect()
+							strPluginName = tPlugin:GetName()
+							strPluginType = tPlugin:GetTyp()
+							if atPluginOptions.romloader_jtag.jtag_reset == "Attach" then 
+								atPluginOptions.romloader_jtag.jtag_reset = "SoftReset"
+							end
+							
+							tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+							if tPlugin == nil then
+								strMsg = strMsg or "Could not re-open the JTAG interface."
+							else 
+								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+								print("Connect() result: ", fConnected, strMsg)
+								
+								if not fConnected then
+									print("Failed to reconnect.")
+								else
+									-- read the SIP pages 
+									local tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
+		
+									if tRes == nil then 
+										print(strMsg)
+									else
+										-- Get the secure boot flags from the info pages.
+										OFF_COM_SIP_PROTECTION_FLAGS = 556+1
+										MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										OFF_APP_SIP_PROTECTION_FLAGS = 552+1
+										MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										
+										local fSecureBootCOM = nil
+										local fSecureBootAPP = nil
+									
+										if tRes.strComSipData ~= nil then 
+											local bSecureBootCOM = tRes.strComSipData:byte(OFF_COM_SIP_PROTECTION_FLAGS)
+											-- printf("COM secure boot options bit 0-7: 0x%02x", bSecureBootCOM)
+											fSecureBootCOM = (bit.band(bSecureBootCOM, MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT)
+										end 
+										
+										if tRes.strAppSipData ~= nil then 
+											local bSecureBootAPP = tRes.strAppSipData:byte(OFF_APP_SIP_PROTECTION_FLAGS)
+											-- printf("APP secure boot options bit 0-7: 0x%02x", bSecureBootAPP)
+											fSecureBootAPP = (bit.band(bSecureBootAPP, MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT)
+										end 
+		
+										-- Derive the secure boot status.
+										if fSecureBootCOM == false and fSecureBootAPP == false then
+											iSecureBootStatus = SECURE_BOOT_DISABLED
+										elseif fSecureBootCOM == true then
+											iSecureBootStatus = SECURE_BOOT_ENABLED
+										elseif fSecureBootCOM == false and fSecureBootAPP == true then
+											iSecureBootStatus = SECURE_BOOT_ONLY_APP_ENABLED
+										else 
+											iSecureBootStatus = SECURE_BOOT_UNKNOWN
+										end
+									end -- tRes == nil
+								end -- fConnected the 2nd time
+							end -- getPlugin
+						end -- clear APP SIP hash 
+					end -- clear COM SIP Hash
+				end -- chip typ e netx 90
+			end -- connected the 1st time
+		end -- readSipM2M image
+
+	else
+		strMsg = "Only romloader_uart and romloader_jtag are supported."
 	end -- if tPlugin
 
 	if iSecureBootStatus==SECURE_BOOT_DISABLED then
@@ -459,12 +704,16 @@ function detect_secure_boot_mode(aArgs)
 	elseif iSecureBootStatus==SECURE_BOOT_ONLY_APP_ENABLED then
 		strMsg = "Secure boot mode enabled. COM CPU is in open mode, APP CPU is in secure boot mode."
 	elseif iSecureBootStatus==SECURE_BOOT_UNKNOWN then
-		strMsg = "Cannot detect secure boot mode. "..
-		"If the netX was just reset, COM and APP are in open mode."
+		strMsg = "Cannot detect secure boot mode. "
+		if tPlugin:GetTyp() == "romloader_uart" then
+			strMsg = strMsg .. "If the netX was just reset, COM and APP are in open mode."
+		end
 	else
-		strMsg = "Cannot detect secure boot mode: " .. strMsg or "unknown error"
+		strMsg = "Cannot detect secure boot mode: " .. (strMsg or "unknown error")
 	end
 
+	tPlugin:Disconnect()
+	
 	return iSecureBootStatus, strMsg
 
 end

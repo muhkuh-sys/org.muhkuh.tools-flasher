@@ -17,26 +17,6 @@ local atLogLevels = {
 }
 
 
-function bytes_to_int(str, endian, signed)
-    -- use length of string to determine 8,16,32,64 bits
-    local t = { str:byte(1, -1) }
-    if endian == "big" then
-        --reverse bytes
-        local tt = {}
-        for k = 1, #t do
-            tt[#t - k + 1] = t[k]
-        end
-        t = tt
-    end
-    local n = 0
-    for k = 1, #t do
-        n = n + t[k] * 2 ^ ((k - 1) * 8)
-    end
-    if signed then
-        n = (n > 2 ^ (#t * 8 - 1) - 1) and (n - 2 ^ (#t * 8)) or n -- if last bit set, negative.
-    end
-    return n
-end
 
 local UsipGenerator = class()
 
@@ -273,6 +253,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
 
         -- read whole file and find the first USIP chunk
+        -- Note: this will cause an error if the string "USIP" occurs 
+        -- somewhere before the first USIP chunk.
         local strUsipFileContent = tUsipFileHandle:read("*a")
         i, j = string.find(strUsipFileContent, "USIP")
         iUsipFileOffset = i - 1
@@ -287,17 +269,17 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             local strChunkSize = tUsipFileHandle:read(4)
             local ulChunkSize
 
-            if strChunkId == nil or tFlasherHelper.bytes_to_uint32(strChunkId, "little", "unsigned") == 0 then
+            if strChunkId == nil or tFlasherHelper.bytes_to_uint32(strChunkId) == 0 then
                 print("No Chunk ID found. End of loop.")
                 break
             end
 
             -- get the chunk size
-            ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize, "little", "unsigned") * 4
+            ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize) * 4
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
                 print(string.format("Skip over '%s' chunk", strChunkId))
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
 
             elseif strChunkId == "USIP" then
                 self.tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
@@ -324,7 +306,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
                 -- get the key type
                 local strUsipChunkKey = tUsipFileHandle:read(1)
-                local ulUsipChunkKey = tFlasherHelper.bytes_to_uint32(strUsipChunkKey, "little", "unsigned")
+                local ulUsipChunkKey = tFlasherHelper.bytes_to_uint32(strUsipChunkKey)
                 mh_sha384:hash(strUsipChunkKey)
                 tUsipFileContent[iUsipChunkIdx]["key_idx"] = strUsipChunkKey
                 tUsipFileContent[iUsipChunkIdx]["key_idx_int"] = ulUsipChunkKey
@@ -379,14 +361,14 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     print("strKeyAlgorithm offset " ..tUsipFileHandle:seek())
                     -- extract the key algorithm
                     local strKeyAlgorithm = tUsipFileHandle:read(1)
-                    local ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm, 'little', 'unsigned')
+                    local ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm)
                     tUsipFileContent[iUsipChunkIdx]["key_algorithm"] = strKeyAlgorithm
 
 
                     print("strKeyStrength offset " ..tUsipFileHandle:seek())
                     -- extract key strength
                     local strKeyStrength = tUsipFileHandle:read(1)
-                    local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength, 'little', 'unsigned')
+                    local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength)
                     tUsipFileContent[iUsipChunkIdx]["key_strength"] = strKeyStrength
 
                     tUsipFileHandle:seek("set", tUsipFileHandle:seek()-2)
@@ -425,17 +407,17 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx] = {}
 
                     local strDataOffset = tUsipFileHandle:read(2)
-                    local ulDataOffset = tFlasherHelper.bytes_to_uint32(strDataOffset, 'little', 'unsigned')
+                    local ulDataOffset = tFlasherHelper.bytes_to_uint32(strDataOffset)
                     mh_sha384:hash(strDataOffset)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset"] = strDataOffset
-                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset_int"] = tFlasherHelper.bytes_to_uint32(strDataOffset)
+                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["offset_int"] = ulDataOffset
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
                     local strDataSize = tUsipFileHandle:read(2)
-                    local ulDataSize = tFlasherHelper.bytes_to_uint32(strDataSize, 'little', 'unsigned')
+                    local ulDataSize = tFlasherHelper.bytes_to_uint32(strDataSize)
                     mh_sha384:hash(strDataSize)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size"] = strDataSize
-                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = tFlasherHelper.bytes_to_uint32(strDataSize)
+                    tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = ulDataSize
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
                     local current = tUsipFileHandle:seek()
@@ -471,7 +453,6 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
                 local current = tUsipFileHandle:seek()
                 local strSignature = tUsipFileHandle:read(ulSignatureSize)
-                local ulSignature = tFlasherHelper.bytes_to_uint32(strSignature)
                 tUsipFileContent[iUsipChunkIdx]["signature"] = strSignature
 
                 tUsipFileContent[iUsipChunkIdx]["sha384_hash"] = mh_sha384:hash_end()

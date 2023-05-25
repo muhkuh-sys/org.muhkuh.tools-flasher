@@ -14,6 +14,7 @@ local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
 
+local tVerifySignature = require 'verify_signature'
 
 
 
@@ -617,9 +618,12 @@ tParser:flag "--version":description "Show version info and exit. ":action(funct
     os.exit(0)
 end)
 
-tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
-    tHelperFiles.disableHelperFileChecks()
-end)
+-- Add a hidden flag to disable the version checks on helper files.
+tParser:flag "--disable_helper_version_check":hidden(true)
+    :description "Disable version checks on helper files."
+    :action(function()
+        tHelperFiles.disableHelperFileChecks()
+    end)
 
 -- Add the "flash" command and all its options.
 local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.'):target('fCommandFlashSelected')
@@ -686,6 +690,19 @@ tParserCommandExample:argument('xml', 'Output example XML control file.'):target
 tParserCommandExample:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
 tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+
+
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+tParserCommandVerifyHelperSig:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 local tArgs = tParser:parse()
 
@@ -1025,6 +1042,10 @@ elseif tArgs.fCommandListSelected == true then
 elseif tArgs.fCommandPackSelected == true then
     fOk=pack(tArgs.strWfpArchiveFile,tArgs.strWfpControlFile,tWfpControl,tLog,tArgs.fOverwrite,tArgs.fBuildSWFP)
 
+elseif tArgs.fCommandVerifyHelperSignaturesSelected then 
+    tArgs.atPluginOptions = atPluginOptions
+    fOk = tVerifySignature.verifyHelperSignatures(
+        tArgs.strPluginName, tArgs.strPluginType, tArgs.atPluginOptions, tArgs.strSecureOption)
 end
 
 

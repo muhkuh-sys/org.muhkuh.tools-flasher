@@ -420,7 +420,32 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
  
+    # build disable_security_settings.usp
+    disable_security_settings_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
  
+    disable_security_settings_app_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings_app.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_app.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
+ 
+    disable_security_settings_com_usp = env_netx90_nodbg_secure.HBootImage(
+        os.path.join('targets', 'disable_security_settings', 'disable_security_settings_com.usp'),
+        os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_com.xml'),
+        HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
+        HBOOTIMAGE_KNOWN_FILES=dict(),
+        HBOOTIMAGE_DEFINES=dict(),
+        ASIC_TYP='NETX90B')
+ 
+
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_nodbg = env_netx56_default.Clone()
     env_netx56_nodbg.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0']])
@@ -651,8 +676,9 @@ if fBuildIsFull==True:
         'helper_binaries/netx90/set_kek.usp')
         
     tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
-        'helper_binaries/netx90_usip/disable_secure_boot_app.usp',
-        'helper_binaries/netx90_usip/disable_secure_boot_com.usp')
+        disable_security_settings_usp,
+        disable_security_settings_com_usp,
+        disable_security_settings_app_usp)
     
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
@@ -681,6 +707,7 @@ if fBuildIsFull==True:
         'lua/lua/sipper.lua',
         'lua/lua/usip_generator.lua',
         'lua/lua/usip_player_conf.lua',
+        'lua/lua/verify_signature.lua',
         )
 
 
@@ -764,6 +791,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
         'targets/testbench/lua/helper_files.lua':                          'lua/lua/helper_files.lua', 
         'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/verify_signature.lua':                      'lua/lua/verify_signature.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
         'targets/testbench/lua/usip_player.lua':                           'lua/usip_player.lua',

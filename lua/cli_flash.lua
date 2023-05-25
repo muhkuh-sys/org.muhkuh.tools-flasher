@@ -20,6 +20,7 @@ SVN_AUTHOR ="$Author$"
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
+local tVerifySignature = require 'verify_signature'
 
 --------------------------------------------------------------------------
 -- Usage
@@ -218,9 +219,12 @@ tParser:flag "-v --version":description "Show version info and exit. ":action(fu
     os.exit(0)
 end)
 
-tParser:flag "-d --disable_helper_file_check":description "Disable version checks on helper files.":action(function()
-    tHelperFiles.disableHelperFileChecks()
-end)
+-- Add a hidden flag to disable the version checks on helper files.
+tParser:flag "--disable_helper_version_check":hidden(true)
+    :description "Disable version checks on helper files."
+    :action(function()
+        tHelperFiles.disableHelperFileChecks()
+    end)
 
 
 
@@ -411,6 +415,17 @@ addSecureArgs(tParserCommandIdentifyNetx)
 local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
 addSecureArgs(tParserCommandCheckHelperFiles)
 
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+-- tParserCommandVerifyHelperSig:option(
+--     '-V --verbose'
+-- ):description(
+--     string.format(
+--         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+--     )
+-- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- printArgs(tArguments)
@@ -970,7 +985,7 @@ function main()
 
     elseif aArgs.fCommandResetSelected then
 
-        tPlugin, strMsg = getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
+        tPlugin, strMsg = tFlasherHelper.getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
         local strPluginType = tPlugin:GetTyp()
         local ulM2MMajor = tPlugin:get_mi_version_maj()
         local ulM2MMinor = tPlugin:get_mi_version_min()
@@ -1020,6 +1035,12 @@ function main()
         printf("Time: %d seconds", dt)
         os.exit(fOk and 0 or 1)
         
+    elseif aArgs.fCommandVerifyHelperSignaturesSelected then 
+        fOk = tVerifySignature.verifyHelperSignatures(
+            aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions, aArgs.strSecureOption)
+        -- verifyHelperSignatures has printed a success/failure message
+        os.exit(fOk and 0 or 1)
+            
     elseif aArgs.fCommandTestCliSelected then
         flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)
