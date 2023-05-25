@@ -25,7 +25,7 @@ tSignatures[2][3] = 512  -- 4096
 local Sipper = class()
 
 function Sipper:_init(tLog)
-    print("initialize USIP")
+    print("initialize Sipper")
     self.tLog = tLog
 end
 
@@ -393,7 +393,7 @@ end
 
 
 if pcall(debug.getlocal, 4, 1) then
-    print("Library")
+    print("Sipper used as Library")
     -- do nothing
 else
     print("Main file")

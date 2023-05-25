@@ -41,7 +41,7 @@ end
 local UsipGenerator = class()
 
 function UsipGenerator:_init(tLog)
-    print("initialize USIP")
+    print("initialize USIP Generator")
     self.tLog = tLog
 end
 
@@ -521,7 +521,7 @@ end
 
 
 if pcall(debug.getlocal, 4, 1) then
-    print("Library")
+    print("USIP Generator used as Library")
     -- do nothing
 else
     print("Main file")
