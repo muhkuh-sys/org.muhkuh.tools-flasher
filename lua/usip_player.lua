@@ -146,7 +146,8 @@ strSetSipProtectionHelp = [[
     - Enable all ROOT ROMkeys
     - remove protection option flags
         - SIPs will not be copied
-        - SIPs will be visiable
+        - SIPs will be visible
+    - update counter will be reset to zero
 ]]
 local tParserCommandSip = tParser:command('set_sip_protection', strSetSipProtectionHelp):target('fCommandSipSelected')
 tParserCommandSip:option(
@@ -735,7 +736,7 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
 end
 
 
--- fOk verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strSipperExePath, strVerifySigPath)
+-- fOk verifySignature(tPlugin, strPluginType, tPathList, strTempPath, strSipperExePath, strVerifySigPath)
 -- verify the signature of every usip file in the list
 -- the SIPper is used for the data-block generation only
 -- the verify_sig binary does not need to be signed, because the image is called directly via the tPlugin:call command.
@@ -744,7 +745,7 @@ end
 -- For every single usip in the list a new data block have to be generated and an individually signature verification is
 -- performed. Every signature is checked even if one already failed.
 -- returns true if every signature is correct, otherwise false
-function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strVerifySigPath)
+function verifySignature(tPlugin, strPluginType, tPathList, strTempPath, strVerifySigPath)
     -- NOTE: For more information of how the verify_sig program works and how the data block is structured and how the
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
     -- be pessimistic
@@ -775,7 +776,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
         end
 
         -- iterate over the path list to check the signature of every usip file
-        for idx, strSingleFilePath in ipairs(astrPathList) do
+        for idx, strSingleFilePath in ipairs(tPathList) do
             local strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
             -- generate data block
             local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockTmpPath)
@@ -968,7 +969,6 @@ end
 -- loading an usip file
 -- loads an usip file via a dedicated interface and checks if the chiptype is supported
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
--- todo load usip with new m2m command if m2m version 3.1 and newer
 function loadUsip(strFilePath, tPlugin, strPluginType)
 
     local ulRetries = 5
@@ -1095,9 +1095,11 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
 
         if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
             if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+                -- M2M protocol for rev2
                 tLog.info("Start read sip hboot image inside intram")
                 tFlasher.call_hboot(tPlugin, nil, true)
             elseif strPluginType ~= 'romloader_jtag' then
+                -- M2M protocol for rev2
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
@@ -1109,7 +1111,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
                         ulDataLoadAddress + 1,
                         ulReadSipResultAddress
                 )
-            else -- jtag interface
+            else
+                -- jtag interface for all versions
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
@@ -1334,18 +1337,19 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
 
     local ulM2MMajor = tPlugin:get_mi_version_maj()
     local ulM2MMinor = tPlugin:get_mi_version_min()
+    local strPluginType = tPlugin:GetTyp()
+
     if ulM2MMajor == 3 and ulM2MMinor >= 1 then
         tFlasher.call_hboot(tPlugin)
     else
-        local strSetKekData = string.sub(strCombinedImageData, 1037, 5256)
+        local strSetKekData = string.sub(strCombinedImageData, 1037)
         tFlasher.write_image(tPlugin, ulHbootDataLoadAddress, strSetKekData)
 
         if strPluginType ~= "romloader_jtag" then
-            tPlugin:call_no_answer(
+            tFlasher.call_no_answer(
+                tPlugin,
                 ulHbootDataLoadAddress + 1,
-                ulDataStructureAddress,
-                tFlasher.default_callback_message,
-                2
+                ulDataStructureAddress
             )
         else
             tPlugin:call(
@@ -1372,6 +1376,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     -- TODO: include description
     if ulHbootResult == 0x107 then
         tLog.info( "Successfully set KEK" )
+        fOk = true
     else
         tLog.error( "Failed to set KEK" )
         fOk = false
@@ -1386,7 +1391,7 @@ end
 -----------------------------------------------------------------------------------------------------
 function usip(
         tPlugin,
-        astrPathList,
+        tPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
@@ -1415,7 +1420,7 @@ function usip(
     if tArgs.fVerifySigEnable then
         -- check if every signature in the list is correct via MI
         fOk = verifySignature(
-            tPlugin, strPluginType, astrPathList, strTmpFolderPath, strVerifySigPath
+            tPlugin, strPluginType, tPathList, strTmpFolderPath, strVerifySigPath
         )
     else
         -- set the signature verification to automatically to true
@@ -1425,7 +1430,7 @@ function usip(
     -- just continue if the verification process was a success (or not enabled)
     if fOk then
         -- iterate over the usip file path list
-        for _, strSingleUsipPath in ipairs(astrPathList) do
+        for _, strSingleUsipPath in ipairs(tPathList) do
             -- check if usip needs extended by the bootswitch with parameters
             if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
                 tLog.debug("Extending USIP file with bootswitch.")
@@ -1605,18 +1610,17 @@ end
 function set_kek(
     tPlugin,
     strTmpFolderPath,
-    strVerifySigHbootPath,
-    astrPathList,
-    fIsSecure,
-    strReadSipPath,
+    tPathList,
+    strExecReturnPath,
+    strVerifySigPath,
     strResetReadSipPath,
     strBootswitchFilePath,
     strResetBootswitchPath,
-    strExecReturnFilePath,
     strResetExecReturnPath,
     tUsipConfigDict,
     strKekHbootFilePath,
-    strKekDummyUsipFilePath
+    strKekDummyUsipFilePath,
+    iChiptype
 )
 
     -- be optimistic
@@ -1642,12 +1646,12 @@ function set_kek(
     -- are replaced by the new generated KEK and so the signature will change too
 
     -- check if an USIP file was provided
-    if next(astrPathList) then
+    if next(tPathList) then
         fProcessUsip = true
         tLog.debug("Found general USIP to process.")
         -- lua tables start with 1
-        strFirstUsipPath = astrPathList[1]
-        table.remove(astrPathList, 1)
+        strFirstUsipPath = tPathList[1]
+        table.remove(tPathList, 1)
         -- load usip data
         strFirstUsipData, strMsg = tFlasherHelper.loadBin(strFirstUsipPath)
         if not strFirstUsipData then
@@ -1670,6 +1674,7 @@ function set_kek(
         fOk = false
         local iMaxImageSizeInBytes = 0x2000
         local iMaxOptionSizeInBytes = 0x1000
+        local iCopyUsipSize = 0x0
         -- combine the images with fill data
         if string.len( strKekHbootData ) > iMaxImageSizeInBytes then
             tLog.error("KEK HBoot image is to big, something went wrong.")
@@ -1698,27 +1703,35 @@ function set_kek(
             -- reserved      0x0040
             -- reserved      0x0080
             if fProcessUsip then
-                -- todo add switch case for netx90 revision to support netx90 rev2
-                strSetKekOptions = strSetKekOptions .. string.char(0x11, 0x00)
-                -- size of copied data
-                local iCopySizeInBytes = iMaxImageSizeInBytes + string.len(strFirstUsipData) + iMaxOptionSizeInBytes
-                strSetKekOptions = strSetKekOptions .. string.char(
-                    bit.band(iCopySizeInBytes, 0xff)
-                )
-                strSetKekOptions = strSetKekOptions .. string.char(
-                    bit.band(bit.rshift(iCopySizeInBytes, 8), 0xff)
-                )
-                strSetKekOptions = strSetKekOptions .. string.char(
-                    bit.band(bit.rshift(iCopySizeInBytes, 16), 0xff)
-                )
-                strSetKekOptions = strSetKekOptions .. string.char(
-                    bit.band(bit.rshift(iCopySizeInBytes, 24), 0xff)
-                )
+                if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90A or
+                        iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+                        iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+                    strSetKekOptions = strSetKekOptions .. string.char(0x11, 0x00)
+                elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
+                    strSetKekOptions = strSetKekOptions .. string.char(0x12, 0x00)
+                end
+
+                iCopyUsipSize = string.len(strFirstUsipData)
+
             else
-                strSetKekOptions = strSetKekOptions .. string.char(0x01, 0x00)
-                -- set not used data to zero
-                strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
+                strSetKekOptions = strSetKekOptions .. string.char(0x01, 0x00)  -- todo change for rev2?
             end
+            
+            -- size of copied data
+            local iCopySizeInBytes = iMaxImageSizeInBytes + iCopyUsipSize + iMaxOptionSizeInBytes
+
+            strSetKekOptions = strSetKekOptions .. string.char(
+                bit.band(iCopySizeInBytes, 0xff)
+            )
+            strSetKekOptions = strSetKekOptions .. string.char(
+                bit.band(bit.rshift(iCopySizeInBytes, 8), 0xff)
+            )
+            strSetKekOptions = strSetKekOptions .. string.char(
+                bit.band(bit.rshift(iCopySizeInBytes, 16), 0xff)
+            )
+            strSetKekOptions = strSetKekOptions .. string.char(
+                bit.band(bit.rshift(iCopySizeInBytes, 24), 0xff)
+            )
             -- reserved
             strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
             -- reserved
@@ -1747,7 +1760,7 @@ function set_kek(
             if tArgs.strBootswitchParams == "JTAG" then
                 tLog.debug("Extending USIP file with exec.")
                 fOk, strUsipToExtend, strMsg = extendExecReturn(
-                        strUsipToExtend, strTmpFolderPath, strExecReturnFilePath
+                        strUsipToExtend, strTmpFolderPath, strExecReturnPath
                 )
                 tLog.debug(strMsg)
             else if tArgs.strBootswitchParams ~= nil then
@@ -1824,7 +1837,15 @@ function set_kek(
                                 -- is_secure     0x0020 (set ON / not set OFF)
                                 -- reserved      0x0040
                                 -- reserved      0x0080
-                                strSetKekOptions = strSetKekOptions .. string.char(0x01, 0x00)
+
+                                if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90A or
+                                        iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+                                        iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C then
+                                    strSetKekOptions = strSetKekOptions .. string.char(0x01, 0x00)
+                                elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
+                                    strSetKekOptions = strSetKekOptions .. string.char(0x02, 0x00)
+                                end
+
                                 -- set not used data to zero
                                 strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
                                 -- reserved
@@ -1874,7 +1895,7 @@ function set_kek(
                                     else
                                         fOk = usip(
                                                 tPlugin,
-                                                astrPathList,
+                                                tPathList,
                                                 tUsipConfigDict,
                                                 strTmpFolderPath,
                                                 strExecReturnPath,
@@ -2078,7 +2099,7 @@ local strBootswitchFilePath
 local strKekHbootFilePath
 local strKekDummyUsipFilePath
 local strExecReturnFilePath
-local astrPathList = {}
+local tPathList = {}
 local strTmpFolderPath = tempFolderConfPath
 local strUsipConfigPath
 local strResetExecReturnPath
@@ -2181,10 +2202,11 @@ if iChiptype then
         tLog.error("The connected netX (%s) is not supported.", strNetxName)
         tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
         os.exit(1)
-    elseif iChiptype == 14 or iChiptype == 17 then -- todo replace with romloader constants
+    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
         tLog.debug("Detected netX90 rev1")
         fIsRev2 = false
-    elseif iChiptype == 18 then
+    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
         tLog.debug("Detected netX90 rev2")
         fIsRev2 = true
     end
@@ -2262,7 +2284,8 @@ end
 if tArgs.fCommandKekSelected then
     -- set kek image paths
     strKekHbootFilePath = path.join(strSecureOption, strNetxName, "set_kek.bin")
-    strKekDummyUsipFilePath = path.join(strSecureOption, strNetxName, "set_kek.usp")
+    -- strKekDummyUsipFilePath = path.join(strSecureOption, strNetxName, "set_kek.usp")
+    strKekDummyUsipFilePath = path.join("netx", "helper", "netx90", "set_kek.usp")
     -- check if the set_kek file exists
     if not path.exists(strKekHbootFilePath) then
         tLog.error( "Set-KEK binary is not available at: %s", strKekHbootFilePath )
@@ -2270,7 +2293,7 @@ if tArgs.fCommandKekSelected then
         os.exit(1)
     end
     -- todo: check version
-    local strSetKekBin, strMsg = getHelperFile(strSecureOptionDir, "set_kek")
+    local strSetKekBin, strMsg = tHelperFiles.getHelperFile(strSecureOptionDir, "set_kek")
     if not strSetKekBin then
         tLog.error(strMsg or "unknown error")
         tLog.error("Error during file version checks.")
@@ -2322,9 +2345,9 @@ if tArgs.strUsipFilePath then
         os.exit(1)
     else
         if iChiptype == 14  or iChiptype == 17 and tUsipConfigDict["num_of_chunks"] > 1  then
-            iGenMultiResult, astrPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+            iGenMultiResult, tPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
         else
-            astrPathList = {strUsipFilePath}
+            tPathList = { strUsipFilePath}
             iGenMultiResult = true
         end
     end
@@ -2388,7 +2411,7 @@ if tArgs.fCommandUsipSelected then
     tLog.info("######################################")
     fFinalResult = usip(
         tPlugin,
-        astrPathList,
+        tPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
@@ -2419,18 +2442,17 @@ elseif tArgs.fCommandKekSelected then
     fFinalResult = set_kek(
         tPlugin,
         strTmpFolderPath,
+        tPathList,
+        strExecReturnPath,
         strVerifySigPath,
-        astrPathList,
-        fIsSecure,
-        strReadSipPath,
         strResetReadSipPath,
         strBootswitchFilePath,
         strResetBootswitchPath,
-        strExecReturnFilePath,
         strResetExecReturnPath,
         tUsipConfigDict,
         strKekHbootFilePath,
-        strKekDummyUsipFilePath
+        strKekDummyUsipFilePath,
+        iChiptype
     )
 --------------------------------------------------------------------------
 -- READ SIP
