@@ -123,6 +123,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
                 else
                     -- netX90 rev_1 and ethernet detected, this function is not supported
                     tLog.error( "This Interface is not yet supported! -> %s", strPluginType )
+                    fOk = false
                 end
             else
                 fOk = false
@@ -137,6 +138,7 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
     else
         tLog.error(strMsg)
         tLog.error( "Could not load data from file: %s", strVerifySigPath )
+        fOk = false
     end
 
     return fOk, atResults
