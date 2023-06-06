@@ -311,28 +311,30 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
     local strFlasherBin, strMsg 
     local usMiVersionMin = get_mi_version_min(tPlugin)
     local usMiVersionMaj = get_mi_version_maj(tPlugin)
-    local strnetX90HelperPath = path.join(strSecureOption, "netx90")
 
     print(string.format("usMiVersionMaj 0x%04x", usMiVersionMaj))
     print(string.format("usMiVersionMin 0x%04x", usMiVersionMin))
 
-    if (usMiVersionMaj == 3 and usMiVersionMin >=1 or usMiVersionMaj > 3) and bCompMode == false then
+    if (usMiVersionMaj == 3 and usMiVersionMin >=1 or usMiVersionMaj > 3) and bCompMode == false and
+            strSecureOption ~= nil then
         bHbootFlash = true
-        
+
+        local strnetX90HelperPath = path.join(strSecureOption, "netx90")
+
         print(string.format("iChiptype:          %s", iChiptype))
         print(string.format("Using secure option files from: %s", strSecureOption))
-        
+
         if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
             strFlasherBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "flasher_netx90_hboot")
         else
             strMsg = "Unknown or unsupported chiptyp! " .. tostring(iChiptype)
         end
-        
+
         if strFlasherBin == nil then
             strMsg = strMsg or "Failed to load flasher_netx90_hboot"
             error(strMsg)
         end
-        
+
     else
         strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
         local tFile, strMsg = io.open(strPath, 'rb')
@@ -345,13 +347,12 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
 
 	local aAttr = get_flasher_binary_attributes(strFlasherBin)
 	aAttr.strBinaryName = strFlasherBin
-	
+
 	print(string.format("downloading to 0x%08x", aAttr.ulLoadAddress))
 	write_image(tPlugin, aAttr.ulLoadAddress, strFlasherBin, fnCallbackProgress)
-	
+
 	return aAttr
 end
-
 
 -- set the buffer area (when using SDRAM as a buffer, for instance)
 function set_buffer_area(aAttr, ulBufferAdr, ulBufferLen)
