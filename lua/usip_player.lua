@@ -51,31 +51,31 @@ strUsipPlayerGeneralHelp = [[
     can be generated with the newest netX-Studio version.
 
     Folder structure inside flasher:
-    |- flasher_cli-1.6.3                     -- main folder
+    |- flasher_cli-X.Y.Z                     -- main folder
     |- .tmp                                  -- temporary folder created by the usip_player to save temp files
     |- doc
-    |- ext                                   -- folder for external tools
-       |- SIPper                             -- tool to interact with the secure info pages and everything around that
-       |- USIP_Generator_CLI                 -- tool to generate and analyze usip files
     |- lua                                   -- more lua files
-    |- lua_pugins                            -- lua plugins
+    |- lua_plugins                            -- lua plugins
     |- netx
        |- hboot                             -- hboot images, necessary for for the flasher
           |- unsigned                       -- unsigned hboot images
-             |- netx90                      -- netx specific folder
-          |- signed                         -- signed images
+             |- netx90                      -- netx specific folder containing hboot images
+             |- netx90_usip                 -- netx specific folder containing usip images
+       |- helper
+          |- netx90                         -- helper files that can't be signed
+
     |- lua5.1(.exe)                         -- lua executable
     |- usip_player.lua                      -- usip_player lua file
 
-    The .tmp folder is generated and used in the processes of the usip_player.
 
-    To use the usip_player in secure mode some hboot images have to be signed,
-    that the netX can execute them correctly.
-    The following images are located into the unsigned folder that have to be
-    signed to use the usip_player in secure mode:
-    - read_sip.bin
-    - verify_sig.bin
-    - bootswitch.bin
+    To use the usip_player in secure mode:
+        - create a dedicated folder for signed images (e.g. 'netx/hboot/signed')
+        - sign the images found in netx/hboot/unsigned/netx90 with the firmware key and copy them into the signed
+          folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90')
+        - sign the images found in netx/hboot/unsigned/netx90_usip with the master key and copy them into the signed
+          folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90_usip')
+        - use the created folder as the handover parameter for the parameters '--sec' and '--sec_p2'
+
 ]]
 local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
 
@@ -89,7 +89,7 @@ tParser:flag "--disable_helper_version_check":hidden(true)
 
 -- Add the "usip" command and all its options.
 strBootswitchHelp = [[
-    Control the bootprocess after the execution of the sip update.
+    Control the boot process after the execution of the sip update.
 
     Options:
      - 'UART' (Open uart-console-mode)
