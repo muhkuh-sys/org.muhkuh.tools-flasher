@@ -319,3 +319,104 @@ function checkAllHelperFiles(astrDirectories)
     return fOk
 end
 
+
+-- -- not tested
+-- function getHelperInfo(strKey)
+--     local tEntry
+--     local strMsg
+--     
+--     for i, e in ipairs(atHelperFileVersions) do
+--         if e.key == strKey then
+--             tEntry = e 
+--             break
+--         end 
+--     end
+--     
+--     if tEntry == nil then
+--         strMsg = string.format("Unknown helper name: '%s'", strKey)
+--     end
+-- 
+--     return tEntry, strMsg
+-- end
+-- 
+-- -- not tested
+-- function getHelperPath(strDir, strKey)
+--     local tEntry, strMsg = getHelperInfo(strKey)
+--     local strPath
+--     if tEntry then
+--         strPath = path.join(strDir, tEntry.filename)
+--     end 
+--     
+--     return strPath, strMsg
+-- end
+-- 
+-- -- not tested
+-- function getAllHelperKeys()
+--     local astrKeys = {}
+--     for i, e in ipairs(atHelperFileVersions) do
+--         table.insert(astrKeys, e.key)
+--     end
+--     return astrKeys
+-- end
+-- 
+-- -- not tested
+-- function getHelperPaths(astrDir, astrKey)
+--     astrKey = astrKey or getAllHelperKeys()
+--     local astrPaths = {}
+--     local fOk = true
+--     for i, strDir in ipairs(astrDir) do
+--         for j, strKey in ipairs(astrKeys) do
+--             local strPath, strMsg = getHelperPath(strDir, strKey)
+--             if strPath then
+--                 table.insert(astrPaths, strPath)
+--             else 
+--                 printf("Unable to get path to helper %s: %s", strKey, (strMsg or "Unknown error"))
+--                 fOk = false
+--             end
+--         end
+--     end
+--     return fOk, astrPaths
+-- end
+
+
+-- Return the paths to all known helper files.
+-- astrDir is a list of directories. 
+-- Returns a list of paths.
+-- Each path is a combination of a directory with the file names of a helper.
+function getAllHelperPaths(astrDir)
+    local astrPaths = {}
+    for i, strDir in ipairs(astrDir) do
+        for j, tEntry in ipairs(atHelperFileVersions) do
+            local strPath = path.join(strDir, tEntry.filename)
+            table.insert(astrPaths, strPath)
+        end
+    end
+    return astrPaths
+end
+
+
+-- Show file check results in a generalized way.
+-- Each entry consists of the following:
+--   path: the full path to and name of the file
+--   check: the type of check (e.g. "signature", "version")
+--   ok: true/false, whether the check has succeeded
+--   message: optional message string
+-- 
+function showFileCheckResults(atResults)
+    print(string.rep('-', 80))
+    print("File verification results:")
+    for i, tEntry in ipairs(atResults) do
+        local strOk
+        if tEntry.ok then 
+            strOk = string.format("%s check successful.", tEntry.check)
+        else    
+            strOk = string.format("%s check failed.", tEntry.check)
+        end 
+        if tEntry.message then
+            print(tEntry.path, strOk, tEntry.message)        
+        else
+            print(tEntry.path, strOk)
+        end
+    end
+    print(string.rep('-', 80))
+end
