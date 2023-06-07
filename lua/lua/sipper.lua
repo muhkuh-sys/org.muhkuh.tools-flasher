@@ -12,6 +12,10 @@ local atLogLevels = {
     'fatal'
 }
 
+VERIFY_RESULT_OK = 0
+VERIFY_RESULT_ERROR = 1
+VERIFY_RESULT_FALSE = 2
+
 local tSignatures = {}
 tSignatures[1] = {}  --ECC
 tSignatures[1][1] = 64  -- 265
@@ -30,7 +34,14 @@ function Sipper:_init(tLog)
 end
 
 function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePath)
-    local tResult = true
+    -- verify the configuration data extracted from an usip file with the content of the COM and APP SIP
+    -- return values:
+    --  0: (RESULT_VERIFY_OK) data verified
+    --  1: (RESULT_VERIFY_ERROR) error while verifying
+    --  2: (VERIFY_RESULT_FALSE) verification failed
+
+
+    local uResult = VERIFY_RESULT_OK
     local strErrorMsg = ""
     local strCompareSipPath
     local strCompSip
@@ -44,9 +55,10 @@ function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePat
             strCompareSipPath = strAppSipFilePath
             strCompSip = "APP"
         else
-            tResult = false
+            uResult = VERIFY_RESULT_ERROR
             strErrorMsg = string.format("Unknown Secure Info Page '%'",
                     tUsipChunk['page_type_int'])
+            break
         end
 
         self.tLog.info(string.format("Verify content of USIP inside %s-SIP Page", strCompSip))
@@ -57,14 +69,14 @@ function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePat
             local strSipData = tSipFile:read(tData['size_int'])
 
             if strSipData ~= tData['patched_data'] then
-                tResult = false
+                uResult = VERIFY_RESULT_FALSE
                 strErrorMsg = string.format("Data was not patched correctly to offset 0x%08x", tData['offset_int'])
                 break
             end
         end
         tSipFile:close()
     end
-    return tResult, strErrorMsg
+    return uResult, strErrorMsg
 end
 
 function Sipper:compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize)

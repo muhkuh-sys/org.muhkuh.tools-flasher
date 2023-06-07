@@ -290,6 +290,25 @@ tParserVerifyContent:flag('--disable_helper_signature_check')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
+strCheckCookieHelp = [[
+    Check if the SIP protection cookie is set
+]]
+local tParserCheckSIPCookie = tParser:command('detect_sip_protection_cookie', strCheckCookieHelp):target('fCommandCheckSIPCookie')
+tParserCheckSIPCookie:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCheckSIPCookie:option('-t'):description("plugin type"):target("strPluginType")
+tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCheckSIPCookie:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
+tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCheckSIPCookie:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 
 -- Add the "read_sip" command and all its options.
 strReadHelp = [[
@@ -308,10 +327,6 @@ tParserReadSip:option('-o --output'):description(
 ):target("strOutputFolder"):default(tempFolderConfPath)
 tParserReadSip:option('-t'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
--- tParserReadSip:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
--- tParserReadSip:flag('--extend_exec'):description(
---     "Use an execute-chunk to activate JTAG."
--- ):target('fExtendExec')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
@@ -1198,6 +1213,7 @@ function verifyContent(
     strExecReturnPath
 )
     local fOk
+    local uVerifyResult = VERIFY_RESULT_OK
     local strErrorMsg
     local strComSipData
     local strAppSipData
@@ -1215,8 +1231,7 @@ function verifyContent(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
-        tLog.error("Unable to read out both SecureInfoPages.")
-        tLog.error(strErrorMsg)
+        uVerifyResult = VERIFY_RESULT_ERROR
     else
 
         tLog.debug("Saving content to files...")
@@ -1238,14 +1253,10 @@ function verifyContent(
         tFile:close()
 
 
-        fOk, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipFilePath, strAppSipFilePath, tPlugin)
-
-        if fOk ~= true then
-            tLog.error(strErrorMsg)
-        end
+        uVerifyResult, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipFilePath, strAppSipFilePath, tPlugin)
     end
 
-    return fOk
+    return uVerifyResult, strErrorMsg
 end
 
 
@@ -1397,6 +1408,7 @@ function usip(
     )
 
     local fOk
+    local uVerifyResult
     local strPluginType
     local strPluginName
     local ulM2MMajor = tPlugin:get_mi_version_maj()
@@ -1520,7 +1532,7 @@ function usip(
         -- this is the case if the content should be verified without a reset at the end
 
         tPlugin:Connect()
-        fOk = verifyContent(
+        uVerifyResult, strErrorMsg = verifyContent(
             strPluginType,
             tPlugin,
             strTmpFolderPath,
@@ -1530,6 +1542,12 @@ function usip(
             strResetBootswitchPath,
             strResetExecReturnPath
         )
+        if (uVerifyResult == VERIFY_RESULT_OK)then
+            fOk = true
+        else
+            fOk = false
+            tLog.error(strErrorMsg)
+        end
     end
 
     return fOk
@@ -2024,14 +2042,10 @@ function verify_content(
     strExecReturnPath
 )
     local strPluginType
-    local fOk = false
+    local uVerifyResult
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
-
-    --------------------------------------------------------------------------
-    -- PROCESS
-    --------------------------------------------------------------------------
 
     --------------------------------------------------------------------------
     -- analyze the usip file
@@ -2045,7 +2059,7 @@ function verify_content(
         --------------------------------------------------------------------------
 
         -- verify the content via the MI
-        fOk = verifyContent(
+        uVerifyResult, strErrorMsg = verifyContent(
             strPluginType,
             tPlugin,
             strTmpFolderPath,
@@ -2057,10 +2071,11 @@ function verify_content(
         )
 
     else
+        uVerifyResult = VERIFY_RESULT_ERROR
         tLog.error(strErrorMsg)
     end
 
-    return fOk
+    return uVerifyResult, strErrorMsg
 end
 
 -- print args
@@ -2105,8 +2120,8 @@ local strErrorMsg
 local tUsipConfigDict
 
 -- set fFinalResult to false, be pessimistic
-fFinalResult = false
-
+local fFinalResult = false
+local uResultCode = VERIFY_RESULT_ERROR
 --------------------------------------------------------------------------
 -- INITIAL VALUES
 --------------------------------------------------------------------------
@@ -2323,6 +2338,11 @@ if not exists(strTmpFolderPath) then
     os.execute("mkdir " .. strTmpFolderPath)
 end
 
+-- set the path for set_sip_protection_cookie.usp
+if tArgs.fCommandCheckSIPCookie then
+    strUsipFilePath = path.join(strSecureOption, "netx90_usip" ,"set_sip_protection_cookie.usp")
+end
+
 --------------------------------------------------------------------------
 -- analyze the usip file
 --------------------------------------------------------------------------
@@ -2527,20 +2547,16 @@ elseif tArgs.fCommandGetUidSelected then
         strExecReturnPath
     )
 
-    if not fFinalResult then
-        os.exit(1)
-    else
-        os.exit(0)
-    end
 
 --------------------------------------------------------------------------
 -- VERIFY CONTENT
 --------------------------------------------------------------------------
 elseif tArgs.fCommandVerifySelected then
+
     tLog.info("######################################")
     tLog.info("# RUNNING VERIFY CONTENT COMMAND     #")
     tLog.info("######################################")
-    fFinalResult = verify_content(
+        uResultCode, strErrorMsg = verify_content(
         tPlugin,
         strTmpFolderPath,
         strUsipFilePath,
@@ -2548,6 +2564,64 @@ elseif tArgs.fCommandVerifySelected then
         strBootswitchFilePath,
         strExecReturnPath
     )
+    if uResultCode == VERIFY_RESULT_OK then
+        fFinalResult = true
+    else
+        fFinalResult = false
+    end
+
+elseif tArgs.fCommandCheckSIPCookie then
+
+    tLog.info("################################################")
+    tLog.info("# RUNNING DETECT SIP PROTECTION COOKIE COMMAND #")
+    tLog.info("################################################")
+
+    uResultCode, strErrorMsg = verify_content(
+        tPlugin,
+        strTmpFolderPath,
+        strUsipFilePath,
+        strReadSipPath,
+        strBootswitchFilePath,
+        strExecReturnPath
+    )
+    if uResultCode == VERIFY_RESULT_OK then
+        tLog.info('')
+        tLog.info('####  ######      ######  ######## ######## ')
+        tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
+        tLog.info(' ##  ##          ##       ##          ##    ')
+        tLog.info(' ##   ######      ######  ######      ##    ')
+        tLog.info(' ##        ##          ## ##          ##    ')
+        tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
+        tLog.info('####  ######      ######  ########    ##    ')
+        tLog.info('')
+        tLog.info('RESULT: SIP protection cookie is set')
+    elseif uResultCode == VERIFY_RESULT_ERROR then
+        -- print ERROR if an error occurred
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        tLog.error('RESULT: ERROR')
+    elseif uResultCode == VERIFY_RESULT_FALSE then
+        -- print NOT SET if verify_content came back negative
+        tLog.error("")
+        tLog.error("##    ##  #######  ########     ######  ######## ######## ")
+        tLog.error("###   ## ##     ##    ##       ##    ## ##          ##    ")
+        tLog.error("####  ## ##     ##    ##       ##       ##          ##    ")
+        tLog.error("## ## ## ##     ##    ##        ######  ######      ##    ")
+        tLog.error("##  #### ##     ##    ##             ## ##          ##    ")
+        tLog.error("##   ### ##     ##    ##       ##    ## ##          ##    ")
+        tLog.error("##    ##  #######     ##        ######  ########    ##    ")
+        tLog.error("")
+        tLog.error('RESULT: SIP protection cookie not set')
+    end
+    tLog.info('RETURN: '.. uResultCode)
+    os.exit(uResultCode)
 
 
 --------------------------------------------------------------------------
@@ -2592,6 +2666,7 @@ end
 tPlugin:Disconnect()
 tPlugin = nil
 -- print OK if everything works
+
 if fFinalResult then
     tLog.info('')
     tLog.info(' #######  ##    ## ')
@@ -2603,8 +2678,10 @@ if fFinalResult then
     tLog.info(' #######  ##    ## ')
     tLog.info('')
     tLog.info('RESULT: OK')
+    tLog.info('RETURN: 0')
     os.exit(0)
 else
+
     -- print ERROR if an error occurred
     tLog.error("")
     tLog.error("######## #######  #######   ######  ####### ")
@@ -2616,5 +2693,8 @@ else
     tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
     tLog.error("")
     tLog.error('RESULT: ERROR')
+    tLog.error('RETURN: 1')
+
     os.exit(1)
+
 end
