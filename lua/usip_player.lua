@@ -1543,9 +1543,9 @@ function usip(
             strResetExecReturnPath
         )
         if (uVerifyResult == VERIFY_RESULT_OK)then
-            fOk = True
+            fOk = true
         else
-            fOk = False
+            fOk = false
             tLog.error(strErrorMsg)
         end
     end
@@ -2565,9 +2565,9 @@ elseif tArgs.fCommandVerifySelected then
         strExecReturnPath
     )
     if uResultCode == VERIFY_RESULT_OK then
-        fFinalResult = True
+        fFinalResult = true
     else
-        fFinalResult = False
+        fFinalResult = false
     end
 
 elseif tArgs.fCommandCheckSIPCookie then
