@@ -26,6 +26,13 @@ Common (CLI Flasher, WFP, USIP Player):
   --disable_helper_version_check and hide it from the command line documentation.
 * Remove the short form '-d'.
 
+Update romloader to v2.5.4-dev7:
+* Updated the error message that is shown if, while connecting to the 
+  netx 90 via JTAG, the chip type cannot be detected:
+  Error: Could not detect the chip type.
+  The debug access port might be disabled.
+
+
 
 Updates in CLI Flasher v2.0.0-dev10
 ==============================
