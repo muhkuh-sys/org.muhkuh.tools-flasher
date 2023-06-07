@@ -21,11 +21,6 @@ local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
 
 
--- define result codes
-local RESULT_OK = 0
-local RESULT_EXECUTION_ERROR = 1
-local RESULT_SPECIFIC_ERROR = 2  --
-
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
 
