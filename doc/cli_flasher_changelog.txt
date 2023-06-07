@@ -5,15 +5,18 @@ CLI Flasher:
 * detect_secure_boot_mode command works via JTAG
 
 USIP Player:
-* Add the command disable_security.
+* New command detect_sip_protection_cookie
+* New command disable_security.
   This command applies an USIP file that 
   - disables secure boot on the COM and APP CPU,
   - enables the copying and disables the hiding of the COM and APP info pages 
   - disables the security level on the COM and APP info pages
-* Add the flag --disable_helper_signature_check
+* New flag --disable_helper_signature_check
 * Avoid unneccessary splitting of USIP images (SIPper)
 * Bugfix: some input files were not closed in SIPper
 * Bugfix: Possible error when skipping non-usip chunks. (USIP Generator)
+* Bugfix: set_kek command
+* Bugfix: set_sip_protection command 
 
 Common (CLI Flasher, WFP, USIP Player):
 * Add the command verify_helper_signatures.
