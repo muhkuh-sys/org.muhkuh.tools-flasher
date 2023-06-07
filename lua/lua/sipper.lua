@@ -37,8 +37,9 @@ function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePat
     -- verify the configuration data extracted from an usip file with the content of the COM and APP SIP
     -- return values:
     --  0: (RESULT_VERIFY_OK) data verified
-    --  1: (RESULT_VERIFY_NOT_OK) data not verified
-    --  2: (RESULT_VERIFY_ERROR) error while verifying
+    --  1: (RESULT_VERIFY_ERROR) error while verifying
+    --  2: (VERIFY_RESULT_FALSE) verification failed
+
 
     local uResult = VERIFY_RESULT_OK
     local strErrorMsg = ""
