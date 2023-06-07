@@ -2564,7 +2564,9 @@ elseif tArgs.fCommandVerifySelected then
         strBootswitchFilePath,
         strExecReturnPath
     )
-    if uResultCode ~= VERIFY_RESULT_OK then
+    if uResultCode == VERIFY_RESULT_OK then
+        fFinalResult = True
+    else
         fFinalResult = False
     end
 
