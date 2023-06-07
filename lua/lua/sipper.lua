@@ -58,6 +58,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipFilePath, strAppSipFilePat
             uResult = VERIFY_RESULT_ERROR
             strErrorMsg = string.format("Unknown Secure Info Page '%'",
                     tUsipChunk['page_type_int'])
+            break
         end
 
         self.tLog.info(string.format("Verify content of USIP inside %s-SIP Page", strCompSip))

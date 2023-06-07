@@ -1232,7 +1232,6 @@ function verifyContent(
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
         uVerifyResult = VERIFY_RESULT_ERROR
-        strErrorMsg = strErrorMsg
     else
 
         tLog.debug("Saving content to files...")
@@ -2552,7 +2551,7 @@ elseif tArgs.fCommandGetUidSelected then
 --------------------------------------------------------------------------
 -- VERIFY CONTENT
 --------------------------------------------------------------------------
-elseif tArgs.fCommandVerifySelected or tArgs.fCommandCheckSIPCookie then
+elseif tArgs.fCommandVerifySelected then
 
     tLog.info("######################################")
     tLog.info("# RUNNING VERIFY CONTENT COMMAND     #")
@@ -2565,51 +2564,62 @@ elseif tArgs.fCommandVerifySelected or tArgs.fCommandCheckSIPCookie then
         strBootswitchFilePath,
         strExecReturnPath
     )
-
-    if tArgs.fCommandCheckSIPCookie then
-        if uResultCode == VERIFY_RESULT_OK then
-            tLog.info('')
-            tLog.info('####  ######      ######  ######## ######## ')
-            tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
-            tLog.info(' ##  ##          ##       ##          ##    ')
-            tLog.info(' ##   ######      ######  ######      ##    ')
-            tLog.info(' ##        ##          ## ##          ##    ')
-            tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
-            tLog.info('####  ######      ######  ########    ##    ')
-            tLog.info('')
-            tLog.info('RESULT: SIP protection cookie is set')
-        elseif uResultCode == VERIFY_RESULT_ERROR then
-            -- print ERROR if an error occurred
-            tLog.error("")
-            tLog.error("######## #######  #######   ######  ####### ")
-            tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
-            tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
-            tLog.error("#######  #######  #######  ##    ## ####### ")
-            tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
-            tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
-            tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
-            tLog.error("")
-            tLog.error('RESULT: ERROR')
-        elseif uResultCode == VERIFY_RESULT_FALSE then
-            -- print ERROR if an error occurred
-            tLog.error("")
-            tLog.error("##    ##  #######  ########     ######  ######## ######## ")
-            tLog.error("###   ## ##     ##    ##       ##    ## ##          ##    ")
-            tLog.error("####  ## ##     ##    ##       ##       ##          ##    ")
-            tLog.error("## ## ## ##     ##    ##        ######  ######      ##    ")
-            tLog.error("##  #### ##     ##    ##             ## ##          ##    ")
-            tLog.error("##   ### ##     ##    ##       ##    ## ##          ##    ")
-            tLog.error("##    ##  #######     ##        ######  ########    ##    ")
-            tLog.error("")
-            tLog.error('RESULT: SIP protection cookie not set')
-        end
-        tLog.info('RETURN: '.. uResultCode)
-        os.exit(uResultCode)
-    end
-
     if uResultCode ~= VERIFY_RESULT_OK then
         fFinalResult = False
     end
+
+elseif tArgs.fCommandCheckSIPCookie then
+
+    tLog.info("################################################")
+    tLog.info("# RUNNING DETECT SIP PROTECTION COOKIE COMMAND #")
+    tLog.info("################################################")
+
+    uResultCode, strErrorMsg = verify_content(
+        tPlugin,
+        strTmpFolderPath,
+        strUsipFilePath,
+        strReadSipPath,
+        strBootswitchFilePath,
+        strExecReturnPath
+    )
+    if uResultCode == VERIFY_RESULT_OK then
+        tLog.info('')
+        tLog.info('####  ######      ######  ######## ######## ')
+        tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
+        tLog.info(' ##  ##          ##       ##          ##    ')
+        tLog.info(' ##   ######      ######  ######      ##    ')
+        tLog.info(' ##        ##          ## ##          ##    ')
+        tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
+        tLog.info('####  ######      ######  ########    ##    ')
+        tLog.info('')
+        tLog.info('RESULT: SIP protection cookie is set')
+    elseif uResultCode == VERIFY_RESULT_ERROR then
+        -- print ERROR if an error occurred
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        tLog.error('RESULT: ERROR')
+    elseif uResultCode == VERIFY_RESULT_FALSE then
+        -- print NOT SET if verify_content came back negative
+        tLog.error("")
+        tLog.error("##    ##  #######  ########     ######  ######## ######## ")
+        tLog.error("###   ## ##     ##    ##       ##    ## ##          ##    ")
+        tLog.error("####  ## ##     ##    ##       ##       ##          ##    ")
+        tLog.error("## ## ## ##     ##    ##        ######  ######      ##    ")
+        tLog.error("##  #### ##     ##    ##             ## ##          ##    ")
+        tLog.error("##   ### ##     ##    ##       ##    ## ##          ##    ")
+        tLog.error("##    ##  #######     ##        ######  ########    ##    ")
+        tLog.error("")
+        tLog.error('RESULT: SIP protection cookie not set')
+    end
+    tLog.info('RETURN: '.. uResultCode)
+    os.exit(uResultCode)
 
 
 --------------------------------------------------------------------------
