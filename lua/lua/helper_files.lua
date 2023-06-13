@@ -93,7 +93,7 @@ atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",  
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev2-0-g140a678c784b:reV",
+        version = "Ver:GITv1.0.0-dev3-0-g584ea6170547:reV",
         version_offset = 0x910
     },
 
