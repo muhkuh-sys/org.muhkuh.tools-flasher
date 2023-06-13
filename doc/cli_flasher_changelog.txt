@@ -1,3 +1,14 @@
+Updates in CLI Flasher v2.0.0-dev12
+==============================
+
+Disable the pull-down resistors of the UART RXD/TXD pins.
+
+* when the flasher binary or boot image is executed 
+* when read_sip, verify_signature or set_kek is executed 
+* when start_mi is executed
+* when detect_netx is executed and the chip type is netx 90 rev.1
+
+
 Updates in CLI Flasher v2.0.0-dev11
 ==============================
 CLI Flasher:
