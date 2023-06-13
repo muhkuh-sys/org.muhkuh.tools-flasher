@@ -86,7 +86,7 @@ atHelperFileVersions = {
     {
         key = "set_kek",
         filename = "set_kek.bin",
-        version = "Ver:GITv1.0.0-dev3-0-gec5859d83bf6:reV",
+        version = "Ver:GITv1.0.0-dev4-0-g58cd77a73d9f:reV",
         version_offset = 0x9e8
     },
     
