@@ -1146,6 +1146,35 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 
 #endif
 
+/**
+* The idle state of uart txd and rxd is high.
+* We need to disable the pull-down resistors (it is enabled by default)
+* */
+static void disable_uart_pulldown_resistors(void)
+{
+#if ASIC_TYP==ASIC_TYP_NETX90
+	HOSTDEF(ptAsicCtrlArea);
+	HOSTDEF(ptPadCtrlArea);
+	
+	NX90_PAD_CTRL_UART_TXD_T  tPadCtrlUartTxd;
+	NX90_PAD_CTRL_UART_RXD_T  tPadCtrlUartRxd;
+	
+	/* get the current value of uart txd and rxd */
+	tPadCtrlUartTxd.val = (uint32_t) ptPadCtrlArea->ulPad_ctrl_uart_txd;
+	tPadCtrlUartRxd.val = (uint32_t) ptPadCtrlArea->ulPad_ctrl_uart_rxd;
+	
+	/* clear pull enable bit of uart txd and rxd (disable pull-down resistor of pad) */
+	tPadCtrlUartTxd.bf.pe = 0;
+	tPadCtrlUartRxd.bf.pe = 0;
+	
+	/* write back new values */
+	ptAsicCtrlArea->ulAsic_ctrl_access_key = ptAsicCtrlArea->ulAsic_ctrl_access_key; /* @suppress("Assignment to itself") */
+	ptPadCtrlArea->ulPad_ctrl_uart_txd = tPadCtrlUartTxd.val;
+	ptAsicCtrlArea->ulAsic_ctrl_access_key = ptAsicCtrlArea->ulAsic_ctrl_access_key; /* @suppress("Assignment to itself") */
+	ptPadCtrlArea->ulPad_ctrl_uart_rxd = tPadCtrlUartRxd.val;
+#endif
+}
+
 NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTestParam)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -1157,6 +1186,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	
 	/* Initialize the board. */
 	tResult = board_init();
+	disable_uart_pulldown_resistors();
 	if( tResult!=NETX_CONSOLEAPP_RESULT_OK )
 	{
 		/* Failed to initialize board, can not continue! */

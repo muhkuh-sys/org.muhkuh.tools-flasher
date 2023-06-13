@@ -262,6 +262,32 @@ function list_interfaces(strPluginType, atPluginOptions)
 end
 
 
+function netx90_disable_uart_pulldown_resistors(tPlugin)
+	local addr_pad_ctrl_uart_rxd    = 0xff401028
+	local addr_pad_ctrl_uart_txd    = 0xff40102c
+	local addr_asic_ctrl_access_key = 0xff4012c0
+		
+	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
+	val_pad_ctrl_uart_rxd = bit.band(val_pad_ctrl_uart_rxd, 0xef)
+	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
+	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
+	tPlugin:write_data32(addr_pad_ctrl_uart_rxd, val_pad_ctrl_uart_rxd)
+	
+	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
+	val_pad_ctrl_uart_txd = bit.band(val_pad_ctrl_uart_txd, 0xef)
+	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
+	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
+	tPlugin:write_data32(addr_pad_ctrl_uart_txd, val_pad_ctrl_uart_txd)
+end
+
+function netx90_check_uart_padctrl(tPlugin)
+	local addr_pad_ctrl_uart_rxd = 0xff401028
+	local addr_pad_ctrl_uart_txd = 0xff40102c
+	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
+	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
+	printf("val_pad_ctrl_uart_rxd: 0x%08x", val_pad_ctrl_uart_rxd)
+	printf("val_pad_ctrl_uart_txd: 0x%08x", val_pad_ctrl_uart_txd)
+end 
 
 function detect_chiptype(aArgs)
 	local strPluginName  = aArgs.strPluginName
@@ -296,6 +322,10 @@ function detect_chiptype(aArgs)
 
 			-- Note: if the connection has failed, we keep the previously read chip type.
 			if fConnected == true then
+				print("Disabling pull-down resistors for UART RXD and TXD")
+				netx90_disable_uart_pulldown_resistors(tPlugin)
+				netx90_check_uart_padctrl(tPlugin)
+				
 				print("Detecting PHY version on netX 90 Rev1")
 				local bootpins = require("bootpins")
 				bootpins:_init()

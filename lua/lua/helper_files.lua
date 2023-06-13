@@ -79,22 +79,22 @@ atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev4-0-ga66fb60ea736:reV",
-        version_offset = 0x102c
+        version = "Ver:GITv1.0.0-dev5-0-gae7d9fe11ca0:reV",
+        version_offset = 0x1D70
     },
     
     {
         key = "set_kek",
         filename = "set_kek.bin",
-        version = "Ver:GITv1.0.0-dev3-0-gec5859d83bf6:reV",
-        version_offset = 0x9e8
+        version = "Ver:GITv1.0.0-dev4-0-g58cd77a73d9f:reV",
+        version_offset = 0xEB4
     },
     
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",  
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev2-0-g140a678c784b:reV",
-        version_offset = 0x910
+        version = "Ver:GITv1.0.0-dev3-0-g584ea6170547:reV",
+        version_offset = 0x93C
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
@@ -107,7 +107,7 @@ atHelperFileVersions = {
     {
         key = "start_mi",
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
+        version = "Ver:GITv2.5.4-dev8-0-g5d6f87da4ad9:reV",
         version_offset = 0x0454
     },
 
