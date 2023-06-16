@@ -645,7 +645,7 @@ function exec(aArgs)
 							strMsg = string.format("Offset+size exceeds flash device size: 0x%08x bytes", ulDeviceSize)
 						else
 							fOk = true
-							strMsg = string.format("Flash device size: %d/0x%08x bytes", ulDeviceSize, ulDeviceSize)
+							strMsg = string.format("Flash device size: %u/0x%08x bytes", ulDeviceSize, ulDeviceSize)
 						end
 						
 					end
