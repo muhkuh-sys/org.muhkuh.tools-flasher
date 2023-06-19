@@ -612,7 +612,8 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	return ulFlashSize;
 }
 
-
+/* Todo: check for flash devices with sizes >= 4 GB, as we cannot
+   represent a device size of 4 GB or larger. */
 static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
