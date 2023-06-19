@@ -638,6 +638,12 @@ function exec(aArgs)
 					if ulDeviceSize == nil then
 						fOk = false
 						strMsg = "Failed to get the device size!"
+						
+					-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
+					elseif ulDeviceSize == 0xffffffff then
+						fOk = false 
+						strMsg = "Devices with a size of 2^32 bytes or more are not supported!"
+
 					else 
 						-- if offset/len are set, we require that offset+len is less than or equal the device size
 						if ulStartOffset~= nil and ulLen~= nil and ulStartOffset+ulLen > ulDeviceSize and ulLen ~= 0xffffffff then
