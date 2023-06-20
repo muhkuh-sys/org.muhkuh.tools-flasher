@@ -1,3 +1,10 @@
+Updates in CLI Flasher v2.0.0-dev13
+==============================
+
+CLI Flasher:
+* The flash device size is printed as an unsigned number.
+* If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
+
 Updates in CLI Flasher v2.0.0-dev12
 ==============================
 
