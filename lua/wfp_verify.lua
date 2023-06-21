@@ -189,9 +189,9 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     for strChunkKey, atFlashData in pairs(atFlashDataTable) do
         tLog.info("Verify Data inside Flash B"..atFlashData['tBus'] .." CS" .. atFlashData['ulChipSelect'] .." U"..atFlashData['ulUnit'])
          -- Detect the device. (switch to right flash)
-        fOk = tFlasher.detect(tPlugin, aAttr, atFlashData['tBus'], atFlashData['ulUnit'],atFlashData['ulChipSelect'])
-        if fOk ~= true then
-            tLog.error("Failed to detect the device!")
+        local fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, atFlashData['tBus'], atFlashData['ulUnit'],atFlashData['ulChipSelect'])
+        if fDetectOk ~= true then
+            tLog.error(strMsg)
             fVerified = false
             break
         end
