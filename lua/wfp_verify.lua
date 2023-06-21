@@ -38,7 +38,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
         if tBus == nil then
             tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
-            fOk = false
+            fVerified = false
             break
         else
             local ulUnit = tTargetFlash.ulUnit
@@ -192,7 +192,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
         fOk = tFlasher.detect(tPlugin, aAttr, atFlashData['tBus'], atFlashData['ulUnit'],atFlashData['ulChipSelect'])
         if fOk ~= true then
             tLog.error("Failed to detect the device!")
-            fOk = false
+            fVerified = false
             break
         end
 
