@@ -572,6 +572,32 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 end
 
 
+-- Detect the device and check if the size is in 32 bit range.
+function detectAndCheckSizeLimit(tPlugin, aAttr, ...)
+	local fOk = detect(tPlugin, aAttr, ...)
+	local strMsg
+	local ulDeviceSize
+	
+	if fOk ~= true then
+		fOk = false
+		--strMsg = "Failed to get a device description!"
+		strMsg = "Failed to detect the device!"
+	else 
+		ulDeviceSize = getFlashSize(tPlugin, aAttr)
+		if ulDeviceSize == nil then
+			fOk = false
+			strMsg = "Failed to get the device size!"
+			
+		-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
+		elseif ulDeviceSize == 0xffffffff then
+			fOk = false 
+			strMsg = "Devices with a size of 2^32 bytes or more are not supported!"	
+		end
+	end
+	
+	return fOk, strMsg, ulDeviceSize
+end
+
 
 -- read device descriptor after detect (debugging)
 function readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)

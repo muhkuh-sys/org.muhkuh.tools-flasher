@@ -616,12 +616,10 @@ function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				fOk = flasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect)
 				if fOk ~= true then
 					fOk = false
-					strMsg = "Failed to get a device description!"
 				else
-				
 					if iBus == flasher.BUS_Spi then
 						local strDevDesc = flasher.readDeviceDescriptor(tPlugin, aAttr)
 						if strDevDesc==nil then
@@ -634,20 +632,13 @@ function exec(aArgs)
 						end
 					end
 				
-					ulDeviceSize = flasher.getFlashSize(tPlugin, aAttr)
-					if ulDeviceSize == nil then
+					-- if offset/len are set, we require that offset+len is less than or equal the device size
+					if ulStartOffset~= nil and ulLen~= nil and ulStartOffset+ulLen > ulDeviceSize and ulLen ~= 0xffffffff then
 						fOk = false
-						strMsg = "Failed to get the device size!"
-					else 
-						-- if offset/len are set, we require that offset+len is less than or equal the device size
-						if ulStartOffset~= nil and ulLen~= nil and ulStartOffset+ulLen > ulDeviceSize and ulLen ~= 0xffffffff then
-							fOk = false
-							strMsg = string.format("Offset+size exceeds flash device size: 0x%08x bytes", ulDeviceSize)
-						else
-							fOk = true
-							strMsg = string.format("Flash device size: %d/0x%08x bytes", ulDeviceSize, ulDeviceSize)
-						end
-						
+						strMsg = string.format("Offset+size exceeds flash device size: 0x%08x bytes", ulDeviceSize)
+					else
+						fOk = true
+						strMsg = string.format("Flash device size: %u/0x%08x bytes", ulDeviceSize, ulDeviceSize)
 					end
 				end
 			end

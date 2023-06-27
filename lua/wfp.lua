@@ -521,12 +521,12 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                             local ulChipSelect = tTargetFlash.ulChipSelect
                             tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
 
-                            -- Detect the device.
-                            local fDetectOk
-                            fDetectOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected exists inside the hardware
+                            -- Detect the device and check if the size is in 32 bit range.
+                            local fDetectOk, strMsg
+                            fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected exists inside the hardware
 
                             if fDetectOk ~= true then
-                                tLog.error("Failed to detect the device!")
+                                tLog.error(strMsg)
                                 fOk = false
                                 break
                             end
@@ -883,13 +883,15 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                 local ulChipSelect = tTargetFlash.ulChipSelect
                                 tLog.debug('Processing bus: %s, unit: %d, chip select: %d', strBusName, ulUnit, ulChipSelect)
 
-                                -- Detect the device.
-                                fOk = tFlasher.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect)
-                                if fOk ~= true then
-                                    tLog.error("Failed to detect the device!")
+                                -- Detect the device and check if the size is in 32 bit range.
+                                local fDetectOk
+                                fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) 
+                                if fDetectOk ~= true then
+                                    tLog.error(strMsg)
                                     fOk = false
                                     break
                                 end
+                                
                                 if tArgs.fCommandFlashSelected == true then
                                     -- loop over data inside xml
                                     for ulDataIdx, tData in ipairs(tTargetFlash.atData) do

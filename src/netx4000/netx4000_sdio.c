@@ -1999,7 +1999,7 @@ int sdio_detect(SDIO_HANDLE_T *ptSdioHandle, const SDIO_OPTIONS_T *ptSdioOptions
 			}
 			else
 			{
-				uprintf("Capacity: %d KB\n", ptSdioHandle->ulSizeKB);
+				uprintf("Capacity: %u KB\n", ptSdioHandle->ulSizeKB);
 				
 			}
 		}
