@@ -411,21 +411,22 @@ addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
--- check_helper_files
-local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
-addSecureArgs(tParserCommandCheckHelperFiles)
+-- check_helper_version
+local tParserCommandCheckHelperVersion = tParser:command('check_helper_version', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperVersionSelected')
+addSecureArgs(tParserCommandCheckHelperVersion)
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
--- tParserCommandVerifyHelperSig:option(
+-- check_helper_signature 
+local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+-- tParserCommandCheckHelperSignature:option(
 --     '-V --verbose'
 -- ):description(
 --     string.format(
 --         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
 --     )
 -- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandCheckHelperSignature:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandCheckHelperSignature:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandCheckHelperSignature:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- printArgs(tArguments)
@@ -924,7 +925,7 @@ function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
-    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
+    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
 
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
@@ -1015,7 +1016,7 @@ function main()
         print(strMsg)
         os.exit(iRet)
 
-    elseif aArgs.fCommandCheckHelperFilesSelected then
+    elseif aArgs.fCommandCheckHelperVersionSelected then
         local t1 = os.time()
         
         local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
@@ -1026,7 +1027,7 @@ function main()
         printf("Time: %d seconds", dt)
         os.exit(fOk and 0 or 1)
         
-    elseif aArgs.fCommandVerifyHelperSignaturesSelected then 
+    elseif aArgs.fCommandCheckHelperSignatureSelected then 
         fOk = tVerifySignature.verifyHelperSignatures(
             aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions, aArgs.strSecureOption)
         -- verifyHelperSignatures has printed a success/failure message
