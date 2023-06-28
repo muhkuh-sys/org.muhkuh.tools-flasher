@@ -9,11 +9,11 @@ function printf(...) print(string.format(...)) end
 
 -- Checking is enabled by default.
 fEnableHelperFileChecks = true
-
+  
 -- When the module is loaded:
--- If the environment variable CLI_FL_DISABLE_HELPER_FILE_CHECK
+-- If the environment variable CLI_FL_DISABLE_HELPER_VERSION_CHECK
 -- is set to any value, disable the checks 
-strEnvVar = "CLI_FL_DISABLE_HELPER_FILE_CHECK"
+strEnvVar = "CLI_FL_DISABLE_HELPER_VERSION_CHECK"
 local strEnvEnable=os.getenv(strEnvVar)
 if strEnvEnable == nil then 
     -- printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
