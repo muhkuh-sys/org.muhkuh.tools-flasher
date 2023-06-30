@@ -181,6 +181,37 @@ function show_plugin_options(tOpts)
 	end
 end
 
+function connect_retry(tPlugin, uLRetries)
+    local fCallSuccess
+    local strError
+    print("connect to plugin")
+
+    if tPlugin == nil then
+        strError = "No plugin selected for connect"
+    end
+
+    -- default retries are 5
+    if uLRetries == nil then
+        uLRetries = 5
+    end
+
+    while uLRetries > 0 do
+        fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
+        if fCallSuccess then
+            print("connect successful")
+            break
+        end
+        print("connect not successful")
+        uLRetries = uLRetries - 1
+        sleep_s(1)
+        if uLRetries > 0 then
+            print("retry connecting ... ")
+        end
+    end
+
+    return fCallSuccess, strError
+end
+
 -- Try to open a plugin for an interface with the given name.
 -- This function assumes that the name starts with the name of the interface,
 -- e.g. romloader_uart, and scans only for interfaces whose type is contained
