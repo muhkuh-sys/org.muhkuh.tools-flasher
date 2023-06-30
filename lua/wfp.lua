@@ -180,7 +180,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
         if tPlugin then
-            tPlugin:Connect()
+            tFlasherHelper.connect_retry(tPlugin, 5)
         else
             tLog.error(strError)
         end
@@ -487,7 +487,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                 tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
                 if tPlugin then
-                    tPlugin:Connect()
+                    tFlasherHelper.connect_retry(tPlugin, 5)
 				else
 					tLog.error(strError)
                 end
@@ -844,7 +844,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
                 if tPlugin then
-                    tPlugin:Connect()
+                    tFlasherHelper.connect_retry(tPlugin, 5)
                 end
             end
 

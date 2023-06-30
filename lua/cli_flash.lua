@@ -556,7 +556,7 @@ function exec(aArgs)
 	-- open the plugin
 	tPlugin, strMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
-		fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
+		fOk, strMsg = tFlasherHelper.connect_retry(tPlugin, 5)
 		if not fOk then 
 			strMsg = strMsg or "Failed to open connection"
 		end

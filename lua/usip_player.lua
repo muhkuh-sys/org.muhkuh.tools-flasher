@@ -1030,7 +1030,7 @@ function loadUsip(strUsipData, tPlugin, strPluginType)
 
     local fOk
     tLog.info( "Loading Usip via %s", strPluginType )
-    tPlugin:Connect()
+    tFlasherHelper.connect_retry(tPlugin, 5)
     local strPluginName = tPlugin:GetName()
 
     local ulM2MMinor = tPlugin:get_mi_version_min()
@@ -1180,16 +1180,18 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
                 )
             end
 
-            tFlasherHelper.sleep_s(5)
             tLog.info("Disconnect from Plugin and reconnect again")
             -- can there be timing issues with different OS
             tPlugin:Disconnect()
-            tFlasherHelper.sleep_s(8)
+            -- wait at least 2 sec for signature verification of read sip binary
+            tFlasherHelper.sleep_s(3)
 
             while uLRetries > 0 do
                 tLog.info("try to get the Plugin again after read sip reset")
-                tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
-                if tPlugin ~= nil then
+                -- tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                fCallSuccess, tPlugin = pcall(
+                        tFlasherHelper.getPlugin, strPluginName, strPluginType, atPluginOptions)
+                if fCallSuccess then
                     break
                 end
                 uLRetries = uLRetries - 1
@@ -1197,7 +1199,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             end
 
             if tPlugin then
-                tPlugin:Connect()
+                tFlasherHelper.connect_retry(tPlugin, 10)
+
             else
                 strErrorMsg = "Could not reach plugin after reset"
                 fResult = false
@@ -1413,12 +1416,12 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     end
     tLog.debug("Finished call, disconnecting")
     tPlugin:Disconnect()
-    tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
-    sleep(2)
+    tLog.debug("Wait 3 seconds to be sure the set_kek process is finished")
+    sleep(3)
     -- todo check results of connect and getPlugin before continuing
     -- get the uart plugin again
     tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
-    tPlugin:Connect()
+    tFlasherHelper.connect_retry(tPlugin, 5)
 
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
@@ -1531,7 +1534,7 @@ function usip(
         end
 
         -- connect to the netX
-        tPlugin:Connect()
+        tFlasherHelper.connect_retry(tPlugin, 5)
         -- tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_usip.bin")
         -- tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x1000, strTmpFolderPath, "dump_after_usip.bin")
         -- check if a bootswitch is necessary to force a dedicated interface after a reset
@@ -1577,7 +1580,7 @@ function usip(
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
         -- this is the case if the content should be verified without a reset at the end
 
-        tPlugin:Connect()
+        tFlasherHelper.connect_retry(tPlugin, 5)
         uVerifyResult, strErrorMsg = verifyContent(
             strPluginType,
             tPlugin,
@@ -2202,16 +2205,7 @@ if fCallSuccess then
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
-            fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
-            if fCallSuccess then
-                -- get the chiptype
-                iChiptype = tPlugin:GetChiptyp()
-                tLog.debug( "Found Chip type: %d", iChiptype )
-            else
-                tLog.debug(strError)
-                tLog.error( "Could not open %s interface. (check if netX is in secure boot mode)", strPluginType )
-                os.exit(1)
-            end
+            tFlasherHelper.connect_retry(tPlugin, 5)
         end
     end
 else
@@ -2293,6 +2287,7 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     strResetVerifySigPath = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName, "verify_sig.bin")
     -- check if the verify_sig file exists
 
+    -- todo why not use get helper file function?
     strResetExecReturnPath = path.join(
     tArgs.strSecureOptionPhaseTwo, strNetxName, "return_exec.bin"
     )
