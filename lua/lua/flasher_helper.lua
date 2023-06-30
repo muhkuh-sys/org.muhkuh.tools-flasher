@@ -9,6 +9,7 @@ module("flasher_helper", package.seeall)
 
 local tFlasher = require 'flasher'
 local bit = require 'bit'
+local class = require 'pl.class'
 
 -- exit code for detect_netx
 STATUS_OK = 0
@@ -25,6 +26,21 @@ SECURE_BOOT_ERROR = 1
 --------------------------------------------------------------------------
 -- helpers
 --------------------------------------------------------------------------
+
+-- Checking is enabled by default.
+fStoreTempFiles = false
+
+-- Disable the checks
+function disableStoreTempFiles()
+    -- print("Disabling automatic helper file checks")
+    fStoreTempFiles = false
+end
+
+-- Enable the checks
+function enableStoreTempFiles()
+    -- print("Enabling automatic helper file checks")
+    fStoreTempFiles = true
+end
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
@@ -945,3 +961,51 @@ function dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 	dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
 end
 
+
+-- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
+-- !! this class does not provide every functionality of a file handle !!
+
+StringHandle = class()
+
+function StringHandle:_init(strData)
+    self.strData = strData
+    self.ulCurrentPointer = 1
+    self.ulSize = string.len(strData)
+end
+
+function StringHandle:read(ulReadBytes)
+	local strReadData
+    local ulReadLength = ulReadBytes
+	strReadData = string.sub(self.strData,self.ulCurrentPointer,(self.ulCurrentPointer + ulReadLength - 1))
+	self.ulCurrentPointer = self.ulCurrentPointer + ulReadLength
+    return strReadData
+end
+
+function StringHandle:__getStringPosInBytes()
+    return (self.ulCurrentPointer - 1)
+end
+
+function StringHandle:seek(strWhence, ulOffset)
+
+    local ulNewOffset
+
+    if ulOffset == nil then
+        ulOffset = 0
+    end
+
+    ulNewOffset = ulOffset -- * 4
+
+    if strWhence == "set" then
+        self.ulCurrentPointer = 1 + ulNewOffset
+    elseif strWhence == "cur" then
+        self.ulCurrentPointer = self.ulCurrentPointer + ulNewOffset
+    elseif strWhence == "end" then
+        self.ulCurrentPointer = self.ulSize + ulNewOffset
+    end
+
+    return self:__getStringPosInBytes()
+end
+
+function StringHandle:close()
+    -- dummy function that does nothing
+end
