@@ -198,3 +198,69 @@ function verifyHelperSignatures (strPluginName, strPluginType, atPluginOptions, 
     return fOk, atResults
 end
 
+
+function verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    local iChiptype = tPlugin:GetChiptyp()
+    if (iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
+        or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C
+        or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D)
+        and astrKeys ~= nil then
+        return verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
+    else 
+        return true
+    end 
+end
+    
+-- Verify if the connected netx accepts signed helper binaries.
+-- astrKeys: keys of the helpers to verify.
+-- strSecureOption: the directory where the helpers are located.
+-- The helper_files module is used to obtain the paths to the actual files.
+--
+-- Returns true the signatures could be verified,
+-- or false and an error message if the signatures are invalid, or 
+-- the signature verification has failed.
+function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
+    local fOk = true
+    local strMsg 
+    local atResults
+    local strSecPathNx90 = path.join(strSecureOption, "netx90")
+    local astrSigCheckPaths
+    fOk, astrSigCheckPaths = helper_files.getHelperPaths({strSecPathNx90}, astrKeys)
+    
+    if fOk ~= true then
+        fOk = false
+        strMsg = "Failed to get the paths to the helper files."
+    else 
+        tLog.info("Checking signatures of support files ...**")
+    
+        local usipPlayerConf = require 'usip_player_conf'
+        local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
+
+        local strVerifySigPath
+        strVerifySigPath, strMsg = helper_files.getHelperPath(strSecPathNx90, "verify_sig")
+        if strVerifySigPath == nil then 
+            fOk = false
+            strMsg = strMsg or "Failed to get the path to verify_sig"
+        else 
+            local strPluginType = tPlugin:GetTyp()
+            fOk, atResults = verifySignature(
+                tPlugin, strPluginType, astrSigCheckPaths, tempFolderConfPath, strVerifySigPath
+            )
+            
+            tHelperFiles.showFileCheckResults(atResults)
+            
+            if fOk then
+                tLog.info("The signatures of the helper files have been successfully verified.")
+                fOk = true
+                strMsg = "Helper file signatures OK."
+            else
+                tLog.error( "The signatures of the helper files could not be verified." )
+                tLog.error( "Please check if the helper files are signed correctly." )
+                fOk = false
+                strMsg = "Could not verify the signatures of the helper files."
+            end
+        end
+    end
+    
+    return fOk, strMsg
+end
