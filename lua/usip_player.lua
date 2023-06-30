@@ -220,7 +220,7 @@ strSetSipProtectionHelp = [[
     - update counter will be reset to zero
 ]]
 
-local tParserCommandSip = tParser:command('set_sip_protection', strSetSipProtectionHelp):target('fCommandSipSelected')
+local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target('fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
 ):description(
@@ -239,7 +239,7 @@ strSetKekHelp = [[
     reset the netX and process \n the usip file to update the SecureInfoPage and
     continue standard boot process.
 ]]
-local tParserCommandKek = tParser:command('set_kek', strSetKekHelp):target('fCommandKekSelected')
+local tParserCommandKek = tParser:command('set_kek sk', strSetKekHelp):target('fCommandKekSelected')
 tParserCommandKek:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
 tParserCommandKek:option(
     '-V --verbose'
@@ -301,7 +301,7 @@ tParserVerifyContent:flag('--disable_helper_signature_check')
 strCheckCookieHelp = [[
     Check if the SIP protection cookie is set
 ]]
-local tParserCheckSIPCookie = tParser:command('detect_sip_protection_cookie', strCheckCookieHelp):target('fCommandCheckSIPCookie')
+local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target('fCommandCheckSIPCookie')
 tParserCheckSIPCookie:option(
     '-V --verbose'
 ):description(
@@ -368,7 +368,7 @@ tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target
 -- ):target('fExtendExec')
 tParserDetectSecure:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- Add the "get_uid" command and all its options.
-local tParserGetUid = tParser:command('get_uid', 'Get the unique ID.'):target('fCommandGetUidSelected')
+local tParserGetUid = tParser:command('get_uid gu', 'Get the unique ID.'):target('fCommandGetUidSelected')
 tParserGetUid:option(
     '-V --verbose'
 ):description(
@@ -385,7 +385,7 @@ tParserGetUid:flag('--disable_helper_signature_check')
     :default(false)
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures vhs', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(

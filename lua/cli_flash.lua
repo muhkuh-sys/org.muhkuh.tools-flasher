@@ -385,7 +385,7 @@ addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
 
 -- detect_secure_boot_mode
-local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode ds', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
+local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode dsbm', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectSecureBoot)
 addPluginTypeArg(tParserCommandDetectSecureBoot)
@@ -394,7 +394,7 @@ addJtagKhzArg(tParserCommandDetectSecureBoot)
 
 
 -- reset_netx
-local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandResetSelected')
+local tParserCommandResetNetx = tParser:command('reset_netx rn', 'Reset the netX'):target('fCommandResetSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
@@ -403,7 +403,7 @@ addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
 -- identify_netx
-local tParserCommandIdentifyNetx = tParser:command('identify_netx i', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
+local tParserCommandIdentifyNetx = tParser:command('identify_netx in', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
@@ -415,7 +415,7 @@ addSecureArgs(tParserCommandIdentifyNetx)
 local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
 addSecureArgs(tParserCommandCheckHelperFiles)
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures vhs', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
 -- tParserCommandVerifyHelperSig:option(
 --     '-V --verbose'
 -- ):description(
