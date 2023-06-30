@@ -320,63 +320,62 @@ function checkAllHelperFiles(astrDirectories)
 end
 
 
--- -- not tested
--- function getHelperInfo(strKey)
---     local tEntry
---     local strMsg
---     
---     for i, e in ipairs(atHelperFileVersions) do
---         if e.key == strKey then
---             tEntry = e 
---             break
---         end 
---     end
---     
---     if tEntry == nil then
---         strMsg = string.format("Unknown helper name: '%s'", strKey)
---     end
--- 
---     return tEntry, strMsg
--- end
--- 
--- -- not tested
--- function getHelperPath(strDir, strKey)
---     local tEntry, strMsg = getHelperInfo(strKey)
---     local strPath
---     if tEntry then
---         strPath = path.join(strDir, tEntry.filename)
---     end 
---     
---     return strPath, strMsg
--- end
--- 
--- -- not tested
--- function getAllHelperKeys()
---     local astrKeys = {}
---     for i, e in ipairs(atHelperFileVersions) do
---         table.insert(astrKeys, e.key)
---     end
---     return astrKeys
--- end
--- 
--- -- not tested
--- function getHelperPaths(astrDir, astrKey)
---     astrKey = astrKey or getAllHelperKeys()
---     local astrPaths = {}
---     local fOk = true
---     for i, strDir in ipairs(astrDir) do
---         for j, strKey in ipairs(astrKeys) do
---             local strPath, strMsg = getHelperPath(strDir, strKey)
---             if strPath then
---                 table.insert(astrPaths, strPath)
---             else 
---                 printf("Unable to get path to helper %s: %s", strKey, (strMsg or "Unknown error"))
---                 fOk = false
---             end
---         end
---     end
---     return fOk, astrPaths
--- end
+function getHelperInfo(strKey)
+    local tEntry
+    local strMsg
+    
+    for i, e in ipairs(atHelperFileVersions) do
+        if e.key == strKey then
+            tEntry = e 
+            break
+        end 
+    end
+    
+    if tEntry == nil then
+        strMsg = string.format("Unknown helper name: '%s'", strKey)
+    end
+
+    return tEntry, strMsg
+end
+
+
+function getHelperPath(strDir, strKey)
+    local tEntry, strMsg = getHelperInfo(strKey)
+    local strPath
+    if tEntry then
+        strPath = path.join(strDir, tEntry.filename)
+    end 
+    
+    return strPath, strMsg
+end
+
+
+function getAllHelperKeys()
+    local astrKeys = {}
+    for i, e in ipairs(atHelperFileVersions) do
+        table.insert(astrKeys, e.key)
+    end
+    return astrKeys
+end
+
+
+function getHelperPaths(astrDir, astrKeys)
+    astrKeys = astrKeys or getAllHelperKeys()
+    local astrPaths = {}
+    local fOk = true
+    for i, strDir in ipairs(astrDir) do
+        for j, strKey in ipairs(astrKeys) do
+            local strPath, strMsg = getHelperPath(strDir, strKey)
+            if strPath then
+                table.insert(astrPaths, strPath)
+            else 
+                printf("Unable to get path to helper %s: %s", strKey, (strMsg or "Unknown error"))
+                fOk = false
+            end
+        end
+    end
+    return fOk, astrPaths
+end
 
 
 -- Return the paths to all known helper files.
