@@ -175,6 +175,8 @@ function addSecureArgs(tParserCommand)
             tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
             tParserCommand:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     )
+    tParserCommand:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+    
 end
 
 function addJtagKhzArg(tParserCommand)
@@ -563,6 +565,11 @@ function exec(aArgs)
 		end
 		print("Connect() result: ", fOk, strMsg)
 		
+		if fOk then 
+			-- check helper signatures
+			fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, aArgs.strSecureOption, aArgs.aHelperKeysForSigCheck)
+		end
+
 		-- On netx 4000, there may be a boot image in intram that makes it
 		-- impossible to boot a firmware from flash by resetting the hardware.
 		-- Therefore we clear the start of the intram boot image.
@@ -957,6 +964,32 @@ function main()
         end
     end
 
+    if aArgs.strSecureOption ~= nil 
+    and aArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION 
+    and aArgs.fDisableHelperSignatureChecks ~= true then
+
+        if aArgs.fCommandFlashSelected               -- flash         
+        or aArgs.fCommandReadSelected                -- read          
+        or aArgs.fCommandEraseSelected               -- erase         
+        or aArgs.fCommandVerifySelected              -- verify        
+        or aArgs.fCommandVerifyHashSelected          -- verify_hash   
+        or aArgs.fCommandHashSelected                -- hash          
+        or aArgs.fCommandDetectSelected              -- detect        
+        or aArgs.fCommandTestSelected                -- test          
+        or aArgs.fCommandTestCliSelected             -- testcli       
+        or aArgs.fCommandInfoSelected                -- info          
+        or aArgs.fParserCommandIdentifyNetxSelected  -- identify_netx 
+        then
+            aArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
+            
+        elseif aArgs.fCommandDetectNetxSelected          -- detect_netx 
+            or aArgs.fCommandDetectSecureBootSelected    -- detect_secure_boot_mode 
+            or aArgs.fCommandResetSelected               -- reset_netx 
+        then
+            aArgs.aHelperKeysForSigCheck = {"start_mi"}
+        end
+    end
+
 
     printArgs(aArgs)
     local strHelperFileStatus = tHelperFiles.getStatusString()
@@ -970,7 +1003,7 @@ function main()
     require("mhash")
     require("flasher")
     require("flasher_test")
-
+    
     if aArgs.fCommandListInterfacesSelected then
         tFlasherHelper.list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
         os.exit(0)
