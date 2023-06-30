@@ -273,6 +273,16 @@ function getHelperFile(strDirectory, strHelperName, fCheck)
     return checkHelperFileIntern(strDirectory, strHelperName, fCheck)
 end
 
+function getHelperFileData(strDirectory, strHelperName, fCheck)
+    local strHelperfilePath = getHelperFile(strDirectory, strHelperName, fCheck)
+    local strData
+    tFileHandle = io.open(strHelperfilePath, "rb")
+    strData = tFileHandle:read("*all")
+    tFileHandle:close()
+    return strData
+end
+
+
 
 -- Check the specified helper files in the specified directories,
 -- if the checks are enabled.
@@ -394,6 +404,26 @@ function getAllHelperPaths(astrDir)
     return astrPaths
 end
 
+function getAllHelperFilesData(astrDir)
+    local tPathList = getAllHelperPaths(astrDir)
+    local tDataList = {}
+    local tFileHandle
+    for i, strFilePath in ipairs(tPathList) do
+        if not path.exists(strFilePath) then
+            table.insert(tDataList, "")
+        else
+            tFileHandle = io.open(strFilePath, "rb")
+            if tFileHandle ~= nil then
+                local strData = tFileHandle:read("*all")
+                tFileHandle:close()
+                table.insert(tDataList, strData)
+            else
+                table.insert(tDataList, "")
+            end
+        end
+    end
+    return tDataList, tPathList
+end
 
 -- Show file check results in a generalized way.
 -- Each entry consists of the following:
