@@ -18,8 +18,19 @@ CLI Flasher:
   It is not currently performed for these commands:
   reset_netx, detect_secure_boot_mode, detect_netx
 
+* remove redundant used abbreviations inside API ('reset_netx' and 'read' both used abbreviation 'r')
+
 CLI Flasher, WFP:
 * If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
+
+CLI Flasher, WFP, USIP Player:
+* Stabilize UART communication by retrying connect command
+
+USIP Player:
+* No longer store temporary files inside flasher
+* Read command now takes the output folder as a positional argument (was '-o' '--output')
+
+
 
 Updates in CLI Flasher v2.0.0-dev12
 ==============================
