@@ -395,7 +395,7 @@ end
 function loadFiles(astrPaths)
     local astrFileData = {}
     local fOk = true
-    for i, strPath in ipairs(tPathList) do
+    for i, strPath in ipairs(astrPaths) do
         local strBin, strMsg = tFlasherHelper.loadBin(strPath)
         if strBin then 
             table.insert(astrFileData, strBin)
