@@ -34,7 +34,7 @@ local path = require 'pl.path'
 --   ok: true/false
 --   message: optional a message string
 
-function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strVerifySigPath)
+function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPath, strVerifySigPath)
     -- NOTE: For more information of how the verify_sig program works and how the data block is structured and how the
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
     
@@ -67,71 +67,89 @@ function verifySignature(tPlugin, strPluginType, astrPathList, strTempPath, strV
         end
 
         -- iterate over the path list to check the signature of every usip file
-        for idx, strSingleFilePath in ipairs(astrPathList) do
-            local strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
-            -- generate data block
-            local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strSingleFilePath, strDataBlockTmpPath)
+        for idx, strFileData in ipairs(tDatalist) do
             local tResult = {
-                path = strSingleFilePath, 
+                path = tPathList[idx], 
+                data_block = nil,
                 check = "signature",
                 ok = true,
                 message = nil
                 }
-            
-            -- check if the command executes without an error
-            if tGenDataBlockResult == true then
-                -- execute verify signature binary
 
-                tLog.debug("Clearing result areas ...")
-                tPlugin:write_data32(ulVerifySigResultAddress, 0x00000000)
-                tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
+            if strFileData ~= "" then
+                local strDataBlockTmpPath = nil
 
-                -- todo: why is the plugin type checked inside the loop?
-                if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
-                    tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
-                    tFlasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
-                    tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_before.bin")
-                    tLog.info("Start signature verification ...")
-                    if ulM2MMajor == 3 and ulM2MMinor >= 1 then
-                        tFlasher.call_hboot(tPlugin)
+
+                if tFlasherHelper.fStoreTempFiles then
+                    -- only if fStoreTempFiles is enabled set a path to store the data_block binary in the temp folder
+                    strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
+                end
+    
+                -- generate data block
+                local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strFileData, strDataBlockTmpPath)
+                tResult.data_block = strDataBlock
+    
+                -- check if the command executes without an error
+                if tGenDataBlockResult == true then
+                    -- execute verify signature binary
+    
+                    tLog.debug("Clearing result areas ...")
+                    tPlugin:write_data32(ulVerifySigResultAddress, 0x00000000)
+                    tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
+    
+                    -- todo: why is the plugin type checked inside the loop?
+                    if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
+                        tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
+                        tFlasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
+                        -- tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_before.bin")
+                        tLog.info("Start signature verification ...")
+                        if ulM2MMajor == 3 and ulM2MMinor >= 1 then
+                            tFlasher.call_hboot(tPlugin)
+                        else
+                            tPlugin:call(
+                                ulVerifySigDataLoadAddress + 1,
+                                ulDataBlockLoadAddress,
+                                tFlasher.default_callback_message,
+                                2
+                            )
+                        end
+                        -- tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_after.bin")
+    
+                        ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAddress)
+                        ulVerifySigDebug = tPlugin:read_data32(ulVerifySigDebugAddress)
+                        tLog.debug( "ulVerifySigDebug: 0x%08x ", ulVerifySigDebug )
+                        tLog.debug( "ulVerifySigResult: 0x%08x", ulVerifySigResult )
+                        -- if the verify sig program runs without errors the result
+                        -- register has a value of 0x00000701
+                        if ulVerifySigResult == 0x701 then
+                             tLog.info( "Successfully verified the signature of file: %s", tPathList[idx])
+                            tResult.ok = true
+                        else
+                            fOk = false
+                            tLog.error( "Failed to verify the signature of file: %s", tPathList[idx])
+                            tResult.ok = false
+                            tResult.message = "Signature verification failed."
+                        end
+    
                     else
-                        tPlugin:call(
-                            ulVerifySigDataLoadAddress + 1,
-                            ulDataBlockLoadAddress,
-                            tFlasher.default_callback_message,
-                            2
-                        )
-                    end
-                    tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_after.bin")
-
-                    ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAddress)
-                    ulVerifySigDebug = tPlugin:read_data32(ulVerifySigDebugAddress)
-                    tLog.debug( "ulVerifySigDebug: 0x%08x ", ulVerifySigDebug )
-                    tLog.debug( "ulVerifySigResult: 0x%08x", ulVerifySigResult )
-                    -- if the verify sig program runs without errors the result
-                    -- register has a value of 0x00000701
-                    if ulVerifySigResult == 0x701 then
-                        tLog.info( "Successfully verified the signature of file: %s", strSingleFilePath )
-                        tResult.ok = true
-                    else
+                        -- netX90 rev_1 and ethernet detected, this function is not supported
+                        tLog.error( "This Interface is not yet supported! -> %s", strPluginType )
                         fOk = false
-                        tLog.error( "Failed to verify the signature of file: %s", strSingleFilePath )
-                        tResult.ok = false
-                        tResult.message = "Signature verification failed."
                     end
-
                 else
-                    -- netX90 rev_1 and ethernet detected, this function is not supported
-                    tLog.error( "This Interface is not yet supported! -> %s", strPluginType )
                     fOk = false
+                    tLog.error( strErrorMsg ) 
+                    -- tLog.error( "Failed to generate data_block for file: %s ", strSingleFilePath )
+                    tResult.ok = false
+                    tResult.message = strErrorMsg 
                 end
             else
-                fOk = false
-                tLog.error( strErrorMsg ) 
-                tLog.error( "Failed to generate data_block for file: %s ", strSingleFilePath )
                 tResult.ok = false
-                tResult.message = strErrorMsg 
+                tResult.message = string.format("File does not exist: %s", tPathList[idx]) 
+                fOk = false
             end
+
+ 
             
             table.insert(atResults, tResult)
         end
@@ -153,17 +171,16 @@ end
 -- - Run the signature check
 -- - Print the results
 
-function verifyHelperSignatures (strPluginName, strPluginType, atPluginOptions, strSecureOption)
+function verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions, strSecureOption)
     tLog.info("Checking signatures of support files...**")
 
     local usipPlayerConf = require 'usip_player_conf'
-    local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
-    local strTmpFolderPath = tempFolderConfPath
+    local strTmpFolderPath = usipPlayerConf.tempFolderConfPath
     
     local strVerifySigPath = path.join(strSecureOption, "netx90", "verify_sig.bin")
         
     local strPath = path.join(strSecureOption, "netx90")
-    local astrSigCheckPaths = tHelperFiles.getAllHelperPaths({strPath})
+    local tHelperFileDataList, tPathList = tHelperFiles.getAllHelperFilesData({strPath})
 
     local atResults
 
@@ -179,7 +196,7 @@ function verifyHelperSignatures (strPluginName, strPluginType, atPluginOptions, 
             local strPluginType = tPlugin:GetTyp()
             
             fOk, atResults = verifySignature(
-                tPlugin, strPluginType, astrSigCheckPaths, strTmpFolderPath, strVerifySigPath
+                tPlugin, strPluginType, tHelperFileDataList, tPathList, strTmpFolderPath, strVerifySigPath
             )
         
             tPlugin:Disconnect()

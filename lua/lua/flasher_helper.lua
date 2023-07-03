@@ -9,6 +9,7 @@ module("flasher_helper", package.seeall)
 
 local tFlasher = require 'flasher'
 local bit = require 'bit'
+local class = require 'pl.class'
 
 -- exit code for detect_netx
 STATUS_OK = 0
@@ -25,6 +26,21 @@ SECURE_BOOT_ERROR = 1
 --------------------------------------------------------------------------
 -- helpers
 --------------------------------------------------------------------------
+
+-- Checking is enabled by default.
+fStoreTempFiles = false
+
+-- Disable the checks
+function disableStoreTempFiles()
+    -- print("Disabling automatic helper file checks")
+    fStoreTempFiles = false
+end
+
+-- Enable the checks
+function enableStoreTempFiles()
+    -- print("Enabling automatic helper file checks")
+    fStoreTempFiles = true
+end
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
@@ -46,6 +62,7 @@ function loadBin(strFilePath)
 	else
 		strMsg = string.format("Could not open file %s: %s", strFilePath, strMsg or "Unknown error")
 	end
+    tFile.close()
 	return strData, strMsg
 end
 
@@ -163,6 +180,37 @@ function show_plugin_options(tOpts)
 			print(strKey, tVal)
 		end
 	end
+end
+
+function connect_retry(tPlugin, uLRetries)
+    local fCallSuccess
+    local strError
+    print("connect to plugin")
+
+    if tPlugin == nil then
+        strError = "No plugin selected for connect"
+    end
+
+    -- default retries are 5
+    if uLRetries == nil then
+        uLRetries = 5
+    end
+
+    while uLRetries > 0 do
+        fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
+        if fCallSuccess then
+            print("connect successful")
+            break
+        end
+        print("connect not successful")
+        uLRetries = uLRetries - 1
+        sleep_s(1)
+        if uLRetries > 0 then
+            print("retry connecting ... ")
+        end
+    end
+
+    return fCallSuccess, strError
 end
 
 -- Try to open a plugin for an interface with the given name.
@@ -945,3 +993,51 @@ function dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 	dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
 end
 
+
+-- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
+-- !! this class does not provide every functionality of a file handle !!
+
+StringHandle = class()
+
+function StringHandle:_init(strData)
+    self.strData = strData
+    self.ulCurrentPointer = 1
+    self.ulSize = string.len(strData)
+end
+
+function StringHandle:read(ulReadBytes)
+	local strReadData
+    local ulReadLength = ulReadBytes
+	strReadData = string.sub(self.strData,self.ulCurrentPointer,(self.ulCurrentPointer + ulReadLength - 1))
+	self.ulCurrentPointer = self.ulCurrentPointer + ulReadLength
+    return strReadData
+end
+
+function StringHandle:__getStringPosInBytes()
+    return (self.ulCurrentPointer - 1)
+end
+
+function StringHandle:seek(strWhence, ulOffset)
+
+    local ulNewOffset
+
+    if ulOffset == nil then
+        ulOffset = 0
+    end
+
+    ulNewOffset = ulOffset -- * 4
+
+    if strWhence == "set" then
+        self.ulCurrentPointer = 1 + ulNewOffset
+    elseif strWhence == "cur" then
+        self.ulCurrentPointer = self.ulCurrentPointer + ulNewOffset
+    elseif strWhence == "end" then
+        self.ulCurrentPointer = self.ulSize + ulNewOffset
+    end
+
+    return self:__getStringPosInBytes()
+end
+
+function StringHandle:close()
+    -- dummy function that does nothing
+end
