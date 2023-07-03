@@ -34,6 +34,8 @@ local atLogLevels = {
     'fatal'
 }
 
+
+
 local separator = package.config:sub(1,1)
 local fIsRev2
 
@@ -86,6 +88,12 @@ tParser:flag "--disable_helper_version_check":hidden(true)
         tHelperFiles.disableHelperFileChecks()
     end)
 
+-- Add a hidden flag to disable the version checks on helper files.
+tParser:flag "--enable_temp_files":hidden(true)
+    :description "Enable writing some temporary data to files for debugging."
+    :action(function()
+        tFlasherHelper.enableStoreTempFiles()
+    end)
 
 -- Add the "usip" command and all its options.
 strBootswitchHelp = [[
@@ -212,7 +220,7 @@ strSetSipProtectionHelp = [[
     - update counter will be reset to zero
 ]]
 
-local tParserCommandSip = tParser:command('set_sip_protection', strSetSipProtectionHelp):target('fCommandSipSelected')
+local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target('fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
 ):description(
@@ -231,7 +239,7 @@ strSetKekHelp = [[
     reset the netX and process \n the usip file to update the SecureInfoPage and
     continue standard boot process.
 ]]
-local tParserCommandKek = tParser:command('set_kek', strSetKekHelp):target('fCommandKekSelected')
+local tParserCommandKek = tParser:command('set_kek sk', strSetKekHelp):target('fCommandKekSelected')
 tParserCommandKek:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
 tParserCommandKek:option(
     '-V --verbose'
@@ -293,7 +301,7 @@ tParserVerifyContent:flag('--disable_helper_signature_check')
 strCheckCookieHelp = [[
     Check if the SIP protection cookie is set
 ]]
-local tParserCheckSIPCookie = tParser:command('detect_sip_protection_cookie', strCheckCookieHelp):target('fCommandCheckSIPCookie')
+local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target('fCommandCheckSIPCookie')
 tParserCheckSIPCookie:option(
     '-V --verbose'
 ):description(
@@ -322,9 +330,9 @@ tParserReadSip:option(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserReadSip:option('-o --output'):description(
-    "Set the output directory. Default is specified in the config file of the usip-player."
-):target("strOutputFolder"):default(tempFolderConfPath)
+tParserReadSip:argument('output'):description(
+    "Set the output directory."
+):target("strOutputFolder")
 tParserReadSip:option('-t'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
@@ -360,7 +368,7 @@ tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target
 -- ):target('fExtendExec')
 tParserDetectSecure:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- Add the "get_uid" command and all its options.
-local tParserGetUid = tParser:command('get_uid', 'Get the unique ID.'):target('fCommandGetUidSelected')
+local tParserGetUid = tParser:command('get_uid gu', 'Get the unique ID.'):target('fCommandGetUidSelected')
 tParserGetUid:option(
     '-V --verbose'
 ):description(
@@ -377,7 +385,7 @@ tParserGetUid:flag('--disable_helper_signature_check')
     :default(false)
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures vhs', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -503,16 +511,6 @@ local atPluginOptionsFirstConnect = {
 -- helpers
 --------------------------------------------------------------------------
 
-
--- Source: http://lua-users.org/wiki/SleepFunction
--- sleep for n seconds
--- this function is blocking!
--- returns after n seconds
-function sleep(iSeconds)  -- seconds
-    local tClock = os.clock
-    local tT0 = tClock()
-  while tClock() - tT0 <= iSeconds do end
-end
 
 
 function check_file(strFilePath)
@@ -691,8 +689,6 @@ end
 -- returns nothing, in case of a romlaoder error MUHKUH_PLUGIN_ERROR <- ??
 function loadImage(tPlugin, strPath, ulLoadAddress)
     local fResult = false
-
-
     if path.exists(strPath) then
         tLog.info( "Loading image path: '%s'", strPath )
 
@@ -704,11 +700,7 @@ function loadImage(tPlugin, strPath, ulLoadAddress)
             local strFileData = tFile:read('*all')
             tFile:close()
             if strFileData ~= nil and strFileData ~= "" then
-                tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
-                -- write the image to the netX
-                tFlasher.write_image(tPlugin, ulLoadAddress, strFileData)
-                tLog.info("Writing image complete!")
-                fResult = true
+                fResult = loadDataToIntram(tPlugin, strFileData, ulLoadAddress)
             else
                 tLog.error( "Could not read from file %s", strPath )
             end
@@ -717,10 +709,15 @@ function loadImage(tPlugin, strPath, ulLoadAddress)
             tLog.error( 'Failed to open file "%s" for reading: %s', strPath, strMsg )
         end
     end
-
-
-
     return fResult
+end
+
+function loadDataToIntram(tPlugin, strData, ulLoadAddress)
+    tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
+    -- write the image to the netX
+    tFlasher.write_image(tPlugin, ulLoadAddress, strData)
+    tLog.info("Writing image complete!")
+    return true
 end
 
 
@@ -732,7 +729,6 @@ function loadUsipImage(tPlugin, strPath, fnCallbackProgress)
     -- this address is necessary for the new usip commands in the MI-Interfaces
     local ulLoadAddress = 0x000200C0
     fResult = loadImage(tPlugin, strPath, ulLoadAddress)
-
     return fResult
 end
 
@@ -793,7 +789,7 @@ end
 -- loads an image into the intram, flushes the data and reset via watchdog
 -- returns
 --    nothing
-function execBinViaIntram(tPlugin, strFilePath, ulIntramLoadAddress)
+function execBinViaIntram(tPlugin, strUsipData, ulIntramLoadAddress)
     local fResult
     local ulLoadAddress
     if ulIntramLoadAddress == nil then
@@ -801,9 +797,9 @@ function execBinViaIntram(tPlugin, strFilePath, ulIntramLoadAddress)
     else
         ulLoadAddress = ulIntramLoadAddress
     end
+        -- load an image into the intram
+    fResult = loadDataToIntram(tPlugin, strUsipData ,ulLoadAddress)
 
-    -- load an image into the intram
-    fResult = loadIntramImage(tPlugin, strFilePath, ulLoadAddress)
     if fResult then
         -- flush the image
         -- flush the intram by reading 32 bit and write them back
@@ -840,10 +836,19 @@ end
 -- the hash is correct and is not relevant for the usip process
 -- returns a list of all generated usip file paths and the output of the command
 function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+    local tResult
+    local aDataList
+    local tUsipNames
     -- list of all generated usip file paths
-    local tResult, aFileList = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
+    if tFlasherHelper.fStoreTempFiles then
+        tResult, aDataList, tUsipNames = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
+    else
+        aDataList, tUsipNames = tUsipGen:gen_multi_usip(tUsipConfigDict)
+        tResult = true
+    end
+    
 
-    return tResult, aFileList
+    return tResult, aDataList, tUsipNames
 end
 
 
@@ -855,79 +860,93 @@ end
 -- more information about the bootswitch in combination with an usip can be found in the
 -- KB: https://kb.hilscher.com/x/0s2gBw
 -- returns true, nil if everything went right, else false and a error message
-function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, strBootswitchParam)
-    -- result variable, be pessimistic
+function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchParam)
     local fResult = false
-    local strMsg
-    local strUsipData
-    local strBootswitchData
-    local strBootSwitchOnlyPornParam
-    local strCombinedUsipPath
 
     -- read the usip content
     -- print("Loading USIP content ... ")
     strUsipData, strMsg = tFlasherHelper.loadBin(strUsipPath)
     if strUsipData then
-        -- read the bootswitch content
-        -- print("Appending Bootswitch ... ")
-        -- strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
-        strBootswitchData, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "bootswitch")
-        if strBootswitchData == nil then
-            tLog.info(strMsg or "Error: Failed to load bootswitch (unknown error)")
-            os.exit(1)
-        end
-        -- note: the case that bootswitch cannot be found/loaded is not handled.
-        if strBootswitchData then
-            -- set the bootswitch parameter
-            if strBootswitchParam == "ETH" then
-                -- open eth console after reset
-                strBootSwitchOnlyPornParam = string.char(0x04, 0x00, 0x00, 0x00)
-            elseif strBootswitchParam == "UART" then
-                -- open uart console after reset
-                strBootSwitchOnlyPornParam = string.char(0x14, 0x00, 0x00, 0x00)
-            else
-                -- start MFW after reset
-                strBootSwitchOnlyPornParam = string.char(0x03, 0x00, 0x00, 0x00)
-            end
-        end
-        -- cut the usip image ending and the bootswitch header and extend the bootswitch content
-        -- this is necessary to have a regular image.
-        -- The bootswitch and the usip needs their regular header/ending because they have to be executed
-        -- individually. The bootswitch is an optional extension
-        strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strBootswitchData, 65 )
-        -- fill the image, so the bootswitch parameter are always at the same offset
-        if string.len( strUsipData ) < 0x8000 then
-            -- calculate the length of the fill up data
-            local ulFillUpLength = 0x8000 - string.len(strUsipData)
-            -- generate the fill up data
-            local strFillUpData = string.rep(string.char(255), ulFillUpLength)
-            -- extend the content with the fillup data - lenght of bootswitch parameter (-4)
-            -- the bootswitch have a hard-coded offset where he looks for the only-porn-parameters
-            -- to place the parameters at this offset the image must be extended to this predefined length
-            -- extend the bootswitch only porn data
-            strUsipData = strUsipData .. string.sub(strFillUpData, 1, -17) .. strBootSwitchOnlyPornParam
-            -- extend with zeros to flush the image
-            strUsipData = strUsipData .. string.char(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        fResult, strUsipData, strMsg = extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
+    else
+        tLog.info(strMsg or "Error: Failed to load '%s'", strUsipPath)
+    end
 
-            if string.len( strUsipData ) == 0x8000 then
-                -- set combined file path
+    return fResult, strUsipData, strMsg
+end
+
+function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
+    -- result variable, be pessimistic
+    local fResult = false
+    local strMsg
+    local strBootswitchData
+    local strBootSwitchOnlyPornParam
+    local strCombinedUsipPath
+    local strUsipData = strUsipData
+
+    -- read the bootswitch content
+    -- print("Appending Bootswitch ... ")
+    -- strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
+    strBootswitchData, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "bootswitch")
+    if strBootswitchData == nil then
+        tLog.info(strMsg or "Error: Failed to load bootswitch (unknown error)")
+        os.exit(1)
+    end
+    -- note: the case that bootswitch cannot be found/loaded is not handled.
+    if strBootswitchData then
+        -- set the bootswitch parameter
+        if strBootswitchParam == "ETH" then
+            -- open eth console after reset
+            strBootSwitchOnlyPornParam = string.char(0x04, 0x00, 0x00, 0x00)
+        elseif strBootswitchParam == "UART" then
+            -- open uart console after reset
+            strBootSwitchOnlyPornParam = string.char(0x14, 0x00, 0x00, 0x00)
+        else
+            -- start MFW after reset
+            strBootSwitchOnlyPornParam = string.char(0x03, 0x00, 0x00, 0x00)
+        end
+    end
+    -- cut the usip image ending and the bootswitch header and extend the bootswitch content
+    -- this is necessary to have a regular image.
+    -- The bootswitch and the usip needs their regular header/ending because they have to be executed
+    -- individually. The bootswitch is an optional extension
+    strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strBootswitchData, 65 )
+    -- fill the image, so the bootswitch parameter are always at the same offset
+    if string.len( strUsipData ) < 0x8000 then
+        -- calculate the length of the fill up data
+        local ulFillUpLength = 0x8000 - string.len(strUsipData)
+        -- generate the fill up data
+        local strFillUpData = string.rep(string.char(255), ulFillUpLength)
+        -- extend the content with the fillup data - lenght of bootswitch parameter (-4)
+        -- the bootswitch have a hard-coded offset where he looks for the only-porn-parameters
+        -- to place the parameters at this offset the image must be extended to this predefined length
+        -- extend the bootswitch only porn data
+        strUsipData = strUsipData .. string.sub(strFillUpData, 1, -17) .. strBootSwitchOnlyPornParam
+        -- extend with zeros to flush the image
+        strUsipData = strUsipData .. string.char(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+
+        if string.len( strUsipData ) == 0x8000 then
+            -- set combined file path
+            if tFlasherHelper.fStoreTempFiles then
+                -- only store temporary file when it is enabled
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")  -- todo use handover parameter for file name
                 -- write the data back to the usip binary file
                 local tFile
                 tFile = io.open(strCombinedUsipPath, "wb")
                 tFile:write(strUsipData)
                 tFile:close()
-                fResult = true
-                strMsg = "Extendet bootswitch."
-            else
-                strMsg = "The combined image exceeds the size of 32kB. Choose a smaller USIP file!"
             end
+            fResult = true
+            strMsg = "Extendet bootswitch."
+        else
+            strUsipData = nil
+            strMsg = "The combined image exceeds the size of 32kB. Choose a smaller USIP file!"
         end
     end
 
-    return fResult, strCombinedUsipPath, strMsg
+    return fResult, strUsipData, strMsg
 end
-
 
 -- fOk, strSingleUsipPath, strMsg extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
 -- extend the usip file with an exec chunk that return immediately and activated the debugging
@@ -937,19 +956,35 @@ function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath, 
     local fResult = false
     local strMsg
     local strUsipData
-    local strExecReturnData
-    local strCombinedUsipPath
-
-    -- read the usip content
+       -- read the usip content
     strUsipData = tFlasherHelper.loadBin(strUsipPath)
     if strUsipData then
-        -- read the exec-return content
-        strExecReturnData = tFlasherHelper.loadBin(strExecReturnFilePath)
-        if strExecReturnData then
-            -- cut the usip image ending and extend the exec-return content without the boot header
-            -- the first 64 bytes are the boot header
-            -- todo: find better way to strip the last 0 values (end indication of hboot image)
-            strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strExecReturnData, 65 )
+        fResult, strUsipData, strMsg = extendExecReturnData(
+                strUsipPath, strTmpFolderPath,
+                strExecReturnFilePath, strOutputFileName)
+    else
+        strMsg = "Can not read out the usip data."
+    end
+
+    return fResult, strUsipData, strMsg
+end
+
+function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
+    local fResult = false
+    local strMsg
+    local strExecReturnData
+    local strCombinedUsipPath
+    local strUsipData = strUsipData
+
+
+    -- read the exec-return content
+    strExecReturnData = tFlasherHelper.loadBin(strExecReturnFilePath)
+    if strExecReturnData then
+        -- cut the usip image ending and extend the exec-return content without the boot header
+        -- the first 64 bytes are the boot header
+        -- todo: find better way to strip the last 0 values (end indication of hboot image)
+        strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strExecReturnData, 65 )
+        if tFlasherHelper.fStoreTempFiles then
             -- set combined file path
             if strOutputFileName == nil then
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
@@ -961,16 +996,16 @@ function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath, 
             tFile = io.open(strCombinedUsipPath, "wb")
             tFile:write(strUsipData)
             tFile:close()
-            fResult = true
-            strMsg = "Extended exec-return."
-        else
-            strMsg = "Can not read out the exec-return binary data."
         end
+
+        fResult = true
+        strMsg = "Extended exec-return."
     else
-        strMsg = "Can not read out the usip data."
+        strMsg = "Can not read out the exec-return binary data."
     end
 
-    return fResult, strCombinedUsipPath, strMsg
+
+    return fResult, strUsipData, strMsg
 end
 
 
@@ -978,26 +1013,32 @@ end
 -- loading an usip file
 -- loads an usip file via a dedicated interface and checks if the chiptype is supported
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
-function loadUsip(strFilePath, tPlugin, strPluginType)
+
+function loadUsip(strUsipData, tPlugin, strPluginType)
 
     local ulRetries = 5
+    local strError
 
     local fOk
-    tLog.info( "Loading Usip %s via %s",strFilePath, strPluginType )
-    tPlugin:Connect()
+    tLog.info( "Loading Usip via %s", strPluginType )
+
+    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+    if fOk == false then
+        tLog.error(strError)
+    end
     local strPluginName = tPlugin:GetName()
 
     local ulM2MMinor = tPlugin:get_mi_version_min()
     local ulM2MMajor = tPlugin:get_mi_version_maj()
     if ulM2MMajor == 3 and ulM2MMinor >= 1 then
         local ulUsipLoadAddress = 0x200C0
-        loadImage(tPlugin, strFilePath ,ulUsipLoadAddress)
+        loadDataToIntram(tPlugin, strUsipData ,ulUsipLoadAddress)
         tFlasher.call_usip(tPlugin)
         fOk = true
     else
         -- we have a netx90 with either jtag or M2M interface older than 3.1
         if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' then
-            fOk = execBinViaIntram(tPlugin, strFilePath)
+            fOk = execBinViaIntram(tPlugin, strUsipData)
 
         elseif strPluginType == 'romloader_eth' then
             -- netX90 rev_1 and ethernet detected, this function is not supported
@@ -1009,7 +1050,7 @@ function loadUsip(strFilePath, tPlugin, strPluginType)
 
     if fOk then
         tPlugin:Disconnect()
-        sleep(3)
+        tFlasherHelper.sleep(3)
         -- get the jtag plugin with the attach option to not reset the netX
 
         while ulRetries > 0 do
@@ -1031,7 +1072,8 @@ end
 
 
 
-function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
+
+function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     local fResult = true
     local strErrorMsg = ""
 
@@ -1055,9 +1097,6 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
 
     local ulReadUUIDAddress = 0x00061ff0
 
-    -- data structure address where the sip data is copied to
-    local ulDataStructureAddress = 0x000220c0
-
     local ulM2MMajor = tPlugin:get_mi_version_maj()
     local ulM2MMinor = tPlugin:get_mi_version_min()
     local strPluginType = tPlugin:GetTyp()
@@ -1072,17 +1111,19 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
     local uLRetries = 5
 
     local strPluginName = tPlugin:GetName()
+    local strReadSipData = tFlasherHelper.loadBin(strHbootPath)
 
     if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
         tLog.debug("Extending USIP file with bootswitch.")
-        fOk, strHbootPath, strMsg = extendBootswitch(
-            strHbootPath, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
+        fOk, strReadSipData, strMsg = extendBootswitchData(
+            strReadSipData, strTmpFolderPath, tArgs.strBootswitchParams
         )
         tLog.debug(strMsg)
     elseif tArgs.strBootswitchParams == "JTAG" then
         tLog.debug("Extending USIP file with exec.")
-        fOk, strHbootPath, strMsg = extendExecReturn(
-            strHbootPath, strTmpFolderPath, strExecReturnPath
+        -- todo why do we still hand over the path (strExecReturnPath) instead of using helper files method
+        fOk, strReadSipData, strMsg = extendExecReturnData(
+            strReadSipData, strTmpFolderPath, strExecReturnPath
         )
     else
         -- tLog.debug(strMsg)
@@ -1091,7 +1132,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
 
 
     -- get verify sig program data only
-    local strReadSipData, strMsg = tFlasherHelper.loadBin(strHbootPath)
+
     if strReadSipData then
         tLog.info("download read_sip hboot image to 0x%08x", ulHbootLoadAddress)
         tFlasher.write_image(tPlugin, ulHbootLoadAddress, strReadSipData)
@@ -1113,7 +1154,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
                 tFlasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
-                tFlasherHelper.sleep_s(2)
+
                 tLog.info("Start read sip binary via call no answer")
                 tFlasher.call_no_answer(
                         tPlugin,
@@ -1126,7 +1167,6 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
                 tFlasher.write_image(tPlugin, ulDataLoadAddress, strReadSipDataSplit)
-                tFlasherHelper.sleep_s(2)
                 tLog.info("Start read sip binary via call")
                 tFlasher.call(
                         tPlugin,
@@ -1135,15 +1175,18 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
                 )
             end
 
-            tFlasherHelper.sleep_s(5)
             tLog.info("Disconnect from Plugin and reconnect again")
+            -- can there be timing issues with different OS
             tPlugin:Disconnect()
-            tFlasherHelper.sleep_s(8)
+            -- wait at least 2 sec for signature verification of read sip binary
+            tFlasherHelper.sleep_s(3)
 
             while uLRetries > 0 do
                 tLog.info("try to get the Plugin again after read sip reset")
-                tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
-                if tPlugin ~= nil then
+                -- tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                fCallSuccess, tPlugin = pcall(
+                        tFlasherHelper.getPlugin, strPluginName, strPluginType, atPluginOptions)
+                if fCallSuccess then
                     break
                 end
                 uLRetries = uLRetries - 1
@@ -1151,7 +1194,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strBo
             end
 
             if tPlugin then
-                tPlugin:Connect()
+                tFlasherHelper.connect_retry(tPlugin, 10)
+
             else
                 strErrorMsg = "Could not reach plugin after reset"
                 fResult = false
@@ -1209,7 +1253,6 @@ function verifyContent(
     strReadSipPath,
     tUsipConfigDict,
     atPluginOptions,
-    strBootswitchFilePath,
     strExecReturnPath
 )
     local fOk
@@ -1228,32 +1271,33 @@ function verifyContent(
 
     -- get the com sip data -- todo add bootswitch here?
     fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(
-        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
+        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
         uVerifyResult = VERIFY_RESULT_ERROR
     else
 
-        tLog.debug("Saving content to files...")
-        -- save the content to a file if the flag is set
-        -- set the sip file path to save the sip data
-        strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
-        strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
+        if tFlasherHelper.fStoreTempFiles then
+            tLog.debug("Saving content to files...")
+            -- save the content to a file if the flag is set
+            -- set the sip file path to save the sip data
+            strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
+            strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
+    
+    
+            -- write the com sip data to a file
+            tLog.debug("Saving COM SIP to %s ", strComSipFilePath)
+            local tFile = io.open(strComSipFilePath, "wb")
+            tFile:write(strComSipData)
+            tFile:close()
+            -- write the app sip data to a file
+            tLog.debug("Saving APP SIP to %s ", strAppSipFilePath)
+            tFile = io.open(strAppSipFilePath, "wb")
+            tFile:write(strAppSipData)
+            tFile:close()
+        end
 
-
-        -- write the com sip data to a file
-        tLog.debug("Saving COM SIP to %s ", strComSipFilePath)
-        local tFile = io.open(strComSipFilePath, "wb")
-        tFile:write(strComSipData)
-        tFile:close()
-        -- write the app sip data to a file
-        tLog.debug("Saving APP SIP to %s ", strAppSipFilePath)
-        tFile = io.open(strAppSipFilePath, "wb")
-        tFile:write(strAppSipData)
-        tFile:close()
-
-
-        uVerifyResult, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipFilePath, strAppSipFilePath, tPlugin)
+        uVerifyResult, strErrorMsg = tSipper:verify_usip(tUsipConfigDict, strComSipData, strAppSipData, tPlugin)
     end
 
     return uVerifyResult, strErrorMsg
@@ -1367,12 +1411,20 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     end
     tLog.debug("Finished call, disconnecting")
     tPlugin:Disconnect()
-    tLog.debug("Wait 2 seconds to be sure the set_kek process is finished")
-    sleep(2)
+    tLog.debug("Wait 3 seconds to be sure the set_kek process is finished")
+    tFlasherHelper.sleep(3)
     -- todo check results of connect and getPlugin before continuing
     -- get the uart plugin again
     tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
-    tPlugin:Connect()
+    if tPlugin then
+        fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fOk == false then
+            tLog.error(strError)
+        end
+    else
+        tLog.error("Failed to get plugin after set KEK")
+        fOk = false
+    end
 
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
@@ -1396,12 +1448,12 @@ end
 -----------------------------------------------------------------------------------------------------
 function usip(
         tPlugin,
-        tPathList,
+        tUsipDataList,
+        tUsipPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
         strVerifySigPath,
-        strBootswitchFilePath,
         strResetExecReturnPath,
         strResetBootswitchPath,
         strResetReadSipPath
@@ -1426,7 +1478,7 @@ function usip(
     if tArgs.fVerifySigEnable then
         -- check if every signature in the list is correct via MI
         fOk = tVerifySignature.verifySignature(
-            tPlugin, strPluginType, tPathList, strTmpFolderPath, strVerifySigPath
+            tPlugin, strPluginType, tUsipDataList, tUsipPathList, strTmpFolderPath, strVerifySigPath
         )
     else
         -- set the signature verification to automatically to true
@@ -1436,18 +1488,18 @@ function usip(
     -- just continue if the verification process was a success (or not enabled)
     if fOk then
         -- iterate over the usip file path list
-        for _, strSingleUsipPath in ipairs(tPathList) do
+        for _, strSingleUsipData in ipairs(tUsipDataList) do
             -- check if usip needs extended by the bootswitch with parameters
             if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
                 tLog.debug("Extending USIP file with bootswitch.")
-                fOk, strSingleUsipPath, strMsg = extendBootswitch(
-                    strSingleUsipPath, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
+                fOk, strSingleUsipData, strMsg = extendBootswitchData(
+                    strSingleUsipData, strTmpFolderPath, tArgs.strBootswitchParams
                 )
                 tLog.debug(strMsg)
             elseif tArgs.strBootswitchParams == "JTAG" then
                 tLog.debug("Extending USIP file with exec.")
-                fOk, strSingleUsipPath, strMsg = extendExecReturn(
-                    strSingleUsipPath, strTmpFolderPath, strExecReturnPath
+                fOk, strSingleUsipData, strMsg = extendExecReturnData(
+                    strSingleUsipData, strTmpFolderPath, strExecReturnPath
                 )
             else
                 -- tLog.debug(strMsg)
@@ -1458,7 +1510,7 @@ function usip(
             if fOk then
 
                 -- load an usip file via a dedicated interface
-                fOk, tPlugin = loadUsip(strSingleUsipPath, tPlugin, strPluginType)
+                fOk, tPlugin = loadUsip(strSingleUsipData, tPlugin, strPluginType)
                 -- NOTE: be aware after the loading the netX will make a reset
                 --       but in the function the tPlugin will be reconncted!
                 --       so after the function the tPlugin is connected!
@@ -1485,7 +1537,10 @@ function usip(
         end
 
         -- connect to the netX
-        tPlugin:Connect()
+        fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fOk == false then
+            tLog.error(strError)
+        end
         -- tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_usip.bin")
         -- tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x1000, strTmpFolderPath, "dump_after_usip.bin")
         -- check if a bootswitch is necessary to force a dedicated interface after a reset
@@ -1516,7 +1571,7 @@ function usip(
             end
 
             tPlugin:Disconnect()
-            sleep(2)
+            tFlasherHelper.sleep(2)
             -- just necessary if the uart plugin in used
             -- jtag works without getting a new plugin
 
@@ -1531,23 +1586,34 @@ function usip(
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
         -- this is the case if the content should be verified without a reset at the end
 
-        tPlugin:Connect()
-        uVerifyResult, strErrorMsg = verifyContent(
-            strPluginType,
-            tPlugin,
-            strTmpFolderPath,
-            strResetReadSipPath,
-            tUsipConfigDict,
-            atResetPluginOptions,
-            strResetBootswitchPath,
-            strResetExecReturnPath
-        )
-        if (uVerifyResult == VERIFY_RESULT_OK)then
-            fOk = true
+        if tPlugin then
+            fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+            if fOk == false then
+                tLog.error(strError)
+            end
         else
+            tLog.error("Failed to get plugin after set KEK")
             fOk = false
-            tLog.error(strErrorMsg)
         end
+
+        if fOk then
+            uVerifyResult, strErrorMsg = verifyContent(
+                    strPluginType,
+                    tPlugin,
+                    strTmpFolderPath,
+                    strResetReadSipPath,
+                    tUsipConfigDict,
+                    atResetPluginOptions,
+                    strResetExecReturnPath
+            )
+            if (uVerifyResult == VERIFY_RESULT_OK)then
+                fOk = true
+            else
+                fOk = false
+                tLog.error(strErrorMsg)
+            end
+        end
+
     end
 
     return fOk
@@ -1622,11 +1688,11 @@ end
 function set_kek(
     tPlugin,
     strTmpFolderPath,
-    tPathList,
+    tUsipDataList,
+    tUsipPathList,
     strExecReturnPath,
     strVerifySigPath,
     strResetReadSipPath,
-    strBootswitchFilePath,
     strResetBootswitchPath,
     strResetExecReturnPath,
     tUsipConfigDict,
@@ -1638,14 +1704,11 @@ function set_kek(
     -- be optimistic
     local fOk = true
     local strPluginType
-    local strPluginName
     local strKekHbootData
-    local strKekDummyUsipData
-    local strKekProcessOutput
     local strCombinedImageData
     local strFillUpData
-    local strFirstUsipPath
-    local strUsipToExtend
+    local strUsipToExtendData
+    local strKekDummyUsipData
     local fProcessUsip = false
     local strMsg
     local strFirstUsipData
@@ -1658,22 +1721,17 @@ function set_kek(
     -- are replaced by the new generated KEK and so the signature will change too
 
     -- check if an USIP file was provided
-    if next(tPathList) then
+    if next(tUsipDataList) then
         fProcessUsip = true
         tLog.debug("Found general USIP to process.")
         -- lua tables start with 1
-        strFirstUsipPath = tPathList[1]
-        table.remove(tPathList, 1)
-        -- load usip data
-        strFirstUsipData, strMsg = tFlasherHelper.loadBin(strFirstUsipPath)
-        if not strFirstUsipData then
-            tLog.error(strMsg)
-            fOk = false
-        end
+        strFirstUsipData = tUsipDataList[1]
+        table.remove(tUsipDataList, 1)
     else
         tLog.debug("No general USIP found.")
     end
 
+    strKekDummyUsipData = tFlasherHelper.loadBin(strKekDummyUsipFilePath)
     ---------------------------------------------------------------
     -- KEK process
     ---------------------------------------------------------------
@@ -1762,23 +1820,23 @@ function set_kek(
             if fProcessUsip then
                 tLog.debug("Getting first USIP from Usiplist.")
                 tLog.debug("Set general USIP as extending USIP.")
-                strUsipToExtend = strFirstUsipPath
+                strUsipToExtendData = strFirstUsipData
             else
                 tLog.debug("Set dummy USIP as extending USIP.")
-                strUsipToExtend = strKekDummyUsipFilePath
+                strUsipToExtendData = strKekDummyUsipData
             end
             -- extend usip with bootswitch/exec_return data if necessary
             -- check if usip needs extended by the bootswitch with parameters
             if tArgs.strBootswitchParams == "JTAG" then
                 tLog.debug("Extending USIP file with exec.")
-                fOk, strUsipToExtend, strMsg = extendExecReturn(
-                        strUsipToExtend, strTmpFolderPath, strExecReturnPath
+                fOk, strUsipToExtendData, strMsg = extendExecReturnData(
+                    strUsipToExtendData, strTmpFolderPath, strExecReturnPath
                 )
                 tLog.debug(strMsg)
             else if tArgs.strBootswitchParams ~= nil then
                 tLog.debug("Extending USIP file with bootswitch.")
-                fOk, strUsipToExtend, strMsg = extendBootswitch(
-                    strUsipToExtend, strTmpFolderPath, strBootswitchFilePath, tArgs.strBootswitchParams
+                fOk, strUsipToExtendData, strMsg = extendBootswitchData(
+                    strUsipToExtendData, strTmpFolderPath, tArgs.strBootswitchParams
                 )
                 tLog.debug(strMsg)
             else
@@ -1790,15 +1848,14 @@ function set_kek(
             if fOk then
 
                 if fProcessUsip then
-                    strFirstUsipPath = strUsipToExtend
+                    strFirstUsipData = strUsipToExtendData
                 else
-                    strKekDummyUsipFilePath = strUsipToExtend
+                    strKekDummyUsipData = strUsipToExtendData
                 end
                 if fOk then
                     -- be pessimistic
                     fOk = false
                     -- load dummyUsip data
-                    strKekDummyUsipData, strMsg = tFlasherHelper.loadBin(strKekDummyUsipFilePath)
                     if not strKekDummyUsipData then
                         tLog.error(strMsg)
                     else
@@ -1808,7 +1865,6 @@ function set_kek(
                             fOk = true
                         else
                             -- load usip data
-                            strFirstUsipData, strMsg = tFlasherHelper.loadBin(strFirstUsipPath)
                             if not strFirstUsipData then
                                 tLog.error(strMsg)
                             else
@@ -1880,44 +1936,48 @@ function set_kek(
                         if fOk then
                             -- be pessimistic again
                             fOk = false
-                            -- save the combined file into the temporary folder
-                            local strKekHbootCombPath = path.join( strTmpFolderPath, "kek_hboot_comb.bin")
-                            local tFile = io.open( strKekHbootCombPath, "wb" )
-                            -- check if the file exists
-                            if not tFile then
-                                tLog.error("Could not write data to file %s.", strKekHbootCombPath)
-                            else
-                                -- write all data to file
-                                tFile:write( strCombinedImageData )
-                                tFile:close()
-                                -- load the combined image to the netX
-                                tLog.info( "Using %s", strPluginType )
-                                --fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
-                                fOk, tPlugin = kekProcess(tPlugin, strCombinedImageData, strTmpFolderPath)
 
-                                -- todo if not further usip are provided we do not make a final reset to activate the last usip file
+                            if tFlasherHelper.fStoreTempFiles then
 
-                                if fOk then
-                                    -- check if an input file path is set
-                                    if not fProcessUsip then
-                                        tLog.warning(
-                                            "No input file given. All other options that are just for the usip" ..
-                                            " command will be ignored."
-                                        )
-                                    else
-                                        fOk = usip(
-                                                tPlugin,
-                                                tPathList,
-                                                tUsipConfigDict,
-                                                strTmpFolderPath,
-                                                strExecReturnPath,
-                                                strVerifySigPath,
-                                                strBootswitchFilePath,
-                                                strResetExecReturnPath,
-                                                strResetBootswitchPath,
-                                                strResetReadSipPath
-                                        )
-                                    end
+                                -- save the combined file into the temporary folder
+                                local strKekHbootCombPath = path.join( strTmpFolderPath, "kek_hboot_comb.bin")
+                                local tFile = io.open( strKekHbootCombPath, "wb" )
+                                -- check if the file exists
+                                if not tFile then
+                                    tLog.error("Could not write data to file %s.", strKekHbootCombPath)
+                                else
+                                    -- write all data to file
+                                    tFile:write( strCombinedImageData )
+                                    tFile:close()
+                                end
+                            end
+                            -- load the combined image to the netX
+                            tLog.info( "Using %s", strPluginType )
+                            --fOk, tPlugin = kekProcess(tPlugin, strKekHbootCombPath, strTmpFolderPath)
+                            fOk, tPlugin = kekProcess(tPlugin, strCombinedImageData, strTmpFolderPath)
+
+                            -- todo if not further usip are provided we do not make a final reset to activate the last usip file
+
+                            if fOk then
+                                -- check if an input file path is set
+                                if not fProcessUsip then
+                                    tLog.warning(
+                                        "No input file given. All other options that are just for the usip" ..
+                                        " command will be ignored."
+                                    )
+                                else
+                                    fOk = usip(
+                                            tPlugin,
+                                            tUsipDataList,
+                                            tUsipPathList,
+                                            tUsipConfigDict,
+                                            strTmpFolderPath,
+                                            strExecReturnPath,
+                                            strVerifySigPath,
+                                            strResetExecReturnPath,
+                                            strResetBootswitchPath,
+                                            strResetReadSipPath
+                                    )
                                 end
                             end
                         end
@@ -1937,13 +1997,10 @@ function read_sip(
     strReadSipPath,
     strOutputFolderPath,
     fReadCal,
-    strBootswitchFilePath,
     strExecReturnPath
 )
 
     local fOk = false
-    local strPluginType
-    local strPluginName
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
@@ -1955,7 +2012,7 @@ function read_sip(
     --------------------------------------------------------------------------
 
     local iReadSipResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData, _ =  readSip(
-        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
+        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
 
 
     if iReadSipResult then
@@ -1998,7 +2055,7 @@ function read_sip(
 end
 
 
-function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
+function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, strExecReturnPath)
 
     local fOk = false
     local strPluginType
@@ -2018,7 +2075,7 @@ function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, str
     --------------------------------------------------------------------------
 
     local iReadSipResult, strErrorMsg, _, _, _, aStrUUIDs = readSip(
-        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strBootswitchFilePath, strExecReturnPath)
+        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
 
     if iReadSipResult then
             strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
@@ -2038,7 +2095,6 @@ function verify_content(
     strTmpFolderPath,
     strUsipFilePath,
     strReadSipPath,
-    strBootswitchFilePath,
     strExecReturnPath
 )
     local strPluginType
@@ -2066,7 +2122,6 @@ function verify_content(
             strReadSipPath,
             tUsipConfigDict,
             atPluginOptions,
-            strBootswitchFilePath,
             strExecReturnPath
         )
 
@@ -2090,27 +2145,19 @@ tLog.info("")
 local tPlugin
 local iChiptype = nil
 local strPluginType
-local strPluginName
 local strNetxName
 local fIsSecure
 local strUsipFilePath = nil
-local strUsipGenExePath
-local strSipperExePath
-
-
-
 local strSecureOption = tArgs.strSecureOption
-
 local strReadSipPath
 local strExecReturnPath
 local strVerifySigPath
 local strBootswitchFilePath
 local strKekHbootFilePath
 local strKekDummyUsipFilePath
-local strExecReturnFilePath
-local tPathList = {}
+local tUsipDataList = {}
+local tUsipPathList = {}
 local strTmpFolderPath = tempFolderConfPath
-local strUsipConfigPath
 local strResetExecReturnPath
 local strResetVerifySigPath
 local strResetBootswitchPath
@@ -2118,6 +2165,7 @@ local strResetReadSipPath
 local tResult
 local strErrorMsg
 local tUsipConfigDict
+local strFileData
 
 -- set fFinalResult to false, be pessimistic
 local fFinalResult = false
@@ -2169,16 +2217,11 @@ if fCallSuccess then
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
-            fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
-            if fCallSuccess then
-                -- get the chiptype
-                iChiptype = tPlugin:GetChiptyp()
-                tLog.debug( "Found Chip type: %d", iChiptype )
-            else
-                tLog.debug(strError)
-                tLog.error( "Could not open %s interface. (check if netX is in secure boot mode)", strPluginType )
-                os.exit(1)
+            fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+            if fFinalResult == false then
+                tLog.error(strErrorMsg)
             end
+
         end
     end
 else
@@ -2260,6 +2303,7 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     strResetVerifySigPath = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName, "verify_sig.bin")
     -- check if the verify_sig file exists
 
+    -- todo why not use get helper file function?
     strResetExecReturnPath = path.join(
     tArgs.strSecureOptionPhaseTwo, strNetxName, "return_exec.bin"
     )
@@ -2275,6 +2319,7 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     check_file(strResetExecReturnPath)
     check_file(strResetBootswitchPath)
     check_file(strResetReadSipPath)
+
 
     strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
     local fHelpersOk = tHelperFiles.checkHelperFiles({strSecureOptionPhaseTwoDir}, astrHelpersToCheck)
@@ -2295,7 +2340,10 @@ end
 if tArgs.fCommandKekSelected then
     -- set kek image paths
     strKekHbootFilePath = path.join(strSecureOption, strNetxName, "set_kek.bin")
+    check_file(strKekHbootFilePath)
+
     -- strKekDummyUsipFilePath = path.join(strSecureOption, strNetxName, "set_kek.usp")
+    -- todo add flasher root path here
     strKekDummyUsipFilePath = path.join("netx", "helper", "netx90", "set_kek.usp")
     -- check if the set_kek file exists
     if not path.exists(strKekHbootFilePath) then
@@ -2333,13 +2381,13 @@ if tArgs.strBootswitchParams then
 end
 
 -- check if the temp folder exists, if it does not exists, create it
-if not exists(strTmpFolderPath) then
-    -- (!) TODO: This is not os independent! (!)
-    os.execute("mkdir " .. strTmpFolderPath)
+if not exists(strTmpFolderPath) and tFlasherHelper.fStoreTempFiles then
+    path.mkdir(strTmpFolderPath)
 end
 
 -- set the path for set_sip_protection_cookie.usp
 if tArgs.fCommandCheckSIPCookie then
+    -- todo move to helper files folder (this will not be signed)
     strUsipFilePath = path.join(strSecureOption, "netx90_usip" ,"set_sip_protection_cookie.usp")
 end
 
@@ -2361,10 +2409,14 @@ if tArgs.strUsipFilePath then
         os.exit(1)
     else
         if (iChiptype == 14  or iChiptype == 17) and tUsipConfigDict["num_of_chunks"] > 1  then
-            iGenMultiResult, tPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+            iGenMultiResult, tUsipDataList, tUsipPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
         else
-            tPathList = { strUsipFilePath}
-            iGenMultiResult = true
+            strData, strMsg = tFlasherHelper.loadBin(strUsipFilePath)
+            if strData then
+                tUsipDataList = {strData}
+                tUsipPathList = {strUsipFilePath}
+                iGenMultiResult = true
+            end
         end
     end
 end
@@ -2380,38 +2432,60 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
     else
         -- verify the signature of the used HTBL files
         -- make a list of necessary files
-        local tblHtblFilePaths = {}
+        local tblHtblFileData = {}
+        local tPathList = {}
         local fDoVerify = false
         if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
             fDoVerify = true
-            table.insert(tblHtblFilePaths, strReadSipPath)
+            strFileData, _ = tFlasherHelper.loadBin(strReadSipPath)
+            if strData == nil then
+                fFinalResult = false
+            end
+            table.insert(tblHtblFileData, strFileData)
+            table.insert( tPathList, strReadSipPath)
         end
         if tArgs.strBootswitchParams then
             fDoVerify = true
             if tArgs.strBootswitchParams == "JTAG" then
-                table.insert( tblHtblFilePaths, strExecReturnFilePath )
+                strFileData, _ = tFlasherHelper.loadBin(strExecReturnPath)
+                if strData == nil then
+                    fFinalResult = false
+                end
+                table.insert( tblHtblFileData, strFileData)
+                table.insert( tPathList, strExecReturnPath)
             else
-                table.insert( tblHtblFilePaths, strBootswitchFilePath )
+                strFileData, _ = tFlasherHelper.loadBin(strBootswitchFilePath)
+                if strData == nil then
+                    fFinalResult = false
+                end
+                table.insert( tblHtblFileData, strFileData)
+                table.insert( tPathList, strBootswitchFilePath)
             end
         end
 
-        -- TODO why not verify set_kek.bin even if no bootswitch was selected?
         -- maybe only verify if set kek command selected
-        table.insert(tblHtblFilePaths, strKekHbootFilePath)
+        if tArgs.fCommandKekSelected then
+            strFileData, strErrorMsg = tFlasherHelper.loadBin(strKekHbootFilePath)
+            if strData == nil then
+                fFinalResult = false
+            end
+            table.insert(tblHtblFileData, strFileData)
+            table.insert( tPathList, strKekHbootFilePath)
+        end
 
         -- TODO: how to be sure that the verify sig will work correct?
         -- NOTE: If the verify_sig file is not signed correctly the process will fail
         -- is there a way to verify the signature of the verify_sig itself?
         -- if tArgs.fVerifySigEnable then
         --     fDoVerify = true
-        --     table.insert( tblHtblFilePaths, strVerifySigPath )
+        --     table.insert( tblHtblFileData, strVerifySigPath )
 
         if fDoVerify then
             tLog.info("Checking signatures of support files...")
 
             -- check if every signature in the list is correct via MI
             fOk = tVerifySignature.verifySignature(
-                tPlugin, strPluginType, tblHtblFilePaths, strTmpFolderPath, strVerifySigPath
+                tPlugin, strPluginType, tblHtblFileData, tPathList, strTmpFolderPath, strVerifySigPath
             )
 
             if not fOk then
@@ -2434,12 +2508,12 @@ if tArgs.fCommandUsipSelected then
     tLog.info("######################################")
     fFinalResult = usip(
         tPlugin,
-        tPathList,
+        tUsipDataList,
+        tUsipPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
         strVerifySigPath,
-        strBootswitchFilePath,
         strResetExecReturnPath,
         strResetBootswitchPath,
         strResetReadSipPath
@@ -2455,12 +2529,12 @@ elseif tArgs.fCommandDisableSecurity then
 
     fFinalResult = usip(
         tPlugin,
-        astrPathList,
+        tUsipDataList,
+        tUsipPathList,
         tUsipConfigDict,
         strTmpFolderPath,
         strExecReturnPath,
         strVerifySigPath,
-        strBootswitchFilePath,
         strResetExecReturnPath,
         strResetBootswitchPath,
         strResetReadSipPath
@@ -2487,11 +2561,11 @@ elseif tArgs.fCommandKekSelected then
     fFinalResult = set_kek(
         tPlugin,
         strTmpFolderPath,
-        tPathList,
+        tUsipDataList,
+        tUsipPathList,
         strExecReturnPath,
         strVerifySigPath,
         strResetReadSipPath,
-        strBootswitchFilePath,
         strResetBootswitchPath,
         strResetExecReturnPath,
         tUsipConfigDict,
@@ -2520,7 +2594,6 @@ elseif tArgs.fCommandReadSelected then
         strReadSipPath,
         strOutputFolderPath,
         tArgs.fReadCal,
-        strBootswitchFilePath,
         strExecReturnPath
     )
 
@@ -2543,7 +2616,6 @@ elseif tArgs.fCommandGetUidSelected then
         strTmpFolderPath,
         strReadSipPath,
         atPluginOptions,
-        strBootswitchFilePath,
         strExecReturnPath
     )
 
@@ -2561,7 +2633,6 @@ elseif tArgs.fCommandVerifySelected then
         strTmpFolderPath,
         strUsipFilePath,
         strReadSipPath,
-        strBootswitchFilePath,
         strExecReturnPath
     )
     if uResultCode == VERIFY_RESULT_OK then
@@ -2581,7 +2652,6 @@ elseif tArgs.fCommandCheckSIPCookie then
         strTmpFolderPath,
         strUsipFilePath,
         strReadSipPath,
-        strBootswitchFilePath,
         strExecReturnPath
     )
     if uResultCode == VERIFY_RESULT_OK then
@@ -2641,12 +2711,12 @@ elseif tArgs.fCommandVerifyHelperSignaturesSelected then
     local strVerifySigPath = path.join(strSecureOption, "netx90", "verify_sig.bin")
 
     local strPath = path.join(strSecureOption, "netx90")
-    local astrSigCheckPaths = tHelperFiles.getAllHelperPaths({strPath})
+    local tSigCheckDataList, tPathList = tHelperFiles.getAllHelperFilesData({strPath})
     local atResults
     local strPluginType = tPlugin:GetTyp()
 
     fFinalResult, atResults = tVerifySignature.verifySignature(
-        tPlugin, strPluginType, astrSigCheckPaths, strTmpFolderPath, strVerifySigPath
+        tPlugin, strPluginType, tSigCheckDataList, tPathList, strTmpFolderPath, strVerifySigPath
     )
 
     tHelperFiles.showFileCheckResults(atResults)
