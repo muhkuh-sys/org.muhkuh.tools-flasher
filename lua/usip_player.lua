@@ -276,7 +276,7 @@ tParserCommandKek:flag('--no_reset'
 strVerifyHelp = [[
     Verify the content of a usip file against the content of a secure info page
 ]]
-local tParserVerifyContent = tParser:command('verify', strVerifyHelp):target('fCommandVerifySelected')
+local tParserVerifyContent = tParser:command('verify v', strVerifyHelp):target('fCommandVerifySelected')
 tParserVerifyContent:option(
     '-V --verbose'
 ):description(
@@ -322,7 +322,7 @@ tParserCheckSIPCookie:flag('--disable_helper_signature_check')
 strReadHelp = [[
     Read out the sip content and save it into a temporary folder
 ]]
-local tParserReadSip = tParser:command('read', strReadHelp):target('fCommandReadSelected')
+local tParserReadSip = tParser:command('read r', strReadHelp):target('fCommandReadSelected')
 tParserReadSip:option(
     '-V --verbose'
 ):description(
