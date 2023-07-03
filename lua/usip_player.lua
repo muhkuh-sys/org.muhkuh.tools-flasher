@@ -1050,7 +1050,7 @@ function loadUsip(strUsipData, tPlugin, strPluginType)
 
     if fOk then
         tPlugin:Disconnect()
-        tFlasherHelper.sleep(3)
+        tFlasherHelper.sleep_s(3)
         -- get the jtag plugin with the attach option to not reset the netX
 
         while ulRetries > 0 do
@@ -1059,7 +1059,7 @@ function loadUsip(strUsipData, tPlugin, strPluginType)
             if tPlugin ~= nil then
                 break
             end
-            tFlasherHelper.sleep(1)  -- todo use the same sleep everywhere
+            tFlasherHelper.sleep_s(1)  -- todo use the same sleep everywhere
         end
     end
 
@@ -1412,7 +1412,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     tLog.debug("Finished call, disconnecting")
     tPlugin:Disconnect()
     tLog.debug("Wait 3 seconds to be sure the set_kek process is finished")
-    tFlasherHelper.sleep(3)
+    tFlasherHelper.sleep_s(3)
     -- todo check results of connect and getPlugin before continuing
     -- get the uart plugin again
     tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
@@ -1571,7 +1571,7 @@ function usip(
             end
 
             tPlugin:Disconnect()
-            tFlasherHelper.sleep(2)
+            tFlasherHelper.sleep_s(2)
             -- just necessary if the uart plugin in used
             -- jtag works without getting a new plugin
 
