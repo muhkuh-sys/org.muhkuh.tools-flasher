@@ -224,12 +224,12 @@ function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
     local strMsg 
     local atResults
     local strSecPathNx90 = path.join(strSecureOption, "netx90")
-    local astrSigCheckPaths
-    fOk, astrSigCheckPaths = helper_files.getHelperPaths({strSecPathNx90}, astrKeys)
+    local astrPaths, astrFileData
+    fOk, astrPaths, astrFileData = helper_files.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
     
-    if fOk ~= true then
+    if astrPaths == nil then
         fOk = false
-        strMsg = "Failed to get the paths to the helper files."
+        strMsg = "Bug: some helper files are unknown"
     else 
         tLog.info("Checking signatures of support files ...**")
     
@@ -244,14 +244,14 @@ function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
         else 
             local strPluginType = tPlugin:GetTyp()
             fOk, atResults = verifySignature(
-                tPlugin, strPluginType, astrSigCheckPaths, tempFolderConfPath, strVerifySigPath
+                tPlugin, strPluginType, astrPaths, astrFileData, tempFolderConfPath, strVerifySigPath
             )
             
             tHelperFiles.showFileCheckResults(atResults)
             
             if fOk then
                 tLog.info("The signatures of the helper files have been successfully verified.")
-                fOk = true
+                --fOk = true
                 strMsg = "Helper file signatures OK."
             else
                 tLog.error( "The signatures of the helper files could not be verified." )

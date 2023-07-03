@@ -358,7 +358,13 @@ function getAllHelperKeys()
     return astrKeys
 end
 
-
+-- Get the paths to helper files.
+-- For each helper ID in astrKeys, the filename is looked up and appended to 
+-- the directory. This is repeated for each directory in astrDir.
+--
+-- Return values:
+-- fOk: true if all keys could be found, false if not.
+-- astrPaths: the paths that could be generated, may be incomplete.
 function getHelperPaths(astrDir, astrKeys)
     astrKeys = astrKeys or getAllHelperKeys()
     local astrPaths = {}
@@ -369,6 +375,10 @@ function getHelperPaths(astrDir, astrKeys)
             if strPath then
                 table.insert(astrPaths, strPath)
             else 
+                -- TODO: This indicates a bug.
+                -- The program tried to get the path to a helper file 
+                -- that is not implemented here.
+                -- Maybe an error should be raised immediately.
                 printf("Unable to get path to helper %s: %s", strKey, (strMsg or "Unknown error"))
                 fOk = false
             end
@@ -377,6 +387,39 @@ function getHelperPaths(astrDir, astrKeys)
     return fOk, astrPaths
 end
 
+-- Load the files in astrPaths.
+-- Returns values:
+-- fOk: true if all files could be loaded, false if not.
+-- astrFileData: a list of the contents of the files.
+-- For any file that cannot be loaded, an empty string is inserted.
+function loadFiles(astrPaths)
+    local astrFileData = {}
+    local fOk = true
+    for i, strPath in ipairs(tPathList) do
+        local strBin, strMsg = tFlasherHelper.loadBin(strPath)
+        if strBin then 
+            table.insert(astrFileData, strBin)
+        else 
+            print(strMsg)
+            table.insert(astrFileData, "")
+            fOk = false
+        end
+    end
+    return fOk, astrFileData
+end
+
+-- Return values:
+-- true, data, paths: all helpers could be read.
+-- false, data, paths: not all helpers could be read, some data entries are the empty string. 
+-- false, nil, paths: some helper files are unknown -> Bug
+function getHelperDataAndPaths(astrDir, astrKeys)
+    local fOk, astrPaths = getHelperPaths(astrDir, astrKeys)
+    local astrFileData
+    if fOk and astrPaths then
+        fOk, astrFileData = loadFiles(astrPaths)
+    end
+    return fOk, astrFileData, astrPaths 
+end
 
 -- Return the paths to all known helper files.
 -- astrDir is a list of directories. 
