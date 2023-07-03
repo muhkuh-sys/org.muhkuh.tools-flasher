@@ -273,16 +273,6 @@ function getHelperFile(strDirectory, strHelperName, fCheck)
     return checkHelperFileIntern(strDirectory, strHelperName, fCheck)
 end
 
-function getHelperFileData(strDirectory, strHelperName, fCheck)
-    local strHelperfilePath = getHelperFile(strDirectory, strHelperName, fCheck)
-    local strData
-    tFileHandle = io.open(strHelperfilePath, "rb")
-    strData = tFileHandle:read("*all")
-    tFileHandle:close()
-    return strData
-end
-
-
 
 -- Check the specified helper files in the specified directories,
 -- if the checks are enabled.

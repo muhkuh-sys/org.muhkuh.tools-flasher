@@ -90,7 +90,7 @@ tParser:flag "--disable_helper_version_check":hidden(true)
 
 -- Add a hidden flag to disable the version checks on helper files.
 tParser:flag "--enable_temp_files":hidden(true)
-    :description "Disable version checks on helper files."
+    :description "Enable writing some temporary data to files for debugging."
     :action(function()
         tFlasherHelper.enableStoreTempFiles()
     end)
@@ -511,16 +511,6 @@ local atPluginOptionsFirstConnect = {
 -- helpers
 --------------------------------------------------------------------------
 
-
--- Source: http://lua-users.org/wiki/SleepFunction
--- sleep for n seconds
--- this function is blocking!
--- returns after n seconds
-function sleep(iSeconds)  -- seconds
-    local tClock = os.clock
-    local tT0 = tClock()
-  while tClock() - tT0 <= iSeconds do end
-end
 
 
 function check_file(strFilePath)
@@ -1027,10 +1017,15 @@ end
 function loadUsip(strUsipData, tPlugin, strPluginType)
 
     local ulRetries = 5
+    local strError
 
     local fOk
     tLog.info( "Loading Usip via %s", strPluginType )
-    tFlasherHelper.connect_retry(tPlugin, 5)
+
+    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+    if fOk == false then
+        tLog.error(strError)
+    end
     local strPluginName = tPlugin:GetName()
 
     local ulM2MMinor = tPlugin:get_mi_version_min()
@@ -1055,7 +1050,7 @@ function loadUsip(strUsipData, tPlugin, strPluginType)
 
     if fOk then
         tPlugin:Disconnect()
-        sleep(3)
+        tFlasherHelper.sleep(3)
         -- get the jtag plugin with the attach option to not reset the netX
 
         while ulRetries > 0 do
@@ -1417,11 +1412,19 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     tLog.debug("Finished call, disconnecting")
     tPlugin:Disconnect()
     tLog.debug("Wait 3 seconds to be sure the set_kek process is finished")
-    sleep(3)
+    tFlasherHelper.sleep(3)
     -- todo check results of connect and getPlugin before continuing
     -- get the uart plugin again
     tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
-    tFlasherHelper.connect_retry(tPlugin, 5)
+    if tPlugin then
+        fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fOk == false then
+            tLog.error(strError)
+        end
+    else
+        tLog.error("Failed to get plugin after set KEK")
+        fOk = false
+    end
 
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
@@ -1534,7 +1537,10 @@ function usip(
         end
 
         -- connect to the netX
-        tFlasherHelper.connect_retry(tPlugin, 5)
+        fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fOk == false then
+            tLog.error(strError)
+        end
         -- tFlasherHelper.dump_trace(tPlugin, strTmpFolderPath, "trace_after_usip.bin")
         -- tFlasherHelper.dump_intram(tPlugin, 0x20080000, 0x1000, strTmpFolderPath, "dump_after_usip.bin")
         -- check if a bootswitch is necessary to force a dedicated interface after a reset
@@ -1565,7 +1571,7 @@ function usip(
             end
 
             tPlugin:Disconnect()
-            sleep(2)
+            tFlasherHelper.sleep(2)
             -- just necessary if the uart plugin in used
             -- jtag works without getting a new plugin
 
@@ -1580,22 +1586,34 @@ function usip(
         -- check if strResetReadSipPath is set, if it is nil set it to the default path of the read sip binary
         -- this is the case if the content should be verified without a reset at the end
 
-        tFlasherHelper.connect_retry(tPlugin, 5)
-        uVerifyResult, strErrorMsg = verifyContent(
-            strPluginType,
-            tPlugin,
-            strTmpFolderPath,
-            strResetReadSipPath,
-            tUsipConfigDict,
-            atResetPluginOptions,
-            strResetExecReturnPath
-        )
-        if (uVerifyResult == VERIFY_RESULT_OK)then
-            fOk = true
+        if tPlugin then
+            fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+            if fOk == false then
+                tLog.error(strError)
+            end
         else
+            tLog.error("Failed to get plugin after set KEK")
             fOk = false
-            tLog.error(strErrorMsg)
         end
+
+        if fOk then
+            uVerifyResult, strErrorMsg = verifyContent(
+                    strPluginType,
+                    tPlugin,
+                    strTmpFolderPath,
+                    strResetReadSipPath,
+                    tUsipConfigDict,
+                    atResetPluginOptions,
+                    strResetExecReturnPath
+            )
+            if (uVerifyResult == VERIFY_RESULT_OK)then
+                fOk = true
+            else
+                fOk = false
+                tLog.error(strErrorMsg)
+            end
+        end
+
     end
 
     return fOk
@@ -2130,19 +2148,13 @@ local strPluginType
 local strNetxName
 local fIsSecure
 local strUsipFilePath = nil
-
-
-
-
 local strSecureOption = tArgs.strSecureOption
-
 local strReadSipPath
 local strExecReturnPath
 local strVerifySigPath
 local strBootswitchFilePath
 local strKekHbootFilePath
 local strKekDummyUsipFilePath
-local tPathList = {}
 local tUsipDataList = {}
 local tUsipPathList = {}
 local strTmpFolderPath = tempFolderConfPath
@@ -2205,7 +2217,11 @@ if fCallSuccess then
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
-            tFlasherHelper.connect_retry(tPlugin, 5)
+            fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+            if fFinalResult == false then
+                tLog.error(strErrorMsg)
+            end
+
         end
     end
 else
@@ -2438,7 +2454,6 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
             end
         end
 
-        -- TODO why not verify set_kek.bin even if no bootswitch was selected?
         -- maybe only verify if set kek command selected
         if tArgs.fCommandKekSelected then
             strFileData, _ = tFlasherHelper.loadBin(strKekHbootFilePath)
