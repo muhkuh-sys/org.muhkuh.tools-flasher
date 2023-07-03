@@ -3,6 +3,21 @@ Updates in CLI Flasher v2.0.0-dev13
 
 CLI Flasher:
 * The flash device size is printed as an unsigned number.
+* Added automatic signature checking for helper binaries.
+
+  The flasher will automatically check the signatures of the helpers used 
+  for the current command, if
+  - a helper directory is supplied using the --sec option,
+    wich is not the 'unsigned' directory
+  - checking is not disabled by adding the flag --disable_helper_signature_check
+  
+  The check is performed for the following commands:
+  flash, read, erase, verify, verify_hash, hash 
+  detect, info, identify_netx, test, testcli
+
+  It is not currently performed for these commands:
+  reset_netx, detect_secure_boot_mode, detect_netx
+
 CLI Flasher, WFP:
 * If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
 

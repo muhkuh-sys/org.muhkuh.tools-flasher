@@ -175,6 +175,8 @@ function addSecureArgs(tParserCommand)
             tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
             tParserCommand:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     )
+    tParserCommand:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+    
 end
 
 function addJtagKhzArg(tParserCommand)
@@ -411,21 +413,23 @@ addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
--- check_helper_files
-local tParserCommandCheckHelperFiles = tParser:command('check_helper_files chf', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperFilesSelected')
-addSecureArgs(tParserCommandCheckHelperFiles)
+-- check_helper_version
+local tParserCommandCheckHelperVersion = tParser:command('check_helper_version', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperVersionSelected')
+addSecureArgs(tParserCommandCheckHelperVersion)
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures vhs', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
--- tParserCommandVerifyHelperSig:option(
+-- check_helper_signature 
+local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+-- tParserCommandCheckHelperSignature:option(
+
 --     '-V --verbose'
 -- ):description(
 --     string.format(
 --         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
 --     )
 -- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandCheckHelperSignature:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandCheckHelperSignature:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandCheckHelperSignature:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- printArgs(tArguments)
@@ -562,6 +566,11 @@ function exec(aArgs)
 		end
 		print("Connect() result: ", fOk, strMsg)
 		
+		if fOk then 
+			-- check helper signatures
+			fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, aArgs.strSecureOption, aArgs.aHelperKeysForSigCheck)
+		end
+
 		-- On netx 4000, there may be a boot image in intram that makes it
 		-- impossible to boot a firmware from flash by resetting the hardware.
 		-- Therefore we clear the start of the intram boot image.
@@ -924,7 +933,7 @@ function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
-    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperFilesSelected ~= true then
+    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
 
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
@@ -956,6 +965,32 @@ function main()
         end
     end
 
+    if aArgs.strSecureOption ~= nil 
+    and aArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION 
+    and aArgs.fDisableHelperSignatureChecks ~= true then
+
+        if aArgs.fCommandFlashSelected               -- flash         
+        or aArgs.fCommandReadSelected                -- read          
+        or aArgs.fCommandEraseSelected               -- erase         
+        or aArgs.fCommandVerifySelected              -- verify        
+        or aArgs.fCommandVerifyHashSelected          -- verify_hash   
+        or aArgs.fCommandHashSelected                -- hash          
+        or aArgs.fCommandDetectSelected              -- detect        
+        or aArgs.fCommandTestSelected                -- test          
+        or aArgs.fCommandTestCliSelected             -- testcli       
+        or aArgs.fCommandInfoSelected                -- info          
+        or aArgs.fParserCommandIdentifyNetxSelected  -- identify_netx 
+        then
+            aArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
+            
+        elseif aArgs.fCommandDetectNetxSelected          -- detect_netx 
+            or aArgs.fCommandDetectSecureBootSelected    -- detect_secure_boot_mode 
+            or aArgs.fCommandResetSelected               -- reset_netx 
+        then
+            aArgs.aHelperKeysForSigCheck = {"start_mi"}
+        end
+    end
+
 
     printArgs(aArgs)
     local strHelperFileStatus = tHelperFiles.getStatusString()
@@ -969,7 +1004,7 @@ function main()
     require("mhash")
     require("flasher")
     require("flasher_test")
-
+    
     if aArgs.fCommandListInterfacesSelected then
         tFlasherHelper.list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
         os.exit(0)
@@ -1015,7 +1050,7 @@ function main()
         print(strMsg)
         os.exit(iRet)
 
-    elseif aArgs.fCommandCheckHelperFilesSelected then
+    elseif aArgs.fCommandCheckHelperVersionSelected then
         local t1 = os.time()
         
         local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
@@ -1026,7 +1061,7 @@ function main()
         printf("Time: %d seconds", dt)
         os.exit(fOk and 0 or 1)
         
-    elseif aArgs.fCommandVerifyHelperSignaturesSelected then 
+    elseif aArgs.fCommandCheckHelperSignatureSelected then 
         fOk = tVerifySignature.verifyHelperSignatures(
             aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions, aArgs.strSecureOption)
         -- verifyHelperSignatures has printed a success/failure message
