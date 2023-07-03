@@ -2438,6 +2438,9 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
         if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
             fDoVerify = true
             strFileData, _ = tFlasherHelper.loadBin(strReadSipPath)
+            if strData == nil then
+                fFinalResult = false
+            end
             table.insert(tblHtblFileData, strFileData)
             table.insert( tPathList, strReadSipPath)
         end
@@ -2445,10 +2448,16 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
             fDoVerify = true
             if tArgs.strBootswitchParams == "JTAG" then
                 strFileData, _ = tFlasherHelper.loadBin(strExecReturnPath)
+                if strData == nil then
+                    fFinalResult = false
+                end
                 table.insert( tblHtblFileData, strFileData)
                 table.insert( tPathList, strExecReturnPath)
             else
                 strFileData, _ = tFlasherHelper.loadBin(strBootswitchFilePath)
+                if strData == nil then
+                    fFinalResult = false
+                end
                 table.insert( tblHtblFileData, strFileData)
                 table.insert( tPathList, strBootswitchFilePath)
             end
@@ -2456,7 +2465,10 @@ if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
 
         -- maybe only verify if set kek command selected
         if tArgs.fCommandKekSelected then
-            strFileData, _ = tFlasherHelper.loadBin(strKekHbootFilePath)
+            strFileData, strErrorMsg = tFlasherHelper.loadBin(strKekHbootFilePath)
+            if strData == nil then
+                fFinalResult = false
+            end
             table.insert(tblHtblFileData, strFileData)
             table.insert( tPathList, strKekHbootFilePath)
         end
