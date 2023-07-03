@@ -62,7 +62,6 @@ function loadBin(strFilePath)
 	else
 		strMsg = string.format("Could not open file %s: %s", strFilePath, strMsg or "Unknown error")
 	end
-    tFile.close()
 	return strData, strMsg
 end
 
