@@ -171,6 +171,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
     local tPlugin
     local aAttr
     local aBoardInfo
+    local fResult = true
 
     if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
         tPlugin = tester:getCommonPlugin()
@@ -180,9 +181,13 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
         if tPlugin then
-            tPlugin:Connect()
+            fResult, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+            if fResult == false then
+                tLog.error(strError)
+            end
         else
             tLog.error(strError)
+            fResult = false
         end
     end
 	
@@ -215,7 +220,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 	
 	exampleXml:exportXml(tArgs.strWfpControlFile)
     
-    return true
+    return fResult
 end
 
 
@@ -487,16 +492,17 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                 tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
                 if tPlugin then
-                    tPlugin:Connect()
+                    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+                    if fOk == false then
+                        tLog.error(strError)
+                    end
 				else
 					tLog.error(strError)
+                    fOk = false
                 end
             end
 
-            if not tPlugin then
-                tLog.error("No plugin selected, nothing to do!")
-                fOk = false
-            else
+            if tPlugin then
                 local iChiptype = tPlugin:GetChiptyp()
                 print("found chip type: ", iChiptype)
                 -- Does the WFP have an entry for the chip?
@@ -844,7 +850,10 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
                 if tPlugin then
-                    tPlugin:Connect()
+                    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+                    if fOk == false then
+                        tLog.error(strError)
+                    end
                 end
             end
 

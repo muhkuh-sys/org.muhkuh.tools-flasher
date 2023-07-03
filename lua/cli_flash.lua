@@ -387,7 +387,7 @@ addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
 
 -- detect_secure_boot_mode
-local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode ds', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
+local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode dsbm', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectSecureBoot)
 addPluginTypeArg(tParserCommandDetectSecureBoot)
@@ -396,7 +396,7 @@ addJtagKhzArg(tParserCommandDetectSecureBoot)
 
 
 -- reset_netx
-local tParserCommandResetNetx = tParser:command('reset_netx r', 'Reset the netX'):target('fCommandResetSelected')
+local tParserCommandResetNetx = tParser:command('reset_netx rn', 'Reset the netX'):target('fCommandResetSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
@@ -405,7 +405,7 @@ addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
 -- identify_netx
-local tParserCommandIdentifyNetx = tParser:command('identify_netx i', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
+local tParserCommandIdentifyNetx = tParser:command('identify_netx in', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
@@ -420,6 +420,7 @@ addSecureArgs(tParserCommandCheckHelperVersion)
 -- check_helper_signature 
 local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 -- tParserCommandCheckHelperSignature:option(
+
 --     '-V --verbose'
 -- ):description(
 --     string.format(
@@ -559,7 +560,7 @@ function exec(aArgs)
 	-- open the plugin
 	tPlugin, strMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
-		fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
+		fOk, strMsg = tFlasherHelper.connect_retry(tPlugin, 5)
 		if not fOk then 
 			strMsg = strMsg or "Failed to open connection"
 		end

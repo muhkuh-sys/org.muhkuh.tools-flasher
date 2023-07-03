@@ -25,9 +25,92 @@ function UsipGenerator:_init(tLog)
     self.tLog = tLog
 end
 
+function UsipGenerator:gen_multi_usip(tUsipConfigDict)
+   local aDataList = {}
+   local tDataNames = {}
+    for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
+        local tChunkContent = tUsipConfigDict['content'][iIdx]
+
+        -- open the first output file
+
+        local strUsipData = ""
+
+        -- write the magic sequence
+        strUsipData = strUsipData .. string.char(0x00, 0xaf, 0xbe, 0xf3)
+
+        -- fill up with 12 zeros
+        strUsipData = strUsipData .. string.char(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+
+        -- write header image size
+        strUsipData = strUsipData .. tUsipConfigDict["header_image_size"]
+
+        -- fill up with 4 zeros
+        strUsipData = strUsipData .. string.char(0x00, 0x00, 0x00, 0x00)
+
+        -- write MOOH
+        strUsipData = strUsipData .. string.char(0x4d, 0x4f, 0x4f, 0x48)
+
+        -- fill up with 4 zeros
+        strUsipData = strUsipData .. string.char(0x00, 0x00, 0x00, 0x00)
+
+        -- write header hash
+        strUsipData = strUsipData .. tUsipConfigDict['sha224']
+
+        -- write header checksum
+        strUsipData = strUsipData .. tUsipConfigDict['header_check_sum']
+
+        -- write usip cookie
+        strUsipData = strUsipData .. string.char(0x55, 0x53, 0x49, 0x50)
+
+        -- write chunk size
+        strUsipData = strUsipData .. tChunkContent['chunk_size']
+
+        -- add page type
+        strUsipData = strUsipData .. tChunkContent['page_type']
+
+        -- add key index
+        strUsipData = strUsipData .. tChunkContent['key_idx']
+
+        -- add patched size
+        strUsipData = strUsipData .. tChunkContent['patched_size']
+
+        if tChunkContent['key_idx_int'] ~= 255 then
+            strUsipData = strUsipData .. tChunkContent['uuid']
+            strUsipData = strUsipData .. tChunkContent['anchor_0']
+            strUsipData = strUsipData .. tChunkContent['anchor_1']
+            strUsipData = strUsipData .. tChunkContent['anchor_2']
+            strUsipData = strUsipData .. tChunkContent['anchor_3']
+            strUsipData = strUsipData .. tChunkContent['uuid_mask']
+            strUsipData = strUsipData .. tChunkContent['anchor_mask_0']
+            strUsipData = strUsipData .. tChunkContent['anchor_mask_1']
+            strUsipData = strUsipData .. tChunkContent['anchor_mask_2']
+            strUsipData = strUsipData .. tChunkContent['anchor_mask_3']
+            strUsipData = strUsipData .. tChunkContent['padded_key']
+        end
+
+        -- add data
+        for iDataIdx=0, tChunkContent['ulDataCount'] do
+            strUsipData = strUsipData .. tChunkContent['data'][iDataIdx]['offset']
+            strUsipData = strUsipData .. tChunkContent['data'][iDataIdx]['size']
+            strUsipData = strUsipData .. tChunkContent['data'][iDataIdx]['patched_data']
+        end
+
+        -- add padding
+        strUsipData = strUsipData .. tChunkContent['padding']
+
+        --add signature
+        strUsipData = strUsipData .. tChunkContent['signature']
+        -- add 4 zeros
+        strUsipData = strUsipData .. string.char(0x00, 0x00, 0x00, 0x00)
+
+        table.insert(aDataList, strUsipData)
+        table.insert(tDataNames, "single_usip_".. iIdx)
+    end
+    return aDataList, tDataNames
+end
+
 function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPrefix)
     local tResult = true
-    local strZeroFill
 
     if not path.exists(strOutputDir) then
         path.mkdir(strOutputDir)
@@ -38,85 +121,22 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     end
 
     local aOutputList = {}
+    local aDataList = self:gen_multi_usip(tUsipConfigDict)
+    local strUsipData
+
     for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
         local strOutputFilePath = pl.path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
         table.insert(aOutputList, strOutputFilePath)
 
-        local tChunkContent = tUsipConfigDict['content'][iIdx]
+        strUsipData = aDataList[iIdx]
 
-        -- open the first output file
         local tUsipFileHandle = io.open(strOutputFilePath, 'wb')
-
-        -- write the magic sequence
-        tUsipFileHandle:write(string.char(0x00, 0xaf, 0xbe, 0xf3))
-
-        -- fill up with 12 zeros
-        tUsipFileHandle:write(string.char(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
-
-        -- write header image size
-        tUsipFileHandle:write(tUsipConfigDict["header_image_size"])
-
-        -- fill up with 4 zeros
-        tUsipFileHandle:write(string.char(0x00, 0x00, 0x00, 0x00))
-
-        -- write MOOH
-        tUsipFileHandle:write(string.char(0x4d, 0x4f, 0x4f, 0x48))
-
-        -- fill up with 4 zeros
-        tUsipFileHandle:write(string.char(0x00, 0x00, 0x00, 0x00))
-
-        -- write header hash
-        tUsipFileHandle:write(tUsipConfigDict['sha224'])
-
-        -- write header checksum
-        tUsipFileHandle:write(tUsipConfigDict['header_check_sum'])
-
-        -- write usip cookie
-        tUsipFileHandle:write(string.char(0x55, 0x53, 0x49, 0x50))
-
-        -- write chunk size
-        tUsipFileHandle:write(tChunkContent['chunk_size'])
-
-        -- add page type
-        tUsipFileHandle:write(tChunkContent['page_type'])
-
-        -- add key index
-        tUsipFileHandle:write(tChunkContent['key_idx'])
-
-        -- add patched size
-        tUsipFileHandle:write(tChunkContent['patched_size'])
-
-        if tChunkContent['key_idx_int'] ~= 255 then
-            tUsipFileHandle:write(tChunkContent['uuid'])
-            tUsipFileHandle:write(tChunkContent['anchor_0'])
-            tUsipFileHandle:write(tChunkContent['anchor_1'])
-            tUsipFileHandle:write(tChunkContent['anchor_2'])
-            tUsipFileHandle:write(tChunkContent['anchor_3'])
-            tUsipFileHandle:write(tChunkContent['uuid_mask'])
-            tUsipFileHandle:write(tChunkContent['anchor_mask_0'])
-            tUsipFileHandle:write(tChunkContent['anchor_mask_1'])
-            tUsipFileHandle:write(tChunkContent['anchor_mask_2'])
-            tUsipFileHandle:write(tChunkContent['anchor_mask_3'])
-            tUsipFileHandle:write(tChunkContent['padded_key'])
-        end
-
-        -- add data
-        for iDataIdx=0, tChunkContent['ulDataCount'] do
-            tUsipFileHandle:write(tChunkContent['data'][iDataIdx]['offset'])
-            tUsipFileHandle:write(tChunkContent['data'][iDataIdx]['size'])
-            tUsipFileHandle:write(tChunkContent['data'][iDataIdx]['patched_data'])
-        end
-
-        -- add padding
-        tUsipFileHandle:write(tChunkContent['padding'])
-
-        --add signature
-        tUsipFileHandle:write(tChunkContent['signature'])
-        -- add 4 zeros
-        tUsipFileHandle:write(string.char(0x00, 0x00, 0x00, 0x00))
+        tUsipFileHandle:write(strUsipData)
         tUsipFileHandle:close()
+
     end
-    return tResult, aOutputList
+
+    return tResult, aOutputList, aDataList
 end
 
 function UsipGenerator:analyze_usip(strUsipFilePath)
