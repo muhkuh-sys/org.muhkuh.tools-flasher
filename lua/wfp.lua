@@ -689,6 +689,10 @@ tParserCommandExample:argument('xml', 'Output example XML control file.'):target
 tParserCommandExample:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
 tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandExample:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandExample:mutex(
+        tParserCommandExample:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
+        tParserCommandExample:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+)
 
 -- Add the "check_helper_signature" command and all its options.
 local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target('fCommandCheckHelperSignatureSelected')
