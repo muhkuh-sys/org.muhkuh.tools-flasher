@@ -618,7 +618,7 @@ end
 
 local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
 
-tParser:flag "--version":description "Show version info and exit. ":action(function()
+tParser:flag "-v --version":description "Show version info and exit. ":action(function()
     require("flasher_version")
     print(FLASHER_VERSION_STRING)
     os.exit(0)
@@ -636,7 +636,7 @@ local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of th
 tParserCommandFlash:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
 tParserCommandFlash:flag('-d --dry-run'):description('Dry run. Connect to a netX and read all data from the WFP, but to not alter the flash.'):default(false):target('fDryRun')
 tParserCommandFlash:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
-tParserCommandFlash:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandFlash:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandFlash:mutex(
@@ -644,10 +644,11 @@ tParserCommandFlash:mutex(
         tParserCommandFlash:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
 
+-- Add the "verify" command and all its options.
 local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
 tParserCommandVerify:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
-tParserCommandVerify:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerify:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandVerify:mutex(
@@ -662,7 +663,7 @@ tParserCommandRead:argument("xml", "The XML control file."):target("strWfpContro
 tParserCommandRead:argument("output_dir", "The destination path to create the backup."):target("strBackupPath")
 tParserCommandRead:option("-a --archive", 'Create a WFP file from the output directory.'):default(nil):target('strWfpArchiveFile')
 tParserCommandRead:flag('-s --simple'):description('Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
-tParserCommandRead:option("-v --verbose"):description(
+tParserCommandRead:option("-V --verbose"):description(
     string.format(
         "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
         table.concat(atLogLevels, ", ")
@@ -681,7 +682,7 @@ tParserCommandRead:mutex(
 -- Add the "list" command and all its options.
 local tParserCommandList = tParser:command('list l', 'List the contents of the WFP.'):target('fCommandListSelected')
 tParserCommandList:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
-tParserCommandList:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandList:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
 -- Add the "pack" command and all its options.
 local tParserCommandPack = tParser:command('pack p', 'Pack a WFP based on an XML.'):target('fCommandPackSelected')
@@ -689,16 +690,17 @@ tParserCommandPack:argument('xml', 'The XML control file.'):target('strWfpContro
 tParserCommandPack:argument('archive', 'The WFP file to create.'):target('strWfpArchiveFile')
 tParserCommandPack:flag('-o --overwrite'):description('Overwrite an existing WFP archive. The default is to do nothing if the target archive already exists.'):default(false):target('fOverwrite')
 tParserCommandPack:flag('-s --simple'):description('Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
-tParserCommandPack:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandPack:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
+-- Add the "example" command and all its options.
 local tParserCommandExample = tParser:command('example e', 'Create example XML for connected netX.'):target('fCommandExampleSelected')
 tParserCommandExample:argument('xml', 'Output example XML control file.'):target('strWfpControlFile')
 tParserCommandExample:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
 tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandExample:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
-
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -707,7 +709,7 @@ tParserCommandVerifyHelperSig:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 local tArgs = tParser:parse()

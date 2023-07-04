@@ -420,7 +420,6 @@ addSecureArgs(tParserCommandCheckHelperVersion)
 -- check_helper_signature 
 local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 -- tParserCommandCheckHelperSignature:option(
-
 --     '-V --verbose'
 -- ):description(
 --     string.format(
@@ -428,7 +427,7 @@ local tParserCommandCheckHelperSignature = tParser:command('check_helper_signatu
 --     )
 -- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandCheckHelperSignature:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandCheckHelperSignature:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandCheckHelperSignature:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandCheckHelperSignature:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
