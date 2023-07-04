@@ -162,7 +162,7 @@ end
 
 function addPluginNameArg(tParserCommand)
     -- tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
-    tParserCommand:option('-p', 'plugin name'):target('strPluginName')
+    tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
 end
 
 function addPluginTypeArg(tParserCommand)
