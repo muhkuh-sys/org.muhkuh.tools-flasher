@@ -7,8 +7,7 @@ local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.forma
 
 local tFlasher = require 'flasher' -- write_image(), call(), call_hboot()
 local tFlasherHelper = require 'flasher_helper' --loadBin(), dump_intram()
-local sipper = require 'sipper'
-local tSipper = sipper(tLog)
+
 
 local tHelperFiles = require 'helper_files'
 
@@ -39,6 +38,8 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
     
     -- be optimistic
+    local sipper = require 'sipper'
+    local tSipper = sipper(tLog)
     local fOk = true
     local atResults = {}
     local ulVerifySigResult
