@@ -166,8 +166,7 @@ function addPluginNameArg(tParserCommand)
 end
 
 function addPluginTypeArg(tParserCommand)
-    -- tParserCommand:option('--t --plugin_type', 'plugin type'):target('strPluginType')
-    tParserCommand:option('-t', 'plugin type'):target('strPluginType')
+    tParserCommand:option('-t --plugin_type', 'plugin type'):target('strPluginType')
 end
 
 function addSecureArgs(tParserCommand)
@@ -426,10 +425,9 @@ local tParserCommandCheckHelperSignature = tParser:command('check_helper_signatu
 --         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
 --     )
 -- ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandCheckHelperSignature:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandCheckHelperSignature:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserCommandCheckHelperSignature:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-
+addPluginTypeArg(tParserCommandCheckHelperSignature)
+addPluginNameArg(tParserCommandCheckHelperSignature)
+addSecureArgs(tParserCommandCheckHelperSignature)
 
 -- printArgs(tArguments)
 -- Print all arguments in a table

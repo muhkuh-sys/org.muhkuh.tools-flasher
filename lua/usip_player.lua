@@ -128,7 +128,7 @@ tParserCommandUsip:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandUsip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandUsip:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandUsip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandUsip:flag('--verify_sig'):description(
     "Verify the signature of an usip image against a netX, if the signature does not match, cancel the process!"
 ):target('fVerifySigEnable')
@@ -186,7 +186,7 @@ tParserCommandDisableSecurity:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandDisableSecurity:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandDisableSecurity:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandDisableSecurity:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandDisableSecurity:flag('--no_verify_usip_sig'):description(
     "Do not verify the signature of the usip images against a netX; if the signature does not match, cancel the process!"
 ):target('fVerifyUsipSigDisable')
@@ -228,7 +228,7 @@ tParserCommandSip:option(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandSip:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 
 
@@ -249,7 +249,7 @@ tParserCommandKek:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandKek:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandKek:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandKek:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandKek:flag('--verify_sig'):description(
     "Verify the signature of an usip image against a netX, if the signature does not match, cancel the process!"
 ):target('fVerifySigEnable')
@@ -284,7 +284,7 @@ tParserVerifyContent:option(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserVerifyContent:option('-t'):description("plugin type"):target("strPluginType")
+tParserVerifyContent:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserVerifyContent:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserVerifyContent:option('-i --input'):description("USIP binary file path"):target('strUsipFilePath')
 -- tParserVerifyContent:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
@@ -309,7 +309,7 @@ tParserCheckSIPCookie:option(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCheckSIPCookie:option('-t'):description("plugin type"):target("strPluginType")
+tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCheckSIPCookie:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -333,7 +333,7 @@ tParserReadSip:option(
 tParserReadSip:argument('output'):description(
     "Set the output directory."
 ):target("strOutputFolder")
-tParserReadSip:option('-t'):description("plugin type"):target("strPluginType")
+tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -360,7 +360,7 @@ tParserDetectSecure:option(
         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserDetectSecure:option('-t'):description("plugin type"):target("strPluginType")
+tParserDetectSecure:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 -- tParserDetectSecure:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 -- tParserDetectSecure:flag('--extend_exec'):description(
@@ -377,7 +377,7 @@ tParserGetUid:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserGetUid:option('-t'):description("plugin type"):target("strPluginType")
+tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -394,7 +394,7 @@ tParserCommandVerifyHelperSig:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t'):description("plugin type"):target("strPluginType")
+tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
