@@ -118,7 +118,7 @@ strUsipHelp = [[
 ]]
 
 
-local tParserCommandUsip = tParser:command('u usip', strUsipHelp):target('fCommandUsipSelected')
+local tParserCommandUsip = tParser:command('usip u', strUsipHelp):target('fCommandUsipSelected')
 tParserCommandUsip:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
 tParserCommandUsip:option(
     '-V --verbose'
@@ -177,7 +177,7 @@ strDisableSecurityHelp = [[
 
 ]]
 
-local tParserCommandDisableSecurity = tParser:command('ds disable_security', strDisableSecurityHelp):target('fCommandDisableSecurity')
+local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target('fCommandDisableSecurity')
 tParserCommandDisableSecurity:option(
     '-V --verbose'
 ):description(
