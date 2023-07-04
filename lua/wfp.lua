@@ -168,27 +168,20 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 
     tLog.info("Creating example control XML")
     local iChiptype
-    local tPlugin
     local aAttr
     local aBoardInfo
     local fResult = true
 
-    if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
-        tPlugin = tester:getCommonPlugin()
-    else
-        local strError
+    local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
-        tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
-
-        if tPlugin then
-            fResult, strError = tFlasherHelper.connect_retry(tPlugin, 5)
-            if fResult == false then
-                tLog.error(strError)
-            end
-        else
+    if tPlugin then
+        fResult, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fResult == false then
             tLog.error(strError)
-            fResult = false
         end
+    else
+        tLog.error(strError)
+        fResult = false
     end
 	
     exampleXml = WFPXml(nil, tLog)
@@ -482,24 +475,17 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
         if fOk == true then
 
            
-           -- Select a plugin and connect to the netX.
-            local tPlugin
-            if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
-                tPlugin = tester:getCommonPlugin()
-            else
-                local strError
+            -- Select a plugin and connect to the netX.
+            local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
-                tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
-
-                if tPlugin then
-                    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
-                    if fOk == false then
-                        tLog.error(strError)
-                    end
-				else
-					tLog.error(strError)
-                    fOk = false
+            if tPlugin then
+                fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+                if fOk == false then
+                    tLog.error(strError)
                 end
+			else
+				tLog.error(strError)
+                fOk = false
             end
 
             if tPlugin then
@@ -848,19 +834,12 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
 
         if fOk == true then
             -- Select a plugin and connect to the netX.
-            local tPlugin
-            if tArgs.strPluginName == nil and tArgs.strPluginType == nil then
-                tPlugin = tester:getCommonPlugin()
-            else
-                local strError
+            local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
-                tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
-
-                if tPlugin then
-                    fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
-                    if fOk == false then
-                        tLog.error(strError)
-                    end
+            if tPlugin then
+                fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+                if fOk == false then
+                    tLog.error(strError)
                 end
             end
 
