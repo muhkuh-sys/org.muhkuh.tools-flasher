@@ -193,12 +193,20 @@ local argparse = require 'argparse'
 local strEpilog = [==[
 Limitations:
 
-The reset_netx command currently supports only the netx 90.
+There are several commands that are only valid for the netX 90:
+   check_helper_version
+   check_helper_signature
+   detect_secure_boot_mode 
+
+Likewise, the optional arguments for secure boot mode are only valid 
+for the netX 90:
+    --sec 
+    --comp 
+    --disable_helper_signature_check
+  
+The reset_netx command currently supports only the netX 90.
 
 The hash and verify_hash commands do not support the netIOL.
-
-The secure mode features ('--sec' and '--comp') are only valid for netx90
-
 
 Examples:
 

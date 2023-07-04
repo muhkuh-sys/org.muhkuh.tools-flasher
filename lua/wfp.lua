@@ -615,8 +615,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 end
 
 
+local strEpilog = [==[
+Note: the command 'check_helper_signature' and the optional arguments 
+for secure boot mode (--sec, --comp, --disable_helper_signature_check) 
+are only valid for the netX 90.
+]==]
 
-local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
+local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand"):epilog(strEpilog)
 
 tParser:flag "-v --version":description "Show version info and exit. ":action(function()
     require("flasher_version")
