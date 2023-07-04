@@ -385,7 +385,7 @@ tParserGetUid:flag('--disable_helper_signature_check')
     :default(false)
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures vhs', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -1779,6 +1779,8 @@ function set_kek(
                     strSetKekOptions = strSetKekOptions .. string.char(0x11, 0x00)
                 elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
                     strSetKekOptions = strSetKekOptions .. string.char(0x12, 0x00)
+                else
+                    -- todo how to we act here?
                 end
 
                 iCopyUsipSize = string.len(strFirstUsipData)
@@ -2220,8 +2222,10 @@ if fCallSuccess then
             fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
             if fFinalResult == false then
                 tLog.error(strErrorMsg)
+            else
+                iChiptype = tPlugin:GetChiptyp()
+                tLog.debug( "Found Chip type: %d", iChiptype )
             end
-
         end
     end
 else
@@ -2425,7 +2429,7 @@ end
 -- do not verify the signature of the helper files if the read command is selected  -- why?
 -- todo: this seems incomplete, e.g. no checks are made for the verify command.
 -- old: if fIsSecure  and not tArgs.fCommandReadSelected then
-if fIsSecure and not tArgs.fCommandVerifyHelperSignaturesSelected then
+if fIsSecure and not tArgs.fCommandCheckHelperSignatureSelected then
     if tArgs.fDisableHelperSignatureChecks==true then
         tLog.info("Skipping signature checks for support files.")
 
@@ -2697,7 +2701,7 @@ elseif tArgs.fCommandCheckSIPCookie then
 --------------------------------------------------------------------------
 -- VERIFY_HELPER_SIGNATURE COMMAND
 --------------------------------------------------------------------------
-elseif tArgs.fCommandVerifyHelperSignaturesSelected then
+elseif tArgs.fCommandCheckHelperSignatureSelected then
     tLog.info("############################################")
     tLog.info("# RUNNING VERIFY_HELPER_SIGNATURES COMMAND #")
     tLog.info("############################################")

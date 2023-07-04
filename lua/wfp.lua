@@ -698,7 +698,7 @@ tParserCommandExample:option('-t --plugin_type'):description("plugin type"):targ
 tParserCommandExample:option('-v --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 
 
-local tParserCommandVerifyHelperSig = tParser:command('verify_helper_signatures', strUsipHelp):target('fCommandVerifyHelperSignaturesSelected')
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -1053,7 +1053,7 @@ elseif tArgs.fCommandListSelected == true then
 elseif tArgs.fCommandPackSelected == true then
     fOk=pack(tArgs.strWfpArchiveFile,tArgs.strWfpControlFile,tWfpControl,tLog,tArgs.fOverwrite,tArgs.fBuildSWFP)
 
-elseif tArgs.fCommandVerifyHelperSignaturesSelected then 
+elseif tArgs.fCommandCheckHelperSignatureSelected then
     tArgs.atPluginOptions = atPluginOptions
     fOk = tVerifySignature.verifyHelperSignatures(
         tArgs.strPluginName, tArgs.strPluginType, tArgs.atPluginOptions, tArgs.strSecureOption)

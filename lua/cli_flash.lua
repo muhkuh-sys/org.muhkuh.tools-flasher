@@ -414,11 +414,11 @@ addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
 -- check_helper_version
-local tParserCommandCheckHelperVersion = tParser:command('check_helper_version', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperVersionSelected')
+local tParserCommandCheckHelperVersion = tParser:command('check_helper_version chv', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperVersionSelected')
 addSecureArgs(tParserCommandCheckHelperVersion)
 
 -- check_helper_signature 
-local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 -- tParserCommandCheckHelperSignature:option(
 
 --     '-V --verbose'
