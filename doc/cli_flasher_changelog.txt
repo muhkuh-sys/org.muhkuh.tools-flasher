@@ -3,6 +3,13 @@ Updates in CLI Flasher v2.0.0-dev13
 
 CLI Flasher:
 * The flash device size is printed as an unsigned number.
+
+USIP Player:
+* No longer store temporary files inside flasher
+* Read command now takes the output folder as a positional argument (was '-o' '--output')
+
+CLI Flasher, WFP:
+* If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
 * Added automatic signature checking for helper binaries.
 
   The flasher will automatically check the signatures of the helpers used 
@@ -10,7 +17,8 @@ CLI Flasher:
   - a helper directory is supplied using the --sec option,
     wich is not the 'unsigned' directory
   - checking is not disabled by adding the flag --disable_helper_signature_check
-  
+
+  For the CLI flasher:
   The check is performed for the following commands:
   flash, read, erase, verify, verify_hash, hash 
   detect, info, identify_netx, test, testcli
@@ -18,17 +26,16 @@ CLI Flasher:
   It is not currently performed for these commands:
   reset_netx, detect_secure_boot_mode, detect_netx
 
-* remove redundant used abbreviations inside API ('reset_netx' and 'read' both used abbreviation 'r')
-
-CLI Flasher, WFP:
-* If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
 
 CLI Flasher, WFP, USIP Player:
 * Stabilize UART communication by retrying connect command
-
-USIP Player:
-* No longer store temporary files inside flasher
-* Read command now takes the output folder as a positional argument (was '-o' '--output')
+* Cleaned up the command line interface:
+  remove redundant used abbreviations inside API ('reset_netx' and 'read' both used abbreviation 'r')
+  The version can be queried using -v/--version 
+  The abbreviation for --verbose is not -V 
+  Some commands were renamed:
+  check_helper_files -> check_helper_version chv
+  verify_helper_signatures -> check_helper_signature chs
 
 
 
