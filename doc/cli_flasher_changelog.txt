@@ -37,7 +37,9 @@ CLI Flasher, WFP, USIP Player:
   check_helper_files -> check_helper_version chv
   verify_helper_signatures -> check_helper_signature chs
 
-
+Update romloader to v2.5.4-dev9:
+* If the UART knock (identify_loader) fails on the first attempt,
+  retry before going on to fix_deadloop.
 
 Updates in CLI Flasher v2.0.0-dev12
 ==============================
