@@ -1,3 +1,14 @@
+Updates in CLI Flasher v1.8.2-dev1
+==============================
+
+USIP Player:
+* Update read_sip, verify_sig and set_kek
+  UART handling 
+  include and check version numbers
+  
+* Update SIPper and UsipGenerator
+
+
 Updates in CLI Flasher v1.8.1
 ==============================
 
