@@ -1,3 +1,22 @@
+Updates in CLI Flasher v1.8.2-dev3
+==============================
+
+USIP Player:  
+* Updates/bug fixes
+* update USIP Player to v0.2.5-dev1 
+* update USIP Generator to v0.2.3-dev1 
+* update verify_sig to 0.9.2
+
+* Update romloader to v2.5.3.1 
+  (includes support for J-Link v12)
+
+
+Updates in CLI Flasher v1.8.2-dev2
+==============================
+
+Build with the same versions of the dependencies as v1.8.1
+
+
 Updates in CLI Flasher v1.8.2-dev1
 ==============================
 
