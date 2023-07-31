@@ -42,7 +42,7 @@ Then add those that depend on Lua and the previously defined modules.
 <!-- depends on luaterm, date -->
 <dependency group="com.github.moteus"        module="lua-log"          artifact="lua-log"                version="0.1.6.5"/> 
 
-<dependency group="org.muhkuh.lua"           module="romloader"        artifact="lua5.1-romloader"       version="2.5.3"/>
+<dependency group="org.muhkuh.lua"           module="romloader"        artifact="lua5.1-romloader"       version="2.5.3.1"/>
 
 <dependency group="org.muhkuh.tools"         module="muhkuh_base_cli"  artifact="lua5.1-muhkuh_base_cli" version="2.3.2"/>
 	
