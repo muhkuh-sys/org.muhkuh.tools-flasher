@@ -1,31 +1,15 @@
-Updates in CLI Flasher v1.8.2-dev3
+Updates in CLI Flasher v1.8.2
 ==============================
-
 USIP Player:  
 * Updates/bug fixes
-* update USIP Player to v0.2.5-dev1 
-* update USIP Generator to v0.2.3-dev1 
-* update verify_sig to 0.9.2
-
+* Improved reliability of serial (RS232) transmissions
+* Check version numbers of helper binaries
+  (read_sip, verify_sig, set_kek, bootswitch, return_exec),
+  SIPper and USIP Generator
 * Update romloader to v2.5.3.1 
   (includes support for J-Link v12)
-
-
-Updates in CLI Flasher v1.8.2-dev2
-==============================
-
-Build with the same versions of the dependencies as v1.8.1
-
-
-Updates in CLI Flasher v1.8.2-dev1
-==============================
-
-USIP Player:
-* Update read_sip, verify_sig and set_kek
-  UART handling 
-  include and check version numbers
   
-* Update SIPper and UsipGenerator
+Limitation: The set_kek command does not work in this version.
 
 
 Updates in CLI Flasher v1.8.1
