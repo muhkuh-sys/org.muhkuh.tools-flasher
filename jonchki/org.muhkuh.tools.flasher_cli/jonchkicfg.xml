@@ -32,17 +32,6 @@
 			<artifact>[dotgroup]-[module]/releases/download/v[version]/[artifact]-[version][platform].[extension]</artifact>
 		</repository>
 
-		<!-- Hack to make jonchki include a package with a suffix after the version number:
-		https://github.com/muhkuh-sys/org.muhkuh.lua-romloader/releases/download/v2.5.4-dev2/lua5.1-romloader-2.5.4-windows_x86_64.tar.xz
-		Replacing [module] with romloader (the module name) prevents other packages from being found using this rule.
-		-->
-		<repository id="github2" type="url" cacheable="true" rescan="3600">
-			<root>https://github.com/muhkuh-sys</root>
-			<versions>[dotgroup]-romloader/releases</versions>
-			  <config>[dotgroup]-romloader/releases/download/v[version]-dev2/[artifact]-[version][platform].[extension]</config>
-			<artifact>[dotgroup]-romloader/releases/download/v[version]-dev2/[artifact]-[version][platform].[extension]</artifact>
-		</repository>
-
 		<!-- This is a workaround to get v2.3 of muhkuh_base_cli. -->
 <!--		<repository id="github_for_base_cli" type="url" cacheable="true" rescan="3600">
 			<root>https://github.com/muhkuh-sys</root>
