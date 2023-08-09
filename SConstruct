@@ -268,49 +268,49 @@ if 'NETX4000' in atPickNetxForBuild:
     env_netx4000_default = atEnv.NETX4000.Clone()
     env_netx4000_default.Replace(LDFILE = File('src/netx4000/netx4000.ld'))
     env_netx4000_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx4000','src/sha1_arm'])
-    env_netx4000_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SDIO', '1']])
+    env_netx4000_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1'], ['CFG_INCLUDE_SDIO', '1']])
 
 if 'NETX500' in atPickNetxForBuild:
     env_netx500_default = atEnv.NETX500.Clone()
     env_netx500_default.Replace(LDFILE = File('src/netx500/netx500.ld'))
     env_netx500_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx500','src/sha1_arm'])
-    env_netx500_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1']])
+    env_netx500_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETX90_MPW' in atPickNetxForBuild:
     env_netx90_mpw_default  = atEnv.NETX90_MPW.Clone()
     env_netx90_mpw_default.Replace(LDFILE = File('src/netx90/netx90.ld'))
     env_netx90_mpw_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx90','src/sha1_netx'])
-    env_netx90_mpw_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_INTFLASH', '1']])
+    env_netx90_mpw_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_INTFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETX90' in atPickNetxForBuild:
     env_netx90_default  = atEnv.NETX90.Clone()
     env_netx90_default.Replace(LDFILE = File('src/netx90/netx90.ld'))
     env_netx90_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx90','src/sha1_netx'])
-    env_netx90_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_INTFLASH', '1']])
+    env_netx90_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_INTFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETX56' in atPickNetxForBuild:
     env_netx56_default  = atEnv.NETX56.Clone()
     env_netx56_default.Replace(LDFILE = File('src/netx56/netx56.ld'))
     env_netx56_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx56','src/sha1_arm'])
-    env_netx56_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1']])
+    env_netx56_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETX50' in atPickNetxForBuild:
     env_netx50_default  = atEnv.NETX50.Clone()
     env_netx50_default.Replace(LDFILE = File('src/netx50/netx50.ld'))
     env_netx50_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx50','src/sha1_arm'])
-    env_netx50_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1']])
+    env_netx50_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETX10' in atPickNetxForBuild:
     env_netx10_default  = atEnv.NETX10.Clone()
     env_netx10_default.Replace(LDFILE = File('src/netx10/netx10.ld'))
     env_netx10_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netx10','src/sha1_arm'])
-    env_netx10_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1']])
+    env_netx10_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '1'], ['CFG_INCLUDE_PARFLASH', '1'], ['CFG_INCLUDE_SMART_ERASE', '1']])
 
 if 'NETIOL' in atPickNetxForBuild:
     env_netiol_default  = atEnv.NETIOL.Clone()
     env_netiol_default.Replace(LDFILE = File('src/netiol/netiol.ld'))
     env_netiol_default.Append(CPPPATH = astrCommonIncludePaths + ['src/netiol','src/sha1_arm'])
-    env_netiol_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '0']])
+    env_netiol_default.Append(CPPDEFINES = [['CFG_INCLUDE_SHA1', '0'], ['CFG_INCLUDE_SMART_ERASE', '0']])
 
 #----------------------------------------------------------------------------
 #

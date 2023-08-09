@@ -23,6 +23,7 @@
 #define __SPI_H__
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "netx_io_areas.h"
 
@@ -106,6 +107,15 @@ typedef struct FLASHER_SPI_CFG_STRUCT
 	unsigned long ulTrcBase;        /**< @brief the base bits of the transfer control register. */
 	unsigned char aucMmio[4];       /**< @brief MMIO pins. */
 } FLASHER_SPI_CFG_T;
+
+/** Struct for manipulating flags passed to the detect function */
+typedef union FLASHER_SPI_FLAGS_STRUCT {
+        uint32_t rawValue; /* Entire flag as number */
+        struct {
+            unsigned int bUseSfdpErase : 1;  /* Always use SFDP to detect erase commands */
+            unsigned int reserved : 31;      /* reserved */
+        } bits;
+} FLASHER_SPI_FLAGS_T;
 
 
 #endif  /* __SPI_H__ */

@@ -81,7 +81,10 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 	case BUS_SPI:
 		/* Use SPI flash */
 		uprintf("SPI flash\n");
-		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End));
+		FLASHER_SPI_FLAGS_T flags = {
+			.rawValue = ptParameter->ulFlags
+		};
+		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End), flags);
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
 			ptDeviceDescription->fIsValid = 1;
@@ -319,6 +322,66 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 }
 
 
+/* ------------------------------------- */
+
+#if CFG_INCLUDE_SMART_ERASE==1
+
+/**
+ * \brief opMode function for the smart erase feature.
+ *        Currently only supports SPI devices,
+ *        will fall back to normal erase for other devices.
+ * 
+ * \param ptAppParams  The flasher input parameters
+ * 
+ * \return NETX_CONSOLEAPP_RESULT_T
+ * - NETX_CONSOLEAPP_RESULT_OK     Flash was erase successfully
+ * - NETX_CONSOLEAPP_RESULT_ERROR  An error occured while erasing the flash
+ */
+static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppParams)
+{
+	CMD_PARAMETER_SMART_ERASE_T *ptParams = &(ptAppParams->uParameter.tSmartErase);
+
+	/* Be pessimistic. */
+	NETX_CONSOLEAPP_RESULT_T tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+
+	/* get the source type */
+	BUS_T tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	switch (tSourceTyp)
+	{
+	case BUS_SPI:
+		/*  use SPI flash */
+		tResult = spi_smart_erase(&(ptParams->ptDeviceDescription->uInfo.tSpiInfo), ptParams->ulStartAdr, ptParams->ulEndAdr);
+		if(tResult != 0){
+			uprintf("! smart_erase operation failed");
+			return tResult;
+		}
+		break;
+
+	case BUS_ParFlash:
+		/*  use parallel flash - not yet implemented.  */
+		uprintf("! Parallel flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_IFlash:
+		/*  use internal flash - not yet implemented.  */
+		uprintf("! Internal flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_SDIO:
+		/*  use sdio flash - not yet implemented.  */
+		uprintf("! SDIO flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	default: /* Unknown/wrong flash types */
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
+	}
+	return tResult;
+}
+#endif
 /* ------------------------------------- */
 
 
@@ -940,7 +1003,17 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Reset netX from binary\n");
 		break;
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
+	case OPERATION_MODE_SmartErase:
+		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
+		ulStartAdr = ptAppParams->uParameter.tSmartErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tSmartErase.ulEndAdr;
+		ptDeviceDescription = ptAppParams->uParameter.tSmartErase.ptDeviceDescription;
+		uprintf(". Mode: Smart Erase\n");
+		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
+		break;
+#endif
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -1297,6 +1370,16 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			case OPERATION_MODE_Reset:
 				tResult = opMode_reset();
 				break;
+
+			case OPERATION_MODE_SmartErase:
+#if CFG_INCLUDE_SMART_ERASE==1
+				tResult = opMode_smartErase(ptAppParams);
+				break;
+#else
+				/* This is possible since the parameters for normal and smart erase are identical. */
+				tResult = opMode_erase(ptAppParams);
+				break;
+#endif
 			}
 		}
 	}

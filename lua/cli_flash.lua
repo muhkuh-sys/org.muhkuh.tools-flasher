@@ -222,6 +222,13 @@ local function addJtagResetArg(tParserCommand)
     tOption.choices = {"hard", "soft", "attach" }
 end
 
+-- #Todo choose a better name
+function addSkipSfdpErase(tParserCommand)
+    tParserCommand:flag('--skip_sfdp_erase')
+            :description('Skip reading SFDP data to get erase operations. Only use operations predefined in fash table.')
+            :target('bSkipSfdpErase'):default(false)
+end
+
 local argparse = require 'argparse'
 
 local strEpilog = [==[
@@ -319,6 +326,23 @@ addPluginTypeArg(tParserCommandErase)
 addJtagResetArg(tParserCommandErase)
 addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
+
+-- smart erase
+local tParserCommandSmartErase = tParser:command('smart_erase se', 'Erase area inside SPI-flash with optimised erase block sizes'):target('fCommandSmartEraseSelected')
+-- required_args = {"b", "u", "cs", "s", "l"}
+addBusOptionArg(tParserCommandSmartErase)
+addUnitOptionArg(tParserCommandSmartErase)
+addChipSelectOptionArg(tParserCommandSmartErase)
+addStartOffsetArg(tParserCommandSmartErase)
+addLengthArg(tParserCommandSmartErase)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandSmartErase)
+addPluginTypeArg(tParserCommandSmartErase)
+addJtagResetArg(tParserCommandSmartErase)
+addJtagKhzArg(tParserCommandSmartErase)
+addSecureArgs(tParserCommandSmartErase)
+addSkipSfdpErase(tParserCommandSmartErase)
+
 
 -- verify
 local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed')
@@ -699,7 +723,11 @@ local function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+				local ulDetectFlags = 0
+				if not aArgs.bSkipSfdpErase and aArgs.fCommandSmartEraseSelected  then
+					ulDetectFlags = FLAG_DETECT_SPI_USE_SFDP_ERASE
+				end
+				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect, nil, nil, nil, ulDetectFlags)
 				if fOk ~= true then
 					fOk = false
 				else
@@ -733,6 +761,10 @@ local function exec(aArgs)
 			fOk, strMsg = flasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
 		end
 
+		if fOk and (aArgs.fCommandSmartEraseSelected) then
+			fOk, strMsg = flasher.smartEraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
+		end
+		
 		-- flash: flash the data
 		if fOk and aArgs.fCommandFlashSelected then
 			fOk, strMsg = flasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)

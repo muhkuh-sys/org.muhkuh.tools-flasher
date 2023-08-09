@@ -53,6 +53,7 @@ local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A co
 local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
 local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}    -- Blink the status LED for 5 seconds to visualy identify the hardware
 local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}    -- Reset the netX by triggering a watchdog reset
+local OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}     -- Erases with variable erase block sizes
 
 
 M.MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -100,6 +101,10 @@ local strCurrentModulePath = path.dirname(debug.getinfo(1, "S").source:sub(2))
 local FLASHER_DIR = path.normpath(path.join(strCurrentModulePath, '..'))
 M.DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 M.HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
+
+-- M.detect() optional flags
+-- Flags specific to SPI mode
+M.FLAG_DETECT_SPI_USE_SFDP_ERASE = 1
 
 --------------------------------------------------------------------------
 -- callback/progress functions,
@@ -495,10 +500,10 @@ end
 
 
 -- check if a device is available on tBus/ulUnit/ulChipSelect
-function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter)
+function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter, ulFlags)
 	local aulParameter
 	atParameter = atParameter or {}
-
+	local ulFlagsLocal = ulFlags or 0
 
 	if tBus==M.BUS_Spi then
 		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
@@ -534,7 +539,10 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			ulIdleCfg,                            -- idle configuration
 			ulSpiMode,                            -- mode
 			ulMmioConfiguration,                  -- MMIO configuration
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags
+												  -- Bit 0: Use SFDP erase operations
+												  -- Bit 31-1: reserved
 		}
 	elseif tBus==M.BUS_Parflash then
 		-- Set the allowed bus widths. This parameter is not used yet.
@@ -552,7 +560,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
   elseif tBus==M.BUS_IFlash then
     aulParameter =
@@ -566,7 +575,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
       0,                                    -- reserved
       0,                                    -- reserved
       0,                                    -- reserved
-      aAttr.ulDeviceDesc                    -- data block for the device description
+      aAttr.ulDeviceDesc,                   -- data block for the device description
+      ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
     }
 	elseif tBus==M.BUS_SDIO then
 		aulParameter = {
@@ -579,7 +589,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
 
 	else
@@ -986,6 +997,80 @@ function M.easy_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessag
 	return ulValue == 0
 end
 
+
+
+-- Smart Erase. Erase an area in SPI-Flash with automatic choice of the optimal erase Commands.
+-- The start and end addresses must be aligned to sector boundaries as
+-- set by getEraseArea.
+function M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	local aulParameter = 
+	{
+		OPERATION_MODE_SmartErase,                     -- operation mode: smart_erase
+		aAttr.ulDeviceDesc,                            -- data block for the device description
+		ulEraseStart,
+		ulEraseEnd,
+	}
+	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	return ulValue == 0
+  end
+
+
+-----------------------------------------------------------------------------
+-- Erase an area with mart erase sizes:
+-- ulSize = 0xffffffff to erase from ulDeviceOffset to end of chip
+--
+-- OK:
+-- Area erased
+--
+-- Error messages:
+-- getEraseArea failed!
+-- Failed to erase the area! (Failure during smart_erase)
+-- Failed to erase the area! (isErased check failed)
+
+
+function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
+	local fIsErased
+	local ulEndOffset
+	local ulEraseStart,ulEraseEnd
+
+	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
+	if ulSize == 0xffffffff then
+		ulEndOffset = ulSize
+		ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if not (ulEraseStart and ulEraseEnd) then
+			return false, "getEraseArea failed!"
+		end
+		
+		ulEndOffset = ulEraseEnd
+	else
+		ulEndOffset = ulDeviceOffset + ulSize
+	end
+	
+	print(string.format("Area:  [0x%08x, 0x%08x[", ulDeviceOffset, ulEndOffset))
+	print("Checking if the area is already empty")
+	fIsErased = M.isErased(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+
+	-- Get area to erase, this aligns the operation to the flash sectors
+	ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+	if not (ulEraseStart and ulEraseEnd) then
+		return false, "Unable to get erase area!"
+	end
+
+	print("Smart-Erasing flash")
+	print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseStart, ulEraseEnd))
+
+	fIsErased = M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	if fIsErased~=true then
+		return false, "Failed to erase the area! (Failure during smart_erase)"
+	else
+		print("Checking if the area has been erased")
+		fIsErased = M.isErased(tPlugin, aAttr,  ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if fIsErased~=true then
+			return false, "Failed to erase the area! (isErased check failed)"
+		end
+	end
+return true, "Area erased"
+end
 
 
 

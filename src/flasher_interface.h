@@ -33,7 +33,7 @@
 #endif
 /*-------------------------------------*/
 
-#define FLASHER_INTERFACE_VERSION 0x00030000
+#define FLASHER_INTERFACE_VERSION 0x00040000
 
 
 typedef enum BUS_ENUM
@@ -58,6 +58,7 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_EasyErase        = 9,     /* A combination of GetEraseArea, IsErased and Erase. */
 	OPERATION_MODE_SpiMacroPlayer   = 10,    /* Play an SPI macro. */
 	OPERATION_MODE_Identify         = 11,    /* Blink the status LED for 5 seconds to visualy identify the hardware */
+	OPERATION_MODE_SmartErase       = 12,    /* Erase an area using variable erase block sizes */
 	OPERATION_MODE_Reset            = 13,    /* Reset the netX chip using a watchdog reset */
 } OPERATION_MODE_T;
 
@@ -103,6 +104,10 @@ typedef struct CMD_PARAMETER_ERASE_STRUCT
 } CMD_PARAMETER_ERASE_T;
 
 
+/* Requires the same data as erase */
+typedef CMD_PARAMETER_ERASE_T CMD_PARAMETER_SMART_ERASE_T;
+
+
 typedef struct CMD_PARAMETER_READ_STRUCT
 {
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
@@ -141,6 +146,7 @@ typedef struct CMD_PARAMETER_DETECT_STRUCT
 		//SDIO_OPTIONS_T tSdioOptions;
 	} uSourceParameter;
 	DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	uint32_t ulFlags;
 } CMD_PARAMETER_DETECT_T;
 
 
@@ -177,6 +183,7 @@ typedef struct tFlasherInputParameter_STRUCT
 	{
 		CMD_PARAMETER_FLASH_T tFlash;
 		CMD_PARAMETER_ERASE_T tErase;
+		CMD_PARAMETER_SMART_ERASE_T tSmartErase;
 		CMD_PARAMETER_READ_T tRead;
 		CMD_PARAMETER_VERIFY_T tVerify;
 		CMD_PARAMETER_CHECKSUM_T tChecksum;
