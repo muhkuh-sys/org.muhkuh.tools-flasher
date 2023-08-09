@@ -63,7 +63,7 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
             tFlasher.write_image(tPlugin, ulVerifySigHbootLoadAddress, strVerifySigData)
         else
 
-            strVerifySigData = string.sub(strVerifySigData, 1037, 0x2000)
+            strVerifySigData = string.sub(strVerifySigData, 1037)
             tFlasher.write_image(tPlugin, ulVerifySigDataLoadAddress, strVerifySigData)
         end
 
