@@ -40,6 +40,7 @@
 #include "systime.h"
 
 #include "main.h"
+#include "sfdp.h" // TODO do we need this in main?
 
 #ifdef CFG_INCLUDE_SDIO
 #include "flasher_sdio.h"
@@ -310,6 +311,49 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 	default:
 		/*  unknown device */
 		uprintf("! Unknown device type: 0x%08x\n", tSourceTyp);
+		break;
+	}
+	return tResult;
+}
+
+
+/* ------------------------------------- */
+
+// TODO verify this works
+/**
+ * added opMode Smart Erase here
+ */
+static NETX_CONSOLEAPP_RESULT_T opMode_smart_erase(tFlasherInputParameter *ptAppParams)
+{
+	NETX_CONSOLEAPP_RESULT_T tResult;
+	BUS_T tSourceTyp;
+
+	/* Be pessimistic. */
+	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+
+	/* get the source type */
+	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
+	switch (tSourceTyp) // TODO this appears to not handle all cases
+	{
+	case BUS_ParFlash:
+		/*  use parallel flash - not yet implemented.  */
+
+		//tResult = parflash_erase(&(ptAppParams->uParameter.tErase));
+		break;
+
+	case BUS_SPI:
+		/*  use SPI flash */
+		uprintf("DEBUG: ulEndAdr from Main: %0x08x\n", ptAppParams->uParameter.tSmartErase.ulEndAdr);
+		/** IMPORTANT HINT: We are *NOT* giving an tErase Param but a tRead param to tSmartErase beacause we have to read the mem again
+		 *  tRead contains the same data as tErase but also contains: unsigned char *pucData;
+		 */
+
+		// DEBUG INFO: funktioniert nicht
+		//tResult = spi_read(&(ptAppParams->uParameter.tRead));
+		// DEBUG INFO: funktioniert nicht
+		tResult = spi_smart_erase(&(ptAppParams->uParameter.tSmartErase)); // TODO there is no implementation for this????????s
+		break;
+	default:	// FIXME this is just a workaround to supress build errors rn
 		break;
 	}
 	return tResult;
@@ -923,6 +967,15 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Visually identify hardware\n");
 		break;
 
+	case OPERATION_MODE_SmartErase: // TODO verify this
+		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
+		ulStartAdr = ptAppParams->uParameter.tErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tErase.ulEndAdr;
+		ptDeviceDescription = ptAppParams->uParameter.tErase.ptDeviceDescription;
+		uprintf(". Mode: Smart Erase\n");
+		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
+		break;
+
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -1181,6 +1234,19 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	tFlasherInputParameter *ptAppParams;
 	OPERATION_MODE_T tOpMode;
+
+	// TODO put this in a function together with the other SmartErase helpers. Manipulates global variables?
+	// Make sure this makes sense
+	if (!myData.isValid)
+	{
+		setSFDPData(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	}
+
+	// XXX remove this after testing
+	#include "sfdp.h"
+	if(1==1){
+		setSFDPData(1, 12, 0x20, 15, 0x52, 16, 0xd8, 0, 0, &tSfdpAttributes);
+	}
 	
 	ptAppParams = (tFlasherInputParameter*)ptTestParam->pvInitParams;
 	tOpMode = ptAppParams->tOperationMode;
@@ -1274,6 +1340,13 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			
 			case OPERATION_MODE_Identify:
 				tResult = opMode_identify();
+				break;
+
+			case OPERATION_MODE_SmartErase: // TODO clean this up
+				//DEBUG INFO: funktioniert mit anpassungen in LUA
+//				tResult = opMode_read(ptAppParams);
+
+				tResult = opMode_smart_erase(ptAppParams);
 				break;
 			}
 		}

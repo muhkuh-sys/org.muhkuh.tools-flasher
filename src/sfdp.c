@@ -26,6 +26,8 @@
 #include "spi_flash.h"
 #include "uprintf.h"
 
+#include "flasher_spi.h" // TODO check if we need this
+
 
 
 #if CFG_DEBUGMSG!=0
@@ -55,6 +57,8 @@
 
 
 SPIFLASH_ATTRIBUTES_T tSfdpAttributes;
+
+SFDP_Data_t myData; // TODO extern in header, does this need to be global?
 
 static int read_sfdp(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulAddress, unsigned char *pucData, size_t sizData)
 {
@@ -142,6 +146,11 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 	else
 	{
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
+
+		// TODO what does this call do? Params correct?
+		setSFDPData(1, uSfdpData.auc[28], uSfdpData.auc[29], uSfdpData.auc[30],
+						uSfdpData.auc[31], uSfdpData.auc[32], uSfdpData.auc[33],
+						uSfdpData.auc[34], uSfdpData.auc[35], &(ptFlash->tAttributes));
 
 		/* Clear the complete structure. */
 		memset(&tSfdpAttributes, 0, sizeof(tSfdpAttributes));
@@ -298,7 +307,7 @@ static int read_parameter_headers(FLASHER_SPI_FLASH_T *ptFlash, size_t sizSfdpHe
 			uprintf("Found Header ID 0x%02x V%d.%d @ 0x%08x (%d bytes)\n", ucHeaderId, ucHeaderVersion_Maj, ucHeaderVersion_Min, ulHeaderAddress, sizSfdpHeadersDw*sizeof(unsigned long));
 
 			/* Is this a known header? */
-			if( ucHeaderId==0x00 && sizSfdpHeadersDw>=9 )
+			if( ucHeaderId==0x00 && sizSfdpHeadersDw>=9 ) // XXX why does it not go in here? nvm it does
 			{
 				iResult = read_jedec_flash_parameter(ptFlash, ulHeaderAddress);
 				if( iResult!=0 )

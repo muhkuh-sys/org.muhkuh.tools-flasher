@@ -61,6 +61,15 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 
 int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd);
 int Drv_SpiEraseFlashPage         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+// TODO check what's up with the following block. Is the algo *actually* better than the existing ones?
+//----------
+//int Drv_SpiEraseFlashPage256(const unsigned char opcodeErrPage256 /*new param */, const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashPage512(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashBlock4k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+//int Drv_SpiEraseFlashBlock32k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+
+int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
+//----------
 int Drv_SpiEraseFlashSector       (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashMultiSectors (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearStartAddress, unsigned long ulLinearEndAddress);
 int Drv_SpiEraseFlashComplete     (const FLASHER_SPI_FLASH_T *ptFlash);
