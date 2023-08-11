@@ -40,7 +40,6 @@
 #include "systime.h"
 
 #include "main.h"
-#include "sfdp.h" // TODO do we need this in main?
 
 #ifdef CFG_INCLUDE_SDIO
 #include "flasher_sdio.h"
@@ -319,41 +318,41 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 
 /* ------------------------------------- */
 
-// TODO verify this works
+
 /**
  * added opMode Smart Erase here
  */
-static NETX_CONSOLEAPP_RESULT_T opMode_smart_erase(tFlasherInputParameter *ptAppParams)
+static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppParams)
 {
+	CMD_PARAMETER_SMART_ERASE_T *ptParams = &(ptAppParams->uParameter.tSmartErase);
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	BUS_T tSourceTyp;
-
+	
 	/* Be pessimistic. */
 	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	/* get the source type */
-	tSourceTyp = ptAppParams->uParameter.tFlash.ptDeviceDescription->tSourceTyp;
-	switch (tSourceTyp) // TODO this appears to not handle all cases
+	tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	switch (tSourceTyp)
 	{
-	case BUS_ParFlash:
-		/*  use parallel flash - not yet implemented.  */
-
-		//tResult = parflash_erase(&(ptAppParams->uParameter.tErase));
-		break;
-
 	case BUS_SPI:
 		/*  use SPI flash */
-		uprintf("DEBUG: ulEndAdr from Main: %0x08x\n", ptAppParams->uParameter.tSmartErase.ulEndAdr);
-		/** IMPORTANT HINT: We are *NOT* giving an tErase Param but a tRead param to tSmartErase beacause we have to read the mem again
-		 *  tRead contains the same data as tErase but also contains: unsigned char *pucData;
-		 */
+		tResult = spi_smart_erase(&(ptParams->ptDeviceDescription->uInfo.tSpiInfo), ptParams->ulStartAdr, ptParams->ulEndAdr);
+		if(tResult != 0){ // TODO error handling?
 
-		// DEBUG INFO: funktioniert nicht
-		//tResult = spi_read(&(ptAppParams->uParameter.tRead));
-		// DEBUG INFO: funktioniert nicht
-		tResult = spi_smart_erase(&(ptAppParams->uParameter.tSmartErase)); // TODO there is no implementation for this????????s
+		}
 		break;
-	default:	// FIXME this is just a workaround to supress build errors rn
+
+	case BUS_ParFlash:
+		/*  use parallel flash - not yet implemented.  */
+	case BUS_IFlash:
+		/*  use internal flash - not yet implemented.  */
+	case BUS_SDIO:
+		/*  use sdio flash - not yet implemented.  */
+	default: /* Fallthrough for all unsupported flash types */
+		uprintf("! This type of flash is not yet supported by smart_erase");
+		uprintf("! Falling back to normal erase routine");
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 	return tResult;
@@ -1234,19 +1233,6 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	tFlasherInputParameter *ptAppParams;
 	OPERATION_MODE_T tOpMode;
-
-	// TODO put this in a function together with the other SmartErase helpers. Manipulates global variables?
-	// Make sure this makes sense
-	if (!myData.isValid)
-	{
-		setSFDPData(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-	}
-
-	// XXX remove this after testing
-	#include "sfdp.h"
-	if(1==1){
-		setSFDPData(1, 12, 0x20, 15, 0x52, 16, 0xd8, 0, 0, &tSfdpAttributes);
-	}
 	
 	ptAppParams = (tFlasherInputParameter*)ptTestParam->pvInitParams;
 	tOpMode = ptAppParams->tOperationMode;
@@ -1342,11 +1328,8 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				tResult = opMode_identify();
 				break;
 
-			case OPERATION_MODE_SmartErase: // TODO clean this up
-				//DEBUG INFO: funktioniert mit anpassungen in LUA
-//				tResult = opMode_read(ptAppParams);
-
-				tResult = opMode_smart_erase(ptAppParams);
+			case OPERATION_MODE_SmartErase:
+				tResult = opMode_smartErase(ptAppParams);
 				break;
 			}
 		}

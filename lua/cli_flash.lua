@@ -25,7 +25,6 @@ local tVerifySignature = require 'verify_signature'
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
--- #TODO add smart erase to the CLI
 strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         
@@ -284,19 +283,19 @@ addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
 
 -- smart erase
-local tParserCommandErase = tParser:command('smart_erase se', 'Erase area inside flash with smart sector size'):target('fCommandSmartEraseSelected')
+local tParserCommandSmartErase = tParser:command('smart_erase se', 'Erase area inside SPI-flash with optimised erase block sizes'):target('fCommandSmartEraseSelected')
 -- required_args = {"b", "u", "cs", "s", "l"}
-addBusOptionArg(tParserCommandErase)
-addUnitOptionArg(tParserCommandErase)
-addChipSelectOptionArg(tParserCommandErase)
-addStartOffsetArg(tParserCommandErase)
-addLengthArg(tParserCommandErase)
+addBusOptionArg(tParserCommandSmartErase)
+addUnitOptionArg(tParserCommandSmartErase)
+addChipSelectOptionArg(tParserCommandSmartErase)
+addStartOffsetArg(tParserCommandSmartErase)
+addLengthArg(tParserCommandSmartErase)
 -- optional_args = {"p", "t", "jf", "jr"}
-addPluginNameArg(tParserCommandErase)
-addPluginTypeArg(tParserCommandErase)
-addJtagResetArg(tParserCommandErase)
-addJtagKhzArg(tParserCommandErase)
-addSecureArgs(tParserCommandErase)
+addPluginNameArg(tParserCommandSmartErase)
+addPluginTypeArg(tParserCommandSmartErase)
+addJtagResetArg(tParserCommandSmartErase)
+addJtagKhzArg(tParserCommandSmartErase)
+addSecureArgs(tParserCommandSmartErase)
 
 
 -- verify
@@ -681,7 +680,7 @@ function exec(aArgs)
 		end
 
 		if fOk and (aArgs.fCommandSmartEraseSelected) then
-			fOk, strMsg = flasher.smart_erase(tPlugin, aAttr, ulStartOffset, ulLen) -- #TODO This is passing the wrong parameters for now
+			fOk, strMsg = flasher.smartEraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
 		end
 		
 		-- flash: flash the data

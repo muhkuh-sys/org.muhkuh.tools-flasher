@@ -43,32 +43,36 @@
 
 /* ------------------------------------- */
 
+/** Represents the OpCode and area sizes of an erase instructions
+ * Size in Byte
+*/
+typedef struct FLASHER_SPI_ERASE_STRUCT
+{
+  unsigned char OpCode;
+  unsigned long Size;
+} FLASHER_SPI_ERASE_T;
+#define SPI_FLASH_NR_ERASE_INSTRUCTIONS 4
+
 /**
  * This structure holds the information needed to access the specific flash device.
  * It is filled in by spi_detect(), if a flash device was found.
  */
 typedef struct FLASHER_SPI_FLASH_STRUCT
 {
-	SPIFLASH_ATTRIBUTES_T tAttributes;      /**< @brief attributes of the flash.      */
-	FLASHER_SPI_CFG_T tSpiDev;              /**< @brief SPI device and it's settings. */
-	unsigned long ulSectorSize;             /**< @brief size of one sector in bytes.  */
-	unsigned int uiSlaveId;                 /**< @brief SPI Slave Id of the flash.    */
-	unsigned int uiPageAdrShift;            /**< @brief bit shift for the page part of the address, 0 means no page / byte split.  */
-	unsigned int uiSectorAdrShift;          /**< @brief bit shift for one sector, 0 means no page / byte split.                    */
+	SPIFLASH_ATTRIBUTES_T tAttributes;                                    /**< @brief attributes of the flash.      */
+	FLASHER_SPI_CFG_T tSpiDev;                                            /**< @brief SPI device and it's settings. */
+  FLASHER_SPI_ERASE_T tSpiErase[SPI_FLASH_NR_ERASE_INSTRUCTIONS];       /**< @brief SPI erase instructions        */
+	unsigned long ulSectorSize;                                           /**< @brief size of one sector in bytes.  */
+	unsigned int uiSlaveId;                                               /**< @brief SPI Slave Id of the flash.    */
+	unsigned int uiPageAdrShift;                                          /**< @brief bit shift for the page part of the address, 0 means no page / byte split.  */
+	unsigned int uiSectorAdrShift;                                        /**< @brief bit shift for one sector, 0 means no page / byte split.                    */
 } FLASHER_SPI_FLASH_T;
 
 /*-----------------------------------*/
 
 int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd);
 int Drv_SpiEraseFlashPage         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
-// TODO check what's up with the following block. Is the algo *actually* better than the existing ones?
-//----------
-//int Drv_SpiEraseFlashPage256(const unsigned char opcodeErrPage256 /*new param */, const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
-//int Drv_SpiEraseFlashPage512(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
-//int Drv_SpiEraseFlashBlock4k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
-//int Drv_SpiEraseFlashBlock32k(const SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
-
-int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
+int Drv_SpiEraseFlashArea         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode); // TODO rename after rewrite
 //----------
 int Drv_SpiEraseFlashSector       (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashMultiSectors (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearStartAddress, unsigned long ulLinearEndAddress);

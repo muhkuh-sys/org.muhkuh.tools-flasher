@@ -26,28 +26,6 @@
 #ifndef __SFDP_H__
 #define __SFDP_H__
 
-// TODO clean this up, do we need this here? Also get rid of testvar
-// some init things?
-typedef struct SFDP_Data{
-	unsigned char isValid;
-	unsigned int eraseOperation1;
-	unsigned char eraseInstruction1;
-	unsigned int eraseOperation2;
-	unsigned char eraseInstruction2;
-	unsigned int eraseOperation3;
-	unsigned char eraseInstruction3;
-	unsigned int eraseOperation4;
-	unsigned char eraseInstruction4;
-	SPIFLASH_ATTRIBUTES_T * pFlashDeviceInfo;
-}SFDP_Data_t;
-
-// TODO is this fixed now?
-// extern SFDP_Data_t myData __attribute__ ((section (".data")));
-extern SFDP_Data_t myData;
-static const int testvar = 10;
-// XXX remove this after testing
-extern SPIFLASH_ATTRIBUTES_T tSfdpAttributes;
-
 const SPIFLASH_ATTRIBUTES_T *sfdp_detect(FLASHER_SPI_FLASH_T *ptFlash);
 
 #endif  /* __SFDP_H__ */

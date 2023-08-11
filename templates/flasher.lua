@@ -55,7 +55,7 @@ OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus
 OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
 OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
 OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
-OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}     -- #TODO better description: Erases with variable erase chunk size
+OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}     -- Erases with variable erase block sizes
 
 
 MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -961,21 +961,61 @@ end
 
 
 
--- Smart Erase #TODO verify this is correct
+-- Smart Erase. Erase an area in SPI-Flash with automatic choice of the optimal erase Commands.
 -- The start and end addresses must be aligned to sector boundaries as
 -- set by getEraseArea.
 function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	local aulParameter = 
 	{
-		OPERATION_MODE_SmartErase,                     -- operation mode: erase
+		OPERATION_MODE_SmartErase,                     -- operation mode: smart_erase
 		aAttr.ulDeviceDesc,                            -- data block for the device description
 		ulEraseStart,
-		ulEraseEnd
+		ulEraseEnd,
 	}
-	print("Testpoint 1 Smart_erase activated!")
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
   end
+
+
+-----------------------------------------------------------------------------
+-- Erase an area with mart erase sizes:
+-- ulSize = 0xffffffff to erase from ulDeviceOffset to end of chip
+--
+-- OK:
+-- Area erased
+--
+-- Error messages:
+-- getEraseArea failed!
+-- Failed to erase the area! (Failure during smart_erase)
+-- Failed to erase the area! (isErased check failed)
+function smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
+	-- No emptiness check is performed since the SmartErase algorithm does this automatically
+	-- #XXX The smart erase may fallback to the normal erase which does NOT check if sectors are empty.
+	-- The fallback should either check if empty in the c-code or we do it here every time.
+
+	-- Get area to erase aligned by sectors
+	local ulEraseStart, ulEraseEnd
+	local ulEndOffset = ulSize
+	ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+	if not (ulEraseStart and ulEraseEnd) then
+		return false, "getEraseArea failed!"
+	end
+
+	print("Smart-Erasing flash")
+	print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseStart, ulEraseEnd))
+
+	fIsErased = smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	if fIsErased~=true then
+		return false, "Failed to erase the area! (Failure during smart_erase)"
+	else
+		print("Checking if the area has been erased")
+		fIsErased = isErased(tPlugin, aAttr,  ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if fIsErased~=true then
+			return false, "Failed to erase the area! (isErased check failed)"
+		end
+	end
+return true, "Area erased"
+end
 
 
 

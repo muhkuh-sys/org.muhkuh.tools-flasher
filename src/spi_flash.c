@@ -264,7 +264,7 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	int           fFoundId;
 	unsigned int  uiCnt;
 	unsigned char aucIdResp[SPIFLASH_ID_SIZE];
-	const SPIFLASH_ATTRIBUTES_T *ptSc;
+	const SPIFLASH_ATTRIBUTES_T *ptSc; // TODO extend this function to also read in the erase opcodes and sizes if present
 	const SPIFLASH_ATTRIBUTES_T *ptSe;
 	const SPIFLASH_ATTRIBUTES_T *ptSr;
 	FLASHER_SPI_CFG_T *ptSpiDev;
@@ -397,14 +397,37 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 
 	/* Do not override optimized settings from the detect list. */
-	//if( ptSr==NULL ) // TODO reenable this, disabled it for testing purposes
-	if(1==1)
+	if(1 == 1) // TODO reenable this check
+	//if( ptSr==NULL )
 	{
 		if( uiUseSfdp!=0 )
 		{
 			/* Try to detect the device parameters with SFDP. */
 			ptSr = sfdp_detect(ptFlash);
 		}
+	}
+	else /* If the detected list is used, fill out the erase codes as good as possible*/
+	{
+		// TODO manually fill out the correct info (this is a workaround since I can't edit the SPIFLASH_ATTRIBUTES_T struct)
+		/* Clear entries*/
+		for (int entry = 0; entry < 4; entry++)
+		{
+			ptFlash->tSpiErase[entry].OpCode = 0;
+			ptFlash->tSpiErase[entry].Size = 0;
+		}
+
+		// Sector erase (always exists)
+		ptFlash->tSpiErase[0].OpCode = 0;
+		ptFlash->tSpiErase[0].Size = 0;
+
+		// Page erase (if it exists)
+		if(1 != 0){
+			ptFlash->tSpiErase[1].OpCode = 0;
+			ptFlash->tSpiErase[1].Size = 0;
+		}
+		
+		// TODO remove this print
+		uprintf("Set erase info from table");
 	}
 
 	/* return result only if the pointer is not NULL */
@@ -887,12 +910,13 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 
 
 
-// TODO verify this function
+// TODO Rewrit this entire function also rename it and re-comment
 /*! Drv_SpiEraseFlashBlock32k
  *   Erases a 32k Block in the specified serial FLASH
  *
  *   \param      ptFls                           Pointer to FLASH Control Block
  *   \param      ulLinearAddress                 linear address of the sector to be erased
+ *   \param      eraseOpCode                     OpCode for the desired erase command
  *
  *   \return     RX_OK                           Erasure successful
  *               Drv_SpiS_ERASURE_NOT_SUPPORTED  Erase function not supported or configured

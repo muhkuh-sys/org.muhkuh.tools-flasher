@@ -58,7 +58,7 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_EasyErase        = 9,    /* A combination of GetEraseArea, IsErased and Erase. */
 	OPERATION_MODE_SpiMacroPlayer   = 10,   /* Play an SPI macro. */
 	OPERATION_MODE_Identify         = 11,   /* Blink the status LED for 5 seconds to visualy identify the hardware */
-	OPERATION_MODE_SmartErase       = 12,   /* TODO better comment: Erase an area using variable erase block size */
+	OPERATION_MODE_SmartErase       = 12,   /* Erase an area using variable erase block sizes */
 } OPERATION_MODE_T;
 
 
@@ -103,15 +103,8 @@ typedef struct CMD_PARAMETER_ERASE_STRUCT
 } CMD_PARAMETER_ERASE_T;
 
 
-/* TODO is this true? If so change struct: Actually we don't need the pucData buffer */
-typedef struct CMD_PARAMETER_SMART_ERASE_STRUCT
-{
-	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
-	unsigned long ulStartAdr;
-	unsigned long ulEndAdr;
-//	unsigned char *pucData;
-} CMD_PARAMETER_SMART_ERASE_T;
-
+/* Requires the same data as erase */
+typedef CMD_PARAMETER_ERASE_T CMD_PARAMETER_SMART_ERASE_T;
 
 typedef struct CMD_PARAMETER_READ_STRUCT
 {

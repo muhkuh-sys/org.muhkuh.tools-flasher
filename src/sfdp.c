@@ -26,8 +26,6 @@
 #include "spi_flash.h"
 #include "uprintf.h"
 
-#include "flasher_spi.h" // TODO check if we need this
-
 
 
 #if CFG_DEBUGMSG!=0
@@ -58,7 +56,6 @@
 
 SPIFLASH_ATTRIBUTES_T tSfdpAttributes;
 
-SFDP_Data_t myData; // TODO extern in header, does this need to be global?
 
 static int read_sfdp(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulAddress, unsigned char *pucData, size_t sizData)
 {
@@ -147,10 +144,30 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 	{
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
 
-		// TODO what does this call do? Params correct?
-		setSFDPData(1, uSfdpData.auc[28], uSfdpData.auc[29], uSfdpData.auc[30],
-						uSfdpData.auc[31], uSfdpData.auc[32], uSfdpData.auc[33],
-						uSfdpData.auc[34], uSfdpData.auc[35], &(ptFlash->tAttributes));
+
+		// TODO Implement reading the erase opCodes and sizes (also remore printfs)
+		uprintf("Read erase values:\n");
+		/** Read erase instruction entries from JEDEC Basic Flash Parametes
+		 *  Read starting from DWORD 8, there are 4 erase entries each with:
+		 *  8-Bit for the size in 2^N format
+		 *  8-Bit for the OpCode
+		 */
+		const unsigned char DWORD_8_START = 7*4; /* Nr of DWords starts at 1*/
+		const short MAX_NR_ERASE_INSTRUCTIONS = 4;
+
+		for(int i = 0; i < MAX_NR_ERASE_INSTRUCTIONS; i++){
+			unsigned char shift = uSfdpData.auc[DWORD_8_START + 2*i];
+			unsigned char opCode = uSfdpData.auc[DWORD_8_START + 2*i + 1];
+			/* No instruction present or shift further than variable size */
+			if(shift == 0 || shift >= sizeof(unsigned long long)*8){
+				ptFlash->tSpiErase[i].Size = 0;
+				ptFlash->tSpiErase[i].OpCode = 0;
+			}else{
+				ptFlash->tSpiErase[i].Size = 1U << shift;
+				ptFlash->tSpiErase[i].OpCode = opCode;
+			}
+			uprintf("OpCode: %x, Memory: %d\n", ptFlash->tSpiErase[i].OpCode, ptFlash->tSpiErase[i].Size);
+		}
 
 		/* Clear the complete structure. */
 		memset(&tSfdpAttributes, 0, sizeof(tSfdpAttributes));
@@ -307,7 +324,7 @@ static int read_parameter_headers(FLASHER_SPI_FLASH_T *ptFlash, size_t sizSfdpHe
 			uprintf("Found Header ID 0x%02x V%d.%d @ 0x%08x (%d bytes)\n", ucHeaderId, ucHeaderVersion_Maj, ucHeaderVersion_Min, ulHeaderAddress, sizSfdpHeadersDw*sizeof(unsigned long));
 
 			/* Is this a known header? */
-			if( ucHeaderId==0x00 && sizSfdpHeadersDw>=9 ) // XXX why does it not go in here? nvm it does
+			if( ucHeaderId==0x00 && sizSfdpHeadersDw>=9 )
 			{
 				iResult = read_jedec_flash_parameter(ptFlash, ulHeaderAddress);
 				if( iResult!=0 )

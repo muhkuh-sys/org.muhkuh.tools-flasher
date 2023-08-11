@@ -27,7 +27,7 @@ import struct
 #
 # Select the platforms to build
 #
-atPickNetxForBuild_All = ['NETX4000', 'NETX500', 'NETX90_MPW', 'NETX90', 'NETX56', 'NETX50', 'NETX10'] #FIXME reenable , 'NETIOL']
+atPickNetxForBuild_All = ['NETX4000', 'NETX500', 'NETX90_MPW', 'NETX90', 'NETX56', 'NETX50', 'NETX10', 'NETIOL'] # FIXME disable netiol here
 AddOption('--netx',
           dest='atPickNetxForBuild',
           type='choice',
@@ -666,7 +666,7 @@ if fBuildIsFull==True:
         bin_netx56_nodbg,
         bin_netx50_nodbg,
         bin_netx10_nodbg,
-        # bin_netiol_nodbg, #FIXME reenable
+        bin_netiol_nodbg, #FIXME reenable
         'bootpins_netx90/bootpins_netx90.bin')
 
     tArcList.AddFiles('netx/hboot/unsigned/netx90/',
@@ -697,7 +697,7 @@ if fBuildIsFull==True:
         bin_netx56_dbg,
         bin_netx50_dbg,
         bin_netx10_dbg,
-        # bin_netiol_dbg #FIXME reenable
+        bin_netiol_dbg #FIXME reenable
         )
 
     tArcList.AddFiles('doc/',
@@ -781,7 +781,7 @@ if fBuildIsFull==True:
         'targets/testbench/netx/flasher_netx56.bin':                       bin_netx56_nodbg,
         'targets/testbench/netx/flasher_netx50.bin':                       bin_netx50_nodbg,
         'targets/testbench/netx/flasher_netx10.bin':                       bin_netx10_nodbg,
-        #'targets/testbench/netx/flasher_netiol.bin':                       bin_netiol_nodbg,
+        'targets/testbench/netx/flasher_netiol.bin':                       bin_netiol_nodbg,
 
         # Copy all debug binaries.
         'targets/testbench/netx/debug/flasher_netx4000_debug.bin':         bin_netx4000_dbg,
@@ -791,7 +791,7 @@ if fBuildIsFull==True:
         'targets/testbench/netx/debug/flasher_netx56_debug.bin':           bin_netx56_dbg,
         'targets/testbench/netx/debug/flasher_netx50_debug.bin':           bin_netx50_dbg,
         'targets/testbench/netx/debug/flasher_netx10_debug.bin':           bin_netx10_dbg,
-        #'targets/testbench/netx/debug/flasher_netiol_debug.bin':           bin_netiol_dbg,
+        'targets/testbench/netx/debug/flasher_netiol_debug.bin':           bin_netiol_dbg,
 
         # Copy all LUA modules.
         'targets/testbench/lua/Version.lua':                               'lua/lua/Version.lua',
@@ -852,7 +852,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/libflasher_netx56.a':                         lib_netx56_nodbg,
         'targets/flasher_lib/libflasher_netx50.a':                         lib_netx50_nodbg,
         'targets/flasher_lib/libflasher_netx50.a':                         lib_netx10_nodbg,
-        #'targets/flasher_lib/libflasher_netiol.a':                         lib_netiol_nodbg,
+        'targets/flasher_lib/libflasher_netiol.a':                         lib_netiol_nodbg,
 
         'targets/flasher_lib/libflasher_netx4000_debug.a':                 lib_netx4000_dbg,
         'targets/flasher_lib/libflasher_netx500_debug.a':                  lib_netx500_dbg,
@@ -860,7 +860,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/libflasher_netx56_debug.a':                   lib_netx56_dbg,
         'targets/flasher_lib/libflasher_netx50_debug.a':                   lib_netx50_dbg,
         'targets/flasher_lib/libflasher_netx50_debug.a':                   lib_netx10_dbg,
-        #'targets/flasher_lib/libflasher_netiol_debug.a':                   lib_netiol_dbg,
+        'targets/flasher_lib/libflasher_netiol_debug.a':                   lib_netiol_dbg,
     }
 
     for tDst, tSrc in atCopyFiles.iteritems():
