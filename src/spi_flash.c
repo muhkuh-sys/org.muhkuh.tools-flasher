@@ -264,7 +264,7 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	int           fFoundId;
 	unsigned int  uiCnt;
 	unsigned char aucIdResp[SPIFLASH_ID_SIZE];
-	const SPIFLASH_ATTRIBUTES_T *ptSc; // TODO extend this function to also read in the erase opcodes and sizes if present
+	const SPIFLASH_ATTRIBUTES_T *ptSc;
 	const SPIFLASH_ATTRIBUTES_T *ptSe;
 	const SPIFLASH_ATTRIBUTES_T *ptSr;
 	FLASHER_SPI_CFG_T *ptSpiDev;
@@ -397,8 +397,8 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 
 	/* Do not override optimized settings from the detect list. */
-	if(1 == 1) // TODO reenable this check
-	//if( ptSr==NULL )
+	// if(1 == 1) // TODO remove this
+	if( ptSr==NULL )
 	{
 		if( uiUseSfdp!=0 )
 		{
@@ -408,7 +408,6 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 	else /* If the detected list is used, fill out the erase codes as good as possible*/
 	{
-		// TODO manually fill out the correct info (this is a workaround since I can't edit the SPIFLASH_ATTRIBUTES_T struct)
 		/* Clear entries*/
 		for (int entry = 0; entry < 4; entry++)
 		{
@@ -416,18 +415,51 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 			ptFlash->tSpiErase[entry].Size = 0;
 		}
 
-		// Sector erase (always exists)
-		ptFlash->tSpiErase[0].OpCode = 0;
-		ptFlash->tSpiErase[0].Size = 0;
+		/* Required for sorting */
+		unsigned int nrEraseOps = 0;
 
-		// Page erase (if it exists)
-		if(1 != 0){
-			ptFlash->tSpiErase[1].OpCode = 0;
-			ptFlash->tSpiErase[1].Size = 0;
+		/* Sector erase (always exists) */
+		ptFlash->tSpiErase[0].OpCode = ptSr->ucEraseSectorOpcode;
+		ptFlash->tSpiErase[0].Size = ptSr->ulSectorPages*ptSr->ulPageSize;
+		nrEraseOps++;
+
+		/* Page erase (if it exists) */
+		if(ptSr->ucErasePageOpcode != 0x00){
+			ptFlash->tSpiErase[1].OpCode = ptSr->ucErasePageOpcode;
+			ptFlash->tSpiErase[1].Size = ptSr->ulPageSize;
+			nrEraseOps++;
 		}
-		
-		// TODO remove this print
-		uprintf("Set erase info from table");
+
+		// If other erase commands are included in the XML, read them in here
+
+		/* Sort the erase commands so the smallest is in element 0 */
+		for(unsigned int sortPos = 0; sortPos < nrEraseOps; sortPos++){
+			unsigned long tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
+			unsigned char tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
+			unsigned int tmpMinPos = sortPos;
+			for(unsigned int eraseCmd = sortPos + 1; eraseCmd < nrEraseOps; eraseCmd++)
+			{
+				if(ptFlash->tSpiErase[eraseCmd].Size <= tmpEraseSize)
+				{
+					tmpEraseSize = ptFlash->tSpiErase[eraseCmd].Size;
+					tmpEraseOpCode = ptFlash->tSpiErase[eraseCmd].OpCode;
+					tmpMinPos = eraseCmd;
+				}
+			}
+			tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
+			tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
+			ptFlash->tSpiErase[sortPos] = ptFlash->tSpiErase[tmpMinPos];
+			ptFlash->tSpiErase[tmpMinPos].Size = tmpEraseSize;
+			ptFlash->tSpiErase[tmpMinPos].OpCode = tmpEraseOpCode;
+		}
+
+		/* Print sorted list of operations */
+		uprintf("Erase operations:\n");
+		for(unsigned int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++)
+		{
+			uprintf("OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
+		}
+
 	}
 
 	/* return result only if the pointer is not NULL */
@@ -910,18 +942,16 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 
 
 
-// TODO Rewrit this entire function also rename it and re-comment
-/*! Drv_SpiEraseFlashBlock32k
- *   Erases a 32k Block in the specified serial FLASH
- *
- *   \param      ptFls                           Pointer to FLASH Control Block
- *   \param      ulLinearAddress                 linear address of the sector to be erased
- *   \param      eraseOpCode                     OpCode for the desired erase command
- *
- *   \return     RX_OK                           Erasure successful
- *               Drv_SpiS_ERASURE_NOT_SUPPORTED  Erase function not supported or configured
+/**
+ * \brief Erase an area of the specified SPI flash using the provided opCode
+ * 
+ * \param ptFlash          Pointer to the SPI flash information struct
+ * \param ulLinearAddress  Memory address to use for the erase command
+ * \param eraseOpcode      Erase command OpCode to send to the flash
+ * 
+ * \return int             Returns 0 on success, else 1
  */
-int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode /*new param */)
+int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode)
 {
 	int iResult;
 	unsigned char abCmd[4];
@@ -948,7 +978,9 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 		ulDeviceAddress = getDeviceAddress(ptFlash, ulLinearAddress);
 
 		/* cut off the byteoffset */
+		uprintf("!!! deviceAddr: %x\n",ulDeviceAddress);
 		ulDeviceAddress &= ~((1U << ptFlash->uiSectorAdrShift) - 1U);
+		uprintf("!!! deviceAddr: %x\n",ulDeviceAddress);
 
 		/* set the sector erase opcode */
 		abCmd[0] = eraseOpcode; //ptFlash->tAttributes.ucEraseSectorOpcode;

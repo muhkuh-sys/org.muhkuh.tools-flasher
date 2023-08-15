@@ -27,7 +27,7 @@ import struct
 #
 # Select the platforms to build
 #
-atPickNetxForBuild_All = ['NETX4000', 'NETX500', 'NETX90_MPW', 'NETX90', 'NETX56', 'NETX50', 'NETX10', 'NETIOL'] # FIXME disable netiol here
+atPickNetxForBuild_All = ['NETX4000', 'NETX500', 'NETX90_MPW', 'NETX90', 'NETX56', 'NETX50', 'NETX10', 'NETIOL']
 AddOption('--netx',
           dest='atPickNetxForBuild',
           type='choice',
@@ -666,7 +666,7 @@ if fBuildIsFull==True:
         bin_netx56_nodbg,
         bin_netx50_nodbg,
         bin_netx10_nodbg,
-        bin_netiol_nodbg, #FIXME reenable
+        bin_netiol_nodbg,
         'bootpins_netx90/bootpins_netx90.bin')
 
     tArcList.AddFiles('netx/hboot/unsigned/netx90/',
@@ -697,7 +697,7 @@ if fBuildIsFull==True:
         bin_netx56_dbg,
         bin_netx50_dbg,
         bin_netx10_dbg,
-        bin_netiol_dbg #FIXME reenable
+        bin_netiol_dbg
         )
 
     tArcList.AddFiles('doc/',
@@ -771,7 +771,7 @@ if fBuildIsFull==True:
     #
     # Make a local demo installation.
     #
-    atCopyFiles = { #FIXME reenable netio stuff
+    atCopyFiles = {
         # Copy all binaries.
         'targets/testbench/netx/bootpins_netx90.bin':                      'bootpins_netx90/bootpins_netx90.bin',
         'targets/testbench/netx/flasher_netx4000.bin':                     bin_netx4000_nodbg,

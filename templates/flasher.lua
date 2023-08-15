@@ -989,16 +989,30 @@ function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage
 -- Failed to erase the area! (Failure during smart_erase)
 -- Failed to erase the area! (isErased check failed)
 function smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
-	-- No emptiness check is performed since the SmartErase algorithm does this automatically
-	-- #XXX The smart erase may fallback to the normal erase which does NOT check if sectors are empty.
-	-- The fallback should either check if empty in the c-code or we do it here every time.
+	local fIsErased
+	local ulEndOffset
+	local ulEraseStart,ulEraseEnd
+	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
+	if ulSize == 0xffffffff then
+		ulEndOffset = ulSize
+		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if not (ulEraseStart and ulEraseEnd) then
+			return false, "getEraseArea failed!"
+		end
+		
+		ulEndOffset = ulEraseEnd
+	else
+		ulEndOffset = ulDeviceOffset + ulSize
+	end
+	
+	print(string.format("Area:  [0x%08x, 0x%08x[", ulDeviceOffset, ulEndOffset))
+	print("Checking if the area is already empty")
+	fIsErased = isErased(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 
-	-- Get area to erase aligned by sectors
-	local ulEraseStart, ulEraseEnd
-	local ulEndOffset = ulSize
+	-- Get area to erase, this aligns the operation to the flash sectors
 	ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 	if not (ulEraseStart and ulEraseEnd) then
-		return false, "getEraseArea failed!"
+		return false, "Unable to get erase area!"
 	end
 
 	print("Smart-Erasing flash")

@@ -319,7 +319,8 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 /* ------------------------------------- */
 
 
-/**
+/** 
+ * #TODO doxygen
  * added opMode Smart Erase here
  */
 static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppParams)
@@ -338,8 +339,9 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppP
 	case BUS_SPI:
 		/*  use SPI flash */
 		tResult = spi_smart_erase(&(ptParams->ptDeviceDescription->uInfo.tSpiInfo), ptParams->ulStartAdr, ptParams->ulEndAdr);
-		if(tResult != 0){ // TODO error handling?
-
+		if(tResult != 0){
+			uprintf("! smart_erase operation failed");
+			return tResult;
 		}
 		break;
 
@@ -350,9 +352,9 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppP
 	case BUS_SDIO:
 		/*  use sdio flash - not yet implemented.  */
 	default: /* Fallthrough for all unsupported flash types */
-		uprintf("! This type of flash is not yet supported by smart_erase");
-		uprintf("! Falling back to normal erase routine");
-		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		uprintf("! This type of flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
 		break;
 	}
 	return tResult;
@@ -966,11 +968,11 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Visually identify hardware\n");
 		break;
 
-	case OPERATION_MODE_SmartErase: // TODO verify this
+	case OPERATION_MODE_SmartErase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
-		ulStartAdr = ptAppParams->uParameter.tErase.ulStartAdr;
-		ulEndAdr = ptAppParams->uParameter.tErase.ulEndAdr;
-		ptDeviceDescription = ptAppParams->uParameter.tErase.ptDeviceDescription;
+		ulStartAdr = ptAppParams->uParameter.tSmartErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tSmartErase.ulEndAdr;
+		ptDeviceDescription = ptAppParams->uParameter.tSmartErase.ptDeviceDescription;
 		uprintf(". Mode: Smart Erase\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		break;

@@ -144,29 +144,55 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 	{
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
 
-
-		// TODO Implement reading the erase opCodes and sizes (also remore printfs)
-		uprintf("Read erase values:\n");
 		/** Read erase instruction entries from JEDEC Basic Flash Parametes
 		 *  Read starting from DWORD 8, there are 4 erase entries each with:
 		 *  8-Bit for the size in 2^N format
 		 *  8-Bit for the OpCode
 		 */
 		const unsigned char DWORD_8_START = 7*4; /* Nr of DWords starts at 1*/
-		const short MAX_NR_ERASE_INSTRUCTIONS = 4;
+		unsigned int nrEraseOps = 0; /* Required for sorting */
 
-		for(int i = 0; i < MAX_NR_ERASE_INSTRUCTIONS; i++){
-			unsigned char shift = uSfdpData.auc[DWORD_8_START + 2*i];
-			unsigned char opCode = uSfdpData.auc[DWORD_8_START + 2*i + 1];
+		/* Get erase operations from SFDP data */
+		for(int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++){
+			unsigned char shift = uSfdpData.auc[DWORD_8_START + 2*opNr];
+			unsigned char opCode = uSfdpData.auc[DWORD_8_START + 2*opNr + 1];
 			/* No instruction present or shift further than variable size */
 			if(shift == 0 || shift >= sizeof(unsigned long long)*8){
-				ptFlash->tSpiErase[i].Size = 0;
-				ptFlash->tSpiErase[i].OpCode = 0;
+				ptFlash->tSpiErase[opNr].Size = 0;
+				ptFlash->tSpiErase[opNr].OpCode = 0;
 			}else{
-				ptFlash->tSpiErase[i].Size = 1U << shift;
-				ptFlash->tSpiErase[i].OpCode = opCode;
+				ptFlash->tSpiErase[opNr].Size = 1U << shift;
+				ptFlash->tSpiErase[opNr].OpCode = opCode;
+				nrEraseOps++;
 			}
-			uprintf("OpCode: %x, Memory: %d\n", ptFlash->tSpiErase[i].OpCode, ptFlash->tSpiErase[i].Size);
+		}
+
+		/* Sort the erase commands so the smallest is in element 0 */
+		for(unsigned int sortPos = 0; sortPos < nrEraseOps; sortPos++){
+			unsigned long tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
+			unsigned char tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
+			unsigned int tmpMinPos = sortPos;
+			for(unsigned int eraseCmd = sortPos + 1; eraseCmd < nrEraseOps; eraseCmd++)
+			{
+				if(ptFlash->tSpiErase[eraseCmd].Size <= tmpEraseSize)
+				{
+					tmpEraseSize = ptFlash->tSpiErase[eraseCmd].Size;
+					tmpEraseOpCode = ptFlash->tSpiErase[eraseCmd].OpCode;
+					tmpMinPos = eraseCmd;
+				}
+			}
+			tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
+			tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
+			ptFlash->tSpiErase[sortPos] = ptFlash->tSpiErase[tmpMinPos];
+			ptFlash->tSpiErase[tmpMinPos].Size = tmpEraseSize;
+			ptFlash->tSpiErase[tmpMinPos].OpCode = tmpEraseOpCode;
+		}
+
+		/* Print sorted list of operations */
+		uprintf("Erase operations:\n");
+		for(unsigned int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++)
+		{
+			uprintf("OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
 		}
 
 		/* Clear the complete structure. */
