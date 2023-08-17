@@ -397,7 +397,6 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 
 	/* Do not override optimized settings from the detect list. */
-	// if(1 == 1) // TODO remove this
 	if( ptSr==NULL )
 	{
 		if( uiUseSfdp!=0 )
@@ -454,10 +453,10 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 		}
 
 		/* Print sorted list of operations */
-		uprintf("Erase operations:\n");
+		uprintf(". Erase operations:\n");
 		for(unsigned int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++)
 		{
-			uprintf("OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
+			uprintf(". OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
 		}
 
 	}
@@ -978,12 +977,11 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 		ulDeviceAddress = getDeviceAddress(ptFlash, ulLinearAddress);
 
 		/* cut off the byteoffset */
-		uprintf("!!! deviceAddr: %x\n",ulDeviceAddress);
 		ulDeviceAddress &= ~((1U << ptFlash->uiSectorAdrShift) - 1U);
-		uprintf("!!! deviceAddr: %x\n",ulDeviceAddress);
+		//uprintf(". Erasing deviceAddr: %x\n",ulDeviceAddress);
 
 		/* set the sector erase opcode */
-		abCmd[0] = eraseOpcode; //ptFlash->tAttributes.ucEraseSectorOpcode;
+		abCmd[0] = eraseOpcode;
 		/* byte 1-3 is the sector address */
 		abCmd[1] = (unsigned char) ((ulDeviceAddress >> 16) & 0xff);
 		abCmd[2] = (unsigned char) ((ulDeviceAddress >> 8) & 0xff);
@@ -993,7 +991,6 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 		iResult = send_simple_cmd(ptFlash, abCmd, 4);
 		if (iResult != 0)
 		{
-			//uprintf("ERROR: Drv_SpiEraseFlashPage: send_simple_cmd failed with %d.\n", iResult);
 			DBG_CALL_FAILED_VAL("send_simple_cmd", iResult)
 		}
 		else
@@ -1002,7 +999,6 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 			iResult = wait_for_ready(ptFlash);
 			if (iResult != 0)
 			{
-				//uprintf("ERROR: Drv_SpiEraseFlashSector: wait_for_ready failed with %d.\n", iResult);
 				DBG_CALL_FAILED_VAL("wait_for_ready", iResult)
 			}
 		}

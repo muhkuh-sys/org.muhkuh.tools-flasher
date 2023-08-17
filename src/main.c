@@ -319,21 +319,26 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 /* ------------------------------------- */
 
 
-/** 
- * #TODO doxygen
- * added opMode Smart Erase here
+/**
+ * \brief opMode function for the smart erase feature.
+ *        Currently only supports SPI devices,
+ *        will fall back to normal erase for other devices.
+ * 
+ * \param ptAppParams  The flasher input parameters
+ * 
+ * \return NETX_CONSOLEAPP_RESULT_T
+ * - NETX_CONSOLEAPP_RESULT_OK     Flash was erase successfully
+ * - NETX_CONSOLEAPP_RESULT_ERROR  An error occured while erasing the flash
  */
 static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppParams)
 {
 	CMD_PARAMETER_SMART_ERASE_T *ptParams = &(ptAppParams->uParameter.tSmartErase);
-	NETX_CONSOLEAPP_RESULT_T tResult;
-	BUS_T tSourceTyp;
-	
+
 	/* Be pessimistic. */
-	tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+	NETX_CONSOLEAPP_RESULT_T tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 
 	/* get the source type */
-	tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	BUS_T tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
 	switch (tSourceTyp)
 	{
 	case BUS_SPI:

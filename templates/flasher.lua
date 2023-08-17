@@ -988,10 +988,13 @@ function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage
 -- getEraseArea failed!
 -- Failed to erase the area! (Failure during smart_erase)
 -- Failed to erase the area! (isErased check failed)
+
+
 function smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
 	local fIsErased
 	local ulEndOffset
 	local ulEraseStart,ulEraseEnd
+
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
 	if ulSize == 0xffffffff then
 		ulEndOffset = ulSize
