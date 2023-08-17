@@ -697,8 +697,7 @@ if fBuildIsFull==True:
         bin_netx56_dbg,
         bin_netx50_dbg,
         bin_netx10_dbg,
-        bin_netiol_dbg
-        )
+        bin_netiol_dbg)
 
     tArcList.AddFiles('doc/',
         doc,

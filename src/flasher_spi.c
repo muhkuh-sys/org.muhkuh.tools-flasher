@@ -39,7 +39,6 @@
 /** @file spi.h */
 /** @file spi_flash.h */
 
-
 /*-----------------------------------*/
 
 #define SPI_BUFFER_SIZE 8192

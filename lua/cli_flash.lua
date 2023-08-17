@@ -25,6 +25,7 @@ local tVerifySignature = require 'verify_signature'
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
+
 strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
         

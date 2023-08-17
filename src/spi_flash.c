@@ -940,7 +940,6 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 }
 
 
-
 /**
  * \brief Erase an area of the specified SPI flash using the provided opCode
  * 
@@ -1010,9 +1009,6 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 	DEBUGMSG(ZONE_FUNCTION, ("-Drv_SpiEraseFlashSector(): iResult=%d.\n", iResult));
 	return iResult;
 }
-
-
-
 
 
 /*! Drv_SpiEraseFlashSector

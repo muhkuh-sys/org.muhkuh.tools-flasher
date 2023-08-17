@@ -106,6 +106,7 @@ typedef struct CMD_PARAMETER_ERASE_STRUCT
 /* Requires the same data as erase */
 typedef CMD_PARAMETER_ERASE_T CMD_PARAMETER_SMART_ERASE_T;
 
+
 typedef struct CMD_PARAMETER_READ_STRUCT
 {
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;

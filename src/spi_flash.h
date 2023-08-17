@@ -63,7 +63,7 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 {
 	SPIFLASH_ATTRIBUTES_T tAttributes;                                    /**< @brief attributes of the flash.      */
 	FLASHER_SPI_CFG_T tSpiDev;                                            /**< @brief SPI device and it's settings. */
-  FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest) */
+	FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest) */
 	unsigned long ulSectorSize;                                           /**< @brief size of one sector in bytes.  */
 	unsigned int uiSlaveId;                                               /**< @brief SPI Slave Id of the flash.    */
 	unsigned int uiPageAdrShift;                                          /**< @brief bit shift for the page part of the address, 0 means no page / byte split.  */
@@ -75,7 +75,6 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd);
 int Drv_SpiEraseFlashPage         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashArea         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
-//----------
 int Drv_SpiEraseFlashSector       (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashMultiSectors (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearStartAddress, unsigned long ulLinearEndAddress);
 int Drv_SpiEraseFlashComplete     (const FLASHER_SPI_FLASH_T *ptFlash);
