@@ -9,26 +9,26 @@ on:
     branches: [ dev_v2.0.0 ]
 
 jobs:
-  netxfirmware:
-    runs-on: ubuntu-latest
-    container: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-    steps:
-    - name: Checkout repository
-      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
-      uses: actions/checkout@v1
-      with:
-        submodules: recursive
-    - name: Disable Git safe directory
-      run: git config --system --add safe.directory '*'
-    - name: Build netX firmware
-      run: python3 mbs/mbs
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: targets
-        path: targets
+#  netxfirmware:
+#    runs-on: ubuntu-latest
+#    container: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#    steps:
+#    - name: Checkout repository
+#      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
+#      uses: actions/checkout@v1
+#      with:
+#        submodules: recursive
+#    - name: Disable Git safe directory
+#      run: git config --system --add safe.directory '*'
+#    - name: Build netX firmware
+#      run: python3 mbs/mbs
+#    - name: Upload artifacts
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: targets
+#        path: targets
   build:
-    needs: netxfirmware
+#    needs: netxfirmware
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -90,16 +90,17 @@ jobs:
         submodules: recursive
     - name: Disable Git safe directory
       run: git config --system --add safe.directory '*'
-    - name: Download firmware
-      # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
-      uses: actions/download-artifact@v1
-      with:
-        name: targets
+#    - name: Download firmware
+#      # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
+#      uses: actions/download-artifact@v1
+#      with:
+#        name: targets
     - name: Build
       run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }} --cmake-define BUILDCFG_SKIP_NETX_FW=ON
     - name: Pack artifacts
       run: tar cfvz targets/artifacts.tar.gz targets/flasher_cli-*.tar.gz targets/flasher_cli-*.zip
     - name: Upload artifacts
+      # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/upload-artifact@v1
       with:
         name: artifacts_${{ matrix.platform.distribution-id }}_${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
