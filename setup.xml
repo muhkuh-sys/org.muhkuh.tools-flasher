@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="mbs/setup2html.xsl"?>
 
-<muhkuh_buildsystem project="flasher">
+<muhkuh_buildsystem group="org.muhkuh.tools" module="flasher">
 	<project_version>2.0.0</project_version>
 
 	<scons>
 		<group>org.scons</group>
 		<name>scons-local</name>
 		<package>scons-local</package>
-		<version>2.5.0_1</version>
+		<version>4.1.0_1</version>
 		<typ>tar.bz2</typ>
 	</scons>
 
@@ -17,7 +17,7 @@
 			<group>nz.co.methods</group>
 			<name>asciidoc</name>
 			<package>asciidoc</package>
-			<version>8.6.8_3</version>
+			<version>9.1.1_1</version>
 			<typ>tar.bz2</typ>
 		</tool>
 		<tool>
@@ -32,7 +32,7 @@
 			<group>org.gnu.gcc</group>
 			<name>gcc-arm-none-eabi</name>
 			<package>gcc-arm-none-eabi_${platform}_${machine}</package>
-			<version>4.7.2_2</version>
+			<version>4.7.2_3</version>
 			<typ>tar.bz2</typ>
 		</tool>
 		<!-- For netx 4000/90. -->
@@ -40,7 +40,7 @@
 			<group>org.gnu.gcc</group>
 			<name>gcc-arm-none-eabi</name>
 			<package>gcc-arm-none-eabi_${platform}_${machine}</package>
-			<version>4.9.3_3</version>
+			<version>4.9.3_4</version>
 			<typ>tar.bz2</typ>
 		</tool>
 		<!-- For netIOL. -->
