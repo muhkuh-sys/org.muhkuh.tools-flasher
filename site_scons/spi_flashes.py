@@ -190,12 +190,12 @@ def get_value(tFlashNode, strPath, eType):
 	aPath = strPath.split("@")
 	if len(aPath)>2:
 		raise Exception("Invalid path: %s" % strPath)
-	
+
 	# Find the node.
 	tNode = tFlashNode.find(aPath[0])
 	if tNode is None:
 		raise Exception("Could not find node at path: %s" % aPath[0])
-	
+
 	# Is this a text or attribute request?
 	if len(aPath)==1:
 		# This is a text request.
@@ -203,9 +203,9 @@ def get_value(tFlashNode, strPath, eType):
 	else:
 		# This is an attribute request.
 		if not aPath[1] in tNode.attrib:
-			 raise Exception("Node at path %s has no attribute %s" % (aPath[0], aPath[1]))
+			raise Exception("Node at path %s has no attribute %s" % (aPath[0], aPath[1]))
 		strValue = tNode.attrib[aPath[1]]
-	
+
 	# Convert the value to the requested type.
 	if eType==DATATYPE_STRING:
 		tResult = strValue
@@ -219,7 +219,7 @@ def get_value(tFlashNode, strPath, eType):
 			tResult = [ int(strByte.strip(),0) for strByte in strValue.split(',')]
 	else:
 		raise Exception("Unknown type:", eType)
-	
+
 	return tResult
 
 
@@ -248,79 +248,79 @@ def spiflashes_action(target, source, env):
 		'Init1@command': 0,
 		'Id@send': 0
 	})
-	
+
 	# Loop over all "SerialFlash" nodes.
 	aFlashes = []
 	aFlashNames = []
 	for tFlashNode in tXml.findall('SerialFlash'):
 		aEntry = dict({})
-		
+
 		# Get the "Description" node.
 		tDescriptionNode = tFlashNode.find('Description')
 		if tDescriptionNode is None:
 			raise Exception("No Description node.")
 		aEntry['Description'] = tDescriptionNode.text
-		
+
 		# Add any notes.
 		aNotes = []
 		for tNoteNode in tFlashNode.findall('Note'):
 			strNote = tNoteNode.text
-			if not strNote is None: 
+			if not strNote is None:
 				aNotes.append(strNote)
 		aEntry['Note'] = aNotes
-		
+
 		# Get all values.
 		aEntryNames = dict({
 			'.@name':                              DATATYPE_STRING,
 			'.@size':                              DATATYPE_NUMBER,
 			'.@clock':                             DATATYPE_NUMBER,
-			
+
 			'Layout@pageSize':                     DATATYPE_NUMBER,
 			'Layout@sectorPages':                  DATATYPE_NUMBER,
 			'Layout@mode':                         DATATYPE_STRING,
-			
+
 			'Read@readArrayCommand':               DATATYPE_NUMBER_ARRAY,
 			'Read@ignoreBytes':                    DATATYPE_NUMBER,
-			
+
 			'Write@writeEnableCommand':            DATATYPE_NUMBER_ARRAY,
 			'Write@pageProgramCommand':            DATATYPE_NUMBER_ARRAY,
 			'Write@bufferFillCommand':             DATATYPE_NUMBER_ARRAY,
 			'Write@bufferWriteCommand':            DATATYPE_NUMBER_ARRAY,
 			'Write@eraseAndPageProgramCommand':    DATATYPE_NUMBER_ARRAY,
-			
+
 			'Erase@erasePageCommand':              DATATYPE_NUMBER_ARRAY,
 			'Erase@eraseSectorCommand':            DATATYPE_NUMBER_ARRAY,
 			'Erase@eraseChipCommand':              DATATYPE_NUMBER_ARRAY,
-			
+
 			'Status@readStatusCommand':            DATATYPE_NUMBER_ARRAY,
 			'Status@statusReadyMask':              DATATYPE_NUMBER,
 			'Status@statusReadyValue':             DATATYPE_NUMBER,
-			
+
 			'Init0@command':                       DATATYPE_NUMBER_ARRAY,
 			'Init1@command':                       DATATYPE_NUMBER_ARRAY,
-			
+
 			'Id@send':                             DATATYPE_NUMBER_ARRAY,
 			'Id@mask':                             DATATYPE_NUMBER_ARRAY,
-			'Id@magic':                            DATATYPE_NUMBER_ARRAY	
+			'Id@magic':                            DATATYPE_NUMBER_ARRAY
 		})
-		for strPath,eType in aEntryNames.iteritems():
+		for strPath,eType in aEntryNames.items():
 			aEntry[strPath] = get_value(tFlashNode, strPath, eType)
-		
-		
+
+
 		# Is this entry unique?
-		strDeviceName = aEntry['.@name'] 
+		strDeviceName = aEntry['.@name']
 		if strDeviceName in aFlashNames:
 			raise Exception('Device %s defined multiple times. The device name must be unique!' % strDeviceName)
 		aFlashNames.append(strDeviceName)
-		
+
 
 		# Set the length for the hexdump entries.
 		# NOTE: this must be done before the assignment of the default values.
 		for strPath in aHexDumpEntries:
 			# Set the length of the field.
 			aEntry[strPath+'Len'] = len(aEntry[strPath])
-		
-		
+
+
 		# These commands are optional, replace an empty array with the empty command sequence.
 		aOptionalCommands = [
 			'Write@writeEnableCommand',
@@ -341,11 +341,11 @@ def spiflashes_action(target, source, env):
 				# Yes, it is empty.
 				# Replace it with the default empty command.
 				aEntry[strPath] = [0]
-		
- 		
+
+
  		# Check that all entries in this list have only one array element.
  		# This is hard-coded in the SPI routines. They need to be modified if this is
- 		# no longer true.  
+ 		# no longer true.
 		aSingleByteCommands = [
 			'Read@readArrayCommand',
 			'Write@writeEnableCommand',
@@ -367,8 +367,8 @@ def spiflashes_action(target, source, env):
 				# Convert the array to a single value.
 				ucByte = aEntry[strPath][0]
 				aEntry[strPath] = ucByte
-		
-		
+
+
 		# All ID attributes must have the same size.
 		aIdEntries = [
 			'Id@send',
@@ -384,9 +384,9 @@ def spiflashes_action(target, source, env):
 		# Create a hexdump for the selected commands.
 		for strPath in aHexDumpEntries:
 			# Create the hex dump for this entry.
-			aEntry[strPath+'Hex'] = string.join(['0x%02x'%ucByte for ucByte in aEntry[strPath]], ', ')
-		
-		
+			aEntry[strPath+'Hex'] = ', '.join(['0x%02x'%ucByte for ucByte in aEntry[strPath]])
+
+
 		# Convert the layout mode to the enum.
 		aLayoutMode = dict({
 			'linear': 'SPIFLASH_ADR_LINEAR',
@@ -397,17 +397,17 @@ def spiflashes_action(target, source, env):
 			raise Exception('Device %s: Unknown layout mode: %s' % strDeviceName, strMode)
 		# Translate the mode name to the enum element.
 		aEntry['Layout@mode'] = aLayoutMode[strMode]
-		
-		
+
+
 		# Update the maximum size of this entry.
-		for strPath,sizMax in aMaxSize.iteritems():
+		for strPath,sizMax in aMaxSize.items():
 			sizEntry = len(aEntry[strPath])
 			if sizEntry>sizMax:
 				aMaxSize[strPath] = sizEntry
-		
+
 		aFlashes.append(aEntry)
-	
-	
+
+
 	astrFlashes = []
 	astrFlashes.append(strHead)
 	uiIndent = 88
@@ -428,10 +428,10 @@ def spiflashes_action(target, source, env):
 		astrFlashes.append('        },')
 		astrFlashes.append('        ')
 	astrFlashes.append(strFooter)
-	
+
 	# Write the result.
 	tFile = open(target[0].get_path(), 'wt')
-	tFile.write(string.join(astrFlashes, '\n'))
+	tFile.write('\n'.join(astrFlashes))
 	tFile.close()
 
 
@@ -452,7 +452,7 @@ def spiflashes_action(target, source, env):
 	tFile = open(target[1].get_path(), 'wt')
 	tFile.write(strHeader)
 	tFile.close()
-	
+
 	return None
 
 
@@ -461,7 +461,7 @@ def spiflashes_emitter(target, source, env):
 	# This rule also builds a header.
 	strPath = os.path.splitext(target[0].get_path())[0] + '.h'
 	target.append(File(strPath))
-	
+
 	# Depend on this builder.
 	Depends(target, __file__)
 
@@ -479,7 +479,7 @@ def ApplyToEnv(env):
 	#
 	# Add SPI Flashes builder.
 	#
-	
+
 	spiflashes_act = SCons.Action.Action(spiflashes_action, spiflashes_string)
 	spiflashes_bld = Builder(action=spiflashes_act, emitter=spiflashes_emitter, suffix='.c', src_suffix='.xml', single_source=1)
 	env['BUILDERS']['SPIFlashes'] = spiflashes_bld
