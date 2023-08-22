@@ -18,6 +18,8 @@ jobs:
       uses: actions/checkout@v1
       with:
         submodules: recursive
+    - name: Disable Git safe directory
+      run: git config --system --add safe.directory '*'
     - name: Build netX firmware
       run: python3 mbs/mbs
     - name: Upload artifacts
@@ -86,6 +88,8 @@ jobs:
       uses: actions/checkout@v1
       with:
         submodules: recursive
+    - name: Disable Git safe directory
+      run: git config --system --add safe.directory '*'
     - name: Download firmware
       # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/download-artifact@v1
