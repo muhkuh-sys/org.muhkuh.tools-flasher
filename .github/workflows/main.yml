@@ -97,8 +97,10 @@ jobs:
         name: targets
     - name: Build
       run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }} --cmake-define BUILDCFG_SKIP_NETX_FW=ON
+    - name: Pack artifacts
+      run: tar cfvz targets/artifacts.tar.gz targets/flasher_cli-*.tar.gz targets/flasher_cli-*.zip
     - name: Upload artifacts
       uses: actions/upload-artifact@v1
       with:
         name: artifacts_${{ matrix.platform.distribution-id }}_${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
-        path: targets/flasher_cli-*
+        path: targets/artifacts.tar.gz
