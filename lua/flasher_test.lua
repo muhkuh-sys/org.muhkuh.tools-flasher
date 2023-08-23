@@ -13,7 +13,7 @@ require("flasher")
 -- local m_logMsgFile = nil
 local m_logMsgFile = "flasher_test.log"
 
-local function log_printf(...)
+local function log_printf_fallback(...)
 	local strMsg = string.format(...)
 	print(strMsg)
 	if m_logMsgFile then
@@ -283,7 +283,7 @@ function printf(...) print(string.format(...)) end
 local function testFlasher(tFlasherInterface, fnLogPrintf)
 
 	tFlasherInterface = tFlasherInterface or flasher_interface
-	local log_printf = fnLogPrintf or log_printf
+	local log_printf = fnLogPrintf or log_printf_fallback
 
 	-- init flasher
 	local fOk, strMsg = tFlasherInterface:init()
