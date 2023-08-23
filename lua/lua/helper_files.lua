@@ -3,7 +3,7 @@ module("helper_files", package.seeall)
 require("pl")
 local tFlasherHelper = require 'flasher_helper'
 
-function printf(...) print(string.format(...)) end
+local function printf(...) print(string.format(...)) end
 
 
 -- Checking is enabled by default.
