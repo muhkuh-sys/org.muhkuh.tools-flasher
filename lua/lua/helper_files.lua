@@ -6,8 +6,7 @@ local tFlasherHelper = require 'flasher_helper'
 local function printf(...) print(string.format(...)) end
 
 
--- Checking is enabled by default.
-local fEnableHelperFileChecks = true
+local fEnableHelperFileChecks
 
 -- When the module is loaded:
 -- If the environment variable CLI_FL_DISABLE_HELPER_VERSION_CHECK
