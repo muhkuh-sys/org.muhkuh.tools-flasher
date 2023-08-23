@@ -28,7 +28,7 @@ local SECURE_BOOT_ERROR = 1
 --------------------------------------------------------------------------
 
 -- Checking is enabled by default.
-fStoreTempFiles = false
+local fStoreTempFiles = false
 
 -- Disable the checks
 function disableStoreTempFiles()
@@ -41,6 +41,11 @@ function enableStoreTempFiles()
     -- print("Enabling automatic helper file checks")
     fStoreTempFiles = true
 end
+
+function getStoreTempFiles()
+  return fStoreTempFiles
+end
+
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.

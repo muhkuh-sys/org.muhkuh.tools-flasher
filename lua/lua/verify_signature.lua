@@ -81,7 +81,7 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
                 local strDataBlockTmpPath = nil
 
 
-                if tFlasherHelper.fStoreTempFiles then
+                if tFlasherHelper.getStoreTempFiles() then
                     -- only if fStoreTempFiles is enabled set a path to store the data_block binary in the temp folder
                     strDataBlockTmpPath = path.join(strTempPath, string.format("data_block_%s.bin", idx))
                 end
