@@ -641,11 +641,11 @@ function M.detect_secure_boot_mode(aArgs)
 						printf("Error: Failed to load netX 90 exec_bxlr image: %s", strMsg or "unknown error")
 					else
 						printf("%d bytes loaded.", strImageBin:len())
-						flasher.write_image(tPlugin, 0x200c0, strImageBin)
+						tFlasher.write_image(tPlugin, 0x200c0, strImageBin)
 						tPlugin:write_data32(0x22000, 0xffffffff)
 						local ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 before running boot image: 0x%08x", ulVal)
-						local tRet = flasher.call_hboot(tPlugin)
+						local tRet = tFlasher.call_hboot(tPlugin)
 						print("return value from call_hboot:" , tRet)
 						ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 after running boot image: 0x%08x", ulVal)
@@ -727,14 +727,14 @@ function M.detect_secure_boot_mode(aArgs)
 					local SIZ_APP_SIP_HASH = 0x30
 
 					local strZero = string.rep(string.char(0x55), SIZ_COM_SIP_HASH)
-					flasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
-					local strReadback = flasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
+					tFlasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
+					local strReadback = tFlasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
 					if strReadback ~= strZero then
 						printf("Failed to clear COM SIP hash")
 					else
 						strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
-						flasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
-						strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
+						tFlasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
+						strReadback = tFlasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
 						if strReadback ~= strZero then
 							printf("Failed to clear APP SIP hash")
 						else
