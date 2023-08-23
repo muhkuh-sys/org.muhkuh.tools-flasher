@@ -1,7 +1,7 @@
 local M = {}
 
 -----------------------------------------------------------------------------
--- Copyright (C) 2017 Hilscher Gesellschaft f�r Systemautomation mbH
+-- Copyright (C) 2017 Hilscher Gesellschaft für Systemautomation mbH
 --
 -- Description:
 --   flasher_helper.lua: helper function for CLI Flasher
