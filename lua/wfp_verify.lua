@@ -367,7 +367,6 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
 
                 -- create a new chunk for the file
                 tNewChunk = {}
-                tSplitChunk = nil
 
                 tNewChunk['ulOffset'] = tFile['ulOffset']
                 tNewChunk['ulEndOffset'] = tFile['ulEndOffset']
