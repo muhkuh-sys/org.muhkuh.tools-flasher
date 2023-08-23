@@ -840,7 +840,7 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     local aDataList
     local tUsipNames
     -- list of all generated usip file paths
-    if tFlasherHelper.fStoreTempFiles then
+    if tFlasherHelper.getStoreTempFiles() then
         tResult, aDataList, tUsipNames = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
     else
         aDataList, tUsipNames = tUsipGen:gen_multi_usip(tUsipConfigDict)
@@ -928,7 +928,7 @@ function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
 
         if string.len( strUsipData ) == 0x8000 then
             -- set combined file path
-            if tFlasherHelper.fStoreTempFiles then
+            if tFlasherHelper.getStoreTempFiles() then
                 -- only store temporary file when it is enabled
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")  -- todo use handover parameter for file name
                 -- write the data back to the usip binary file
@@ -984,7 +984,7 @@ function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePa
         -- the first 64 bytes are the boot header
         -- todo: find better way to strip the last 0 values (end indication of hboot image)
         strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strExecReturnData, 65 )
-        if tFlasherHelper.fStoreTempFiles then
+        if tFlasherHelper.getStoreTempFiles() then
             -- set combined file path
             if strOutputFileName == nil then
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
@@ -1277,7 +1277,7 @@ function verifyContent(
         uVerifyResult = VERIFY_RESULT_ERROR
     else
 
-        if tFlasherHelper.fStoreTempFiles then
+        if tFlasherHelper.getStoreTempFiles() then
             tLog.debug("Saving content to files...")
             -- save the content to a file if the flag is set
             -- set the sip file path to save the sip data
@@ -1939,7 +1939,7 @@ function set_kek(
                             -- be pessimistic again
                             fOk = false
 
-                            if tFlasherHelper.fStoreTempFiles then
+                            if tFlasherHelper.getStoreTempFiles() then
 
                                 -- save the combined file into the temporary folder
                                 local strKekHbootCombPath = path.join( strTmpFolderPath, "kek_hboot_comb.bin")
@@ -2385,7 +2385,7 @@ if tArgs.strBootswitchParams then
 end
 
 -- check if the temp folder exists, if it does not exists, create it
-if not exists(strTmpFolderPath) and tFlasherHelper.fStoreTempFiles then
+if not exists(strTmpFolderPath) and tFlasherHelper.getStoreTempFiles() then
     path.mkdir(strTmpFolderPath)
 end
 
