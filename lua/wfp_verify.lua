@@ -317,7 +317,7 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
                 -- modify strData inside tChunk
                 if tChunk.strType == "flash" then
                     local strNewChunkData
-                    strNewChunkData, _ = splitDataString(tChunk['strData'], ulSplitOffset)
+                    strNewChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
                     tChunk['strData'] = strNewChunkData
                 end
                 tChunk['ulEndOffset'] = tNewChunk['ulOffset']
@@ -350,7 +350,7 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
                     -- get the data of the chunk that is in front of tNewChunk
                     ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
-                    strNewChunkData, _ = splitDataString(tChunk['strData'], ulSplitOffset)
+                    strNewChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
                 end
 
                 tChunk['ulEndOffset'] = tNewChunk['ulOffset']
