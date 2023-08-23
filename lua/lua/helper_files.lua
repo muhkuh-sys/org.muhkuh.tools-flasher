@@ -1,6 +1,5 @@
 local M = {}
 
-require("pl")
 local tFlasherHelper = require 'flasher_helper'
 
 local function printf(...) print(string.format(...)) end
