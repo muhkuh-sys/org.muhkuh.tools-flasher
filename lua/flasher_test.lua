@@ -444,10 +444,10 @@ local function testFlasher(tFlasherInterface, fnLogPrintf)
 	fOk = true
 	for iSegment, tSegment in ipairs(atSegments) do
 		log_printf("Reading Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
-		local strData, strMsg = tFlasherInterface:read(tSegment.offset, tSegment.size)
+		local strData, strMsgRead = tFlasherInterface:read(tSegment.offset, tSegment.size)
 		log_printf("Read Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
 
-		assert(strData, strMsg or "Error reading segment")
+		assert(strData, strMsgRead or "Error reading segment")
 
 		if strData == tSegment.data then
 			log_printf("Segment %d equal", iSegment)
