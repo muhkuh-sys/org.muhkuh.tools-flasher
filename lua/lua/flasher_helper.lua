@@ -1,4 +1,5 @@
-module("flasher_helper", package.seeall)
+local M = {}
+
 -----------------------------------------------------------------------------
 -- Copyright (C) 2017 Hilscher Gesellschaft f�r Systemautomation mbH
 --
@@ -31,18 +32,18 @@ local SECURE_BOOT_ERROR = 1
 local fStoreTempFiles = false
 
 -- Disable the checks
-function disableStoreTempFiles()
+function M.disableStoreTempFiles()
     -- print("Disabling automatic helper file checks")
     fStoreTempFiles = false
 end
 
 -- Enable the checks
-function enableStoreTempFiles()
+function M.enableStoreTempFiles()
     -- print("Enabling automatic helper file checks")
     fStoreTempFiles = true
 end
 
-function getStoreTempFiles()
+function M.getStoreTempFiles()
   return fStoreTempFiles
 end
 
@@ -52,7 +53,7 @@ end
 -- returns
 --   data if successful
 --   nil, message if an error occurred
-function loadBin(strFilePath)
+function M.loadBin(strFilePath)
 	local strData
 	local tFile
 	local strMsg
@@ -74,7 +75,7 @@ end
 -- fOk, strMsg writeBin(strName, strBin)
 -- Write string to binary file.
 -- returns true or false, message
-function writeBin(strName, bin)
+function M.writeBin(strName, bin)
 	local f, msg = io.open(strName, "wb")
 	if f then
 		f:write(bin)
@@ -87,7 +88,7 @@ function writeBin(strName, bin)
 end
 
 -- get hex representation (no spaces) of a byte string
-function getHexString(strBin)
+function M.getHexString(strBin)
 	local strHex = ""
 	for i=1, strBin:len() do
 		strHex = strHex .. string.format("%02x", strBin:byte(i))
@@ -97,7 +98,7 @@ end
 
 -- Convert a binary string to an unsigned integer.
 -- str must be 1 to 4 bytes long and in little-endian byte order.
-function bytes_to_uint32(str)
+function M.bytes_to_uint32(str)
     local ulValue = 0
 
     for i= str:len(), 1, -1 do
@@ -134,7 +135,7 @@ end
 -- is scanned.
 -- If strPluginType is nil, all plugin providers are scanned.
 
-function SelectPlugin(strPattern, strPluginType, atPluginOptions)
+local function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	local iInterfaceIdx
 	local aDetectedInterfaces
 	local tPlugin
@@ -200,7 +201,7 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	return tPlugin
 end
 
-function connect_retry(tPlugin, uLRetries)
+function M.connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
     print("connect to plugin")
@@ -222,7 +223,7 @@ function connect_retry(tPlugin, uLRetries)
         end
         print("connect not successful")
         uLRetries = uLRetries - 1
-        sleep_s(1)
+        M.sleep_s(1)
         if uLRetries > 0 then
             print("retry connecting ... ")
         end
@@ -235,7 +236,7 @@ end
 -- This function assumes that the name starts with the name of the interface,
 -- e.g. romloader_uart, and scans only for interfaces whose type is contained
 -- in the name string.
-function getPluginByName(strName, strPluginType, atPluginOptions)
+local function getPluginByName(strName, strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
 	for iPluginClass, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
@@ -288,7 +289,7 @@ end
 -- a plugin provider, e.g. "romloader_uart"), only this plugin provider
 -- is scanned.
 
-function getPlugin(strPluginName, strPluginType, atPluginOptions)
+function M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
@@ -305,7 +306,7 @@ function getPlugin(strPluginName, strPluginType, atPluginOptions)
 end
 
 
-function list_interfaces(strPluginType, atPluginOptions)
+function M.list_interfaces(strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
 	-- detect all interfaces
@@ -361,7 +362,7 @@ local function netx90_check_uart_padctrl(tPlugin)
 	printf("val_pad_ctrl_uart_txd: 0x%08x", val_pad_ctrl_uart_txd)
 end
 
-function detect_chiptype(aArgs)
+function M.detect_chiptype(aArgs)
   local romloader = _G.romloader
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -373,7 +374,7 @@ function detect_chiptype(aArgs)
 
 	local iRet = STATUS_OK -- assume success
 
-	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
@@ -483,7 +484,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	-- This prevents read_sip from clearing the ReadSipResult.
 	tPlugin:write_data32(ulReadSipMagicAddress, MAGIC_COOKIE_INIT)
 
-	--sleep_s(2) -- what for?
+	--M.sleep_s(2) -- what for?
 
 	print("Start read_sip binary via call")
 	tFlasher.call(
@@ -551,7 +552,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	return tRes, strErrorMsg
 end
 
-function detect_secure_boot_mode(aArgs)
+function M.detect_secure_boot_mode(aArgs)
   local romloader = _G.romloader
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -568,7 +569,7 @@ function detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
-	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
 
@@ -633,7 +634,7 @@ function detect_secure_boot_mode(aArgs)
 					local strImagePath = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "hboot_netx90_exec_bxlr.bin")
 					printf("Trying to load netX 90 exec_bxlr image from %s", strImagePath)
 
-					strImageBin, strMsg = loadBin(strImagePath)
+					strImageBin, strMsg = M.loadBin(strImagePath)
 
 					if strImageBin == nil then
 						printf("Error: Failed to load netX 90 exec_bxlr image: %s", strMsg or "unknown error")
@@ -685,7 +686,7 @@ function detect_secure_boot_mode(aArgs)
       "read_sip_M2M.bin"
     )  --tFlasher.HELPER_FILES_PATH,
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
-		strReadSipBin, strMsg = loadBin(strReadSipPath)
+		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
 		else
@@ -742,7 +743,7 @@ function detect_secure_boot_mode(aArgs)
 								atPluginOptions.romloader_jtag.jtag_reset = "SoftReset"
 							end
 
-							tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+							tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
 							else
@@ -833,7 +834,7 @@ end
 
 -- Sleep for a number of seconds
 -- (between seconds and seconds+1)
-function sleep_s(seconds)
+function M.sleep_s(seconds)
 	local t1 = os.time()
 	local t2
 	repeat
@@ -865,7 +866,7 @@ end
 -- RES_TIMEOUT: at base address + 12
 -- bit 15-0 RESET timeout in units of 100 µs
 
-function reset_netx_via_watchdog(aArgs, tPlugin)
+function M.reset_netx_via_watchdog(aArgs, tPlugin)
   local romloader = _G.romloader
 	local fOk
 	local strMsg
@@ -875,7 +876,7 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
         local strPluginType  = aArgs.strPluginType
         local atPluginOptions= aArgs.atPluginOptions
         -- open the plugin
-        tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+        tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
     end
 
 	local atChiptyp2WatchdogBase = {
@@ -980,7 +981,7 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
 
 			-- Wait 1 second (actually between 1 and 2 seconds)
 			if (fOk == true) then
-				sleep_s(1)
+				M.sleep_s(1)
 			end
 		end
 	end
@@ -988,7 +989,7 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
 	return fOk, strMsg
 end
 
-function switch_endian(ulValue)
+function M.switch_endian(ulValue)
     local ulNewValue = 0
     local mskedVal
     local shiftedVal
@@ -1012,26 +1013,26 @@ function switch_endian(ulValue)
     return ulNewValue
 end
 
-function dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
+function M.dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
 
 	local strOutputFilePath = path.join(strOutputFolder, strOutputFileName)
 
 	local strTraceDumpData = tPlugin:read_image(ulAddress, ulSize, tFlasher.default_callback_progress, ulSize)
 
-	writeBin(strOutputFilePath, strTraceDumpData)
+  M.writeBin(strOutputFilePath, strTraceDumpData)
 end
 
-function dump_trace(tPlugin, strOutputFolder, strOutputFileName)
+function M.dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 	local ulTraceAddress = 0x200a0000
 	local ulDumpSize = 0x8000
-	dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
+	M.dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
 end
 
 
 -- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
 -- !! this class does not provide every functionality of a file handle !!
 
-StringHandle = class()
+local StringHandle = class()
 
 function StringHandle:_init(strData)
     self.strData = strData
@@ -1075,3 +1076,7 @@ end
 function StringHandle:close()
     -- dummy function that does nothing
 end
+
+M.StringHandle = StringHandle
+
+return M
