@@ -201,6 +201,64 @@ local function __generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tL
 end
 
 
+local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
+  -- run verify command for flash data chunks with in wfp.xml
+  -- run iserased command for erase commands in wfp.xml
+  local fVerified = true  -- be optimistic
+  local fOk
+  tLog.info('verify chunks from chunk list')
+
+  -- verify the created chunks
+  for _, tChunk in ipairs(tDataChunks) do
+
+      if tChunk['strType'] == "erase" then
+          -- run isErased function for areas that are expected to be erased after using the wfp archive
+          tLog.info('verify erase command at offset 0x%08x to 0x%08x.', tChunk['ulOffset'], tChunk['ulEndOffset'])
+
+          fOk = tFlasher.isErased(tPlugin, aAttr, tChunk['ulOffset'], tChunk['ulEndOffset'])
+          if fOk == true then
+              tLog.info('ok')
+              tChunk['verified'] = true
+          else
+              tLog.info("ERROR: area 0x%08x to 0x%08x not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
+              fVerified = false
+              tChunk['verified'] = false
+              print("verified result: " .. tostring(fVerified))
+          end
+
+
+      elseif tChunk['strType'] == "flash" then
+          local strChunkData = tChunk['strData']
+
+          -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp
+          -- archive
+          tLog.info(
+            'verify flash command at offset [0x%08x, 0x%08x[. file %s',
+            tChunk['ulOffset'],
+            tChunk['ulEndOffset'],
+            tChunk['tFile']['strFilePath']
+          )
+
+          local strMessage
+          fOk, strMessage = tFlasher.verifyArea(tPlugin, aAttr, tChunk['ulOffset'], strChunkData)
+          if fOk == true then
+              tLog.info('ok')
+              tLog.info(strMessage or "")
+              tChunk['verified'] = true
+          else
+              tLog.info('ERROR: verify failed for area 0x%08x to 0x%08x!', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info(strMessage or "")
+              fVerified = false
+              tChunk['verified'] = false
+              print("verified result: " .. tostring(fVerified))
+          end
+      end
+
+  end
+  return fVerified
+end
+
+
 function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
@@ -212,7 +270,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 	-- loop over created buffer table for each flash
 	---- switch to current flash via detect command
 	---- clean flash list (remove entries that were flagged with 'delete' -> whole chunks overwritten by other data)
-	---- run verifyWFPData() function with the cleaned chunk list for each flash
+	---- run __verifyWFPData() function with the cleaned chunk list for each flash
 
     local fOK
     local fVerified = true -- return boolean of function -> be optimistic
@@ -421,8 +479,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
         end
         atFlashData['atChunkList'] = tCleanChunkList
 
-        -- pass the chunk list of current flash to verifyWFPData
-        fOk = verifyWFPData(atFlashData['atChunkList'], tPlugin, tFlasher, aAttr, tLog)
+        -- pass the chunk list of current flash to __verifyWFPData
+        fOk = __verifyWFPData(atFlashData['atChunkList'], tPlugin, tFlasher, aAttr, tLog)
         if fOk == false then
             fVerified = false
         end
@@ -430,64 +488,5 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     -- print final verify result and return
     __print_verify_summary(atFlashDataTable, tLog)
 
-    return fVerified
-end
-
-
-
-function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
-    -- run verify command for flash data chunks with in wfp.xml
-    -- run iserased command for erase commands in wfp.xml
-    local fVerified = true  -- be optimistic
-    local fOk
-    tLog.info('verify chunks from chunk list')
-
-    -- verify the created chunks
-    for _, tChunk in ipairs(tDataChunks) do
-
-        if tChunk['strType'] == "erase" then
-            -- run isErased function for areas that are expected to be erased after using the wfp archive
-            tLog.info('verify erase command at offset 0x%08x to 0x%08x.', tChunk['ulOffset'], tChunk['ulEndOffset'])
-
-            fOk = tFlasher.isErased(tPlugin, aAttr, tChunk['ulOffset'], tChunk['ulEndOffset'])
-            if fOk == true then
-                tLog.info('ok')
-                tChunk['verified'] = true
-            else
-                tLog.info("ERROR: area 0x%08x to 0x%08x not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
-                fVerified = false
-                tChunk['verified'] = false
-                print("verified result: " .. tostring(fVerified))
-            end
-
-
-        elseif tChunk['strType'] == "flash" then
-            local strChunkData = tChunk['strData']
-
-            -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp
-            -- archive
-            tLog.info(
-              'verify flash command at offset [0x%08x, 0x%08x[. file %s',
-              tChunk['ulOffset'],
-              tChunk['ulEndOffset'],
-              tChunk['tFile']['strFilePath']
-            )
-
-            local strMessage
-            fOk, strMessage = tFlasher.verifyArea(tPlugin, aAttr, tChunk['ulOffset'], strChunkData)
-            if fOk == true then
-                tLog.info('ok')
-                tLog.info(strMessage or "")
-                tChunk['verified'] = true
-            else
-                tLog.info('ERROR: verify failed for area 0x%08x to 0x%08x!', tChunk['ulOffset'], tChunk['ulEndOffset'])
-                tLog.info(strMessage or "")
-                fVerified = false
-                tChunk['verified'] = false
-                print("verified result: " .. tostring(fVerified))
-            end
-        end
-
-    end
     return fVerified
 end
