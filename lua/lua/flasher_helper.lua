@@ -135,11 +135,10 @@ end
 -- is scanned.
 -- If strPluginType is nil, all plugin providers are scanned.
 
-local function SelectPlugin(strPattern, strPluginType, atPluginOptions)
+local function SelectPlugin(_, strPluginType, atPluginOptions)
 	local iInterfaceIdx
 	local aDetectedInterfaces
 	local tPlugin
-	local strPattern = strPattern or ".*"
   local strInterface
   local __MUHKUH_PLUGINS = _G.__MUHKUH_PLUGINS
 
