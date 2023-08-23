@@ -243,7 +243,7 @@ local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
 
             for _, strName in ipairs(astrHelperNames) do
                 print()
-                local strBin, strMsg = checkHelperFileIntern(strDir, strName, true)
+                local strBin = checkHelperFileIntern(strDir, strName, true)
                 if strBin == nil then
                     fAllOk = false
                 end
