@@ -438,7 +438,6 @@ end
 local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	local strErrorMsg = ""
 
-	local strReadSipExe
 	local ulReadSipExeAddress    = 0x00060000 -- Load address for the read_sip executable
 	local ulReadSipDataAddress   = 0x00062000 -- Location where read_sip stores the SIP pages.
 
@@ -451,16 +450,12 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	local ulReadSipResultAddress = 0x00065000
 	local COM_SIP_CPY_VALID_MSK  = 0x00000001
 	local COM_SIP_VALID_MSK      = 0x00000002
-	local UID_CPY_MSK            = 0x00000004
-	local COM_SIP_INVALID_MSK    = 0x00000010
 	local APP_SIP_CPY_VALID_MSK  = 0x00000100
 	local APP_SIP_VALID_MSK      = 0x00000200
-	local APP_SIP_INVALID_MSK    = 0x00001000
 	local FIRST_RUN_DONE         = 0x00010000 -- read_sip pass 1 done, shortly before reset
 
 	local ulReadSipResult
 	local ulMagicResult
-	local strCalSipData
 	local strComSipData
 	local strAppSipData
 	local tRes
