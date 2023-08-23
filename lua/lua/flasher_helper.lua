@@ -135,6 +135,7 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	local tPlugin
 	local strPattern = strPattern or ".*"
   local strInterface
+  local __MUHKUH_PLUGINS = _G.__MUHKUH_PLUGINS
 
 	show_plugin_options(atPluginOptions)
 
@@ -234,7 +235,14 @@ function getPluginByName(strName, strPluginType, atPluginOptions)
 			end
 
 			for i,v in ipairs(aDetectedInterfaces) do
-				print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+				print(string.format(
+          "%d: %s (%s) Used: %s, Valid: %s",
+          i,
+          v:GetName(),
+          v:GetTyp(),
+          tostring(v:IsUsed()),
+          tostring(v:IsValid())
+        ))
 				if strName == v:GetName() then
 					if not v:IsValid() then
 						return nil, "Plugin is not valid"
@@ -286,7 +294,7 @@ function list_interfaces(strPluginType, atPluginOptions)
 
 	-- detect all interfaces
 	local aDetectedInterfaces = {}
-	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+	for iPluginClass, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 		end
@@ -338,6 +346,7 @@ local function netx90_check_uart_padctrl(tPlugin)
 end
 
 function detect_chiptype(aArgs)
+  local romloader = _G.romloader
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -532,6 +541,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function detect_secure_boot_mode(aArgs)
+  local romloader = _G.romloader
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -833,6 +843,7 @@ end
 -- bit 15-0 RESET timeout in units of 100 µs
 
 function reset_netx_via_watchdog(aArgs, tPlugin)
+  local romloader = _G.romloader
 	local fOk
 	local strMsg
 
