@@ -1,5 +1,3 @@
-module("muhkuh_cli_init", package.seeall)
-
 -- Set the search path for LUA plugins.
 package.cpath = package.cpath .. ";lua_plugins/?.so"
 
