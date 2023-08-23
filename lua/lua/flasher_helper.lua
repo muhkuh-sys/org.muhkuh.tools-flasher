@@ -244,8 +244,8 @@ local function getPluginByName(strName, strPluginType, atPluginOptions)
 			local iDetected
 			local aDetectedInterfaces = {}
 
-			local strPluginType = tPluginClass:GetID()
-			if strName:match(strPluginType) then
+			local strPluginClassType = tPluginClass:GetID()
+			if strName:match(strPluginClassType) then
 				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
 				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
