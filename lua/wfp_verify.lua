@@ -1,4 +1,4 @@
-module("wfp_verify", package.seeall)
+local M = {}
 
 local pl = require 'pl.import_into'()
 
@@ -259,7 +259,7 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
 end
 
 
-function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
+function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
 	---- get all files (write or erase commands) for current target flash
@@ -490,3 +490,5 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
     return fVerified
 end
+
+return M
