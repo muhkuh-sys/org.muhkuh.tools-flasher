@@ -205,6 +205,8 @@ end
 --========================================================================
 
 
+local function printf(...) print(string.format(...)) end
+
 -- random string
 local function getRandomData(iSize)
 	local acBytes = {}
@@ -277,7 +279,6 @@ local function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
 	end
 end
 
-function printf(...) print(string.format(...)) end
 
 --========================================================================
 --                           Test
