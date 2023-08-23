@@ -231,7 +231,7 @@ function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     local fAllOk = true
     local atCheckedDirs = {}
     
-    for iDir = 1, table.maxn(astrHelperDirs) do
+    for iDir = 1, #astrHelperDirs do
         local strDir = astrHelperDirs[iDir]
         if strDir ~= nil and atCheckedDirs[strDir] == nil then 
             print()
