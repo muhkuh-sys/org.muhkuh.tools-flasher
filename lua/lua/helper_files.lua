@@ -1,7 +1,6 @@
 module("helper_files", package.seeall)
 
 require("pl")
-path = require("pl.path")
 local tFlasherHelper = require 'flasher_helper'
 
 function printf(...) print(string.format(...)) end
@@ -180,6 +179,7 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
         strMsg = string.format("Unknown helper name: '%s'", strKey)
     else
         -- build the path
+        local path = require("pl.path")
         local strPath = path.join(strDir, tEntry.filename)
         local strVersion = tEntry.version
         local iOffset = tEntry.version_offset
@@ -343,6 +343,7 @@ function getHelperPath(strDir, strKey)
     local tEntry, strMsg = getHelperInfo(strKey)
     local strPath
     if tEntry then
+        local path = require("pl.path")
         strPath = path.join(strDir, tEntry.filename)
     end
 
@@ -427,6 +428,7 @@ end
 -- Each path is a combination of a directory with the file names of a helper.
 function getAllHelperPaths(astrDir)
     local astrPaths = {}
+    local path = require("pl.path")
     for _, strDir in ipairs(astrDir) do
         for _, tEntry in ipairs(atHelperFileVersions) do
             local strPath = path.join(strDir, tEntry.filename)
@@ -440,6 +442,7 @@ function getAllHelperFilesData(astrDir)
     local tPathList = getAllHelperPaths(astrDir)
     local tDataList = {}
     local tFileHandle
+    local path = require("pl.path")
     for _, strFilePath in ipairs(tPathList) do
         if not path.exists(strFilePath) then
             table.insert(tDataList, "")
