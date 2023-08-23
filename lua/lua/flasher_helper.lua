@@ -980,7 +980,7 @@ function M.reset_netx_via_watchdog(aArgs, tPlugin)
 			end
 
 			tPlugin:Disconnect()
-			tPlugin = nil
+			collectgarbage('collect')
 
 			-- Wait 1 second (actually between 1 and 2 seconds)
 			if (fOk == true) then
