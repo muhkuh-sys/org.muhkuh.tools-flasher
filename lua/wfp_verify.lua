@@ -9,8 +9,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 	---- get all files (write or erase commands) for current target flash
 	---- create a buffer containing the write/erase data of each flash
 	------ NEW: for netx90 the data of Bus:2 CS: 0 Unit:3 will be added to the flashes that are morrored by that flash
-	---- whenever data overlaps data that was already added to the buffer, it will replace that data either partially or completely
-
+  ---- whenever data overlaps data that was already added to the buffer, it will replace that data either partially
+  ---- or completely
 	-- loop over created buffer table for each flash
 	---- switch to current flash via detect command
 	---- clean flash list (remove entries that were flagged with 'delete' -> whole chunks overwritten by other data)
@@ -97,7 +97,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
             -- get file list of entry
             local tFiles = generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
-			-- tFiles contains a list of all flash commands or erase commands inside the wfp.xml control file for the current flash
+      -- tFiles contains a list of all flash commands or erase commands inside the wfp.xml control file for the
+      -- current flash
 
 
             -- loop over files
@@ -133,7 +134,8 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         local ulSplitOffset = ulIntflash0Size -tNewChunk['ulOffset']
                         local tSplitChunk1 = {}
 
-                        tSplitChunk1['ulOffset'] = 0x0  -- the part will be mapped to intflash1 and all offsets are subtracted by 0x80000
+                        tSplitChunk1['ulOffset'] = 0x0  -- the part will be mapped to intflash1 and all offsets are
+                                                        -- subtracted by 0x80000
                         tSplitChunk1['strType'] = tNewChunk['strType']
                         tSplitChunk1['tFile'] = tNewChunk['tFile']
                         tSplitChunk1['delete'] = tNewChunk['delete']
@@ -187,9 +189,19 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     tLog.info("Verify After gathering data.")
 
     for strChunkKey, atFlashData in pairs(atFlashDataTable) do
-        tLog.info("Verify Data inside Flash B"..atFlashData['tBus'] .." CS" .. atFlashData['ulChipSelect'] .." U"..atFlashData['ulUnit'])
+        tLog.info(
+          "Verify Data inside Flash B" .. atFlashData['tBus'] ..
+          " CS" .. atFlashData['ulChipSelect'] ..
+          " U" .. atFlashData['ulUnit']
+        )
          -- Detect the device. (switch to right flash)
-        local fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, atFlashData['tBus'], atFlashData['ulUnit'],atFlashData['ulChipSelect'])
+        local fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(
+          tPlugin,
+          aAttr,
+          atFlashData['tBus'],
+          atFlashData['ulUnit'],
+          atFlashData['ulChipSelect']
+        )
         if fDetectOk ~= true then
             tLog.error(strMsg)
             fVerified = false
@@ -230,7 +242,11 @@ function print_verify_summary(atFlashDataTable, tLog)
     tLog.info("===========================================")
     for strChunkKey, atFlashData in pairs(atFlashDataTable) do
         if atFlashData['atChunkList'] ~= nil then
-            tLog.info("Flash Bus: "..atFlashData['tBus'] .." Unit: "..atFlashData['ulUnit'].." ChipSelect: " .. atFlashData['ulChipSelect'])
+            tLog.info(
+              "Flash Bus: " .. atFlashData['tBus'] ..
+              " Unit: " .. atFlashData['ulUnit'] ..
+              " ChipSelect: " .. atFlashData['ulChipSelect']
+            )
             tLog.info("-------------------------------------------")
         end
         for _, tChunk in ipairs(atFlashData['atChunkList']) do
@@ -443,8 +459,14 @@ function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
         elseif tChunk['strType'] == "flash" then
             local strChunkData = tChunk['strData']
 
-            -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp archive
-            tLog.info('verify flash command at offset [0x%08x, 0x%08x[. file %s', tChunk['ulOffset'], tChunk['ulEndOffset'], tChunk['tFile']['strFilePath'])
+            -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp
+            -- archive
+            tLog.info(
+              'verify flash command at offset [0x%08x, 0x%08x[. file %s',
+              tChunk['ulOffset'],
+              tChunk['ulEndOffset'],
+              tChunk['tFile']['strFilePath']
+            )
 
             fOk, strMessage = tFlasher.verifyArea(tPlugin, aAttr, tChunk['ulOffset'], strChunkData)
             if fOk == true then
