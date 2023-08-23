@@ -648,7 +648,7 @@ function M.detect_secure_boot_mode(aArgs)
 						printf("Value at 0x22000 before running boot image: 0x%08x", ulVal)
 						local tRet = flasher.call_hboot(tPlugin)
 						print("return value from call_hboot:" , tRet)
-						local ulVal = tPlugin:read_data32(0x22000)
+						ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 after running boot image: 0x%08x", ulVal)
 
 						if (ulVal == 0) then
