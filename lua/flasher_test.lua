@@ -10,10 +10,10 @@ module("flasher_test", package.seeall)
 
 require("flasher")
 
-m_logMsgFile = nil
-m_logMsgFile = "flasher_test.log"
+-- local m_logMsgFile = nil
+local m_logMsgFile = "flasher_test.log"
 
-function log_printf(...)
+local function log_printf(...)
 	local strMsg = string.format(...)
 	print(strMsg)
 	if m_logMsgFile then
@@ -26,10 +26,10 @@ function log_printf(...)
 end
 
 -- Number of random data segments to add
-iNumAddSegments = 100
+local iNumAddSegments = 100
 
 -- Limit the reported device size (size of the test area) to 128 MB.
-ulDeviceSizeMax = 0x8000000
+local ulDeviceSizeMax = 0x8000000
 
 --========================================================================
 --                      interface to flasher.lua
@@ -56,7 +56,7 @@ ulDeviceSizeMax = 0x8000000
 -- fOk, strMsg      isChipErased()
 
 
-flasher_interface = {
+local flasher_interface = {
 	-- private:
 	tPlugin = nil,
 	a_attr = nil,
@@ -88,7 +88,7 @@ function flasher_interface.init(self)
 
 	-- check if the selected flash is present
 	print("Detecting flash device")
-	fOk = flasher.detect(
+	local fOk = flasher.detect(
 		self.tPlugin, self.aAttr,
 		self.iBus, self.iUnit, self.iChipSelect,
 		self.fnCallbackMessage, self.fnCallbackProgress
@@ -202,7 +202,7 @@ end
 
 
 -- random string
-function getRandomData(iSize)
+local function getRandomData(iSize)
 	local acBytes = {}
 	for i=1, iSize do
 		acBytes[i] = string.char(math.random(0, 255))
@@ -214,7 +214,7 @@ end
 -- randomly re-order the elements of l
 -- l is a list with integer keys 1..n
 -- usage: l = reorder_randomly(l)
-function reorder_randomly(l)
+local function reorder_randomly(l)
 	local l2 = {}
 	local iPos
 	for iLen=#l, 1, -1 do
@@ -231,7 +231,7 @@ end
 -- iWordSize: round addresses to 1/2/4 bytes
 -- returns true if a segment was inserted, false otherwise
 
-function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
+local function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
 	-- get a random position
 	-- the new segment is inserted between atSegments[iPos] and atSegments[iPos+1]
 	local iPos = math.random(0, #atSegments)
@@ -280,13 +280,13 @@ function printf(...) print(string.format(...)) end
 --========================================================================
 
 
-function testFlasher(tFlasherInterface, fnLogPrintf)
+local function testFlasher(tFlasherInterface, fnLogPrintf)
 
 	tFlasherInterface = tFlasherInterface or flasher_interface
 	local log_printf = fnLogPrintf or log_printf
 
 	-- init flasher
-	fOk, strMsg = tFlasherInterface:init()
+	local fOk, strMsg = tFlasherInterface:init()
 	assert(fOk, strMsg)
 
 	local ulDeviceSize = tFlasherInterface:getDeviceSize()
@@ -357,6 +357,7 @@ function testFlasher(tFlasherInterface, fnLogPrintf)
 	}
 
 	-- select the segments list according to the flash type
+  local atSegments
 	local iBusWidth = tFlasherInterface:getBusWidth()
 	if iBusWidth==1 then
 		atSegments = atSegments_1
