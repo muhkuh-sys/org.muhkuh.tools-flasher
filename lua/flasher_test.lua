@@ -65,7 +65,7 @@ local flasher_interface = {
 	iChipSelect =nil,
 }
 
-function flasher_interface.configure(self, tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
+function flasher_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
 	self.tPlugin = tPlugin
 	self.strFlasherPath = strFlasherPath
 	self.iBus = iBus
@@ -75,7 +75,7 @@ function flasher_interface.configure(self, tPlugin, strFlasherPath, iBus, iUnit,
 	self.strSecureOption = strSecureOption
 end
 
-function flasher_interface.init(self)
+function flasher_interface:init()
 	if self.iBus == flasher.BUS_IFlash then
 		error("This test is not suitable to test intflash. Write chunks may collide in 16 byte pages.")
 	end
@@ -103,7 +103,7 @@ end
 function flasher_interface.finish(self)
 end
 
-function flasher_interface.getDeviceSize(self)
+function flasher_interface:getDeviceSize()
 	local ulSize = flasher.getFlashSize(
 		self.tPlugin, self.aAttr,
 		self.fnCallbackMessage, self.fnCallbackProgress)
@@ -118,11 +118,11 @@ function flasher_interface.getDeviceSize(self)
 	end
 end
 
-function flasher_interface.getBus(self)
+function flasher_interface:getBus()
 	return self.iBus
 end
 
-function flasher_interface.getBusWidth(self)
+function flasher_interface:getBusWidth()
 	if self.iBus == flasher.BUS_Parflash then
 		return 2 -- 1 or 2 or 4
 	elseif self.iBus == flasher.BUS_Spi then
@@ -134,7 +134,7 @@ function flasher_interface.getBusWidth(self)
 	end
 end
 
-function flasher_interface.getEmptyByte(self)
+function flasher_interface:getEmptyByte()
 	if self.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.iBus == flasher.BUS_Spi then
@@ -146,35 +146,35 @@ function flasher_interface.getEmptyByte(self)
 	end
 end
 
-function flasher_interface.flash(self, ulOffset, strData)
+function flasher_interface:flash(ulOffset, strData)
 	return flasher.flashArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface.verify(self, ulOffset, strData)
+function flasher_interface:verify(ulOffset, strData)
 	return flasher.verifyArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface.read(self, ulOffset, ulSize)
+function flasher_interface:read(ulOffset, ulSize)
 	return flasher.readArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface.erase(self, ulOffset, ulSize)
+function flasher_interface:erase(ulOffset, ulSize)
 	return flasher.eraseArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface.isErased(self, ulOffset, ulSize)
+function flasher_interface:isErased(ulOffset, ulSize)
 	local tPlugin = self.tPlugin
 	local aAttr = self.aAttr
 	local fIsErased = flasher.isErased(
@@ -184,15 +184,15 @@ function flasher_interface.isErased(self, ulOffset, ulSize)
 	return fIsErased, fIsErased and "The area is empty" or "The area is not empty"
 end
 
-function flasher_interface.eraseChip(self)
+function flasher_interface:eraseChip()
 	return self:erase(0, self:getDeviceSize())
 end
 
-function flasher_interface.readChip(self)
+function flasher_interface:readChip()
 	return self:read(0, self:getDeviceSize())
 end
 
-function flasher_interface.isChipErased(self)
+function flasher_interface:isChipErased()
 	return self:isErased(0, self:getDeviceSize())
 end
 
