@@ -3,6 +3,16 @@ module("wfp_verify", package.seeall)
 local pl = require 'pl.import_into'()
 
 
+local function __splitDataString(strData, ulSplitOffset)
+  -- split a data stringinto two data strings at the split offset
+  local strDataNew
+  local StrDataSplit
+  strDataNew =  string.sub(strData, 0x1, ulSplitOffset)
+  StrDataSplit =  string.sub(strData, ulSplitOffset+1)
+  return strDataNew, StrDataSplit
+end
+
+
 function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
@@ -152,7 +162,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
                         if tNewChunk['strType'] == "flash" then
                             -- split the data only if the type is flash (erase has no data to split)
-                            strNewChunkData, strSplitChunkData = splitDataString(tNewChunk['strData'], ulSplitOffset)
+                            strNewChunkData, strSplitChunkData = __splitDataString(tNewChunk['strData'], ulSplitOffset)
                             tNewChunk['strData'] = strNewChunkData
                             tSplitChunk1['strData'] = strSplitChunkData
                         end
@@ -287,7 +297,7 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
                 tChunk['ulOffset'] = tNewChunk['ulEndOffset']
                 if tChunk.strType == "flash" then
-                    local _, strSplitChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
+                    local _, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
                     tChunk['strData'] = strSplitChunkData
                 end
                 -- modify strData inside tChunk
@@ -317,7 +327,7 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
                 -- modify strData inside tChunk
                 if tChunk.strType == "flash" then
                     local strNewChunkData
-                    strNewChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
+                    strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
                     tChunk['strData'] = strNewChunkData
                 end
                 tChunk['ulEndOffset'] = tNewChunk['ulOffset']
@@ -344,13 +354,13 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
                 tSplitChunk['tFile'] = tChunk['tFile']
 
                 if tChunk.strType == "flash" then
-                    strNewChunkData, strSplitChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
+                    strNewChunkData, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
                     tSplitChunk['strData'] = strSplitChunkData
 
 
                     -- get the data of the chunk that is in front of tNewChunk
                     ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
-                    strNewChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
+                    strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
                 end
 
                 tChunk['ulEndOffset'] = tNewChunk['ulOffset']
@@ -370,15 +380,6 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
         table.insert(tDataChunks, tSplitChunk)
     end
 
-end
-
-function splitDataString(strData, ulSplitOffset)
-    -- split a data stringinto two data strings at the split offset
-    local strDataNew
-    local StrDataSplit
-    strDataNew =  string.sub(strData, 0x1, ulSplitOffset)
-    StrDataSplit =  string.sub(strData, ulSplitOffset+1)
-    return strDataNew, StrDataSplit
 end
 
 function generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
