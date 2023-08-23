@@ -469,7 +469,7 @@ local function testFlasher(tFlasherInterface, fnLogPrintf)
 	-- Read image
 	log_printf("")
 	log_printf("Read image")
-	strImage, strMsg = tFlasherInterface:readChip()
+	strImage = tFlasherInterface:readChip()
 	log_printf("Image read")
 
 	-- Compare the segments and check the space in-between
