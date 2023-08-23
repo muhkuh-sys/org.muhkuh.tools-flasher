@@ -243,7 +243,7 @@ function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
     local atResults
     local strSecPathNx90 = path.join(strSecureOption, "netx90")
     local astrPaths, astrFileData
-    fOk, astrPaths, astrFileData = helper_files.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+    fOk, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
     
     if astrPaths == nil then
         fOk = false
@@ -255,7 +255,7 @@ function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
         local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
 
         local strVerifySigPath
-        strVerifySigPath, strMsg = helper_files.getHelperPath(strSecPathNx90, "verify_sig")
+        strVerifySigPath, strMsg = tHelperFiles.getHelperPath(strSecPathNx90, "verify_sig")
         if strVerifySigPath == nil then 
             fOk = false
             strMsg = strMsg or "Failed to get the path to verify_sig"

@@ -1,4 +1,4 @@
-module("helper_files", package.seeall)
+local M = {}
 
 require("pl")
 local tFlasherHelper = require 'flasher_helper'
@@ -23,18 +23,18 @@ else
 end
 
 -- Disable the checks
-function disableHelperFileChecks()
+function M.disableHelperFileChecks()
     -- print("Disabling automatic helper file checks")
     fEnableHelperFileChecks = false
 end
 
 -- Enable the checks
-function enableHelperFileChecks()
+function M.enableHelperFileChecks()
     -- print("Enabling automatic helper file checks")
     fEnableHelperFileChecks = true
 end
 
-function getStatusString()
+function M.getStatusString()
     local strStatus
     if fEnableHelperFileChecks then
         strStatus = "Automatic helper file checks are enabled."
@@ -269,7 +269,7 @@ end
 -- fCheck (optional):
 -- fCheck == true (default): check the file if checks are enabled
 -- fCheck == false: always skip the check
-function getHelperFile(strDirectory, strHelperName, fCheck)
+function M.getHelperFile(strDirectory, strHelperName, fCheck)
     if (fCheck == nil) or (fCheck == true) then
         fCheck = fEnableHelperFileChecks
     end
@@ -281,7 +281,7 @@ end
 -- Check the specified helper files in the specified directories,
 -- if the checks are enabled.
 -- Returns true or false
-function checkHelperFiles(astrDirectories, astrHelperNames)
+function M.checkHelperFiles(astrDirectories, astrHelperNames)
     local fOk
     if fEnableHelperFileChecks then
         fOk = checkHelperFilesIntern(astrDirectories, astrHelperNames)
@@ -304,7 +304,7 @@ end
 -- Check all helper files in the specified directories.
 -- The checks are always performed, even if they were disabled.
 -- Returns true or false
-function checkAllHelperFiles(astrDirectories)
+function M.checkAllHelperFiles(astrDirectories)
     local astrHelperNames = {}
     for _, e in ipairs(atHelperFileVersions) do
         table.insert(astrHelperNames, e.key)
@@ -343,7 +343,7 @@ local function getHelperInfo(strKey)
 end
 
 
-function getHelperPath(strDir, strKey)
+function M.getHelperPath(strDir, strKey)
     local tEntry, strMsg = getHelperInfo(strKey)
     local strPath
     if tEntry then
@@ -376,7 +376,7 @@ local function getHelperPaths(astrDir, astrKeys)
     local fOk = true
     for _, strDir in ipairs(astrDir) do
         for _, strKey in ipairs(astrKeys) do
-            local strPath, strMsg = getHelperPath(strDir, strKey)
+            local strPath, strMsg = M.getHelperPath(strDir, strKey)
             if strPath then
                 table.insert(astrPaths, strPath)
             else
@@ -417,7 +417,7 @@ end
 -- true, data, paths: all helpers could be read.
 -- false, data, paths: not all helpers could be read, some data entries are the empty string.
 -- false, nil, paths: some helper files are unknown -> Bug
-function getHelperDataAndPaths(astrDir, astrKeys)
+function M.getHelperDataAndPaths(astrDir, astrKeys)
     local fOk, astrPaths = getHelperPaths(astrDir, astrKeys)
     local astrFileData
     if fOk and astrPaths then
@@ -442,7 +442,7 @@ local function getAllHelperPaths(astrDir)
     return astrPaths
 end
 
-function getAllHelperFilesData(astrDir)
+function M.getAllHelperFilesData(astrDir)
     local tPathList = getAllHelperPaths(astrDir)
     local tDataList = {}
     local tFileHandle
@@ -471,7 +471,7 @@ end
 --   ok: true/false, whether the check has succeeded
 --   message: optional message string
 --
-function showFileCheckResults(atResults)
+function M.showFileCheckResults(atResults)
     print(string.rep('-', 80))
     print("File verification results:")
     for _, tEntry in ipairs(atResults) do
@@ -489,3 +489,5 @@ function showFileCheckResults(atResults)
     end
     print(string.rep('-', 80))
 end
+
+return M
