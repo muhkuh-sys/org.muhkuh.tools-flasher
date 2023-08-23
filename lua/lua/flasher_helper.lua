@@ -733,9 +733,9 @@ function M.detect_secure_boot_mode(aArgs)
 					if strReadback ~= strZero then
 						printf("Failed to clear COM SIP hash")
 					else
-						local strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
+						strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
 						flasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
-						local strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
+						strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
 						if strReadback ~= strZero then
 							printf("Failed to clear APP SIP hash")
 						else
@@ -757,7 +757,8 @@ function M.detect_secure_boot_mode(aArgs)
 									print("Failed to reconnect.")
 								else
 									-- read the SIP pages
-									local tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
+                  local tRes
+									tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
 
 									if tRes == nil then
 										print(strMsg)
