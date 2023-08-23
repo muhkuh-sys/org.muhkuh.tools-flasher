@@ -8,7 +8,7 @@ module("flasher_test", package.seeall)
 --
 ---------------------------------------------------------------------------
 
-require("flasher")
+local tFlasher = require("flasher")
 
 -- local m_logMsgFile = nil
 local m_logMsgFile = "flasher_test.log"
@@ -76,12 +76,12 @@ function flasher_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChip
 end
 
 function flasher_interface:init()
-	if self.iBus == flasher.BUS_IFlash then
+	if self.iBus == tFlasher.BUS_IFlash then
 		error("This test is not suitable to test intflash. Write chunks may collide in 16 byte pages.")
 	end
 
 	print("Downloading flasher binary")
-	self.aAttr = flasher.download(
+	self.aAttr = tFlasher.download(
     self.tPlugin,
     self.strFlasherPath,
     self.fnCallbackProgress,
@@ -94,7 +94,7 @@ function flasher_interface:init()
 
 	-- check if the selected flash is present
 	print("Detecting flash device")
-	local fOk = flasher.detect(
+	local fOk = tFlasher.detect(
 		self.tPlugin, self.aAttr,
 		self.iBus, self.iUnit, self.iChipSelect,
 		self.fnCallbackMessage, self.fnCallbackProgress
@@ -110,7 +110,7 @@ function flasher_interface.finish()
 end
 
 function flasher_interface:getDeviceSize()
-	local ulSize = flasher.getFlashSize(
+	local ulSize = tFlasher.getFlashSize(
 		self.tPlugin, self.aAttr,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 
@@ -129,59 +129,59 @@ function flasher_interface:getBus()
 end
 
 function flasher_interface:getBusWidth()
-	if self.iBus == flasher.BUS_Parflash then
+	if self.iBus == tFlasher.BUS_Parflash then
 		return 2 -- 1 or 2 or 4
-	elseif self.iBus == flasher.BUS_Spi then
+	elseif self.iBus == tFlasher.BUS_Spi then
 		return 1
-	elseif self.iBus == flasher.BUS_IFlash then
+	elseif self.iBus == tFlasher.BUS_IFlash then
 		return 4
-	elseif self.iBus == flasher.BUS_SDIO then
+	elseif self.iBus == tFlasher.BUS_SDIO then
 		return 1
 	end
 end
 
 function flasher_interface:getEmptyByte()
-	if self.iBus == flasher.BUS_Parflash then
+	if self.iBus == tFlasher.BUS_Parflash then
 		return 0xff
-	elseif self.iBus == flasher.BUS_Spi then
+	elseif self.iBus == tFlasher.BUS_Spi then
 		return 0xff
-	elseif self.iBus == flasher.BUS_IFlash then
+	elseif self.iBus == tFlasher.BUS_IFlash then
 		return 0xff
-	elseif self.iBus == flasher.BUS_SDIO then
+	elseif self.iBus == tFlasher.BUS_SDIO then
 		return 0x00
 	end
 end
 
 function flasher_interface:flash(ulOffset, strData)
-	return flasher.flashArea(
+	return tFlasher.flashArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
 function flasher_interface:verify(ulOffset, strData)
-	return flasher.verifyArea(
+	return tFlasher.verifyArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
 function flasher_interface:read(ulOffset, ulSize)
-	return flasher.readArea(
+	return tFlasher.readArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
 function flasher_interface:erase(ulOffset, ulSize)
-	return flasher.eraseArea(
+	return tFlasher.eraseArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
 function flasher_interface:isErased(ulOffset, ulSize)
-	local fIsErased = flasher.isErased(
+	local fIsErased = tFlasher.isErased(
 		self.tPlugin, self.aAttr, ulOffset, ulOffset + ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 
