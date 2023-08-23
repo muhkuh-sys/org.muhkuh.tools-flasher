@@ -106,7 +106,7 @@ function flasher_interface:init()
 	return true
 end
 
-function flasher_interface.finish(self)
+function flasher_interface.finish()
 end
 
 function flasher_interface:getDeviceSize()
