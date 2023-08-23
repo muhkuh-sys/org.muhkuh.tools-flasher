@@ -281,7 +281,6 @@ function getPlugin(strPluginName, strPluginType, atPluginOptions)
 end
 
 
-function printf(...) print(string.format(...)) end
 function list_interfaces(strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
