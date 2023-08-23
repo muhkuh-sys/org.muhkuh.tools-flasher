@@ -510,8 +510,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 		-- ignore the CAL page.
 		--strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
 
-		fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
-		fComCopyOk = bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0
+		local fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
+		local fComCopyOk = bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0
 		if fComSipOk or fComCopyOk then
 			strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
 		end
@@ -526,8 +526,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			print("The COM SIP is not available.")
 		end
 
-		fAppSipOk = bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0
-		fAppCopyOk = bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0
+		local fAppSipOk = bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0
+		local fAppCopyOk = bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0
 		if fAppSipOk or fAppCopyOk then
 			strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 		end
