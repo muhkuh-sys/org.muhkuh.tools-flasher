@@ -324,7 +324,7 @@ function checkAllHelperFiles(astrDirectories)
 end
 
 
-function getHelperInfo(strKey)
+local function getHelperInfo(strKey)
     local tEntry
     local strMsg
 
@@ -355,7 +355,7 @@ function getHelperPath(strDir, strKey)
 end
 
 
-function getAllHelperKeys()
+local function getAllHelperKeys()
     local astrKeys = {}
     for _, e in ipairs(atHelperFileVersions) do
         table.insert(astrKeys, e.key)
@@ -370,7 +370,7 @@ end
 -- Return values:
 -- fOk: true if all keys could be found, false if not.
 -- astrPaths: the paths that could be generated, may be incomplete.
-function getHelperPaths(astrDir, astrKeys)
+local function getHelperPaths(astrDir, astrKeys)
     astrKeys = astrKeys or getAllHelperKeys()
     local astrPaths = {}
     local fOk = true
@@ -397,7 +397,7 @@ end
 -- fOk: true if all files could be loaded, false if not.
 -- astrFileData: a list of the contents of the files.
 -- For any file that cannot be loaded, an empty string is inserted.
-function loadFiles(astrPaths)
+local function loadFiles(astrPaths)
     local astrFileData = {}
     local fOk = true
     for _, strPath in ipairs(astrPaths) do
@@ -430,7 +430,7 @@ end
 -- astrDir is a list of directories.
 -- Returns a list of paths.
 -- Each path is a combination of a directory with the file names of a helper.
-function getAllHelperPaths(astrDir)
+local function getAllHelperPaths(astrDir)
     local astrPaths = {}
     local path = require("pl.path")
     for _, strDir in ipairs(astrDir) do
