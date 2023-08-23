@@ -18,7 +18,7 @@ local function __print_verify_summary(atFlashDataTable, tLog)
   local ulFailCount = 0
   tLog.info("Verification summary:")
   tLog.info("===========================================")
-  for strChunkKey, atFlashData in pairs(atFlashDataTable) do
+  for _, atFlashData in pairs(atFlashDataTable) do
       if atFlashData['atChunkList'] ~= nil then
           tLog.info(
             "Flash Bus: " .. atFlashData['tBus'] ..
@@ -50,7 +50,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
   ---- modify chunks that would be overwritten by tNewChunk
   tLog.info("Add to chunk list")
   local tSplitChunk
-  for ulChunkIdx, tChunk in ipairs(tDataChunks) do
+  for _, tChunk in ipairs(tDataChunks) do
       if tChunk['delete'] ~= true then
           local tFile = tNewChunk['tFile']
           -- check if start of file overlaps start of chunk
@@ -444,7 +444,7 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
 
     tLog.info("Verify After gathering data.")
 
-    for strChunkKey, atFlashData in pairs(atFlashDataTable) do
+    for _, atFlashData in pairs(atFlashDataTable) do
         tLog.info(
           "Verify Data inside Flash B" .. atFlashData['tBus'] ..
           " CS" .. atFlashData['ulChipSelect'] ..
