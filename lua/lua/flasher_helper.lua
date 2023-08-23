@@ -148,7 +148,7 @@ local function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	repeat do
 		-- Detect all interfaces.
 		aDetectedInterfaces = {}
-		for i,v in ipairs(__MUHKUH_PLUGINS) do
+		for _,v in ipairs(__MUHKUH_PLUGINS) do
 			if strPluginType == nil or strPluginType == v:GetID() then
 				local iDetected
 				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
@@ -239,7 +239,7 @@ end
 local function getPluginByName(strName, strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
-	for iPluginClass, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
+	for _, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			local iDetected
 			local aDetectedInterfaces = {}
@@ -311,14 +311,14 @@ function M.list_interfaces(strPluginType, atPluginOptions)
 
 	-- detect all interfaces
 	local aDetectedInterfaces = {}
-	for iPluginClass, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
+	for _, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 		end
 	end
 	-- filter used and non valid interfaces
 	local aUnusedInterfaces = {}
-	for i,v in ipairs(aDetectedInterfaces) do
+	for _,v in ipairs(aDetectedInterfaces) do
 		if not v:IsUsed() and v:IsValid() then
 				table.insert(aUnusedInterfaces, v)
 		end
