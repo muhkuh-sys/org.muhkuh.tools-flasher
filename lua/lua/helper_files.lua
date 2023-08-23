@@ -7,12 +7,12 @@ local function printf(...) print(string.format(...)) end
 
 
 -- Checking is enabled by default.
-fEnableHelperFileChecks = true
+local fEnableHelperFileChecks = true
 
 -- When the module is loaded:
 -- If the environment variable CLI_FL_DISABLE_HELPER_VERSION_CHECK
 -- is set to any value, disable the checks
-strEnvVar = "CLI_FL_DISABLE_HELPER_VERSION_CHECK"
+local strEnvVar = "CLI_FL_DISABLE_HELPER_VERSION_CHECK"
 local strEnvEnable=os.getenv(strEnvVar)
 if strEnvEnable == nil then
     -- printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
@@ -60,7 +60,7 @@ end
 -- If it is not specified, the entire file is searched for the
 -- version string.
 
-atHelperFileVersions = {
+local atHelperFileVersions = {
     {
         key = "bootswitch",
         filename = "bootswitch.bin",
@@ -160,7 +160,7 @@ atHelperFileVersions = {
 --     - file not found
 --     - version did not match
 
-function checkHelperFileIntern(strDir, strKey, fCheckversion)
+local function checkHelperFileIntern(strDir, strKey, fCheckversion)
     local strBin, strMsg
     local tEntry
 
@@ -227,7 +227,7 @@ end
 
 
 -- Verify multiple helper directories.
-function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
+local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     local fAllOk = true
     local atCheckedDirs = {}
 
