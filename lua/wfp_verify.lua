@@ -45,6 +45,113 @@ local function __print_verify_summary(atFlashDataTable, tLog)
 end
 
 
+local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
+  -- add tNewChunk to tDataChunks
+  ---- modify chunks that would be overwritten by tNewChunk
+  tLog.info("Add to chunk list")
+  local tSplitChunk
+  for ulChunkIdx, tChunk in ipairs(tDataChunks) do
+      if tChunk['delete'] ~= true then
+          local tFile = tNewChunk['tFile']
+          -- check if start of file overlaps start of chunk
+          if tNewChunk['ulOffset'] <= tChunk['ulOffset'] and
+              tNewChunk['ulEndOffset'] > tChunk['ulOffset'] and
+              tNewChunk['ulEndOffset'] < tChunk['ulEndOffset'] then
+
+              -- alter the start of the chunk
+              tLog.info('alter the start of the chunk')
+              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
+              local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
+
+              tChunk['ulOffset'] = tNewChunk['ulEndOffset']
+              if tChunk.strType == "flash" then
+                  local _, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
+                  tChunk['strData'] = strSplitChunkData
+              end
+              -- modify strData inside tChunk
+
+              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+
+
+          -- check if the whole chunk is overwritten by file
+          elseif tNewChunk['ulOffset'] <= tChunk['ulOffset'] and
+              tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] then
+
+              -- mark index to be removed
+              tLog.info('delete chunk          : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tChunk['delete'] = true
+
+          -- check if file overlaps end of chunk
+          elseif tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] and
+              tNewChunk['ulOffset'] < tChunk['ulEndOffset'] and
+              tNewChunk['ulOffset'] > tChunk['ulOffset'] then
+
+              -- alter the end of the chunk
+              tLog.info('alter the end of the chunk')
+              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
+              local ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
+
+              -- modify strData inside tChunk
+              if tChunk.strType == "flash" then
+                  local strNewChunkData
+                  strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
+                  tChunk['strData'] = strNewChunkData
+              end
+              tChunk['ulEndOffset'] = tNewChunk['ulOffset']
+              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+
+
+          -- check if file is inside of chunk
+          elseif tNewChunk['ulOffset'] > tChunk['ulOffset'] and
+              tNewChunk['ulEndOffset'] < tChunk['ulEndOffset'] then
+
+              -- get data of chunk behind if tNewChunk and add it to new created tSplitChunk
+              local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
+              local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
+              local strSplitChunkData
+              local strNewChunkData
+
+
+              -- create split chunk
+              tSplitChunk = {}
+              tSplitChunk['ulOffset'] = tNewChunk['ulEndOffset']
+              tSplitChunk['ulEndOffset'] = tChunk['ulEndOffset']
+              tSplitChunk['strType'] = tChunk['strType']
+              tSplitChunk['delete'] = false
+              tSplitChunk['tFile'] = tChunk['tFile']
+
+              if tChunk.strType == "flash" then
+                  strNewChunkData, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
+                  tSplitChunk['strData'] = strSplitChunkData
+
+
+                  -- get the data of the chunk that is in front of tNewChunk
+                  ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
+                  strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
+              end
+
+              tChunk['ulEndOffset'] = tNewChunk['ulOffset']
+              tChunk['strData'] = strNewChunkData
+
+              tLog.info('split chunk area to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                and : 0x%08x - 0x%08x', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
+          end
+      end
+  end
+
+  -- append the new chunk to the list
+  table.insert(tDataChunks, tNewChunk)
+
+  -- append the split chunk to the list if there is one
+  if tSplitChunk ~= nil then
+      table.insert(tDataChunks, tSplitChunk)
+  end
+
+end
+
+
 function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
@@ -200,13 +307,13 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         end
 
                         -- add the new chunk part that is inside intflash0 to intflash0 chunk list
-                        addChunkToList(tIntfl0Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
+                        __addChunkToList(tIntfl0Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                         -- add the new chunk part that is inside intflash1 to intflash1 chunk list
-                        addChunkToList(tIntfl1Entry['atChunkList'], tSplitChunk1, tSplitChunk1['tFile'], tLog)
+                        __addChunkToList(tIntfl1Entry['atChunkList'], tSplitChunk1, tSplitChunk1['tFile'], tLog)
 
                     elseif tNewChunk['ulOffset'] < ulIntflash0Size and tNewChunk['ulEndOffset'] < ulIntflash0Size then
                         -- add the new chunk part that is inside intflash0 to intflash0 chunk list
-                        addChunkToList(tIntfl0Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
+                        __addChunkToList(tIntfl0Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                     elseif tNewChunk['ulOffset'] >= ulIntflash0Size and tNewChunk['ulEndOffset'] >= ulIntflash0Size then
                         -- add the new chunk part that is inside intflash1 to intflash1 chunk list
                         -- the offsets need to be subtracted by ulIntflDiff
@@ -216,12 +323,12 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
                         end
                         tNewChunk['tFile']['ulOffset'] = tNewChunk['tFile']['ulOffset'] - ulIntflash0Size
                         tNewChunk['tFile']['ulEndOffset'] = tNewChunk['tFile']['ulEndOffset'] - ulIntflash0Size
-                        addChunkToList(tIntfl1Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
+                        __addChunkToList(tIntfl1Entry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                     end
                 else
                     -- add the new chunk to the current chunk entry
 
-                    addChunkToList(tCurrentFlashEntry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
+                    __addChunkToList(tCurrentFlashEntry['atChunkList'], tNewChunk, tNewChunk['tFile'], tLog)
                 end
             end
         end
@@ -277,112 +384,6 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
     return fVerified
 end
 
-
-function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
-    -- add tNewChunk to tDataChunks
-    ---- modify chunks that would be overwritten by tNewChunk
-    tLog.info("Add to chunk list")
-    local tSplitChunk
-    for ulChunkIdx, tChunk in ipairs(tDataChunks) do
-        if tChunk['delete'] ~= true then
-            local tFile = tNewChunk['tFile']
-            -- check if start of file overlaps start of chunk
-            if tNewChunk['ulOffset'] <= tChunk['ulOffset'] and
-                tNewChunk['ulEndOffset'] > tChunk['ulOffset'] and
-                tNewChunk['ulEndOffset'] < tChunk['ulEndOffset'] then
-
-                -- alter the start of the chunk
-                tLog.info('alter the start of the chunk')
-                tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-                local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
-                local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
-
-                tChunk['ulOffset'] = tNewChunk['ulEndOffset']
-                if tChunk.strType == "flash" then
-                    local _, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
-                    tChunk['strData'] = strSplitChunkData
-                end
-                -- modify strData inside tChunk
-
-                tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-
-
-            -- check if the whole chunk is overwritten by file
-            elseif tNewChunk['ulOffset'] <= tChunk['ulOffset'] and
-                tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] then
-
-                -- mark index to be removed
-                tLog.info('delete chunk          : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-                tChunk['delete'] = true
-
-            -- check if file overlaps end of chunk
-            elseif tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] and
-                tNewChunk['ulOffset'] < tChunk['ulEndOffset'] and
-                tNewChunk['ulOffset'] > tChunk['ulOffset'] then
-
-                -- alter the end of the chunk
-                tLog.info('alter the end of the chunk')
-                tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-                local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
-                local ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
-
-                -- modify strData inside tChunk
-                if tChunk.strType == "flash" then
-                    local strNewChunkData
-                    strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
-                    tChunk['strData'] = strNewChunkData
-                end
-                tChunk['ulEndOffset'] = tNewChunk['ulOffset']
-                tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-
-
-            -- check if file is inside of chunk
-            elseif tNewChunk['ulOffset'] > tChunk['ulOffset'] and
-                tNewChunk['ulEndOffset'] < tChunk['ulEndOffset'] then
-
-                -- get data of chunk behind if tNewChunk and add it to new created tSplitChunk
-                local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
-                local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
-                local strSplitChunkData
-                local strNewChunkData
-
-
-                -- create split chunk
-                tSplitChunk = {}
-                tSplitChunk['ulOffset'] = tNewChunk['ulEndOffset']
-                tSplitChunk['ulEndOffset'] = tChunk['ulEndOffset']
-                tSplitChunk['strType'] = tChunk['strType']
-                tSplitChunk['delete'] = false
-                tSplitChunk['tFile'] = tChunk['tFile']
-
-                if tChunk.strType == "flash" then
-                    strNewChunkData, strSplitChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
-                    tSplitChunk['strData'] = strSplitChunkData
-
-
-                    -- get the data of the chunk that is in front of tNewChunk
-                    ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
-                    strNewChunkData = __splitDataString(tChunk['strData'], ulSplitOffset)
-                end
-
-                tChunk['ulEndOffset'] = tNewChunk['ulOffset']
-                tChunk['strData'] = strNewChunkData
-
-                tLog.info('split chunk area to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-                tLog.info('                and : 0x%08x - 0x%08x', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
-            end
-        end
-    end
-
-    -- append the new chunk to the list
-    table.insert(tDataChunks, tNewChunk)
-
-    -- append the split chunk to the list if there is one
-    if tSplitChunk ~= nil then
-        table.insert(tDataChunks, tSplitChunk)
-    end
-
-end
 
 function generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
     -- collect file data in tFiles table
