@@ -87,7 +87,10 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
                 end
 
                 -- generate data block
-                local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(strFileData, strDataBlockTmpPath)
+                local strDataBlock, tGenDataBlockResult, strErrorMsg = tSipper:gen_data_block(
+                  strFileData,
+                  strDataBlockTmpPath
+                )
                 tResult.data_block = strDataBlock
 
                 -- check if the command executes without an error
@@ -99,10 +102,20 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
                     tPlugin:write_data32(ulVerifySigDebugAddress, 0x00000000)
 
                     -- todo: why is the plugin type checked inside the loop?
-                    if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
+                    if (
+                      strPluginType == 'romloader_jtag' or
+                      strPluginType == 'romloader_uart' or
+                      strPluginType == 'romloader_eth'
+                    ) then
                         tLog.info("Write data block into intram at offset 0x%08x", ulDataBlockLoadAddress)
                         tFlasher.write_image(tPlugin, ulDataBlockLoadAddress, strDataBlock)
-                        -- tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_before.bin")
+                        -- tFlasherHelper.dump_intram(
+                        --  tPlugin,
+                        --  0x000220b0,
+                        --  0x400,
+                        --  strTempPath,
+                        --  "dump_data_block_before.bin"
+                        -- )
                         tLog.info("Start signature verification ...")
                         if ulM2MMajor == 3 and ulM2MMinor >= 1 then
                             tFlasher.call_hboot(tPlugin)
@@ -114,7 +127,13 @@ function verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTempPa
                                 2
                             )
                         end
-                        -- tFlasherHelper.dump_intram(tPlugin, 0x000220b0, 0x400, strTempPath, "dump_data_block_after.bin")
+                        -- tFlasherHelper.dump_intram(
+                        --   tPlugin,
+                        --   0x000220b0,
+                        --   0x400,
+                        --   strTempPath,
+                        --   "dump_data_block_after.bin"
+                        -- )
 
                         ulVerifySigResult = tPlugin:read_data32(ulVerifySigResultAddress)
                         ulVerifySigDebug = tPlugin:read_data32(ulVerifySigDebugAddress)
