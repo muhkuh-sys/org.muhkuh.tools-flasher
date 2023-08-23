@@ -569,6 +569,8 @@ function M.detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
+  local path = require 'pl.path'
+
 	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
@@ -1014,7 +1016,7 @@ function M.switch_endian(ulValue)
 end
 
 function M.dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
-
+  local path = require 'pl.path'
 	local strOutputFilePath = path.join(strOutputFolder, strOutputFileName)
 
 	local strTraceDumpData = tPlugin:read_image(ulAddress, ulSize, tFlasher.default_callback_progress, ulSize)
