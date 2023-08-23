@@ -257,12 +257,11 @@ end
 -- or false and an error message if the signatures are invalid, or
 -- the signature verification has failed.
 function verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
-    local fOk = true
+    local fOk
     local strMsg
     local atResults
     local strSecPathNx90 = path.join(strSecureOption, "netx90")
-    local astrPaths, astrFileData
-    fOk, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+    local _, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
 
     if astrPaths == nil then
         fOk = false
