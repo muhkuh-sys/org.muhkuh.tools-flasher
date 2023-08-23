@@ -272,7 +272,7 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
 	---- clean flash list (remove entries that were flagged with 'delete' -> whole chunks overwritten by other data)
 	---- run __verifyWFPData() function with the cleaned chunk list for each flash
 
-    local fOK
+    local fOk
     local fVerified = true -- return boolean of function -> be optimistic
 
     local atFlashDataTable = {} -- stores data chunks for each flash
