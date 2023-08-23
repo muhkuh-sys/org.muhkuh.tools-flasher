@@ -404,7 +404,7 @@ local function testFlasher(tFlasherInterface, fnLogPrintf)
 
 
 	-- fill segments with data
-	for iSegment, tSegment in ipairs(atSegments) do
+	for _, tSegment in ipairs(atSegments) do
 		tSegment.data = tSegment.data or getRandomData(tSegment.size)
 	end
 
