@@ -181,8 +181,6 @@ function flasher_interface:erase(ulOffset, ulSize)
 end
 
 function flasher_interface:isErased(ulOffset, ulSize)
-	local tPlugin = self.tPlugin
-	local aAttr = self.aAttr
 	local fIsErased = flasher.isErased(
 		self.tPlugin, self.aAttr, ulOffset, ulOffset + ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
