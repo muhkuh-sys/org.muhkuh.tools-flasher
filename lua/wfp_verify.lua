@@ -13,6 +13,38 @@ local function __splitDataString(strData, ulSplitOffset)
 end
 
 
+local function __print_verify_summary(atFlashDataTable, tLog)
+  local ulSuccessCount = 0
+  local ulFailCount = 0
+  tLog.info("Verification summary:")
+  tLog.info("===========================================")
+  for strChunkKey, atFlashData in pairs(atFlashDataTable) do
+      if atFlashData['atChunkList'] ~= nil then
+          tLog.info(
+            "Flash Bus: " .. atFlashData['tBus'] ..
+            " Unit: " .. atFlashData['ulUnit'] ..
+            " ChipSelect: " .. atFlashData['ulChipSelect']
+          )
+          tLog.info("-------------------------------------------")
+      end
+      for _, tChunk in ipairs(atFlashData['atChunkList']) do
+          if tChunk.verified == true then
+              tLog.info("    %s Chunk 0x%08x - 0x%08x: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              ulSuccessCount = ulSuccessCount +1
+          else
+              tLog.info("    %s Chunk 0x%08x - 0x%08x: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              ulFailCount = ulFailCount +1
+          end
+      end
+      print("")
+  end
+  tLog.info("===========================================")
+  tLog.info("    Chunks successfully verified:   %s", ulSuccessCount)
+  tLog.info("    Chunks failed to verify:        %s", ulFailCount)
+  tLog.info("-------------------------------------------")
+end
+
+
 function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
@@ -240,41 +272,11 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
         end
     end
     -- print final verify result and return
-    print_verify_summary(atFlashDataTable, tLog)
+    __print_verify_summary(atFlashDataTable, tLog)
 
     return fVerified
 end
 
-function print_verify_summary(atFlashDataTable, tLog)
-    local ulSuccessCount = 0
-    local ulFailCount = 0
-    tLog.info("Verification summary:")
-    tLog.info("===========================================")
-    for strChunkKey, atFlashData in pairs(atFlashDataTable) do
-        if atFlashData['atChunkList'] ~= nil then
-            tLog.info(
-              "Flash Bus: " .. atFlashData['tBus'] ..
-              " Unit: " .. atFlashData['ulUnit'] ..
-              " ChipSelect: " .. atFlashData['ulChipSelect']
-            )
-            tLog.info("-------------------------------------------")
-        end
-        for _, tChunk in ipairs(atFlashData['atChunkList']) do
-            if tChunk.verified == true then
-                tLog.info("    %s Chunk 0x%08x - 0x%08x: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
-                ulSuccessCount = ulSuccessCount +1
-            else
-                tLog.info("    %s Chunk 0x%08x - 0x%08x: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
-                ulFailCount = ulFailCount +1
-            end
-        end
-        print("")
-    end
-    tLog.info("===========================================")
-    tLog.info("    Chunks successfully verified:   %s", ulSuccessCount)
-    tLog.info("    Chunks failed to verify:        %s", ulFailCount)
-    tLog.info("-------------------------------------------")
-end
 
 function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
     -- add tNewChunk to tDataChunks
