@@ -169,7 +169,7 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
         fCheckversion = true
     end
 
-    for i, e in ipairs(atHelperFileVersions) do
+    for _, e in ipairs(atHelperFileVersions) do
         if e.key == strKey then
             tEntry = e
             break
@@ -237,7 +237,7 @@ function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
             print()
             printf("Checking helper files in %s", strDir)
 
-            for iName, strName in ipairs(astrHelperNames) do
+            for _, strName in ipairs(astrHelperNames) do
                 print()
                 local strBin, strMsg = checkHelperFileIntern(strDir, strName, true)
                 if strBin == nil then
@@ -302,7 +302,7 @@ end
 -- Returns true or false
 function checkAllHelperFiles(astrDirectories)
     local astrHelperNames = {}
-    for i, e in ipairs(atHelperFileVersions) do
+    for _, e in ipairs(atHelperFileVersions) do
         table.insert(astrHelperNames, e.key)
     end
 
@@ -324,7 +324,7 @@ function getHelperInfo(strKey)
     local tEntry
     local strMsg
 
-    for i, e in ipairs(atHelperFileVersions) do
+    for _, e in ipairs(atHelperFileVersions) do
         if e.key == strKey then
             tEntry = e
             break
@@ -352,7 +352,7 @@ end
 
 function getAllHelperKeys()
     local astrKeys = {}
-    for i, e in ipairs(atHelperFileVersions) do
+    for _, e in ipairs(atHelperFileVersions) do
         table.insert(astrKeys, e.key)
     end
     return astrKeys
@@ -369,8 +369,8 @@ function getHelperPaths(astrDir, astrKeys)
     astrKeys = astrKeys or getAllHelperKeys()
     local astrPaths = {}
     local fOk = true
-    for i, strDir in ipairs(astrDir) do
-        for j, strKey in ipairs(astrKeys) do
+    for _, strDir in ipairs(astrDir) do
+        for _, strKey in ipairs(astrKeys) do
             local strPath, strMsg = getHelperPath(strDir, strKey)
             if strPath then
                 table.insert(astrPaths, strPath)
@@ -395,7 +395,7 @@ end
 function loadFiles(astrPaths)
     local astrFileData = {}
     local fOk = true
-    for i, strPath in ipairs(astrPaths) do
+    for _, strPath in ipairs(astrPaths) do
         local strBin, strMsg = tFlasherHelper.loadBin(strPath)
         if strBin then
             table.insert(astrFileData, strBin)
@@ -427,8 +427,8 @@ end
 -- Each path is a combination of a directory with the file names of a helper.
 function getAllHelperPaths(astrDir)
     local astrPaths = {}
-    for i, strDir in ipairs(astrDir) do
-        for j, tEntry in ipairs(atHelperFileVersions) do
+    for _, strDir in ipairs(astrDir) do
+        for _, tEntry in ipairs(atHelperFileVersions) do
             local strPath = path.join(strDir, tEntry.filename)
             table.insert(astrPaths, strPath)
         end
@@ -440,7 +440,7 @@ function getAllHelperFilesData(astrDir)
     local tPathList = getAllHelperPaths(astrDir)
     local tDataList = {}
     local tFileHandle
-    for i, strFilePath in ipairs(tPathList) do
+    for _, strFilePath in ipairs(tPathList) do
         if not path.exists(strFilePath) then
             table.insert(tDataList, "")
         else
@@ -467,7 +467,7 @@ end
 function showFileCheckResults(atResults)
     print(string.rep('-', 80))
     print("File verification results:")
-    for i, tEntry in ipairs(atResults) do
+    for _, tEntry in ipairs(atResults) do
         local strOk
         if tEntry.ok then
             strOk = string.format("%s check successful.", tEntry.check)
