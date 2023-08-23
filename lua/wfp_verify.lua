@@ -152,6 +152,55 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 end
 
 
+local function __generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
+  -- collect file data in tFiles table
+
+  local tFiles = {}
+  for _, tData in ipairs(tTargetFlash.atData) do
+       if tWfpControl:matchCondition(atWfpConditions, tData.strCondition)~=true then
+           tLog.info('Not processing file: prevented by condition.')
+
+       else
+          if tData.strFile == nil then
+              -- erase commands here
+              local tCommand = {}
+              tCommand["ulOffset"] = tData.ulOffset
+              tCommand["ulSize"] = tData.ulSize
+              tCommand["ulEndOffset"] = tData.ulOffset + tData.ulSize -- first address after data
+              tCommand["strType"] = "erase"
+              table.insert(tFiles, tCommand)
+          else
+              -- data (flash) commands here
+              local strFile
+              if tWfpControl:getHasSubdirs() == true then
+                  tLog.info('WFP archive uses subdirs.')
+                  strFile = tData.strFile
+              else
+                  tLog.info('WFP archive does not use subdirs.')
+                  strFile = pl.path.basename(tData.strFile)
+              end
+              local ulOffset = tData.ulOffset
+
+              tLog.info('Found file "%s" with offset 0x%08x', strFile, ulOffset)
+              local strData = tWfpControl:getData(strFile)
+              local sizData = string.len(strData)
+
+              local tCommand = {}
+              tCommand["strFile"] = pl.path.basename(tData.strFile)
+              tCommand["strFilePath"] = tData.strFile
+              tCommand["ulOffset"] = tData.ulOffset
+              tCommand["ulEndOffset"] = tData.ulOffset + sizData
+              tCommand["strData"] = strData
+              tCommand["ulSize"] = sizData
+              tCommand["strType"] = "flash"
+              table.insert(tFiles, tCommand)
+          end
+       end
+  end
+  return tFiles
+end
+
+
 function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
 
 	-- loop over each target flash
@@ -245,7 +294,7 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 
 
             -- get file list of entry
-            local tFiles = generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
+            local tFiles = __generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
       -- tFiles contains a list of all flash commands or erase commands inside the wfp.xml control file for the
       -- current flash
 
@@ -385,53 +434,6 @@ function verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tF
 end
 
 
-function generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tLog)
-    -- collect file data in tFiles table
-
-    local tFiles = {}
-    for _, tData in ipairs(tTargetFlash.atData) do
-         if tWfpControl:matchCondition(atWfpConditions, tData.strCondition)~=true then
-             tLog.info('Not processing file: prevented by condition.')
-
-         else
-            if tData.strFile == nil then
-                -- erase commands here
-                local tCommand = {}
-                tCommand["ulOffset"] = tData.ulOffset
-                tCommand["ulSize"] = tData.ulSize
-                tCommand["ulEndOffset"] = tData.ulOffset + tData.ulSize -- first address after data
-                tCommand["strType"] = "erase"
-                table.insert(tFiles, tCommand)
-            else
-                -- data (flash) commands here
-                local strFile
-                if tWfpControl:getHasSubdirs() == true then
-                    tLog.info('WFP archive uses subdirs.')
-                    strFile = tData.strFile
-                else
-                    tLog.info('WFP archive does not use subdirs.')
-                    strFile = pl.path.basename(tData.strFile)
-                end
-                local ulOffset = tData.ulOffset
-
-                tLog.info('Found file "%s" with offset 0x%08x', strFile, ulOffset)
-                local strData = tWfpControl:getData(strFile)
-                local sizData = string.len(strData)
-
-                local tCommand = {}
-                tCommand["strFile"] = pl.path.basename(tData.strFile)
-                tCommand["strFilePath"] = tData.strFile
-                tCommand["ulOffset"] = tData.ulOffset
-                tCommand["ulEndOffset"] = tData.ulOffset + sizData
-                tCommand["strData"] = strData
-                tCommand["ulSize"] = sizData
-                tCommand["strType"] = "flash"
-                table.insert(tFiles, tCommand)
-            end
-         end
-    end
-    return tFiles
-end
 
 function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
     -- run verify command for flash data chunks with in wfp.xml
