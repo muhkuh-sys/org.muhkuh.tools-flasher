@@ -688,6 +688,7 @@ function M.detect_secure_boot_mode(aArgs)
       "read_sip_M2M.bin"
     )  --tFlasher.HELPER_FILES_PATH,
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
+    local strReadSipBin
 		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
