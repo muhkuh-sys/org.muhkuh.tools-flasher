@@ -1,4 +1,4 @@
-module("flasher_test", package.seeall)
+local M = {}
 
 ---------------------------------------------------------------------------
 -- Copyright (C) 2019 Hilscher Gesellschaft für Systemautomation mbH
@@ -200,6 +200,8 @@ function flasher_interface:isChipErased()
 	return self:isErased(0, self:getDeviceSize())
 end
 
+M.flasher_interface = flasher_interface
+
 --========================================================================
 --                           Helper routines
 --========================================================================
@@ -285,7 +287,7 @@ end
 --========================================================================
 
 
-local function testFlasher(tFlasherInterface, fnLogPrintf)
+function M.testFlasher(tFlasherInterface, fnLogPrintf)
 
 	tFlasherInterface = tFlasherInterface or flasher_interface
 	local log_printf = fnLogPrintf or log_printf_fallback
@@ -522,5 +524,4 @@ local function testFlasher(tFlasherInterface, fnLogPrintf)
 	return true, "Test completed"
 end
 
-
-
+return M
