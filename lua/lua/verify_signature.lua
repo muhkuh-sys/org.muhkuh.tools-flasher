@@ -237,6 +237,7 @@ end
 
 
 function verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    local romloader = require 'romloader'
     local iChiptype = tPlugin:GetChiptyp()
     if (iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
         or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C

@@ -362,7 +362,7 @@ local function netx90_check_uart_padctrl(tPlugin)
 end
 
 function M.detect_chiptype(aArgs)
-  local romloader = _G.romloader
+  local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -552,7 +552,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function M.detect_secure_boot_mode(aArgs)
-  local romloader = _G.romloader
+  local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -870,7 +870,7 @@ end
 -- bit 15-0 RESET timeout in units of 100 µs
 
 function M.reset_netx_via_watchdog(aArgs, tPlugin)
-  local romloader = _G.romloader
+  local romloader = require 'romloader'
 	local fOk
 	local strMsg
 
