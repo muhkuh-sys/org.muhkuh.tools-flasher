@@ -573,7 +573,7 @@ function exec(aArgs)
 		
 		if fOk then 
 			-- check helper signatures
-			fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, aArgs.strSecureOption, aArgs.aHelperKeysForSigCheck)
+			fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, aArgs.strSecureOption, aArgs.aHelperKeysForSigCheck)
 		end
 
 		-- On netx 4000, there may be a boot image in intram that makes it
