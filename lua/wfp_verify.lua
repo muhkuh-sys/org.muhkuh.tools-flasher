@@ -287,8 +287,7 @@ function addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
                 tChunk['ulOffset'] = tNewChunk['ulEndOffset']
                 if tChunk.strType == "flash" then
-                    local strSplitChunkData
-                    _, strSplitChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
+                    local _, strSplitChunkData = splitDataString(tChunk['strData'], ulSplitOffset)
                     tChunk['strData'] = strSplitChunkData
                 end
                 -- modify strData inside tChunk
@@ -468,6 +467,7 @@ function verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
               tChunk['tFile']['strFilePath']
             )
 
+            local strMessage
             fOk, strMessage = tFlasher.verifyArea(tPlugin, aAttr, tChunk['ulOffset'], strChunkData)
             if fOk == true then
                 tLog.info('ok')
