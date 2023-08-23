@@ -81,7 +81,13 @@ function flasher_interface:init()
 	end
 
 	print("Downloading flasher binary")
-	self.aAttr = flasher.download(self.tPlugin, self.strFlasherPath, self.fnCallbackProgress, self.bCompMode, self.strSecureOption)
+	self.aAttr = flasher.download(
+    self.tPlugin,
+    self.strFlasherPath,
+    self.fnCallbackProgress,
+    self.bCompMode,
+    self.strSecureOption
+  )
 	if not self.aAttr then
 		return false, "Error while downloading flasher binary"
 	end
