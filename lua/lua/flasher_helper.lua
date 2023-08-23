@@ -1076,7 +1076,7 @@ function StringHandle:seek(strWhence, ulOffset)
     return self:__getStringPosInBytes()
 end
 
-function StringHandle:close()
+function StringHandle.close()
     -- dummy function that does nothing
 end
 
