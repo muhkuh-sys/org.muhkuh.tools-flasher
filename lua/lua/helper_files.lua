@@ -9,16 +9,16 @@ function printf(...) print(string.format(...)) end
 
 -- Checking is enabled by default.
 fEnableHelperFileChecks = true
-  
+
 -- When the module is loaded:
 -- If the environment variable CLI_FL_DISABLE_HELPER_VERSION_CHECK
--- is set to any value, disable the checks 
+-- is set to any value, disable the checks
 strEnvVar = "CLI_FL_DISABLE_HELPER_VERSION_CHECK"
 local strEnvEnable=os.getenv(strEnvVar)
-if strEnvEnable == nil then 
+if strEnvEnable == nil then
     -- printf("Environment variable %s is not set - enabling automatic helper file checks", strEnvVar)
     fEnableHelperFileChecks = true
-else 
+else
     -- printf("Environment variable %s is set - disabling automatic helper file checks", strEnvVar)
     fEnableHelperFileChecks = false
 end
@@ -37,18 +37,18 @@ end
 
 function getStatusString()
     local strStatus
-    if fEnableHelperFileChecks then 
+    if fEnableHelperFileChecks then
         strStatus = "Automatic helper file checks are enabled."
-    else 
+    else
         strStatus = "Automatic helper file checks are disabled."
     end
-    
-    if strEnvEnable == nil then 
+
+    if strEnvEnable == nil then
         strStatus = strStatus .. string.format(" Environment variable %s is not set.", strEnvVar)
-    else 
+    else
         strStatus = strStatus .. string.format(" Environment variable %s is set.", strEnvVar)
-    end 
-    
+    end
+
     return strStatus
 end
 
@@ -59,7 +59,7 @@ end
 -- version is the expected version string.byte
 -- version_offset is the offset of the version string inside the file.
 -- If it is not specified, the entire file is searched for the
--- version string. 
+-- version string.
 
 atHelperFileVersions = {
     {
@@ -75,23 +75,23 @@ atHelperFileVersions = {
         version = "Ver:GITV1.0.3-0-ge6ba63142ffe:reV",
         version_offset = 0x408
     },
-    
+
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
         version = "Ver:GITv1.0.0-dev5-0-gae7d9fe11ca0:reV",
         version_offset = 0x1D70
     },
-    
+
     {
         key = "set_kek",
         filename = "set_kek.bin",
         version = "Ver:GITv1.0.0-dev4-0-g58cd77a73d9f:reV",
         version_offset = 0xEB4
     },
-    
+
     {   -- This is verify_sig_intram from the build
-        key = "verify_sig",  
+        key = "verify_sig",
         filename = "verify_sig.bin",
         version = "Ver:GITv1.0.0-dev3-0-g584ea6170547:reV",
         version_offset = 0x93C
@@ -131,13 +131,13 @@ atHelperFileVersions = {
 --        version = "Ver:GITv2.5.5-dev4-6-ga3277b9142e5+:reV",
 --        version_offset = 0x0454
 --    },
---    
+--
 --    {
 --        key = "start_mi__no_version_offset",
 --        filename = "hboot_start_mi_netx90_com_intram.bin",
 --        version = "Ver:GITv2.5.4-dev6-0-gc3f4f2907cb4:reV",
 --    },
---    
+--
 --    {
 --        key = "start_mi__no_version_offset_wrong_version",
 --        filename = "hboot_start_mi_netx90_com_intram.bin",
@@ -152,30 +152,30 @@ atHelperFileVersions = {
 -- strKey: short name for the binary, e.g. "start_mi"
 -- fCheckversion: if true/nil, always check the version
 --                if false, the version check is skipped
--- 
+--
 -- Returns:
--- a binary string of the helper file, if it was found and has the 
+-- a binary string of the helper file, if it was found and has the
 --    expected version.
 -- nil and a message string if an error occurred, e.g.
 --     - unknown key
---     - file not found 
+--     - file not found
 --     - version did not match
 
 function checkHelperFileIntern(strDir, strKey, fCheckversion)
-    local strBin, strMsg 
-    local tEntry 
-    
-    if fCheckversion == nil then 
+    local strBin, strMsg
+    local tEntry
+
+    if fCheckversion == nil then
         fCheckversion = true
     end
-    
+
     for i, e in ipairs(atHelperFileVersions) do
         if e.key == strKey then
-            tEntry = e 
+            tEntry = e
             break
-        end 
+        end
     end
-    
+
     if tEntry == nil then
         strMsg = string.format("Unknown helper name: '%s'", strKey)
     else
@@ -184,20 +184,20 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
         local strVersion = tEntry.version
         local iOffset = tEntry.version_offset
         printf("Loading helper file '%s' from path %s", strKey, strPath)
-        
+
         -- read the file
         strBin, strMsg = tFlasherHelper.loadBin(strPath)
-        
-        -- failed to read the file 
+
+        -- failed to read the file
         if strBin == nil then
             strMsg = string.format("Failed to load helper file '%s': %s",
                 strKey, strMsg)
             print(strMsg)
-                
-        -- 
+
+        --
         else
             printf("Helper file '%s' loaded (%d bytes)", strKey, strBin:len())
-            
+
             if fCheckversion == true then
                 local fOk
                 if iOffset ~= nil then
@@ -205,15 +205,15 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
                     local iEndOffset = iOffset+strVersion:len()
                     local strFileVersion = strBin:sub(iStartOffset, iEndOffset)
                     fOk = ( strFileVersion == strVersion)
-                else 
+                else
                     local m = strBin:find(strVersion, 1, true)
                     fOk = (m ~= nil)
                 end
-                
+
                 if fOk then
                     strMsg = nil
                     printf("Helper file '%s' has the expected version (%s) - OK", strKey, strVersion)
-                else 
+                else
                     strBin = nil
                     strMsg = string.format("Helper file '%s' does not have the expected version (%s) - ERROR", strKey, strVersion)
                     print(strMsg)
@@ -221,34 +221,34 @@ function checkHelperFileIntern(strDir, strKey, fCheckversion)
             end
         end
     end
-    
+
     return strBin, strMsg
 end
 
 
--- Verify multiple helper directories. 
+-- Verify multiple helper directories.
 function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     local fAllOk = true
     local atCheckedDirs = {}
-    
+
     for iDir = 1, #astrHelperDirs do
         local strDir = astrHelperDirs[iDir]
-        if strDir ~= nil and atCheckedDirs[strDir] == nil then 
+        if strDir ~= nil and atCheckedDirs[strDir] == nil then
             print()
             printf("Checking helper files in %s", strDir)
-            
+
             for iName, strName in ipairs(astrHelperNames) do
                 print()
                 local strBin, strMsg = checkHelperFileIntern(strDir, strName, true)
-                if strBin == nil then 
+                if strBin == nil then
                     fAllOk = false
                 end
             end
-            
+
             atCheckedDirs[strDir] = true
         end
     end
-    
+
     return fAllOk
 end
 
@@ -259,17 +259,17 @@ end
 -- API
 
 -- Get a single helper from a directory
--- Returns a string with the contents of the helper file 
+-- Returns a string with the contents of the helper file
 -- or nil and an error message.
 --
 -- fCheck (optional):
 -- fCheck == true (default): check the file if checks are enabled
 -- fCheck == false: always skip the check
 function getHelperFile(strDirectory, strHelperName, fCheck)
-    if (fCheck == nil) or (fCheck == true) then 
+    if (fCheck == nil) or (fCheck == true) then
         fCheck = fEnableHelperFileChecks
     end
-    
+
     return checkHelperFileIntern(strDirectory, strHelperName, fCheck)
 end
 
@@ -284,11 +284,11 @@ function checkHelperFiles(astrDirectories, astrHelperNames)
         print()
         if fOk == true then
             print("All of the requested helper files were found and have the correct version.")
-        else 
+        else
             print("Some of the requested helper files were not found or do not have the correct version.")
-        end 
+        end
         print()
-        
+
     else
         print("Skipping helper file checks")
         fOk = true
@@ -307,15 +307,15 @@ function checkAllHelperFiles(astrDirectories)
     end
 
     local fOk = checkHelperFilesIntern(astrDirectories, astrHelperNames)
-    
+
     print()
     if fOk == true then
         print("All helper files were found and have the correct version.")
-    else 
+    else
         print("Some helper files were not found or do not have the correct version.")
-    end 
+    end
     print()
-    
+
     return fOk
 end
 
@@ -323,14 +323,14 @@ end
 function getHelperInfo(strKey)
     local tEntry
     local strMsg
-    
+
     for i, e in ipairs(atHelperFileVersions) do
         if e.key == strKey then
-            tEntry = e 
+            tEntry = e
             break
-        end 
+        end
     end
-    
+
     if tEntry == nil then
         strMsg = string.format("Unknown helper name: '%s'", strKey)
     end
@@ -344,8 +344,8 @@ function getHelperPath(strDir, strKey)
     local strPath
     if tEntry then
         strPath = path.join(strDir, tEntry.filename)
-    end 
-    
+    end
+
     return strPath, strMsg
 end
 
@@ -359,7 +359,7 @@ function getAllHelperKeys()
 end
 
 -- Get the paths to helper files.
--- For each helper ID in astrKeys, the filename is looked up and appended to 
+-- For each helper ID in astrKeys, the filename is looked up and appended to
 -- the directory. This is repeated for each directory in astrDir.
 --
 -- Return values:
@@ -374,9 +374,9 @@ function getHelperPaths(astrDir, astrKeys)
             local strPath, strMsg = getHelperPath(strDir, strKey)
             if strPath then
                 table.insert(astrPaths, strPath)
-            else 
+            else
                 -- TODO: This indicates a bug.
-                -- The program tried to get the path to a helper file 
+                -- The program tried to get the path to a helper file
                 -- that is not implemented here.
                 -- Maybe an error should be raised immediately.
                 printf("Unable to get path to helper %s: %s", strKey, (strMsg or "Unknown error"))
@@ -397,9 +397,9 @@ function loadFiles(astrPaths)
     local fOk = true
     for i, strPath in ipairs(astrPaths) do
         local strBin, strMsg = tFlasherHelper.loadBin(strPath)
-        if strBin then 
+        if strBin then
             table.insert(astrFileData, strBin)
-        else 
+        else
             print(strMsg)
             table.insert(astrFileData, "")
             fOk = false
@@ -410,7 +410,7 @@ end
 
 -- Return values:
 -- true, data, paths: all helpers could be read.
--- false, data, paths: not all helpers could be read, some data entries are the empty string. 
+-- false, data, paths: not all helpers could be read, some data entries are the empty string.
 -- false, nil, paths: some helper files are unknown -> Bug
 function getHelperDataAndPaths(astrDir, astrKeys)
     local fOk, astrPaths = getHelperPaths(astrDir, astrKeys)
@@ -418,11 +418,11 @@ function getHelperDataAndPaths(astrDir, astrKeys)
     if fOk and astrPaths then
         fOk, astrFileData = loadFiles(astrPaths)
     end
-    return fOk, astrFileData, astrPaths 
+    return fOk, astrFileData, astrPaths
 end
 
 -- Return the paths to all known helper files.
--- astrDir is a list of directories. 
+-- astrDir is a list of directories.
 -- Returns a list of paths.
 -- Each path is a combination of a directory with the file names of a helper.
 function getAllHelperPaths(astrDir)
@@ -463,19 +463,19 @@ end
 --   check: the type of check (e.g. "signature", "version")
 --   ok: true/false, whether the check has succeeded
 --   message: optional message string
--- 
+--
 function showFileCheckResults(atResults)
     print(string.rep('-', 80))
     print("File verification results:")
     for i, tEntry in ipairs(atResults) do
         local strOk
-        if tEntry.ok then 
+        if tEntry.ok then
             strOk = string.format("%s check successful.", tEntry.check)
-        else    
+        else
             strOk = string.format("%s check failed.", tEntry.check)
-        end 
+        end
         if tEntry.message then
-            print(tEntry.path, strOk, tEntry.message)        
+            print(tEntry.path, strOk, tEntry.message)
         else
             print(tEntry.path, strOk)
         end
