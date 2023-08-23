@@ -230,7 +230,7 @@ function verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions, s
                 tLog.error( "Please check if the helper files are signed correctly." )
             end
         end
-        tPlugin = nil
+        collectgarbage('collect')
     end
     return fOk, atResults
 end
