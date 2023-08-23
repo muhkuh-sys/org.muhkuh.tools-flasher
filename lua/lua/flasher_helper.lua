@@ -12,16 +12,16 @@ local bit = require 'bit'
 local class = require 'pl.class'
 
 -- exit code for detect_netx
-STATUS_OK = 0
-STATUS_ERROR = 1
-STATUS_START_MI_IMAGE_FAILED = 2
+local STATUS_OK = 0
+local STATUS_ERROR = 1
+local STATUS_START_MI_IMAGE_FAILED = 2
 
 -- exit codes for detect_secure_boot_mode
-SECURE_BOOT_DISABLED = 0
-SECURE_BOOT_ENABLED = 5
-SECURE_BOOT_ONLY_APP_ENABLED = 50
-SECURE_BOOT_UNKNOWN = 2
-SECURE_BOOT_ERROR = 1
+local SECURE_BOOT_DISABLED = 0
+local SECURE_BOOT_ENABLED = 5
+local SECURE_BOOT_ONLY_APP_ENABLED = 50
+local SECURE_BOOT_UNKNOWN = 2
+local SECURE_BOOT_ERROR = 1
 
 --------------------------------------------------------------------------
 -- helpers
@@ -103,11 +103,22 @@ function bytes_to_uint32(str)
 end
 
 
-function printf(...) print(string.format(...)) end
+local function printf(...) print(string.format(...)) end
 
 --------------------------------------------------------------------------
 -- get plugin
 --------------------------------------------------------------------------
+
+local function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			print(strKey, tVal)
+		end
+	end
+end
+
 
 -- Show the available interfaces and let the user select one interactively.
 --
@@ -123,6 +134,7 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	local aDetectedInterfaces
 	local tPlugin
 	local strPattern = strPattern or ".*"
+  local strInterface
 
 	show_plugin_options(atPluginOptions)
 
@@ -169,16 +181,6 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	end
 
 	return tPlugin
-end
-
-function show_plugin_options(tOpts)
-	print("Plugin options:")
-	for strPluginId, tPluginOptions in pairs(tOpts) do
-		print(string.format("For %s:", strPluginId))
-		for strKey, tVal in pairs(tPluginOptions) do
-			print(strKey, tVal)
-		end
-	end
 end
 
 function connect_retry(tPlugin, uLRetries)
@@ -309,7 +311,7 @@ function list_interfaces(strPluginType, atPluginOptions)
 end
 
 
-function netx90_disable_uart_pulldown_resistors(tPlugin)
+local function netx90_disable_uart_pulldown_resistors(tPlugin)
 	local addr_pad_ctrl_uart_rxd    = 0xff401028
 	local addr_pad_ctrl_uart_txd    = 0xff40102c
 	local addr_asic_ctrl_access_key = 0xff4012c0
@@ -327,7 +329,7 @@ function netx90_disable_uart_pulldown_resistors(tPlugin)
 	tPlugin:write_data32(addr_pad_ctrl_uart_txd, val_pad_ctrl_uart_txd)
 end
 
-function netx90_check_uart_padctrl(tPlugin)
+local function netx90_check_uart_padctrl(tPlugin)
 	local addr_pad_ctrl_uart_rxd = 0xff401028
 	local addr_pad_ctrl_uart_txd = 0xff40102c
 	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
@@ -409,7 +411,7 @@ end
 
 
 -- return tRes OR nil, strErrorMsg
-function readSip_via_jtag(tPlugin, strReadSipHbootImg)
+local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	local strErrorMsg = ""
 
 	local strReadSipExe
@@ -731,10 +733,10 @@ function detect_secure_boot_mode(aArgs)
 										print(strMsg)
 									else
 										-- Get the secure boot flags from the info pages.
-										OFF_COM_SIP_PROTECTION_FLAGS = 556+1
-										MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
-										OFF_APP_SIP_PROTECTION_FLAGS = 552+1
-										MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										local OFF_COM_SIP_PROTECTION_FLAGS = 556+1
+										local MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										local OFF_APP_SIP_PROTECTION_FLAGS = 552+1
+										local MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
 										
 										local fSecureBootCOM = nil
 										local fSecureBootAPP = nil
