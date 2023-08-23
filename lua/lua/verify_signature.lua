@@ -213,10 +213,10 @@ function verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions, s
         if not fOk then
             tLog.error("Failed to open connection: %s", strMsg or "Unknown error")
         else
-            local strPluginType = tPlugin:GetTyp()
+            local strConnectedPluginType = tPlugin:GetTyp()
 
             fOk, atResults = verifySignature(
-                tPlugin, strPluginType, tHelperFileDataList, tPathList, strTmpFolderPath, strVerifySigPath
+                tPlugin, strConnectedPluginType, tHelperFileDataList, tPathList, strTmpFolderPath, strVerifySigPath
             )
 
             tPlugin:Disconnect()
