@@ -215,7 +215,11 @@ local function checkHelperFileIntern(strDir, strKey, fCheckversion)
                     printf("Helper file '%s' has the expected version (%s) - OK", strKey, strVersion)
                 else
                     strBin = nil
-                    strMsg = string.format("Helper file '%s' does not have the expected version (%s) - ERROR", strKey, strVersion)
+                    strMsg = string.format(
+                      "Helper file '%s' does not have the expected version (%s) - ERROR",
+                      strKey,
+                      strVersion
+                    )
                     print(strMsg)
                 end
             end
