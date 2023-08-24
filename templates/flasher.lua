@@ -385,7 +385,7 @@ end
 -- download parameters to netX
 local function set_parameterblock(tPlugin, ulAddress, aulParameters, fnCallbackProgress)
 	local strBin = ""
-	for i,v in ipairs(aulParameters) do
+	for _,v in ipairs(aulParameters) do
 		-- print parameters as openOCD TCL instructions
 		-- local strSetMem = "set *((unsigned long *) 0x%08x) = 0x%08x"
 		-- printf(strSetMem, ulAddress+4*(i-1), v)
@@ -482,7 +482,7 @@ end
 function M.getBoardInfo(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 	-- Get the bus infos.
 	local aBoardInfo = getInfoBlock(tPlugin, aAttr, 0xffffffff, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
-	for iCnt,aBusInfo in ipairs(aBoardInfo) do
+	for _,aBusInfo in ipairs(aBoardInfo) do
 		-- Get the unit info.
 		local aUnitInfo = getInfoBlock(tPlugin, aAttr, aBusInfo.iIdx, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
 		aBusInfo.aUnitInfo = aUnitInfo
