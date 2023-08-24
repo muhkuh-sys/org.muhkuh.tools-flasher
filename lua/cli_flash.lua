@@ -666,6 +666,7 @@ local function exec(aArgs)
 		end
 
 		-- Download the flasher.
+    local flasher = require 'flasher'
 		if fOk then
 			print("Downloading flasher binary")
 			aAttr = flasher.download(tPlugin, FLASHER_PATH, nil, bCompMode, strSecureOption)
@@ -875,6 +876,7 @@ end
 
 -- bus 0: parallel, bus 1: serial
 function flasher_interface.getBusWidth(self)
+  local flasher = require 'flasher'
 	if self.aArgs.iBus==flasher.BUS_Parflash then
 		return 2 -- may be 1, 2 or 4
 	elseif self.aArgs.iBus==flasher.BUS_Spi then
@@ -887,6 +889,7 @@ function flasher_interface.getBusWidth(self)
 end
 
 function flasher_interface.getEmptyByte(self)
+  local flasher = require 'flasher'
 	if self.aArgs.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.aArgs.iBus == flasher.BUS_Spi then
