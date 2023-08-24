@@ -22,11 +22,13 @@ local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
 
+local FLASHER_PATH = "netx/"
+
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
 
-strUsage = [==[
+local strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
 
 Mode        Parameters
@@ -92,84 +94,84 @@ lua cli_flash.lua erase -b 0 -l 4
 
 
 
-function printf(...) print(string.format(...)) end
+local function printf(...) print(string.format(...)) end
 
 --------------------------------------------------------------------------
 -- handle command line arguments
 --------------------------------------------------------------------------
 
-MODE_FLASH = 0
-MODE_READ = 2
-MODE_VERIFY = 3
-MODE_ERASE = 4
-MODE_HASH = 5
-MODE_DETECT = 6
-MODE_VERIFY_HASH = 7
-MODE_INFO = 8
-MODE_HELP = 10
-MODE_LIST_INTERFACES = 15
-MODE_DETECT_CHIPTYPE = 16
-MODE_VERSION = 17
-MODE_RESET = 18
-MODE_IDENTIFY = 19
+local MODE_FLASH = 0
+local MODE_READ = 2
+local MODE_VERIFY = 3
+local MODE_ERASE = 4
+local MODE_HASH = 5
+local MODE_DETECT = 6
+local MODE_VERIFY_HASH = 7
+local MODE_INFO = 8
+local MODE_HELP = 10
+local MODE_LIST_INTERFACES = 15
+local MODE_DETECT_CHIPTYPE = 16
+local MODE_VERSION = 17
+local MODE_RESET = 18
+local MODE_IDENTIFY = 19
 
 -- test modes
-MODE_TEST = 11
-MODE_TEST_CLI = 12
+local MODE_TEST = 11
+local MODE_TEST_CLI = 12
 -- used by test modes
-MODE_IS_ERASED = 13
-MODE_GET_DEVICE_SIZE = 14
+local MODE_IS_ERASED = 13
+local MODE_GET_DEVICE_SIZE = 14
 
-aJtagResetOptions = {}
+local aJtagResetOptions = {}
 aJtagResetOptions["hard"] = "HardReset"
 aJtagResetOptions["soft"] = "SoftReset"
 aJtagResetOptions["attach"] = "Attach"
 
 -- functions to add arguments to subcommands
 
-function addFilePathArg(tParserCommand)
+local function addFilePathArg(tParserCommand)
    tParserCommand:argument('file', 'file name'):target('strDataFileName')
 end
 
-function addBusOptionArg(tParserCommand)
+local function addBusOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
-    tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
+    local tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
     tOption._mincount = 1
 end
 
-function addUnitOptionArg(tParserCommand)
+local function addUnitOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-u --unit', 'unit number'):target('iUnit')
-    tOption = tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0):convert(tonumber)
+    tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0):convert(tonumber)
     -- tOption._mincount = 1
 end
 
-function addChipSelectOptionArg(tParserCommand)
+local function addChipSelectOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-cs --chip_select', 'chip select number'):target('iChipSelect')
-    tOption = tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0):convert(tonumber)
+    tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0):convert(tonumber)
     -- tOption._mincount = 1
 end
 
-function addStartOffsetArg(tParserCommand)
+local function addStartOffsetArg(tParserCommand)
     -- tParserCommand:option('-s --start_offset', 'start offset'):target('ulStartOffset'):default(0)
     tParserCommand:option('-s', 'start offset'):target('ulStartOffset'):default(0):convert(tonumber)
 end
 
-function addLengthArg(tParserCommand)
+local function addLengthArg(tParserCommand)
     -- tOption = tParserCommand:option('-l --length', 'number of bytes to read/erase/hash'):target('ulLen')
-    tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen'):convert(tonumber)
+    local tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen'):convert(tonumber)
     tOption._mincount = 1
 end
 
-function addPluginNameArg(tParserCommand)
+local function addPluginNameArg(tParserCommand)
     -- tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
     tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
 end
 
-function addPluginTypeArg(tParserCommand)
+local function addPluginTypeArg(tParserCommand)
     tParserCommand:option('-t --plugin_type', 'plugin type'):target('strPluginType')
 end
 
-function addSecureArgs(tParserCommand)
+local function addSecureArgs(tParserCommand)
     tParserCommand:mutex(
             tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
             tParserCommand:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -178,12 +180,12 @@ function addSecureArgs(tParserCommand)
 
 end
 
-function addJtagKhzArg(tParserCommand)
+local function addJtagKhzArg(tParserCommand)
     tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz'):convert(tonumber)
 end
 
-function addJtagResetArg(tParserCommand)
-    tOption = tParserCommand:option('--jtag_reset',
+local function addJtagResetArg(tParserCommand)
+    local tOption = tParserCommand:option('--jtag_reset',
             'JTAG reset method. Possible values are: hard (default), soft, attach'):target('strJtagReset')
     tOption.choices = {"hard", "soft", "attach" }
 end
@@ -437,24 +439,11 @@ addPluginTypeArg(tParserCommandCheckHelperSignature)
 addPluginNameArg(tParserCommandCheckHelperSignature)
 addSecureArgs(tParserCommandCheckHelperSignature)
 
--- printArgs(tArguments)
--- Print all arguments in a table
--- returns
---   nothing
-function printArgs(tArguments)
-    print("")
-    print("Running CLI flasher with the following args:")
-    print("--------------------------------------------")
-    printTable(tArguments, 0)
-    print("")
-end
-
-
 -- printTable(tTable, ulIndent)
 -- Print all elements from a table
 -- returns
 --   nothing
-function printTable(tTable, ulIndent)
+local function printTable(tTable, ulIndent)
     local strIndentSpace = string.rep(" ", ulIndent)
     for key, value in pairs(tTable) do
         if type(value) == "table" then
@@ -470,6 +459,17 @@ function printTable(tTable, ulIndent)
 end
 
 
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+local function printArgs(tArguments)
+  print("")
+  print("Running CLI flasher with the following args:")
+  print("--------------------------------------------")
+  printTable(tArguments, 0)
+  print("")
+end
 
 
 --------------------------------------------------------------------------
@@ -477,7 +477,7 @@ end
 --------------------------------------------------------------------------
 
 
-function printobj(val, key, indent)
+local function printobj(val, key, indent)
 	key = key or ""
 	indent = indent or ""
 
@@ -496,7 +496,7 @@ function printobj(val, key, indent)
 end
 
 
-function printBoardInfo(tBoardInfo)
+local function printBoardInfo(tBoardInfo)
 	print("Board info:")
 	for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
 		print(string.format("Bus %d:\t%s", tBusInfo.iIdx, tBusInfo.strName))
@@ -533,7 +533,7 @@ end
 -- SHA over flash                                                     x         x
 -- save file                                                  x
 
-function exec(aArgs)
+local function exec(aArgs)
 	local iMode          = aArgs.iMode
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -547,6 +547,7 @@ function exec(aArgs)
     local bCompMode = aArgs.bCompMode
 	local strSecureOption = nil
 	if aArgs.strSecureOption~= nil then
+    local path = require 'pl.path'
 		strSecureOption = path.abspath(aArgs.strSecureOption)
 	end
 
@@ -581,6 +582,7 @@ function exec(aArgs)
 		-- Therefore we clear the start of the intram boot image.
 		if fOk then
 			local iChiptype = tPlugin:GetChiptyp()
+      local romloader = require 'romloader'
 			if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
@@ -616,7 +618,7 @@ function exec(aArgs)
 		if fOk then
 			if aArgs.fCommandInfoSelected then
 				-- Get the board info table.
-				aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+				local aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
 				if aBoardInfo then
 					printBoardInfo(aBoardInfo)
 					fOk = true
@@ -721,7 +723,8 @@ function exec(aArgs)
 
 		-- verify_hash: compute the hash of the input file and compare
 		if fOk and aArgs.fCommandVerifyHashSelected then
-			local mh = mhash.mhash_state()
+      local mhash = require 'mhash'
+      local mh = mhash.mhash_state()
 			mh:init(mhash.MHASH_SHA1)
 			mh:hash(strData)
 			strFileHashBin = mh:hash_end()
@@ -766,7 +769,7 @@ end
 --                    test interface
 --========================================================================
 
-flasher_interface = {}
+local flasher_interface = {}
 
 function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
@@ -870,6 +873,7 @@ function flasher_interface.read(self, ulOffset, ulSize)
 
 	local fOk, strMsg = exec(self.aArgs)
 
+  local strData
 	if not fOk then
 		return nil, strMsg
 	else
@@ -916,9 +920,7 @@ end
 -- main
 --------------------------------------------------------------------------
 
-FLASHER_PATH = "netx/"
-
-function main()
+local function main()
     local aArgs
     local fOk
     local iRet
@@ -940,6 +942,7 @@ function main()
     aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
 
+        local path = require 'pl.path'
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
 
 --        Test code - todo: remove
@@ -957,6 +960,7 @@ function main()
 
         print()
         -- print("getHelperFile with checking (nil) (default)")
+        local strnetX90M2MImageBin
         strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
 
         if strnetX90M2MImageBin then
@@ -1016,6 +1020,7 @@ function main()
 
     elseif aArgs.fCommandResetSelected then
 
+        local tPlugin
         tPlugin, strMsg = tFlasherHelper.getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
         local strPluginType = tPlugin:GetTyp()
         local ulM2MMajor = tPlugin:get_mi_version_maj()
@@ -1058,6 +1063,7 @@ function main()
     elseif aArgs.fCommandCheckHelperVersionSelected then
         local t1 = os.time()
 
+        local path = require 'pl.path'
         local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
         fOk = tHelperFiles.checkAllHelperFiles({strnetX90UnsignedHelperPath, strnetX90HelperPath})
@@ -1088,6 +1094,7 @@ function main()
         end
 
     else
+        local tDevInfo
         fOk, strMsg, tDevInfo = exec(aArgs)
 
         if tDevInfo.strDevName then
