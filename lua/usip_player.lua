@@ -1993,6 +1993,7 @@ function read_sip(
 )
 
     local fOk = false
+    local strPluginType
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
