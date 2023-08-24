@@ -345,7 +345,7 @@ tParserReadSip:flag('--disable_helper_signature_check')
     :default(false)
 
 
--- Add the "detect_secure_mode" command and all its options.
+-- Add the "detect_secure_mode" command and note, that it is moved to "cli_flash.lua"
 
 strDetectSecureModeHelp = [[
 This command was moved into cli_flash.lua.
@@ -385,6 +385,7 @@ tParserGetUid:flag('--disable_helper_signature_check')
     :default(false)
 -- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
+-- Add command check_helper_signature chs
 local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
@@ -2377,7 +2378,7 @@ if tArgs.strBootswitchParams then
     if not (
         tArgs.strBootswitchParams == "UART" or tArgs.strBootswitchParams == "ETH" or tArgs.strBootswitchParams == "MFW" or tArgs.strBootswitchParams == "JTAG"
     ) then
-        tLog.error("Wrong Bootswitch parameter, please choose between UART, ETH or MFW.")
+        tLog.error("Wrong Bootswitch parameter, please choose between JTAG, UART, ETH or MFW.")
         tLog.error("If the boot process should continue normal do not use the bootswitch parameter.")
         -- return here because of initial error
         os.exit(1)
