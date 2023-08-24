@@ -1073,8 +1073,6 @@ local function main()
     fOk = true
 
     require("muhkuh_cli_init")
-    require("mhash")
-    require("flasher")
     require("flasher_test")
 
     if aArgs.fCommandListInterfacesSelected then
