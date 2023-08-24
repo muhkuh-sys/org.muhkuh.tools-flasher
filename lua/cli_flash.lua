@@ -19,6 +19,7 @@
 
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
+local flasher_test = require 'flasher_test'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
 
@@ -1073,7 +1074,6 @@ local function main()
     fOk = true
 
     require("muhkuh_cli_init")
-    require("flasher_test")
 
     if aArgs.fCommandListInterfacesSelected then
         tFlasherHelper.list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
