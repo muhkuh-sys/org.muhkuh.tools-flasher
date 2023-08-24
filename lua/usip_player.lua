@@ -350,23 +350,10 @@ tParserReadSip:flag('--disable_helper_signature_check')
 strDetectSecureModeHelp = [[
 This command was moved into cli_flash.lua.
 ]]
-local tParserDetectSecure = tParser:command(
+tParser:command(
     'detect_secure_mode', strDetectSecureModeHelp
 ):target('fCommandDetectSelected')
-tParserDetectSecure:option(
-    '-V --verbose'
-):description(
-    string.format(
-        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
-    )
-):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserDetectSecure:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
--- tParserDetectSecure:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
--- tParserDetectSecure:flag('--extend_exec'):description(
---     "Use an execute-chunk to activate JTAG."
--- ):target('fExtendExec')
-tParserDetectSecure:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
+
 -- Add the "get_uid" command and all its options.
 local tParserGetUid = tParser:command('get_uid gu', 'Get the unique ID.'):target('fCommandGetUidSelected')
 tParserGetUid:option(
