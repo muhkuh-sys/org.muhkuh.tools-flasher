@@ -354,6 +354,7 @@ tParser:command(
     'detect_secure_mode', strDetectSecureModeHelp
 ):target('fCommandDetectSelected')
 
+
 -- Add the "get_uid" command and all its options.
 local tParserGetUid = tParser:command('get_uid gu', 'Get the unique ID.'):target('fCommandGetUidSelected')
 tParserGetUid:option(
@@ -365,12 +366,12 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+tParserGetUid:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
--- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
 -- Add command check_helper_signature chs
 local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
@@ -1107,7 +1108,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             strReadSipData, strTmpFolderPath, tArgs.strBootswitchParams
         )
         tLog.debug(strMsg)
-    elseif tArgs.strBootswitchParams == "JTAG" then
+    elseif tArgs.strBootswitchParams == "JTAG" or
+     (strPluginType == 'romloader_jtag' and  tArgs.strBootswitchParams == nil) then
         tLog.debug("Extending USIP file with exec.")
         -- todo why do we still hand over the path (strExecReturnPath) instead of using helper files method
         fOk, strReadSipData, strMsg = extendExecReturnData(
