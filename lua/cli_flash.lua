@@ -7,9 +7,9 @@
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
 -- SVN Keywords
-SVN_DATE   ="$Date$"
-SVN_VERSION="$Revision$"
-SVN_AUTHOR ="$Author$"
+--   SVN_DATE   ="$Date$"
+--   SVN_VERSION="$Revision$"
+--   SVN_AUTHOR ="$Author$"
 -----------------------------------------------------------------------------
 
 -- Uncomment to debug with LuaPanda
