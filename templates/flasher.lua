@@ -430,7 +430,7 @@ local function callFlasher(tPlugin, aAttr, aulParams, fnCallbackMessage, fnCallb
 
 	-- get the return value (ok/failed)
 	-- any further return values must be read by the calling function
-	ulValue = tPlugin:read_data32(aAttr.ulParameter+0x00)
+	local ulValue = tPlugin:read_data32(aAttr.ulParameter+0x00)
 	print(string.format("call finished with result 0x%08x", ulValue))
 	return ulValue
 end
@@ -462,13 +462,13 @@ local function getInfoBlock(tPlugin, aAttr, ulBusIdx, ulUnitIdx, fnCallbackMessa
 		local sizInfoMax = tPlugin:read_data32(aAttr.ulParameter+0x08)
 		if sizInfoMax>0 then
 			-- Get the board information.
-			strInfo = read_image(tPlugin, aAttr.ulBufferAdr, sizInfoMax, fnCallbackProgress)
+			local strInfo = M.read_image(tPlugin, aAttr.ulBufferAdr, sizInfoMax, fnCallbackProgress)
 
 			-- Get the number of entries.
 			local sizEntryNum = strInfo:byte(1)
 			aResult = {}
 			-- Loop over all entries.
-			strNames = strInfo:sub(2)
+			local strNames = strInfo:sub(2)
 			for strIdx,strName in string.gmatch(strNames, "(.)([^%z]+)%z") do
 				table.insert(aResult, { iIdx=strIdx:byte(1), strName=strName })
 			end
@@ -657,7 +657,7 @@ function M.getDeviceId(tPlugin, aAttr, fnCallbackProgress)
 		error("Failed to read the flash device descriptor!")
 	end
 
-	strDeviceId = nil
+	local strDeviceId = nil
 	if tBus==M.BUS_Spi then
 		-- Extract the flash ID.
 		local iIdxStart = ${OFFSETOF_DEVICE_DESCRIPTION_STRUCT_uInfo}+${OFFSETOF_FLASHER_SPI_FLASH_STRUCT_tAttributes}+${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_acName} + 1
