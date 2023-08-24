@@ -26,7 +26,7 @@ module("flasher", package.seeall)
 -----------------------------------------------------------------------------
 
 require("bit")
-require("romloader")
+local romloader = require 'romloader'
 local tHelperFiles = require 'helper_files'
 
 -----------------------------------------------------------------------------
