@@ -100,24 +100,24 @@ local function printf(...) print(string.format(...)) end
 -- handle command line arguments
 --------------------------------------------------------------------------
 
-local MODE_FLASH = 0
-local MODE_READ = 2
-local MODE_VERIFY = 3
-local MODE_ERASE = 4
-local MODE_HASH = 5
-local MODE_DETECT = 6
-local MODE_VERIFY_HASH = 7
-local MODE_INFO = 8
-local MODE_HELP = 10
-local MODE_LIST_INTERFACES = 15
-local MODE_DETECT_CHIPTYPE = 16
-local MODE_VERSION = 17
-local MODE_RESET = 18
-local MODE_IDENTIFY = 19
+-- local MODE_FLASH = 0
+-- local MODE_READ = 2
+-- local MODE_VERIFY = 3
+-- local MODE_ERASE = 4
+-- local MODE_HASH = 5
+-- local MODE_DETECT = 6
+-- local MODE_VERIFY_HASH = 7
+-- local MODE_INFO = 8
+-- local MODE_HELP = 10
+-- local MODE_LIST_INTERFACES = 15
+-- local MODE_DETECT_CHIPTYPE = 16
+-- local MODE_VERSION = 17
+-- local MODE_RESET = 18
+-- local MODE_IDENTIFY = 19
 
 -- test modes
-local MODE_TEST = 11
-local MODE_TEST_CLI = 12
+-- local MODE_TEST = 11
+-- local MODE_TEST_CLI = 12
 -- used by test modes
 local MODE_IS_ERASED = 13
 local MODE_GET_DEVICE_SIZE = 14
