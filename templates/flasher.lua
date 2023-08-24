@@ -209,11 +209,20 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 		strNetxName = 'netx10'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
 		strNetxName = 'netx56'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+	elseif(
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL
+  ) then
 		strNetxName = 'netx4000'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
 		strNetxName = 'netx90_mpw'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D then
+	elseif(
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 or
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or
+    iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D
+  ) then
 		strNetxName = 'netx90'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
 		strNetxName = 'netiol'
@@ -230,7 +239,12 @@ end
 
 
 local function get_dword(strData, ulOffset)
-	return strData:byte(ulOffset) + strData:byte(ulOffset+1)*0x00000100 + strData:byte(ulOffset+2)*0x00010000 + strData:byte(ulOffset+3)*0x01000000
+	return (
+    strData:byte(ulOffset) +
+    strData:byte(ulOffset+1)*0x00000100 +
+    strData:byte(ulOffset+2)*0x00010000 +
+    strData:byte(ulOffset+3)*0x01000000
+  )
 end
 
 
@@ -375,7 +389,12 @@ local function set_parameterblock(tPlugin, ulAddress, aulParameters, fnCallbackP
 		-- local strSetMem = "set *((unsigned long *) 0x%08x) = 0x%08x"
 		-- printf(strSetMem, ulAddress+4*(i-1), v)
 
-		strBin = strBin .. string.char( bit.band(v,0xff), bit.band(bit.rshift(v,8),0xff), bit.band(bit.rshift(v,16),0xff), bit.band(bit.rshift(v,24),0xff) )
+		strBin = strBin .. string.char(
+      bit.band(v,0xff),
+      bit.band(bit.rshift(v,8),0xff),
+      bit.band(bit.rshift(v,16),0xff),
+      bit.band(bit.rshift(v,24),0xff)
+    )
 	end
 	write_image(tPlugin, ulAddress, strBin, fnCallbackProgress)
 end
@@ -796,7 +815,8 @@ function flash(tPlugin, aAttr, ulStartAdr, ulDataByteSize, ulDataAddress, fnCall
 end
 
 -- Reads data from flash to RAM
-function read(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage, fnCallbackProgress)
+function read(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage,
+              fnCallbackProgress)
 	local aulParameter =
 	{
 		OPERATION_MODE_Read,
@@ -811,7 +831,8 @@ end
 
 
 -- Compares data in flash to RAM
-function verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage, fnCallbackProgress)
+function verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage,
+                fnCallbackProgress)
 	local fEqual = false
 	local aulParameter =
 	{
@@ -897,7 +918,14 @@ function isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, f
 
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
 	if ulEraseEnd == 0xffffffff then
-		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+		ulEraseStart,ulEraseEnd = getEraseArea(
+      tPlugin,
+      aAttr,
+      ulEraseStart,
+      ulEraseEnd,
+      fnCallbackMessage,
+      fnCallbackProgress
+    )
 		if not (ulEraseStart and ulEraseEnd) then
 			return false, "getEraseArea failed!"
 		end
@@ -984,7 +1012,14 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
 	if ulSize == 0xffffffff then
 		ulEndOffset = ulSize
-		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		ulEraseStart,ulEraseEnd = getEraseArea(
+      tPlugin,
+      aAttr,
+      ulDeviceOffset,
+      ulEndOffset,
+      fnCallbackMessage,
+      fnCallbackProgress
+    )
 		if not (ulEraseStart and ulEraseEnd) then
 			return false, "getEraseArea failed!"
 		end
@@ -1006,7 +1041,14 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 	else
 		-- Get the erase area unless we have already gotten it.
 		if not (ulEraseStart and ulEraseEnd) then
-			ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+			ulEraseStart,ulEraseEnd = getEraseArea(
+        tPlugin,
+        aAttr,
+        ulDeviceOffset,
+        ulEndOffset,
+        fnCallbackMessage,
+        fnCallbackProgress
+      )
 			if not (ulEraseStart and ulEraseEnd) then
 				return false, "getEraseArea failed!"
 			end
@@ -1110,7 +1152,15 @@ function verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, 
 
 		-- Verify the chunk.
 		print(string.format("verifying offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
-		fOk = flasher.verify(tPlugin, aAttr, ulDeviceOffset, ulDeviceOffset + ulChunkSize, ulBufferAdr, fnCallbackMessage, fnCallbackProgress)
+		fOk = flasher.verify(
+      tPlugin,
+      aAttr,
+      ulDeviceOffset,
+      ulDeviceOffset + ulChunkSize,
+      ulBufferAdr,
+      fnCallbackMessage,
+      fnCallbackProgress
+    )
 		if not fOk then
 			return false, "Differences were found."
 		end
@@ -1165,7 +1215,15 @@ function readArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 
 		-- Read chunk into buffer
 		print(string.format("reading flash offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
-		fOk = read(tPlugin, aAttr, ulDeviceOffset, ulDeviceOffset + ulChunkSize, ulBufferAddr, fnCallbackMessage, fnCallbackProgress)
+		fOk = read(
+      tPlugin,
+      aAttr,
+      ulDeviceOffset,
+      ulDeviceOffset + ulChunkSize,
+      ulBufferAddr,
+      fnCallbackMessage,
+      fnCallbackProgress
+    )
 		if not fOk then
 			return nil, "Error while reading from flash!"
 		end
@@ -1250,7 +1308,8 @@ end
 --   fnCallbackMessage
 --------------------------------------------------------------------------
 
-function simple_flasher_string(tPlugin, strData, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
+function simple_flasher_string(tPlugin, strData, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress,
+                               fnCallbackMessage)
 	strFlasherPrefix = strFlasherPrefix or ""
 
 	local fOk
@@ -1297,7 +1356,8 @@ end
 --   fnCallbackMessage
 --------------------------------------------------------------------------
 
-function simple_flasher(tPlugin, strDataFileName, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
+function simple_flasher(tPlugin, strDataFileName, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress,
+                        fnCallbackMessage)
 	-- Load the data.
 	local tFile, strMsg = io.open(strDataFileName, 'rb')
 	if tFile==nil then
@@ -1306,7 +1366,16 @@ function simple_flasher(tPlugin, strDataFileName, tBus, ulUnit, ulChipSelect, st
 	local strData = tFile:read('*a')
 	tFile:close()
 
-	simple_flasher_string(tPlugin, strData, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
+	simple_flasher_string(
+    tPlugin,
+    strData,
+    tBus,
+    ulUnit,
+    ulChipSelect,
+    strFlasherPrefix,
+    fnCallbackProgress,
+    fnCallbackMessage
+  )
 end
 
 
