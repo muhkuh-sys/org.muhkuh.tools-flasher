@@ -130,63 +130,92 @@ aJtagResetOptions["attach"] = "Attach"
 -- functions to add arguments to subcommands
 
 local function addFilePathArg(tParserCommand)
-   tParserCommand:argument('file', 'file name'):target('strDataFileName')
+   tParserCommand:argument('file', 'file name')
+     :target('strDataFileName')
 end
 
 local function addBusOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-b --bus', 'bus number'):target('iBus')
-    local tOption = tParserCommand:option('-b', 'bus number'):target('iBus'):convert(tonumber)
+    local tOption = tParserCommand:option('-b', 'bus number')
+      :target('iBus')
+      :convert(tonumber)
     tOption._mincount = 1
 end
 
 local function addUnitOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-u --unit', 'unit number'):target('iUnit')
-    tParserCommand:option('-u', 'unit number'):target('iUnit'):default(0):convert(tonumber)
+    tParserCommand:option('-u', 'unit number')
+      :target('iUnit')
+      :default(0)
+      :convert(tonumber)
     -- tOption._mincount = 1
 end
 
 local function addChipSelectOptionArg(tParserCommand)
     -- tOption = tParserCommand:option('-cs --chip_select', 'chip select number'):target('iChipSelect')
-    tParserCommand:option('-c', 'chip select number'):target('iChipSelect'):default(0):convert(tonumber)
+    tParserCommand:option('-c', 'chip select number')
+      :target('iChipSelect')
+      :default(0)
+      :convert(tonumber)
     -- tOption._mincount = 1
 end
 
 local function addStartOffsetArg(tParserCommand)
     -- tParserCommand:option('-s --start_offset', 'start offset'):target('ulStartOffset'):default(0)
-    tParserCommand:option('-s', 'start offset'):target('ulStartOffset'):default(0):convert(tonumber)
+    tParserCommand:option('-s', 'start offset')
+      :target('ulStartOffset')
+      :default(0)
+      :convert(tonumber)
 end
 
 local function addLengthArg(tParserCommand)
     -- tOption = tParserCommand:option('-l --length', 'number of bytes to read/erase/hash'):target('ulLen')
-    local tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash'):target('ulLen'):convert(tonumber)
+    local tOption = tParserCommand:option('-l', 'number of bytes to read/erase/hash')
+      :target('ulLen')
+      :convert(tonumber)
     tOption._mincount = 1
 end
 
 local function addPluginNameArg(tParserCommand)
     -- tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
-    tParserCommand:option('-p --plugin_name', 'plugin name'):target('strPluginName')
+    tParserCommand:option('-p --plugin_name', 'plugin name')
+      :target('strPluginName')
 end
 
 local function addPluginTypeArg(tParserCommand)
-    tParserCommand:option('-t --plugin_type', 'plugin type'):target('strPluginType')
+    tParserCommand:option('-t --plugin_type', 'plugin type')
+      :target('strPluginType')
 end
 
 local function addSecureArgs(tParserCommand)
-    tParserCommand:mutex(
-            tParserCommand:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-            tParserCommand:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-    )
-    tParserCommand:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+  tParserCommand:mutex(
+    tParserCommand:flag('--comp')
+      :description("use compatibility mode for netx90 M2M interfaces")
+      :target('bCompMode')
+      :default(false),
+    tParserCommand:option('--sec')
+      :description("Path to signed image directory")
+      :target('strSecureOption')
+      :default(tFlasher.DEFAULT_HBOOT_OPTION)
+  )
+  tParserCommand:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 
 end
 
 local function addJtagKhzArg(tParserCommand)
-    tParserCommand:option('--jtag_khz', 'JTAG clock in kHz'):target('iJtagKhz'):convert(tonumber)
+    tParserCommand:option('--jtag_khz', 'JTAG clock in kHz')
+      :target('iJtagKhz')
+      :convert(tonumber)
 end
 
 local function addJtagResetArg(tParserCommand)
-    local tOption = tParserCommand:option('--jtag_reset',
-            'JTAG reset method. Possible values are: hard (default), soft, attach'):target('strJtagReset')
+    local tOption = tParserCommand:option(
+      '--jtag_reset',
+      'JTAG reset method. Possible values are: hard (default), soft, attach'
+    ):target('strJtagReset')
     tOption.choices = {"hard", "soft", "attach" }
 end
 
@@ -240,7 +269,8 @@ tParser:flag "--disable_helper_version_check":hidden(true)
 
 
 -- 	flashfCommandFlashSelected
-local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX'):target('fCommandFlashSelected')
+local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX')
+  :target('fCommandFlashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"},
 addFilePathArg(tParserCommandFlash)
 addBusOptionArg(tParserCommandFlash)
@@ -255,7 +285,8 @@ addJtagKhzArg(tParserCommandFlash)
 addSecureArgs(tParserCommandFlash)
 
 -- 	read
-local tParserCommandRead = tParser:command('read r', 'Read data from netX to a File'):target('fCommandReadSelected')
+local tParserCommandRead = tParser:command('read r', 'Read data from netX to a File')
+  :target('fCommandReadSelected')
 -- required_args = {"b", "u", "cs", "s", "l", "f"}
 addFilePathArg(tParserCommandRead)
 addBusOptionArg(tParserCommandRead)
@@ -271,7 +302,8 @@ addJtagKhzArg(tParserCommandRead)
 addSecureArgs(tParserCommandRead)
 
 -- erase
-local tParserCommandErase = tParser:command('erase e', 'Erase area inside flash'):target('fCommandEraseSelected')
+local tParserCommandErase = tParser:command('erase e', 'Erase area inside flash')
+  :target('fCommandEraseSelected')
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandErase)
 addUnitOptionArg(tParserCommandErase)
@@ -286,7 +318,8 @@ addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
 
 -- verify
-local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed'):target('fCommandVerifySelected')
+local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed')
+  :target('fCommandVerifySelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerify)
 addBusOptionArg(tParserCommandVerify)
@@ -301,7 +334,8 @@ addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums'):target('fCommandVerifyHashSelected')
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums')
+  :target('fCommandVerifyHashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
 addBusOptionArg(tParserCommandVerifyHash)
@@ -316,7 +350,8 @@ addJtagKhzArg(tParserCommandVerifyHash)
 addSecureArgs(tParserCommandVerifyHash)
 
 -- hash
-local tParserCommandHash = tParser:command('hash h', 'Compute SHA1'):target('fCommandHashSelected')
+local tParserCommandHash = tParser:command('hash h', 'Compute SHA1')
+  :target('fCommandHashSelected')
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandHash)
 addUnitOptionArg(tParserCommandHash)
@@ -331,7 +366,8 @@ addJtagKhzArg(tParserCommandHash)
 addSecureArgs(tParserCommandHash)
 
 -- detect
-local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized'):target('fCommandDetectSelected')
+local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized')
+  :target('fCommandDetectSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandDetect)
 addUnitOptionArg(tParserCommandDetect)
@@ -344,7 +380,8 @@ addJtagKhzArg(tParserCommandDetect)
 addSecureArgs(tParserCommandDetect)
 
 -- test
-local tParserCommandTest = tParser:command('test t', 'Test flasher'):target('fCommandTestSelected')
+local tParserCommandTest = tParser:command('test t', 'Test flasher')
+  :target('fCommandTestSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTest)
 addUnitOptionArg(tParserCommandTest)
@@ -357,7 +394,8 @@ addJtagKhzArg(tParserCommandTest)
 addSecureArgs(tParserCommandTest)
 
 -- testcli
-local tParserCommandTestCli = tParser:command('testcli tc', 'Test cli flasher'):target('fCommandTestCliSelected')
+local tParserCommandTestCli = tParser:command('testcli tc', 'Test cli flasher')
+  :target('fCommandTestCliSelected')
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTestCli)
 addUnitOptionArg(tParserCommandTestCli)
@@ -370,7 +408,8 @@ addJtagKhzArg(tParserCommandTestCli)
 addSecureArgs(tParserCommandTestCli)
 
 -- info
-local tParserCommandInfo = tParser:command('info i', 'Show information about the netX'):target('fCommandInfoSelected')
+local tParserCommandInfo = tParser:command('info i', 'Show information about the netX')
+  :target('fCommandInfoSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandInfo)
 addPluginTypeArg(tParserCommandInfo)
@@ -379,7 +418,8 @@ addJtagKhzArg(tParserCommandInfo)
 addSecureArgs(tParserCommandInfo)
 
 -- list_interfaces
-local tParserCommandListInterfaces = tParser:command('list_interfaces li', 'List all connected interfaces'):target('fCommandListInterfacesSelected')
+local tParserCommandListInterfaces = tParser:command('list_interfaces li', 'List all connected interfaces')
+  :target('fCommandListInterfacesSelected')
 -- optional_args = {"t", "jf", "jr"}
 addPluginTypeArg(tParserCommandListInterfaces)
 addJtagResetArg(tParserCommandListInterfaces)
@@ -387,7 +427,8 @@ addJtagKhzArg(tParserCommandListInterfaces)
 
 
 -- detect_netx
-local tParserCommandDetectNetx = tParser:command('detect_netx dn', 'Detect if an interface is a netX'):target('fCommandDetectNetxSelected')
+local tParserCommandDetectNetx = tParser:command('detect_netx dn', 'Detect if an interface is a netX')
+  :target('fCommandDetectNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectNetx)
 addPluginTypeArg(tParserCommandDetectNetx)
@@ -396,7 +437,10 @@ addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
 
 -- detect_secure_boot_mode
-local tParserCommandDetectSecureBoot = tParser:command('detect_secure_boot_mode dsbm', 'Detect if secure boot is enabled (netX 90 only)'):target('fCommandDetectSecureBootSelected')
+local tParserCommandDetectSecureBoot = tParser:command(
+  'detect_secure_boot_mode dsbm',
+  'Detect if secure boot is enabled (netX 90 only)'
+):target('fCommandDetectSecureBootSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectSecureBoot)
 addPluginTypeArg(tParserCommandDetectSecureBoot)
@@ -405,7 +449,10 @@ addJtagKhzArg(tParserCommandDetectSecureBoot)
 
 
 -- reset_netx
-local tParserCommandResetNetx = tParser:command('reset_netx rn', 'Reset the netX'):target('fCommandResetSelected')
+local tParserCommandResetNetx = tParser:command(
+  'reset_netx rn',
+  'Reset the netX'
+):target('fCommandResetSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
@@ -414,7 +461,10 @@ addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
 -- identify_netx
-local tParserCommandIdentifyNetx = tParser:command('identify_netx in', 'Blink SYS LED for 5 sec'):target('fParserCommandIdentifyNetxSelected')
+local tParserCommandIdentifyNetx = tParser:command(
+  'identify_netx in',
+  'Blink SYS LED for 5 sec'
+):target('fParserCommandIdentifyNetxSelected')
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
@@ -423,11 +473,17 @@ addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
 -- check_helper_version
-local tParserCommandCheckHelperVersion = tParser:command('check_helper_version chv', 'Check that the helper files have the correct versions'):target('fCommandCheckHelperVersionSelected')
+local tParserCommandCheckHelperVersion = tParser:command(
+  'check_helper_version chv',
+  'Check that the helper files have the correct versions'
+):target('fCommandCheckHelperVersionSelected')
 addSecureArgs(tParserCommandCheckHelperVersion)
 
 -- check_helper_signature
-local tParserCommandCheckHelperSignature = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandCheckHelperSignature = tParser:command(
+  'check_helper_signature chs',
+  strUsipHelp
+):target('fCommandCheckHelperSignatureSelected')
 -- tParserCommandCheckHelperSignature:option(
 --     '-V --verbose'
 -- ):description(
