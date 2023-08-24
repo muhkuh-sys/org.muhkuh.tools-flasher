@@ -349,7 +349,8 @@ function M.download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecure
 
     else
         strPath = get_flasher_binary_path(iChiptype, strPrefix, fDebug)
-        local tFile, strMsg = io.open(strPath, 'rb')
+        local tFile
+        tFile, strMsg = io.open(strPath, 'rb')
         if tFile==nil then
             error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
         end
