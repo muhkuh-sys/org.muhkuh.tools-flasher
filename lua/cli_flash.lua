@@ -814,7 +814,7 @@ local function exec(aArgs)
         end
 
 		tPlugin:Disconnect()
-		tPlugin = nil
+		collectgarbage('collect')
 	end
 
 	if iMode == MODE_GET_DEVICE_SIZE then
