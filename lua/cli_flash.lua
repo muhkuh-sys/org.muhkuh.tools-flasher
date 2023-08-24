@@ -17,7 +17,7 @@
 
 -- Requires are below, because they cause a lot of text to be printed.
 
-local tFlasher = require 'flasher'
+local flasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
 local flasher_test = require 'flasher_test'
 local tHelperFiles = require 'helper_files'
@@ -197,7 +197,7 @@ local function addSecureArgs(tParserCommand)
     tParserCommand:option('--sec')
       :description("Path to signed image directory")
       :target('strSecureOption')
-      :default(tFlasher.DEFAULT_HBOOT_OPTION)
+      :default(flasher.DEFAULT_HBOOT_OPTION)
   )
   tParserCommand:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -667,7 +667,6 @@ local function exec(aArgs)
 		end
 
 		-- Download the flasher.
-    local flasher = require 'flasher'
 		if fOk then
 			print("Downloading flasher binary")
 			aAttr = flasher.download(tPlugin, FLASHER_PATH, nil, bCompMode, strSecureOption)
@@ -877,7 +876,6 @@ end
 
 -- bus 0: parallel, bus 1: serial
 function flasher_interface.getBusWidth(self)
-  local flasher = require 'flasher'
 	if self.aArgs.iBus==flasher.BUS_Parflash then
 		return 2 -- may be 1, 2 or 4
 	elseif self.aArgs.iBus==flasher.BUS_Spi then
@@ -890,7 +888,6 @@ function flasher_interface.getBusWidth(self)
 end
 
 function flasher_interface.getEmptyByte(self)
-  local flasher = require 'flasher'
 	if self.aArgs.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.aArgs.iBus == flasher.BUS_Spi then
@@ -1003,7 +1000,7 @@ local function main()
     }
 
     -- todo: how to set this properly?
-    aArgs.strSecureOption = aArgs.strSecureOption or tFlasher.DEFAULT_HBOOT_OPTION
+    aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
 
         local path = require 'pl.path'
@@ -1039,7 +1036,7 @@ local function main()
     end
 
     if aArgs.strSecureOption ~= nil
-    and aArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION
+    and aArgs.strSecureOption ~= flasher.DEFAULT_HBOOT_OPTION
     and aArgs.fDisableHelperSignatureChecks ~= true then
 
         if aArgs.fCommandFlashSelected               -- flash
@@ -1088,9 +1085,9 @@ local function main()
         local ulM2MMinor = tPlugin:get_mi_version_min()
         if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
             print("use call usip command to reset netx")
-            tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
+            flasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
                                                  -- image again
-            tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
+            flasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
         else
             print("reset netx via watchdog")
             tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
@@ -1126,7 +1123,7 @@ local function main()
         local t1 = os.time()
 
         local path = require 'pl.path'
-        local strnetX90UnsignedHelperPath = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+        local strnetX90UnsignedHelperPath = path.join(flasher.DEFAULT_HBOOT_OPTION, "netx90")
         local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
         fOk = tHelperFiles.checkAllHelperFiles({strnetX90UnsignedHelperPath, strnetX90HelperPath})
         local t2 = os.time()
