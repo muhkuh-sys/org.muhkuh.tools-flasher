@@ -754,8 +754,8 @@ local function exec(aArgs)
 
 		-- for test mode
 		if fOk and iMode == MODE_IS_ERASED then
-			local fOk = flasher.isErased(tPlugin, aAttr, ulStartOffset, ulStartOffset + ulLen)
-			strMsg = fOk and "Area is empty" or "Area is not empty"
+			local fIsErased = flasher.isErased(tPlugin, aAttr, ulStartOffset, ulStartOffset + ulLen)
+			strMsg = fIsErased and "Area is empty" or "Area is not empty"
 		end
 
 		-- for test mode
