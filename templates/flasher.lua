@@ -905,7 +905,7 @@ end
 
 -- get the flash size via getEraseArea
 function M.getFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
-	local ulEraseStart, ulEraseEnd = M.getEraseArea(tPlugin, aAttr, 0, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
+	local _, ulEraseEnd = M.getEraseArea(tPlugin, aAttr, 0, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
 	return ulEraseEnd
 end
 
