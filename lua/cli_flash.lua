@@ -481,6 +481,10 @@ local tParserCommandCheckHelperVersion = tParser:command(
 addSecureArgs(tParserCommandCheckHelperVersion)
 
 -- check_helper_signature
+local strUsipHelp = [[
+    Loads an usip file on the netX, reset the netX and process
+    the usip file to update the SecureInfoPage and continue standard boot process.
+]]
 local tParserCommandCheckHelperSignature = tParser:command(
   'check_helper_signature chs',
   strUsipHelp
