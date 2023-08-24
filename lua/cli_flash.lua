@@ -832,7 +832,7 @@ end
 
 local flasher_interface = {}
 
-function flasher_interface.configure(self, strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
+function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
 		strPluginName = strPluginName,
 		iBus = iBus,
@@ -867,7 +867,7 @@ function flasher_interface.finish(self)
 end
 
 
-function flasher_interface.getDeviceSize(self)
+function flasher_interface:getDeviceSize()
 	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
 	return exec(self.aArgs)
@@ -875,7 +875,7 @@ end
 
 
 -- bus 0: parallel, bus 1: serial
-function flasher_interface.getBusWidth(self)
+function flasher_interface:getBusWidth()
 	if self.aArgs.iBus==flasher.BUS_Parflash then
 		return 2 -- may be 1, 2 or 4
 	elseif self.aArgs.iBus==flasher.BUS_Spi then
@@ -887,7 +887,7 @@ function flasher_interface.getBusWidth(self)
 	end
 end
 
-function flasher_interface.getEmptyByte(self)
+function flasher_interface:getEmptyByte()
 	if self.aArgs.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.aArgs.iBus == flasher.BUS_Spi then
@@ -899,7 +899,7 @@ function flasher_interface.getEmptyByte(self)
 	end
 end
 
-function flasher_interface.flash(self, ulOffset, strData)
+function flasher_interface:flash(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -913,7 +913,7 @@ function flasher_interface.flash(self, ulOffset, strData)
 end
 
 
-function flasher_interface.verify(self, ulOffset, strData)
+function flasher_interface:verify(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -926,7 +926,7 @@ function flasher_interface.verify(self, ulOffset, strData)
 	return exec(self.aArgs)
 end
 
-function flasher_interface.read(self, ulOffset, ulSize)
+function flasher_interface:read(ulOffset, ulSize)
 	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
@@ -945,7 +945,7 @@ function flasher_interface.read(self, ulOffset, ulSize)
 end
 
 
-function flasher_interface.erase(self, ulOffset, ulSize)
+function flasher_interface:erase(ulOffset, ulSize)
 	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
@@ -954,7 +954,7 @@ function flasher_interface.erase(self, ulOffset, ulSize)
 end
 
 
-function flasher_interface.isErased(self, ulOffset, ulSize)
+function flasher_interface:isErased(ulOffset, ulSize)
 	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
@@ -963,17 +963,17 @@ function flasher_interface.isErased(self, ulOffset, ulSize)
 end
 
 
-function flasher_interface.eraseChip(self)
+function flasher_interface:eraseChip()
 	return self:erase(0, self:getDeviceSize())
 end
 
 
-function flasher_interface.readChip(self)
+function flasher_interface:readChip()
 	return self:read(0, self:getDeviceSize())
 end
 
 
-function flasher_interface.isChipErased(self)
+function flasher_interface:isChipErased()
 	return self:isErased(0, self:getDeviceSize())
 end
 
