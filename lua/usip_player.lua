@@ -2047,7 +2047,12 @@ function read_sip(
 end
 
 
-function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, strExecReturnPath)
+function get_uid(
+    tPlugin,
+    strTmpFolderPath,
+    strReadSipPath,
+    atPluginOptions,
+    strExecReturnPath)
 
     local fOk = false
     local strPluginType
