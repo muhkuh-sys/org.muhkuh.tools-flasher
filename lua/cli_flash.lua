@@ -543,7 +543,7 @@ local function printobj(val, key, indent)
 	elseif type(val)=="string" then
 		print(string.format("%s%s = %s (string)", indent, key, val))
 	elseif type(val)=="table" then
-		local indent = indent .. "  "
+		indent = indent .. "  "
 		print(string.format("%s%s = {", indent, key))
 		for k,v in pairs(val) do
 			printobj(v, tostring(k), indent)
