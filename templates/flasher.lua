@@ -19,7 +19,7 @@ module("flasher", package.seeall)
 --   Free Software Foundation, Inc.,                                       --
 --   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             --
 -----------------------------------------------------------------------------
--- 
+--
 -- Description:
 --   flasher.lua: flasher interface routines
 --
@@ -103,7 +103,7 @@ DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
 
 --------------------------------------------------------------------------
--- callback/progress functions, 
+-- callback/progress functions,
 -- read/write image, call
 --------------------------------------------------------------------------
 
@@ -223,7 +223,7 @@ function get_flasher_binary_path(iChiptype, strPathPrefix, fDebug)
 	if not strNetxName then
 		error("Unknown chiptyp! " .. tostring(iChiptype))
 	end
-	
+
 	local strFileName = "flasher_" .. strNetxName .. strDebug .. ".bin"
     local strFilePath = path.join(strPrefix, strFileName)
 
@@ -264,7 +264,7 @@ function get_flasher_binary_attributes(strData)
 	print(string.format("buffer start:       0x%08x", aAttr.ulBufferAdr))
 	print(string.format("buffer end:         0x%08x", aAttr.ulBufferEnd))
 	print(string.format("buffer size:        0x%08x", aAttr.ulBufferLen))
-	
+
 	return aAttr
 end
 
@@ -277,7 +277,7 @@ function download_netx_binary(tPlugin, strData, fnCallbackProgress)
 	print(string.format("downloading to 0x%08x", aAttr.ulLoadAddress))
 	write_image(tPlugin, aAttr.ulLoadAddress, strData, fnCallbackProgress)
 	-- tPlugin:write_image(aAttr.ulLoadAddress, strData, fnCallbackProgress, string.len(strData))
-	
+
 	return aAttr
 end
 
@@ -308,7 +308,7 @@ function download(tPlugin, strPrefix, fnCallbackProgress, bCompMode, strSecureOp
 	local iChiptype = tPlugin:GetChiptyp()
 	local fDebug = false
     local strPath
-    local strFlasherBin, strMsg 
+    local strFlasherBin, strMsg
     local usMiVersionMin = get_mi_version_min(tPlugin)
     local usMiVersionMaj = get_mi_version_maj(tPlugin)
 
@@ -376,10 +376,10 @@ local function set_parameterblock(tPlugin, ulAddress, aulParameters, fnCallbackP
 		-- print parameters as openOCD TCL instructions
 		-- local strSetMem = "set *((unsigned long *) 0x%08x) = 0x%08x"
 		-- printf(strSetMem, ulAddress+4*(i-1), v)
-		
+
 		strBin = strBin .. string.char( bit.band(v,0xff), bit.band(bit.rshift(v,8),0xff), bit.band(bit.rshift(v,16),0xff), bit.band(bit.rshift(v,24),0xff) )
 	end
-	write_image(tPlugin, ulAddress, strBin, fnCallbackProgress) 
+	write_image(tPlugin, ulAddress, strBin, fnCallbackProgress)
 end
 
 -- Stores parameters in netX memory, calls the flasher and returns the result value
@@ -387,7 +387,7 @@ end
 function callFlasher(tPlugin, aAttr, aulParams, fnCallbackMessage, fnCallbackProgress)
 	fnCallbackMessage = fnCallbackMessage or default_callback_message
 	fnCallbackProgress = fnCallbackProgress or default_callback_progress
-	
+
 	-- set the parameters
 	local aulParameter = {}
 	aulParameter[1] = 0xffffffff                 -- placeholder for return vallue, will be 0 if ok
@@ -409,7 +409,7 @@ function callFlasher(tPlugin, aAttr, aulParams, fnCallbackMessage, fnCallbackPro
         print("use old call method")
         call(tPlugin, aAttr.ulExecAddress, aAttr.ulParameter, fnCallbackMessage)
     end
-	
+
 	-- get the return value (ok/failed)
 	-- any further return values must be read by the calling function
 	ulValue = tPlugin:read_data32(aAttr.ulParameter+0x00)
@@ -427,8 +427,8 @@ end
 -- SRAM bus parflash, extension bus parflash, SPI serial flash, SQI serial flash
 local function getInfoBlock(tPlugin, aAttr, ulBusIdx, ulUnitIdx, fnCallbackMessage, fnCallbackProgress)
 	local aResult = nil
-	
-	local aulParameter = 
+
+	local aulParameter =
 	{
 		OPERATION_MODE_GetBoardInfo,           -- operation mode: get board info
 		ulBusIdx,
@@ -436,7 +436,7 @@ local function getInfoBlock(tPlugin, aAttr, ulBusIdx, ulUnitIdx, fnCallbackMessa
 		aAttr.ulBufferAdr,
 		aAttr.ulBufferLen
 	}
-	
+
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 
 	if ulValue==0 then
@@ -479,31 +479,31 @@ end
 function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter)
 	local aulParameter
 	atParameter = atParameter or {}
-	
-	
+
+
 	if tBus==BUS_Spi then
 		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
 		local ulInitialSpeed = atParameter.ulInitialSpeed
 		ulInitialSpeed = ulInitialSpeed or 1000
-		
+
 		-- Set the maximum SPI speed. The default is 25000kHz (25MHz).
 		local ulMaximumSpeed = atParameter.ulMaximumSpeed
 		ulMaximumSpeed = ulMaximumSpeed or 25000
-		
+
 		-- Set the idle configuration. The default is all lines driving 1.
 		local ulIdleCfg = atParameter.ulIdleCfg
 		ulIdleCfg = ulIdleCfg or (MSK_SQI_CFG_IDLE_IO1_OE + MSK_SQI_CFG_IDLE_IO1_OUT
 		                        + MSK_SQI_CFG_IDLE_IO2_OE + MSK_SQI_CFG_IDLE_IO2_OUT
 		                        + MSK_SQI_CFG_IDLE_IO3_OE + MSK_SQI_CFG_IDLE_IO3_OUT)
-		
+
 		-- Set the SPI mode. The default is 3.
 		local ulSpiMode = atParameter.ulSpiMode
 		ulSpiMode = ulSpiMode or 3
-		
+
 		-- Set the MMIO configuration. The default is 0xffffffff (no MMIO pins).
 		local ulMmioConfiguration = atParameter.ulMmioConfiguration
 		ulMmioConfiguration = ulMmioConfiguration or 0xffffffff
-		
+
 		aulParameter =
 		{
 			OPERATION_MODE_Detect,                -- operation mode: detect
@@ -521,7 +521,7 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 		-- Set the allowed bus widths. This parameter is not used yet.
 		local ulAllowedBusWidths = atParameter.ulAllowedBusWidths
 		ulAllowedBusWidths = ulAllowedBusWidths or 0
-		
+
 		aulParameter =
 		{
 			OPERATION_MODE_Detect,                -- operation mode: detect
@@ -566,7 +566,7 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 	else
 		error("Unknown bus: " .. tostring(tBus))
 	end
-	
+
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
@@ -577,24 +577,24 @@ function detectAndCheckSizeLimit(tPlugin, aAttr, ...)
 	local fOk = detect(tPlugin, aAttr, ...)
 	local strMsg
 	local ulDeviceSize
-	
+
 	if fOk ~= true then
 		fOk = false
 		--strMsg = "Failed to get a device description!"
 		strMsg = "Failed to detect the device!"
-	else 
+	else
 		ulDeviceSize = getFlashSize(tPlugin, aAttr)
 		if ulDeviceSize == nil then
 			fOk = false
 			strMsg = "Failed to get the device size!"
-			
+
 		-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
 		elseif ulDeviceSize == 0xffffffff then
-			fOk = false 
-			strMsg = "Devices with a size of 2^32 bytes or more are not supported!"	
+			fOk = false
+			strMsg = "Devices with a size of 2^32 bytes or more are not supported!"
 		end
 	end
-	
+
 	return fOk, strMsg, ulDeviceSize
 end
 
@@ -605,7 +605,7 @@ function readDeviceDescriptor(tPlugin, aAttr, fnCallbackProgress)
 	local strDevDesc
 	local ulSize
 	local ulVersion
-	
+
 	local ulValue = tPlugin:read_data32(aAttr.ulDeviceDesc)
 	if ulValue==0 then
 		print("the device desription is not valid, nothing detected.")
@@ -638,7 +638,7 @@ function getDeviceId(tPlugin, aAttr, fnCallbackProgress)
 	if strDeviceDescriptor==nil then
 		error("Failed to read the flash device descriptor!")
 	end
-	
+
 	strDeviceId = nil
 	if tBus==BUS_Spi then
 		-- Extract the flash ID.
@@ -654,7 +654,7 @@ function getDeviceId(tPlugin, aAttr, fnCallbackProgress)
 	else
 		error("The device ID can not yet be retrieved for parallel flashes.")
 	end
-	
+
 	return strDeviceId
 end
 
@@ -664,7 +664,7 @@ end
 -- Returns a non-empty string, or nil
 function SpiFlash_getDeviceName(strDeviceDescriptor)
 	local strDeviceId = nil
-	
+
 	local iIdxStart = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_acName + 1
 	local iIdxEnd = iIdxStart
 	local iIdxMax = iIdxStart + SPIFLASH_NAME_SIZE + 1
@@ -674,7 +674,7 @@ function SpiFlash_getDeviceName(strDeviceDescriptor)
 	if iIdxEnd>iIdxStart then
 		strDeviceId = string.sub(strDeviceDescriptor, iIdxStart, iIdxEnd-1)
 	end
-	
+
 	return strDeviceId
 end
 
@@ -703,59 +703,59 @@ function SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
 	local offs_send = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdSend
 	local offs_mask = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdMask
 	local offs_magic = OFFS_FLASH_ATTR+OFFS_FLASH_ATTR_aucIdMagic
-	
+
 	local idLen = string.byte(strDeviceDesc, offs_len+1)
 	local aucIdSend = string.sub(strDeviceDesc, offs_send+1, offs_send+SPIFLASH_ID_SIZE)
 	local aucIdMask = string.sub(strDeviceDesc, offs_mask+1, offs_mask+SPIFLASH_ID_SIZE)
 	local aucIdMagic = string.sub(strDeviceDesc, offs_magic+1, offs_magic+SPIFLASH_ID_SIZE)
-	
+
 	-- print("Examining identification magic")
 	-- print("idLen:", idLen)
 	-- print("aucIdSend:", getHexString(aucIdSend))
 	-- print("aucIdMask:", getHexString(aucIdMask))
 	-- print("aucIdMagid:", getHexString(aucIdMagic))
-	
+
 	local strJedecId
 	if idLen >2 then
 		local fJedecIdValid = true
 		local astrJedecId = {}
-		
+
 		for i=1, idLen do
 			local bSend = string.byte(aucIdSend, i)
 			local bMask = string.byte(aucIdMask, i)
 			local bMagic = string.byte(aucIdMagic, i)
-			
+
 			if (i==1) then
 				if bSend ~= 0x9f or bMask ~= 0 or bMagic ~= 0 then
-					fJedecIdValid = false 
+					fJedecIdValid = false
 					break
 				end
-			else 
-				if bSend ~= 0 or bMask ~= 0xff then 
-					fJedecIdValid = false 
+			else
+				if bSend ~= 0 or bMask ~= 0xff then
+					fJedecIdValid = false
 					break
 				else
 					table.insert(astrJedecId, string.format("0x%02x", bMagic))
 				end
 			end
 		end
-		
+
 		if fJedecIdValid == true then
 			strJedecId = table.concat(astrJedecId, ", ")
 			print("JEDEC ID from flash ID sequence: ", strJedecId)
 		else
-		
+
 			print("The ID sequence does not contain a JEDEC ID")
 		end
-	end 
-	
+	end
+
 	return strJedecId
 end
 
 -- Try to get the JEDEC ID for an SPI flash from the device description
 -- after it has been detected.
 -- If the device name is of the form SPDF_xxxxxx, xxxxxx is the JEDEC ID.
--- If not, it is a known flash device detected using an identification 
+-- If not, it is a known flash device detected using an identification
 -- sequence. Try to get the ID from that.
 function SpiFlash_getNameAndId(strDeviceDesc)
 	local strDevName = SpiFlash_getDeviceName(strDeviceDesc)
@@ -763,14 +763,14 @@ function SpiFlash_getNameAndId(strDeviceDesc)
 	local strJedecId = string.match(strDevName, "^SFDP_(%x+)$")
 	if strJedecId == nil then
 		strJedecId = SpiFlash_getJedecIdFromIdSeq(strDeviceDesc)
-	else 
+	else
 		local bytes = {}
 		local fn = function(x) table.insert(bytes, "0x"..x) end
 		string.gsub(strJedecId, "..", fn)
 		strJedecId = table.concat(bytes, ", ")
 		print("JEDEC ID from SFDP device name:", strJedecId)
 	end
-	
+
 	return strDevName, strJedecId
 end
 
@@ -824,12 +824,12 @@ function verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAd
 		ulBufferAddress
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
-	
+
 	if ulValue==0 then
 		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x08)
 		fEqual = (ulValue==0)
 	end
-	
+
 	return fEqual
 end
 
@@ -845,11 +845,11 @@ function hash(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, fnCallbackMe
 		ulFlashEndOffset,
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
-	
+
 	if ulValue==0 then
 		strHashBin = read_image(tPlugin, aAttr.ulParameter+0x20, 20, fnCallbackProgress)
 	end
-	
+
 	return ulValue == 0, strHashBin
 end
 
@@ -871,7 +871,7 @@ function getEraseArea(tPlugin, aAttr, ulStartAdr, ulEndAdr, fnCallbackMessage, f
 		ulStartAdr,
 		ulEndAdr
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	if ulValue==0 then
 		ulEraseStart = tPlugin:read_data32(aAttr.ulParameter+0x18)
@@ -912,7 +912,7 @@ function isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, f
 		ulEraseStart,
 		ulEraseEnd
 	}
-	
+
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	if ulValue==0 then
 		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x08)
@@ -982,7 +982,7 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 	local fIsErased
 	local ulEndOffset
 	local ulEraseStart,ulEraseEnd
-	
+
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
 	if ulSize == 0xffffffff then
 		ulEndOffset = ulSize
@@ -990,12 +990,12 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 		if not (ulEraseStart and ulEraseEnd) then
 			return false, "getEraseArea failed!"
 		end
-		
+
 		ulEndOffset = ulEraseEnd
 	else
 		ulEndOffset = ulDeviceOffset + ulSize
 	end
-	
+
 
 	print(string.format("Area:  [0x%08x, 0x%08x[", ulDeviceOffset, ulEndOffset))
 	print("Checking if the area is already empty")
@@ -1013,7 +1013,7 @@ function eraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fn
 				return false, "getEraseArea failed!"
 			end
 		end
-		
+
 		print("Erasing flash")
 		print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseStart, ulEraseEnd))
 
@@ -1051,7 +1051,7 @@ function flashArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, f
 	local ulBufferLen = aAttr.ulBufferLen
 	local ulChunkSize
 	local strChunk
-	
+
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
 		-- Required for netx 90 Intflash, does not hurt in other cases:
@@ -1059,7 +1059,7 @@ function flashArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, f
 		-- Note: Additionally, ulDeviceOffset must also be a multiple of 16 bytes.
 		local ulEnd = ulDataOffset+ulBufferLen
 		if ulEnd < strData:len() then
-			ulEnd = ulEnd - (ulEnd % 16) 
+			ulEnd = ulEnd - (ulEnd % 16)
 		end
 		strChunk = strData:sub(ulDataOffset+1, ulEnd)
 		ulChunkSize = strChunk:len()
@@ -1101,7 +1101,7 @@ function verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, 
 	local ulBufferLen = aAttr.ulBufferLen
 	local ulChunkSize
 	local strChunk
-	
+
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
 		strChunk = strData:sub(ulDataOffset+1, ulDataOffset+ulBufferLen)
@@ -1121,7 +1121,7 @@ function verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, 
 		ulDataOffset = ulDataOffset + ulChunkSize
 		ulDeviceOffset = ulDeviceOffset + ulChunkSize
 	end
-	
+
 	return true, "The data in the flash is equal to the input file."
 end
 
@@ -1150,8 +1150,8 @@ function readArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 	local strChunk
 	local ulChunkSize
 	local astrChunks = {}
-	
-	if ulSize == 0xffffffff then 
+
+	if ulSize == 0xffffffff then
 		ulSize = getFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 		if ulSize then
 			print(string.format("Flash size: 0x%08x bytes", ulSize))
@@ -1160,26 +1160,26 @@ function readArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 			return nil, "Could not determine the flash size!"
 		end
 	end
-	
+
 	while ulSize>0 do
 		-- determine chunk size
 		ulChunkSize = math.min(ulSize, ulBufferLen)
-		
+
 		-- Read chunk into buffer
 		print(string.format("reading flash offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
 		fOk = read(tPlugin, aAttr, ulDeviceOffset, ulDeviceOffset + ulChunkSize, ulBufferAddr, fnCallbackMessage, fnCallbackProgress)
 		if not fOk then
 			return nil, "Error while reading from flash!"
 		end
-		
-		-- Read the buffer 
+
+		-- Read the buffer
 		strChunk = read_image(tPlugin, ulBufferAddr, ulChunkSize, fnCallbackProgress)
 		if not strChunk then
 			return nil, "Error while reading from RAM buffer!"
 		end
-	
+
 		table.insert(astrChunks, strChunk)
-		
+
 		ulDeviceOffset = ulDeviceOffset + ulChunkSize
 		ulSize = ulSize - ulChunkSize
 	end
@@ -1197,7 +1197,7 @@ end
 -- size = 0xffffffff to read from ulDeviceOffset to end of device
 --
 -- Returns the hash as a binary string or nil and an error message.
--- 
+--
 -- Ok:
 -- "Checksum calculated."
 --
@@ -1211,8 +1211,8 @@ function hashArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 	local fOk
 	local strFlashHashBin
 	local ulDeviceEndOffset
-	
-	if ulDataByteSize == 0xffffffff then 
+
+	if ulDataByteSize == 0xffffffff then
 		local ulDeviceSize = getFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 		if ulDeviceSize then
 			print(string.format("Flash size: 0x%08x bytes", ulDeviceSize))
@@ -1223,7 +1223,7 @@ function hashArea(tPlugin, aAttr, ulDeviceOffset, ulDataByteSize, fnCallbackMess
 	else
 		ulDeviceEndOffset = ulDeviceOffset + ulDataByteSize
 	end
-	
+
 	fOk, strFlashHashBin = hash(tPlugin, aAttr, ulDeviceOffset, ulDeviceEndOffset, fnCallbackMessage, fnCallbackProgress)
 
 	if fOk~=true then
@@ -1254,28 +1254,28 @@ end
 
 function simple_flasher_string(tPlugin, strData, tBus, ulUnit, ulChipSelect, strFlasherPrefix, fnCallbackProgress, fnCallbackMessage)
 	strFlasherPrefix = strFlasherPrefix or ""
-	
+
 	local fOk
 	local strMsg
 	local ulDeviceOffset = 0
-	
+
 	-- Download the binary.
 	local aAttr = download(tPlugin, strFlasherPrefix, fnCallbackProgress)
-	
+
 	-- Detect the device.
 	fOk = detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress)
 	if fOk~=true then
 		error("Failed to detect the device!")
 	end
-	
+
 	fOk, strMsg = eraseArea(tPlugin, aAttr, ulDeviceOffset, strData:len(), fnCallbackMessage, fnCallbackProgress)
 	print(strMsg)
 	assert(fOk, strMsg or "Error while erasing area")
-	
+
 	fOk, strMsg = flashArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage, fnCallbackProgress)
 	print(strMsg)
 	assert(fOk, strMsg or "Error while programming area")
-	
+
 	print("*** Flashing ok ***")
 end
 
@@ -1322,11 +1322,11 @@ function sdi_init(tPlugin, aAttr, ulUnit, ulChipSelect, ulSpeed_kHz, fnCallbackP
 	local aulParameter
 	local ulIdleCfg
 
-	
+
 	ulIdleCfg = MSK_SQI_CFG_IDLE_IO1_OE + MSK_SQI_CFG_IDLE_IO1_OUT
 	          + MSK_SQI_CFG_IDLE_IO2_OE + MSK_SQI_CFG_IDLE_IO2_OUT
 	          + MSK_SQI_CFG_IDLE_IO3_OE + MSK_SQI_CFG_IDLE_IO3_OUT
-	
+
 	aulParameter =
 	{
 		OPERATION_MODE_SpiMacroPlayer,        -- operation mode: SPI macro player
@@ -1340,7 +1340,7 @@ function sdi_init(tPlugin, aAttr, ulUnit, ulChipSelect, ulSpeed_kHz, fnCallbackP
 		3,                                    -- mode
 		0xffffffff                            -- MMIO configuration
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
@@ -1351,13 +1351,13 @@ function sdi_chip_select(tPlugin, aAttr, uiActive, fnCallbackProgress, fnCallbac
 	local ulValue
 	local aulParameter
 
-	
+
 	if tonumber(uiActive)==0 then
 		ulValue = 0
 	else
 		ulValue = 1
 	end
-	
+
 	aulParameter =
 	{
 		OPERATION_MODE_SpiMacroPlayer,        -- operation mode: SPI macro player
@@ -1365,7 +1365,7 @@ function sdi_chip_select(tPlugin, aAttr, uiActive, fnCallbackProgress, fnCallbac
 		aAttr.ulDeviceDesc,                   -- the SPI configuration
 		ulValue,                              -- chip select
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
 end
@@ -1388,7 +1388,7 @@ function sdi_exchange_data(tPlugin, aAttr, strData, fnCallbackProgress, fnCallba
 
 	-- Download the data.
 	write_image(tPlugin, ulTxBuffer, strData, fnCallbackProgress)
-	
+
 	aulParameter =
 	{
 		OPERATION_MODE_SpiMacroPlayer,        -- operation mode: SPI macro player
@@ -1398,12 +1398,12 @@ function sdi_exchange_data(tPlugin, aAttr, strData, fnCallbackProgress, fnCallba
 		ulRxBuffer,
 		sizData
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	if ulValue==0 then
 		strRxData = read_image(tPlugin, ulRxBuffer, sizData, fnCallbackProgress)
 	end
-	
+
 	return strRxData
 end
 
@@ -1421,7 +1421,7 @@ function sdi_send_data(tPlugin, aAttr, strData, fnCallbackProgress, fnCallbackMe
 
 	-- Download the data.
 	write_image(tPlugin, ulTxBuffer, strData, fnCallbackProgress)
-	
+
 	aulParameter =
 	{
 		OPERATION_MODE_SpiMacroPlayer,        -- operation mode: SPI macro player
@@ -1430,9 +1430,9 @@ function sdi_send_data(tPlugin, aAttr, strData, fnCallbackProgress, fnCallbackMe
 		ulTxBuffer,
 		sizData
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
-	
+
 	return ulValue == 0
 end
 
@@ -1454,12 +1454,12 @@ function sdi_receive_data(tPlugin, aAttr, sizData, fnCallbackProgress, fnCallbac
 		ulRxBuffer,
 		sizData
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	if ulValue==0 then
 		strRxData = read_image(tPlugin, ulRxBuffer, sizData, fnCallbackProgress)
 	end
-	
+
 	return strRxData
 end
 
@@ -1476,14 +1476,14 @@ function sdi_idle_bytes(tPlugin, aAttr, sizIdleBytes, fnCallbackProgress, fnCall
 		aAttr.ulDeviceDesc,                   -- the SPI configuration
 		sizIdleBytes
 	}
-	
+
 	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
-	
+
 	return ulValue == 0
 end
 
 
---------------------------------------------------------------------------																								
+--------------------------------------------------------------------------
 --	Function to visually identify the connected hardware
 --	Blinks the status LED on the Board for 5 seconds
 --  Pattern => Y = Yellow O = Off G = Green YOYOGOGO
