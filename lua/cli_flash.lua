@@ -630,7 +630,11 @@ local function exec(aArgs)
 
 		if fOk then
 			-- check helper signatures
-			fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, aArgs.strSecureOption, aArgs.aHelperKeysForSigCheck)
+			fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(
+        tPlugin,
+        aArgs.strSecureOption,
+        aArgs.aHelperKeysForSigCheck
+      )
 		end
 
 		-- On netx 4000, there may be a boot image in intram that makes it
@@ -1083,7 +1087,8 @@ local function main()
         local ulM2MMinor = tPlugin:get_mi_version_min()
         if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
             print("use call usip command to reset netx")
-            tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same image again
+            tFlasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
+                                                 -- image again
             tFlasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
         else
             print("reset netx via watchdog")
@@ -1135,7 +1140,13 @@ local function main()
         os.exit(fOk and 0 or 1)
 
     elseif aArgs.fCommandTestCliSelected then
-        flasher_interface:configure(aArgs.strPluginName, aArgs.iBus, aArgs.iUnit, aArgs.iChipSelect, aArgs.atPluginOptions)
+        flasher_interface:configure(
+          aArgs.strPluginName,
+          aArgs.iBus,
+          aArgs.iUnit,
+          aArgs.iChipSelect,
+          aArgs.atPluginOptions
+        )
         fOk, strMsg = flasher_test.testFlasher(flasher_interface)
         if fOk then
             if strMsg then
