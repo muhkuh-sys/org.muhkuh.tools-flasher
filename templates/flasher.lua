@@ -1362,7 +1362,7 @@ function M.simple_flasher(tPlugin, strDataFileName, tBus, ulUnit, ulChipSelect, 
 	-- Load the data.
 	local tFile, strMsg = io.open(strDataFileName, 'rb')
 	if tFile==nil then
-		error(string.format('Failed to open file "%s" for reading: %s', strPath, strMsg))
+		error(string.format('Failed to open file "%s" for reading: %s', strDataFileName, strMsg))
 	end
 	local strData = tFile:read('*a')
 	tFile:close()
