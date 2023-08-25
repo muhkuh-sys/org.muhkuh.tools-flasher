@@ -8,7 +8,6 @@ local M = {}
 --
 -----------------------------------------------------------------------------
 
-local tFlasher = require 'flasher'
 local bit = require 'bit'
 local class = require 'pl.class'
 
@@ -436,6 +435,7 @@ end
 
 -- return tRes OR nil, strErrorMsg
 local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
+  local tFlasher = require 'flasher'
 	local strErrorMsg = ""
 
 	local ulReadSipExeAddress    = 0x00060000 -- Load address for the read_sip executable
@@ -552,6 +552,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function M.detect_secure_boot_mode(aArgs)
+  local tFlasher = require 'flasher'
   local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -1018,6 +1019,7 @@ end
 
 function M.dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
   local path = require 'pl.path'
+  local tFlasher = require 'flasher'
 	local strOutputFilePath = path.join(strOutputFolder, strOutputFileName)
 
 	local strTraceDumpData = tPlugin:read_image(ulAddress, ulSize, tFlasher.default_callback_progress, ulSize)
