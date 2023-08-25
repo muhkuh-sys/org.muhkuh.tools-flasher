@@ -1,7 +1,5 @@
 local M = {}
 
-local tFlasherHelper = require 'flasher_helper'
-
 local function printf(...) print(string.format(...)) end
 
 
@@ -184,6 +182,7 @@ local function checkHelperFileIntern(strDir, strKey, fCheckversion)
         printf("Loading helper file '%s' from path %s", strKey, strPath)
 
         -- read the file
+        local tFlasherHelper = require 'flasher_helper'
         strBin, strMsg = tFlasherHelper.loadBin(strPath)
 
         -- failed to read the file
@@ -396,6 +395,7 @@ end
 -- astrFileData: a list of the contents of the files.
 -- For any file that cannot be loaded, an empty string is inserted.
 local function loadFiles(astrPaths)
+    local tFlasherHelper = require 'flasher_helper'
     local astrFileData = {}
     local fOk = true
     for _, strPath in ipairs(astrPaths) do

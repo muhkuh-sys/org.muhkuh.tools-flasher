@@ -5,12 +5,6 @@ local tLogWriterFilter = require 'log.writer.filter'.new('info', tLogWriterConso
 local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
 local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
 
-local tFlasher = require 'flasher' -- write_image(), call(), call_hboot()
-local tFlasherHelper = require 'flasher_helper' --loadBin(), dump_intram()
-
-
-local tHelperFiles = require 'helper_files'
-
 local path = require 'pl.path'
 
 
@@ -40,6 +34,8 @@ function M.verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTemp
     -- be optimistic
     local sipper = require 'sipper'
     local tSipper = sipper(tLog)
+    local tFlasher = require 'flasher'
+    local tFlasherHelper = require 'flasher_helper'
     local fOk = true
     local atResults = {}
     local ulVerifySigResult
@@ -200,11 +196,13 @@ function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions,
     local strVerifySigPath = path.join(strSecureOption, "netx90", "verify_sig.bin")
 
     local strPath = path.join(strSecureOption, "netx90")
+    local tHelperFiles = require 'helper_files'
     local tHelperFileDataList, tPathList = tHelperFiles.getAllHelperFilesData({strPath})
 
     local atResults
 
     local fOk = false
+    local tFlasherHelper = require 'flasher_helper'
     local tPlugin, strMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
     if not tPlugin then
         tLog.error("Failed to open connection: %s", strMsg or "Unknown error")
@@ -249,6 +247,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
   local strMsg
   local atResults
   local strSecPathNx90 = path.join(strSecureOption, "netx90")
+  local tHelperFiles = require 'helper_files'
   local _, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
 
   if astrPaths == nil then
