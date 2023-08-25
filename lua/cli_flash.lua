@@ -559,7 +559,7 @@ end
 
 local function printBoardInfo(tBoardInfo)
 	print("Board info:")
-	for _,tBusInfo in ipairs(aBoardInfo) do
+	for _,tBusInfo in ipairs(tBoardInfo) do
 		print(string.format("Bus %d:\t%s", tBusInfo.iIdx, tBusInfo.strName))
 		if not tBusInfo.aUnitInfo then
 			print("\tNo units.")
