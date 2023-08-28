@@ -2,6 +2,7 @@
 /build.properties
 
 # Ignore all files in the targets folders.
+/flasher-environment/build/
 /targets/
 
 # Ignore all compiled python modules.

@@ -1,0 +1,38 @@
+diff -uNr zlib-1.2.13/CMakeLists.txt zlib-1.2.13_patched/CMakeLists.txt
+--- zlib-1.2.13/CMakeLists.txt	2023-05-25 11:25:53.076698355 +0200
++++ zlib-1.2.13_patched/CMakeLists.txt	2023-05-25 11:26:02.204710596 +0200
+@@ -9,7 +9,7 @@
+ set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Installation directory for libraries")
+ set(INSTALL_INC_DIR "${CMAKE_INSTALL_PREFIX}/include" CACHE PATH "Installation directory for headers")
+ set(INSTALL_MAN_DIR "${CMAKE_INSTALL_PREFIX}/share/man" CACHE PATH "Installation directory for manual pages")
+-set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_PREFIX}/share/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
++#set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_PREFIX}/share/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
+ 
+ include(CheckTypeSize)
+ include(CheckFunctionExists)
+@@ -75,9 +75,9 @@
+   endif()
+ endif()
+ 
+-set(ZLIB_PC ${CMAKE_CURRENT_BINARY_DIR}/zlib.pc)
+-configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/zlib.pc.cmakein
+-		${ZLIB_PC} @ONLY)
++#set(ZLIB_PC ${CMAKE_CURRENT_BINARY_DIR}/zlib.pc)
++#configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/zlib.pc.cmakein
++#		${ZLIB_PC} @ONLY)
+ configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
+ 		${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
+ include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR})
+@@ -186,9 +186,9 @@
+ if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
+     install(FILES zlib.3 DESTINATION "${INSTALL_MAN_DIR}/man3")
+ endif()
+-if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
+-    install(FILES ${ZLIB_PC} DESTINATION "${INSTALL_PKGCONFIG_DIR}")
+-endif()
++#if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
++#    install(FILES ${ZLIB_PC} DESTINATION "${INSTALL_PKGCONFIG_DIR}")
++#endif()
+ 
+ #============================================================================
+ # Example binaries

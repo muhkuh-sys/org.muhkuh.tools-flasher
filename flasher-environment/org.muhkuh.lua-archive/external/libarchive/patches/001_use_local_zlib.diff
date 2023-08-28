@@ -1,0 +1,14 @@
+diff -uNr libarchive-3.6.2/CMakeLists.txt libarchive-3.6.2_patched/CMakeLists.txt
+--- libarchive-3.6.2/CMakeLists.txt	2022-12-09 14:38:31.000000000 +0100
++++ libarchive-3.6.2_patched/CMakeLists.txt	2023-08-28 13:40:33.306594795 +0200
+@@ -420,7 +420,9 @@
+ # Find ZLIB
+ #
+ IF(ENABLE_ZLIB)
+-  FIND_PACKAGE(ZLIB)
++  SET(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
++  SET(ZLIB_INCLUDE_DIR ${ZLIB_INCLUDE_DIR})
++  SET(ZLIB_FOUND TRUE)
+ ELSE()
+   SET(ZLIB_FOUND FALSE) # Override cached value
+ ENDIF()

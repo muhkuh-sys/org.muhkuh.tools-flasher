@@ -1,0 +1,33 @@
+diff -uNr libarchive-3.6.2/CMakeLists.txt libarchive-3.6.2_patched/CMakeLists.txt
+--- libarchive-3.6.2/CMakeLists.txt	2023-08-28 14:21:06.403764640 +0200
++++ libarchive-3.6.2_patched/CMakeLists.txt	2023-08-28 14:21:54.847792079 +0200
+@@ -431,29 +431,6 @@
+   SET(HAVE_ZLIB_H 1)
+   INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+   LIST(APPEND ADDITIONAL_LIBS ${ZLIB_LIBRARIES})
+-  IF(WIN32 AND NOT CYGWIN)
+-    #
+-    # Test if ZLIB_WINAPI macro is needed to use.
+-    #
+-    TRY_MACRO_FOR_LIBRARY(
+-      "${ZLIB_INCLUDE_DIR}" "${ZLIB_LIBRARIES}"
+-      RUNS
+-      "#include <zlib.h>\nint main() {uLong f = zlibCompileFlags(); return (f&(1U<<10))?0:-1; }"
+-      ZLIB_WINAPI)
+-    IF(ZLIB_WINAPI)
+-      ADD_DEFINITIONS(-DZLIB_WINAPI)
+-    ELSE(ZLIB_WINAPI)
+-      # Test if a macro is needed for the library.
+-      TRY_MACRO_FOR_LIBRARY(
+-        "${ZLIB_INCLUDE_DIR}" "${ZLIB_LIBRARIES}"
+-        COMPILES
+-        "#include <zlib.h>\nint main() {return zlibVersion()?1:0; }"
+-        "ZLIB_DLL;WITHOUT_ZLIB_DLL")
+-      IF(ZLIB_DLL)
+-        ADD_DEFINITIONS(-DZLIB_DLL)
+-      ENDIF(ZLIB_DLL)
+-    ENDIF(ZLIB_WINAPI)
+-  ENDIF(WIN32 AND NOT CYGWIN)
+ ENDIF(ZLIB_FOUND)
+ MARK_AS_ADVANCED(CLEAR ZLIB_INCLUDE_DIR)
+ MARK_AS_ADVANCED(CLEAR ZLIB_LIBRARY)
