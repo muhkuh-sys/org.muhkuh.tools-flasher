@@ -653,7 +653,7 @@ if fBuildIsFull==True:
     strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
 
 
-    strArtifact = 'lua5.1-flasher'
+    strArtifact = 'lua5.4-flasher'
 
     tArcList = atEnv.DEFAULT.ArchiveList('zip')
 
