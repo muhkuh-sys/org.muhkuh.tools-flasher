@@ -25,7 +25,7 @@ local M = {}
 --
 -----------------------------------------------------------------------------
 
-require("bit")
+local bit = require("bit")
 local romloader = require 'romloader'
 local tHelperFiles = require 'helper_files'
 
@@ -112,7 +112,7 @@ local ulProgressLastMax     = nil
 local PROGRESS_STEP_PERCENT = 10
 
 function M.default_callback_progress(ulCnt, ulMax)
-	local fPercent = ulCnt * 100 / ulMax
+	local fPercent = math.floor(ulCnt * 100 / ulMax)
 	local ulTime = os.time()
 	if ulProgressLastMax ~= ulMax
 		or ulCnt == 0

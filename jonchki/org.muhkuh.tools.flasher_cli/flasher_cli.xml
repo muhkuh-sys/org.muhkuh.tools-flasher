@@ -7,7 +7,7 @@
 	      vcs-id="${PROJECT_VERSION_VCS}"
 	      extension="zip"/>
 	<dependencies>
-		<dependency group="org.muhkuh.tools" module="flasher" artifact="lua5.1-flasher" version="${PROJECT_VERSION}"/>
+		<dependency group="org.muhkuh.tools" module="flasher" artifact="lua5.4-flasher" version="${PROJECT_VERSION}"/>
 	</dependencies>
 	<actions>
 		<action name="finalizer" file="${prj_root}/jonchki/org.muhkuh.tools.flasher_cli/finalizer.lua"/>
