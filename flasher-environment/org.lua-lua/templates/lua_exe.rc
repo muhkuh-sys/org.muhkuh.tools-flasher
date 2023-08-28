@@ -1,0 +1,42 @@
+#include "winresrc.h"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Application Icons
+//
+
+// explorer icon, must be first in order and sorting
+aaaaaaaa ICON "${LUA_ICON}"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+	FILEVERSION     ${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0
+	PRODUCTVERSION  ${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0
+	FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+	FILEFLAGS       0x0L
+	FILEOS          VOS__WINDOWS32
+	FILETYPE        VFT_APP
+	FILESUBTYPE     0x0L
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904b0"
+		BEGIN
+			VALUE "Comments",           "http://www.lua.org/"
+			VALUE "CompanyName",        "Lua.org, PUC-Rio"
+			VALUE "FileDescription",    "Lua"
+			VALUE "FileVersion",        "${PROJECT_VERSION_MAJOR}, ${PROJECT_VERSION_MINOR}, ${PROJECT_VERSION_PATCH}, 0"
+			VALUE "InternalName",       "lua"
+			VALUE "LegalCopyright",     "Copyright (C) 1994-2016 Lua.org, PUC-Rio."
+			VALUE "OriginalFilename",   "lua5.4.exe"
+			VALUE "ProductName",        "Lua"
+			VALUE "ProductVersion",     "${PROJECT_VERSION_MAJOR}, ${PROJECT_VERSION_MINOR}, ${PROJECT_VERSION_PATCH}, 0"
+		END
+	END
+END
+

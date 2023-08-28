@@ -1,0 +1,12 @@
+diff -uNr zlib-1.2.13/CMakeLists.txt zlib-1.2.13_patched/CMakeLists.txt
+--- zlib-1.2.13/CMakeLists.txt	2023-05-25 11:27:45.492848832 +0200
++++ zlib-1.2.13_patched/CMakeLists.txt	2023-05-25 11:27:54.532860910 +0200
+@@ -175,7 +175,7 @@
+ endif()
+ 
+ if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
+-    install(TARGETS zlib zlibstatic
++    install(TARGETS zlibstatic
+         RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
+         ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
+         LIBRARY DESTINATION "${INSTALL_LIB_DIR}" )
