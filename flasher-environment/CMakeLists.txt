@@ -39,7 +39,13 @@ MESSAGE("Building for: ${JONCHKI_PLATFORM}")
 
 #----------------------------------------------------------------------------
 
+# Add the Lua interpreter first. It is referenced in all plugins.
 ADD_SUBDIRECTORY(org.lua-lua)
+
+# Add libusb which is a common build requirement for openocd and romloader.
+ADD_SUBDIRECTORY(libusb)
+
+# Add plugins
 ADD_SUBDIRECTORY(com.github.hoelzro-lua-term)
 ADD_SUBDIRECTORY(com.github.keplerproject-luafilesystem)
 ADD_SUBDIRECTORY(com.github.lunarmodules-luaexpat)
