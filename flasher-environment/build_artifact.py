@@ -73,6 +73,35 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
                 'libudev-dev:armhf'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
+            strLib = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'lib',
+                'arm-linux-gnueabihf',
+                'libacl.a'
+            )
+            strLibNew = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'usr',
+                'lib',
+                'arm-linux-gnueabihf',
+                'libacl.a'
+            )
+            if os.path.exists(strLib) is not True:
+                if os.path.exists(strLibNew) is not True:
+                    raise Exception(
+                        'libacl does not exist in the 2 expected locations '
+                        '%s and %s.' % (
+                            strLib,
+                            strLibNew
+                        )
+                    )
+                else:
+                    os.symlink(
+                        strLibNew,
+                        strLib
+                    )
 
             astrCMAKE_COMPILER = [
                 '-DCMAKE_TOOLCHAIN_FILE=%s/cmake/toolchainfiles/toolchain_ubuntu_armhf.cmake' % strCfg_projectFolder
@@ -104,6 +133,35 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
                 'libudev-dev:arm64'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
+            strLib = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'lib',
+                'aarch64-linux-gnu',
+                'libacl.a'
+            )
+            strLibNew = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'usr',
+                'lib',
+                'aarch64-linux-gnu',
+                'libacl.a'
+            )
+            if os.path.exists(strLib) is not True:
+                if os.path.exists(strLibNew) is not True:
+                    raise Exception(
+                        'libacl does not exist in the 2 expected locations '
+                        '%s and %s.' % (
+                            strLib,
+                            strLibNew
+                        )
+                    )
+                else:
+                    os.symlink(
+                        strLibNew,
+                        strLib
+                    )
 
             astrCMAKE_COMPILER = [
                 '-DCMAKE_TOOLCHAIN_FILE=%s/cmake/toolchainfiles/toolchain_ubuntu_arm64.cmake' % strCfg_projectFolder
@@ -135,6 +193,35 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
                 'libudev-dev:riscv64'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
+            strLib = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'lib',
+                'riscv64-linux-gnu',
+                'libacl.a'
+            )
+            strLibNew = os.path.join(
+                strCfg_workingFolder,
+                'packages',
+                'usr',
+                'lib',
+                'riscv64-linux-gnu',
+                'libacl.a'
+            )
+            if os.path.exists(strLib) is not True:
+                if os.path.exists(strLibNew) is not True:
+                    raise Exception(
+                        'libacl does not exist in the 2 expected locations '
+                        '%s and %s.' % (
+                            strLib,
+                            strLibNew
+                        )
+                    )
+                else:
+                    os.symlink(
+                        strLibNew,
+                        strLib
+                    )
 
             astrCMAKE_COMPILER = [
                 '-DCMAKE_TOOLCHAIN_FILE=%s/cmake/toolchainfiles/toolchain_ubuntu_riscv64.cmake' % strCfg_projectFolder
