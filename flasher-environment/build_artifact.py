@@ -47,6 +47,7 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             # Build for the build host.
 
             astrDeb = [
+                'libacl1-dev',
                 'libreadline-dev',
                 'libudev-dev',
                 'pkg-config'
@@ -67,6 +68,7 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             ]
             install.install_host_debs(astrDeb)
             astrDeb = [
+                'libacl1-dev:armhf',
                 'libreadline-dev:armhf',
                 'libudev-dev:armhf'
             ]
@@ -97,6 +99,7 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             ]
             install.install_host_debs(astrDeb)
             astrDeb = [
+                'libacl1-dev:arm64',
                 'libreadline-dev:arm64',
                 'libudev-dev:arm64'
             ]
@@ -127,6 +130,7 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             ]
             install.install_host_debs(astrDeb)
             astrDeb = [
+                'libacl1-dev:riscv64',
                 'libreadline-dev:riscv64',
                 'libudev-dev:riscv64'
             ]
