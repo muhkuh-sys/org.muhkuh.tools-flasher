@@ -85,7 +85,13 @@ def copy_list(strWorkingFolder, strCopyList):
             # Split the line by commata. There should be 2 elements.
             astrArgs = string.split(strLine, ',')
             if len(astrArgs) != 2:
-                raise Exception('Invalid entry in copy list "%s" line %d. Expected one comma.' % (strCopyList, uiLineCnt))
+                raise Exception((
+                    'Invalid entry in copy list "%s" line %d. ' +
+                    'Expected one comma.'
+                ) % (
+                    strCopyList,
+                    uiLineCnt
+                ))
             # Strip whitespace from both arguments.
             strSrc = string.strip(astrArgs[0])
             strDst = string.strip(astrArgs[1])
@@ -136,7 +142,10 @@ def main():
         dest='strCopyList',
         required=False,
         default=None,
-        help='process FILE as a list of SOURCE,DESTINATION entries of files to copy',
+        help=(
+            'process FILE as a list of SOURCE,DESTINATION entries ' +
+            'of files to copy'
+        ),
         metavar='PATH'
     )
     aOptions = tParser.parse_args()
