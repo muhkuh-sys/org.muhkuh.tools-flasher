@@ -22,6 +22,7 @@ MESSAGE("Building for: ${JONCHKI_PLATFORM}")
 ADD_SUBDIRECTORY(org.lua-lua)
 ADD_SUBDIRECTORY(com.github.hoelzro-lua-term)
 ADD_SUBDIRECTORY(com.github.keplerproject-luafilesystem)
+ADD_SUBDIRECTORY(com.github.lunarmodules-luaexpat)
 ADD_SUBDIRECTORY(org.muhkuh.lua-archive)
 ADD_SUBDIRECTORY(org.muhkuh.lua-mhash)
 
