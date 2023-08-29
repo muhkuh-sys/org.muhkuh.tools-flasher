@@ -47,7 +47,9 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             # Build for the build host.
 
             astrDeb = [
-                'libreadline-dev'
+                'libreadline-dev',
+                'libudev-dev',
+                'pkg-config'
             ]
             install.install_host_debs(astrDeb)
 
@@ -59,9 +61,14 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
         elif tPlatform['cpu_architecture'] == 'armhf':
             # Build on linux for raspberry.
 
-            # Create the folders if they do not exist yet.
             astrDeb = [
-                'libreadline-dev:armhf'
+                'dpkg-dev',
+                'pkg-config'
+            ]
+            install.install_host_debs(astrDeb)
+            astrDeb = [
+                'libreadline-dev:armhf',
+                'libudev-dev:armhf'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
 
@@ -84,9 +91,14 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
         elif tPlatform['cpu_architecture'] == 'arm64':
             # Build on linux for raspberry.
 
-            # Create the folders if they do not exist yet.
             astrDeb = [
-                'libreadline-dev:arm64'
+                'dpkg-dev',
+                'pkg-config'
+            ]
+            install.install_host_debs(astrDeb)
+            astrDeb = [
+                'libreadline-dev:arm64',
+                'libudev-dev:arm64'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
 
@@ -109,9 +121,14 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
         elif tPlatform['cpu_architecture'] == 'riscv64':
             # Build on linux for riscv64.
 
-            # Create the folders if they do not exist yet.
             astrDeb = [
-                'libreadline-dev:riscv64'
+                'dpkg-dev',
+                'pkg-config'
+            ]
+            install.install_host_debs(astrDeb)
+            astrDeb = [
+                'libreadline-dev:riscv64',
+                'libudev-dev:riscv64'
             ]
             install.install_foreign_debs(astrDeb, strCfg_workingFolder, strCfg_projectFolder)
 
