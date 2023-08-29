@@ -95,7 +95,9 @@ jobs:
 #      uses: actions/download-artifact@v1
 #      with:
 #        name: targets
-    - name: Build
+    - name: Build environment
+      run: cd flasher-environment && ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+    - name: Build flasher
       run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Pack artifacts
       run: tar cfvz targets/artifacts.tar.gz targets/flasher_cli-*
