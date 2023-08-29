@@ -53,3 +53,10 @@ ADD_SUBDIRECTORY(org.muhkuh.lua-archive)
 ADD_SUBDIRECTORY(org.muhkuh.lua-mhash)
 
 #----------------------------------------------------------------------------
+#
+# Build the openocd shared object. It is a dependency for the romloader plugin.
+#
+
+ADD_SUBDIRECTORY(org.openocd-openocd/external/openocd)
+SET(OPENOCD_SO_INSTALL lua_plugins/openocd)
+ADD_SUBDIRECTORY(org.openocd-openocd/openocd)
