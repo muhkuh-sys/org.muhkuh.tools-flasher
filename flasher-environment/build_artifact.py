@@ -307,7 +307,8 @@ for strPath in astrFolders:
 astrCmd = [
     'cmake',
     '-DCMAKE_INSTALL_PREFIX=""',
-    '-DPRJ_DIR=%s' % strCfg_projectFolder
+    '-DPRJ_DIR=%s' % strCfg_projectFolder,
+    '-DWORKING_DIR=%s' % strCfg_workingFolder
 ]
 astrCmd.extend(astrCMAKE_COMPILER)
 astrCmd.extend(astrCMAKE_PLATFORM)
