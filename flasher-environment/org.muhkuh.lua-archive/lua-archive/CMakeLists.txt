@@ -5,16 +5,9 @@ INCLUDE(ExternalProject)
 # Enable tests (see here for details: http://www.vtk.org/Wiki/CMake/Testing_With_CTest)
 ENABLE_TESTING()
 
-FIND_PACKAGE(SWIG REQUIRED)
-
 SET(EXTERNAL_LIB_DIR "${CMAKE_BINARY_DIR}/install/dev/lib/")
 
-# Add a custom target for the swig runtime for LUA.
-INCLUDE(${CMAKE_HOME_DIRECTORY}/cmake/muhkuh_swig_lua_runtime.cmake)
-
-INCLUDE(${SWIG_USE_FILE})
-
-INCLUDE_DIRECTORIES(${LUA54_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${LUA_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/swig_runtime)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/install/dev/include)
