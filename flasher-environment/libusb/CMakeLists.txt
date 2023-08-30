@@ -25,5 +25,5 @@ ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
         SET(LIBUSB_LIBRARIES ${CMAKE_BINARY_DIR}/install/dev/lib/libusb-1.0.a -ludev -pthread
             CACHE INTERNAL "The libusb libraries to link with for a static build.")
 ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-SET(LIBUSB_INCLUDE_DIR ${CMAKE_BINARY_DIR}/install/dev/include
+SET(LIBUSB_INCLUDE_DIR ${CMAKE_BINARY_DIR}/install/dev/include/libusb-1.0
     CACHE INTERNAL "The libusb include path.")
