@@ -66,13 +66,8 @@ ADD_SUBDIRECTORY(org.openocd-openocd/external/openocd)
 SET(OPENOCD_SO_INSTALL lua_plugins/openocd)
 ADD_SUBDIRECTORY(org.openocd-openocd/openocd)
 
-# Build the netX firmware for the romloader.
-ADD_CUSTOM_TARGET(TARGET_NETX_FIRMWARE ALL
-                  COMMAND "${PYTHON_INTERPRETER}" mbs/mbs
-                  WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}/org.muhkuh.lua-romloader
-                  COMMENT "Build the netX firmware."
-)
 # Build the romloader plugins.
+SET(PLUGINS_SOURCES_DIR "${CMAKE_HOME_DIRECTORY}/org.muhkuh.lua-romloader/targets/plugins")
 SET(TARGET_LIBUSB TARGET_libusb)
 SET(TARGET_LUA TARGET_lua54)
 SET(INSTALL_DIR_LUA_MODULES lua)
