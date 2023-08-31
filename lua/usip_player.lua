@@ -153,6 +153,35 @@ tParserCommandUsip:flag('--no_reset'
 ):target('fDisableReset'):default(false)
 
 
+strWriteSipsHelp = [[
+    write APP and COM secure info page (SIP) based on default values
+    the default values can be modified with the data from an USIP file
+    the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+]]
+local tParserWriteSips = tParser:command('write_sips ws', strWriteSipsHelp):target('fCommandWriteSips')
+tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+tParserWriteSips:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserWriteSips:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserWriteSips:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+tParserWriteSips:flag('--verify_sig'):description(
+    "Verify the signature of an usip image against a netX, if the signature does not match, cancel the process!"
+):target('fVerifySigEnable')
+-- maybe keep option '--_no_verify'
+tParserWriteSips:flag('--no_verify'):description(
+    "Do not verify the content of an usip image against a netX SIP content after writing the usip."
+):target('fVerifyContentDisabled')
+tParserWriteSips:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+
+
 -- NXTFLASHER-603
 -- NXTFLASHER-550
 
@@ -2135,8 +2164,113 @@ function verify_content(
     return uVerifyResult, strErrorMsg
 end
 
+function readSIPviaFLash(tPlugin, strSipPage, strSecureOption)
+    local iBus
+    local iUnit
+    local iChipSelect
+    local aAttr
+    local ulOffset = 0x0
+    local ulSize = 0x1000
+    local strReadData
+    local strMsg
+    local flasher_path = "netx/"
+
+    if strSecureOption == nil then
+        strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+    end
+
+    if strSipPage == "CAL" then
+        iBus = 2
+        iUnit = 0
+        iChipSelect = 1
+    elseif strSipPage == "COM" then
+        iBus = 2
+        iUnit = 1
+        iChipSelect = 1
+    elseif strSipPage == "APP" then
+        iBus = 2
+        iUnit = 2
+        iChipSelect = 1
+    end
+
+    aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil, strSecureOption)
+    -- check if the selected flash is present
+    fOk = tFlasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+    if not fOk then
+        strMsg = "No Flash connected!"
+    else
+        strReadData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
+        if strReadData == nil then
+        end
+    end
+    return strReadData, strMsg
+end
+
+
+-- read the COM SIP and extract the SIP protection cookie
+function readSipProtectionCookie(tPlugin)
+    local strSipProtectionCookie
+    local strComSipData
+    local strMsg
+
+    local fComSipStringHandle
+    strComSipData, strMsg = readSIPPage(tPlugin, "COM")
+
+    if strComSipData ~= nil then
+        fComSipStringHandle = tFlasherHelper.StringHandle(strComSipData)
+        strSipProtectionCookie = fComSipStringHandle:read(0x10)
+    end
+
+    return strSipProtectionCookie, strMsg
+end
+
+function check_sip_protection_cookie_via_flash(tPlugin)
+
+    local fCookieSet
+    local strSipProtectionCookie
+    -- sip protection cookie
+    local strSipProtectionCookieLocked = string.char(0x8b, 0x42, 0x3b, 0x75, 0xe2, 0x63, 0x25, 0x62, 0x8a, 0x1e, 0x31, 0x6b, 0x28, 0xb4, 0xd7, 0x03)
+    local strMsg
+
+    -- first check if the SIP protection cookie is set
+    strSipProtectionCookie, strMsg = readSipProtectionCookie(tPlugin)
+    if strSipProtectionCookie ~= nil then
+        if strSipProtectionCookie == strSipProtectionCookieLocked then
+            fCookieSet = true
+        else
+            fCookieSet = false
+        end
+    end
+    return fCookieSet, strMsg
+end
+
+-- write APP and COM secure info page (SIP) based on default values
+-- the default values can be modified with the data from an USIP file
+-- the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+-- * copied from: CAL SIP offset 2192 (0x890) size: 48 (0x30)
+-- * copied to:   APP SIP offset 2048 (0x800) size: 48 (0x30)
+function writeAllSips(tPlugin, tUsipDataList, tUsipPathList, tUsipConfigDict)
+    local fResult = true
+    local fCookieSet
+    local strMsg
+
+    -- first check if the SIP protection cookie is set
+    fCookieSet, strMsg = check_sip_protection_cookie_via_flash(tPlugin)
+    if fCookieSet == nil then
+        fResult = false
+        tLog.error( "Could not read SIP protection cookie: %s", strMsg)
+    else
+        if fCookieSet then
+            fResult = false
+            tLog.error( "SIP protection cookie is set. End command.")
+        end
+    end
+
+    return fResult
+end
+
 -- print args
-printArgs(tArgs, tLog)
+printArgs(tArgs)
 local strHelperFileStatus = tHelperFiles.getStatusString()
 tLog.info(strHelperFileStatus)
 tLog.info("")
@@ -2522,7 +2656,19 @@ if tArgs.fCommandUsipSelected then
         strResetBootswitchPath,
         strResetReadSipPath
     )
-
+--------------------------------------------------------------------------
+-- WRITE SIP COMMAND
+--------------------------------------------------------------------------
+elseif tArgs.fCommandWriteSips then
+    tLog.info("######################################")
+    tLog.info("# RUNNING WRITE SIP COMMAND          #")
+    tLog.info("######################################")
+    fFinalResult = writeAllSips(
+        tPlugin,
+        tUsipDataList,
+        tUsipPathList,
+        tUsipConfigDict
+    )
 --------------------------------------------------------------------------
 -- Disable Security COMMAND
 --------------------------------------------------------------------------
