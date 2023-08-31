@@ -1,7 +1,5 @@
 PROJECT("bzip2")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.0.8")
 
 

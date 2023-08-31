@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.7)
 
 PROJECT("libmhash")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "0.9.9.9")
 
 

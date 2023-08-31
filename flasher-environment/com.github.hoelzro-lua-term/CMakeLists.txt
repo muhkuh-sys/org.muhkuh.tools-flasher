@@ -2,11 +2,10 @@ cmake_minimum_required(VERSION 3.2.3)
 
 PROJECT("lua-term")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "0.7")
 SET(VERSION_PACKAGE  "5")
 SET(PROJECT_VERSION  "${VERSION_EXTERNAL}.${VERSION_PACKAGE}")
+
 
 #----------------------------------------------------------------------------
 #

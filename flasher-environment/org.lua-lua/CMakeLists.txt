@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.7)
 
-INCLUDE(ExternalProject)
-
 SET(LUA_VERSION "5.4.6")
 
 #----------------------------------------------------------------------------

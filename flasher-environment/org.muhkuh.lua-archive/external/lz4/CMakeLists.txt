@@ -1,7 +1,5 @@
 PROJECT("lz4")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.9.4")
 
 

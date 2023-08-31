@@ -1,7 +1,5 @@
 PROJECT("zstd")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.5.5")
 
 

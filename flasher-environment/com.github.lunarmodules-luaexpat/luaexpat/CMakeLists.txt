@@ -1,7 +1,5 @@
 PROJECT("luaexpat")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.5.0")
 
 SET(PRJ_CMAKE_ARGS "")

@@ -1,10 +1,7 @@
-cmake_minimum_required(VERSION 3.2.3)
-
 PROJECT("luafilesystem")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.8.0")
+
 
 #----------------------------------------------------------------------------
 #

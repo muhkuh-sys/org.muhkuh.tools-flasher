@@ -1,7 +1,5 @@
 PROJECT("libarchive")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "3.6.2")
 
 

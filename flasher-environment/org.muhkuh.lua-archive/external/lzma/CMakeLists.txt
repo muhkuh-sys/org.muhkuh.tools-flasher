@@ -1,7 +1,5 @@
 PROJECT("lzma")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "5.4.3")
 
 

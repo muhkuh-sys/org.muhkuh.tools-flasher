@@ -1,7 +1,5 @@
 PROJECT("expat")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "2.5.0")
 
 

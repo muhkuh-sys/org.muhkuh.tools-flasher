@@ -37,6 +37,8 @@ SET(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install")
 INCLUDE(cmake/platform.cmake)
 MESSAGE("Building for: ${JONCHKI_PLATFORM}")
 
+INCLUDE(ExternalProject)
+
 # Add a custom target for the swig runtime for LUA.
 FIND_PACKAGE(SWIG REQUIRED)
 INCLUDE(${SWIG_USE_FILE})

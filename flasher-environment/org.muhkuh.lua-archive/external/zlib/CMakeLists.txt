@@ -1,7 +1,5 @@
 PROJECT("zlib")
 
-INCLUDE(ExternalProject)
-
 SET(VERSION_EXTERNAL "1.2.13")
 
 # Enable tests (see here for details: http://www.vtk.org/Wiki/CMake/Testing_With_CTest)

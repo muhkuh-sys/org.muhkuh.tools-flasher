@@ -3,7 +3,6 @@ PROJECT("libusb")
 SET(VERSION_EXTERNAL "1.0.24")
 SET(VERSION_EXTERNAL_POST "")
 
-INCLUDE(ExternalProject)
 
 #----------------------------------------------------------------------------
 #

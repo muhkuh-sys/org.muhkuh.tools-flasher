@@ -1,7 +1,5 @@
 PROJECT("lua-archive")
 
-INCLUDE(ExternalProject)
-
 # Enable tests (see here for details: http://www.vtk.org/Wiki/CMake/Testing_With_CTest)
 ENABLE_TESTING()
 
