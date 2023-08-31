@@ -3,6 +3,7 @@
 from cmake import cli_args
 from cmake import install
 
+import xml.etree.ElementTree
 import os
 import subprocess
 
@@ -302,13 +303,23 @@ for strPath in astrFolders:
 
 # ---------------------------------------------------------------------------
 #
-# Build the externals.
+# Read the project version from the "setup.xml" file in the root folder.
+#
+tSetupXml = xml.etree.ElementTree.parse('../setup.xml')
+strMbsProjectVersion = tSetupXml.find('project_version').text
+print('Project version = %s' % strMbsProjectVersion)
+
+
+# ---------------------------------------------------------------------------
+#
+# Build the project.
 #
 astrCmd = [
     'cmake',
     '-DCMAKE_INSTALL_PREFIX=""',
     '-DPRJ_DIR=%s' % strCfg_projectFolder,
-    '-DWORKING_DIR=%s' % strCfg_workingFolder
+    '-DWORKING_DIR=%s' % strCfg_workingFolder,
+    '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion
 ]
 astrCmd.extend(astrCMAKE_COMPILER)
 astrCmd.extend(astrCMAKE_PLATFORM)
