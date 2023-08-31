@@ -8,7 +8,6 @@ local M = {}
 --
 -----------------------------------------------------------------------------
 
-local bit = require 'bit'
 local class = require 'pl.class'
 
 -- exit code for detect_netx
@@ -339,13 +338,13 @@ local function netx90_disable_uart_pulldown_resistors(tPlugin)
 	local addr_asic_ctrl_access_key = 0xff4012c0
 
 	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
-	val_pad_ctrl_uart_rxd = bit.band(val_pad_ctrl_uart_rxd, 0xef)
+	val_pad_ctrl_uart_rxd = val_pad_ctrl_uart_rxd & 0xef
 	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_rxd, val_pad_ctrl_uart_rxd)
 
 	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
-	val_pad_ctrl_uart_txd = bit.band(val_pad_ctrl_uart_txd, 0xef)
+	val_pad_ctrl_uart_txd = val_pad_ctrl_uart_txd & 0xef
 	val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_txd, val_pad_ctrl_uart_txd)
@@ -505,8 +504,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 		-- ignore the CAL page.
 		--strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
 
-		local fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
-		local fComCopyOk = bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0
+		local fComSipOk = (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0
+		local fComCopyOk = (ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0
 		if fComSipOk or fComCopyOk then
 			strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
 		end
@@ -521,8 +520,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			print("The COM SIP is not available.")
 		end
 
-		local fAppSipOk = bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0
-		local fAppCopyOk = bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0
+		local fAppSipOk = (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0
+		local fAppCopyOk = (ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0
 		if fAppSipOk or fAppCopyOk then
 			strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 		end
@@ -776,7 +775,7 @@ function M.detect_secure_boot_mode(aArgs)
 											local bSecureBootCOM = tRes.strComSipData:byte(OFF_COM_SIP_PROTECTION_FLAGS)
 											-- printf("COM secure boot options bit 0-7: 0x%02x", bSecureBootCOM)
 											fSecureBootCOM = (
-                        bit.band(bSecureBootCOM, MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
+                        (bSecureBootCOM & MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
                         MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT
                       )
 										end
@@ -785,7 +784,7 @@ function M.detect_secure_boot_mode(aArgs)
 											local bSecureBootAPP = tRes.strAppSipData:byte(OFF_APP_SIP_PROTECTION_FLAGS)
 											-- printf("APP secure boot options bit 0-7: 0x%02x", bSecureBootAPP)
 											fSecureBootAPP = (
-                        bit.band(bSecureBootAPP, MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
+                        (bSecureBootAPP & MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
                         MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT
                       )
 										end
@@ -934,7 +933,7 @@ function M.reset_netx_via_watchdog(aArgs, tPlugin)
 				-- check if it is disabled
 				ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
 				ulVal = ulVal % 2
-				--ulVal = bit.band(ulVal, 1)
+				--ulVal = ulVal & 1
 				if ulVal ~= 0 then
 					print("Warning: cannot disable watchdog on netIOL")
 				end
@@ -998,21 +997,21 @@ function M.switch_endian(ulValue)
     local mskedVal
     local shiftedVal
 
-    mskedVal = bit.band(ulValue, 0x000000ff)
-    shiftedVal = bit.lshift(mskedVal, 24)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+    mskedVal = ulValue & 0x000000ff
+    shiftedVal = mskedVal << 24
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0x0000ff00)
-    shiftedVal = bit.lshift(mskedVal, 8)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0x0000ff00
+    shiftedVal = mskedVal << 8
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0x00ff0000)
-    shiftedVal = bit.rshift(mskedVal, 8)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0x00ff0000
+    shiftedVal = mskedVal >> 8
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0xff000000)
-    shiftedVal = bit.rshift(mskedVal, 24)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0xff000000
+    shiftedVal = mskedVal >> 24
+    ulNewValue = ulNewValue | shiftedVal
 
     return ulNewValue
 end
