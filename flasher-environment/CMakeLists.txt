@@ -58,6 +58,13 @@ ExternalProject_Add(TARGET_flasher
 )
 
 
+#----------------------------------------------------------------------------
+
+ADD_SUBDIRECTORY(com.github.lunarmodules-Penlight)
+ADD_SUBDIRECTORY(com.github.moteus-lua-log)
+ADD_SUBDIRECTORY(com.github.mpeterv-argparse)
+ADD_SUBDIRECTORY(com.github.tieske-date)
+ADD_SUBDIRECTORY(org.muhkuh.tools-muhkuh_base_cli)
 
 #----------------------------------------------------------------------------
 
