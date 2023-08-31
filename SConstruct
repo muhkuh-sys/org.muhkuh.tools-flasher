@@ -719,8 +719,7 @@ if fBuildIsFull==True:
         'lua/lua/verify_signature.lua',
         )
 
-
-    tArcList.AddFiles('demo/',
+    tArcList.AddFiles('',
         'lua/cli_flash.lua',
         'lua/usip_player.lua',
         'lua/demo_getBoardInfo.lua',
@@ -739,6 +738,7 @@ if fBuildIsFull==True:
         'lua/identify_parflash.lua',
         'lua/identify_serflash.lua',
         'lua/is_erased_parflash.lua',
+        'lua/muhkuh_cli_init.lua',
         'lua/netx90mpw_iflash.lua',
         'lua/read_bootimage.lua',
         'lua/read_bootimage_intflash0.lua',
@@ -746,10 +746,8 @@ if fBuildIsFull==True:
         'lua/read_complete_flash.lua',
         'lua/wfp.lua',
         'lua/wfp_verify.lua',
-        tDemoShowEraseAreas)
-
-    tArcList.AddFiles('',
         lua_flasher_version,
+        tDemoShowEraseAreas,
         'jonchki/%s.%s/install.lua' % (strGroup, strModule))
 
     strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
