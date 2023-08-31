@@ -306,7 +306,13 @@ for strPath in astrFolders:
 #
 # Read the project version from the "setup.xml" file in the root folder.
 #
-tSetupXml = xml.etree.ElementTree.parse('../setup.xml')
+tSetupXml = xml.etree.ElementTree.parse(
+    os.path.join(
+        strCfg_projectFolder,
+        '..',
+        'setup.xml'
+    )
+)
 strMbsProjectVersion = tSetupXml.find('project_version').text
 print('Project version = %s' % strMbsProjectVersion)
 
@@ -319,7 +325,10 @@ astrArguments = [
     sys.executable,
     'mbs/mbs'
 ]
-subprocess.check_call(astrArguments, cwd=os.path.join(strCfg_projectFolder, '..'))
+subprocess.check_call(
+    astrArguments,
+    cwd=os.path.join(strCfg_projectFolder, '..')
+)
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +339,10 @@ astrArguments = [
     sys.executable,
     'mbs/mbs'
 ]
-subprocess.check_call(astrArguments, cwd=os.path.join(strCfg_projectFolder, 'org.muhkuh.lua-romloader'))
+subprocess.check_call(
+    astrArguments,
+    cwd=os.path.join(strCfg_projectFolder, 'org.muhkuh.lua-romloader')
+)
 
 
 # ---------------------------------------------------------------------------
