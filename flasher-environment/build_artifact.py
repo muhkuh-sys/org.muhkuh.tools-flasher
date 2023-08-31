@@ -6,6 +6,7 @@ from cmake import install
 import xml.etree.ElementTree
 import os
 import subprocess
+import sys
 
 
 tPlatform = cli_args.parse()
@@ -308,6 +309,28 @@ for strPath in astrFolders:
 tSetupXml = xml.etree.ElementTree.parse('../setup.xml')
 strMbsProjectVersion = tSetupXml.find('project_version').text
 print('Project version = %s' % strMbsProjectVersion)
+
+
+# ---------------------------------------------------------------------------
+#
+# Build the flasher netX code.
+#
+astrArguments = [
+    sys.executable,
+    'mbs/mbs'
+]
+subprocess.check_call(astrArguments, cwd=os.path.join(strCfg_projectFolder, '..'))
+
+
+# ---------------------------------------------------------------------------
+#
+# Build the romloader netX code.
+#
+astrArguments = [
+    sys.executable,
+    'mbs/mbs'
+]
+subprocess.check_call(astrArguments, cwd=os.path.join(strCfg_projectFolder, 'org.muhkuh.lua-romloader'))
 
 
 # ---------------------------------------------------------------------------

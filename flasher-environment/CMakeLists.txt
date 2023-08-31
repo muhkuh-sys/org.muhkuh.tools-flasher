@@ -49,11 +49,6 @@ INCLUDE(cmake/muhkuh_swig_lua_runtime.cmake)
 # Build and extract the flasher.
 #
 SET(FLASHER_ARTIFACT "${CMAKE_HOME_DIRECTORY}/../targets/jonchki/repository/org/muhkuh/tools/flasher/${MBS_PROJECT_VERSION}/lua5.4-flasher-${MBS_PROJECT_VERSION}.zip")
-# Add a custom command for the netX USB firmware.
-ADD_CUSTOM_COMMAND(OUTPUT ${FLASHER_ARTIFACT}
-                   COMMAND "${PYTHON_INTERPRETER}" mbs/mbs
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
-                   COMMENT "Build the flasher artifact.")
 ExternalProject_Add(TARGET_flasher
                     URL ${FLASHER_ARTIFACT}
                     SOURCE_DIR "${CMAKE_BINARY_DIR}/install"
