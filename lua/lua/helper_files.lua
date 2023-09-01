@@ -79,8 +79,8 @@ atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev5-0-gae7d9fe11ca0:reV",
-        version_offset = 0x1D70
+        version = "Ver:GITv1.0.0-dev6-0-gc3bd1bac5a05:reV",
+        version_offset = 0x1044
     },
     
     {
@@ -93,8 +93,8 @@ atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",  
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev3-0-g584ea6170547:reV",
-        version_offset = 0x93C
+        version = "Ver:GITv1.0.0-dev4-0-gc2509531c238+:reV",
+        version_offset = 0xC80
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
