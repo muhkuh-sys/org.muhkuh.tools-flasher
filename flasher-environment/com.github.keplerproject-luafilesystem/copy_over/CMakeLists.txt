@@ -21,15 +21,6 @@ IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 	SET_PROPERTY(TARGET TARGET_luafilesystem PROPERTY LINK_FLAGS "-static -static-libgcc -static-libstdc++")
 ENDIF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 
-# Install the lua module.
-INSTALL(TARGETS TARGET_luafilesystem
-        EXPORT EXPORT_package
-        LIBRARY DESTINATION lua_plugins
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
-
-
 # Add tests for this module.
 IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 	# Here are the MinGW specific tests.

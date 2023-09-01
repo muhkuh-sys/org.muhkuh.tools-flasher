@@ -44,18 +44,14 @@ FIND_PACKAGE(SWIG REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 INCLUDE(cmake/muhkuh_swig_lua_runtime.cmake)
 
+SET(FLASHER_PACKAGE_DIR flasher_cli-${MBS_PROJECT_VERSION})
+
 #----------------------------------------------------------------------------
 #
-# Build and extract the flasher.
+# Install the flasher.
 #
-SET(FLASHER_ARTIFACT "${CMAKE_HOME_DIRECTORY}/../targets/jonchki/repository/org/muhkuh/tools/flasher/${MBS_PROJECT_VERSION}/lua5.4-flasher-${MBS_PROJECT_VERSION}.zip")
-ExternalProject_Add(TARGET_flasher
-                    URL ${FLASHER_ARTIFACT}
-                    SOURCE_DIR "${CMAKE_BINARY_DIR}/install"
-                    CONFIGURE_COMMAND true
-                    BUILD_COMMAND true
-                    INSTALL_COMMAND true
-)
+INSTALL(DIRECTORY "${CMAKE_HOME_DIRECTORY}/../targets/testbench/"
+        DESTINATION ${FLASHER_PACKAGE_DIR})
 
 
 #----------------------------------------------------------------------------
@@ -87,12 +83,32 @@ ADD_SUBDIRECTORY(org.muhkuh.lua-mhash)
 #
 
 ADD_SUBDIRECTORY(org.openocd-openocd/external/openocd)
-SET(OPENOCD_SO_INSTALL lua_plugins/openocd)
+SET(OPENOCD_SO_INSTALL ${FLASHER_PACKAGE_DIR}/lua_plugins/openocd)
 ADD_SUBDIRECTORY(org.openocd-openocd/openocd)
 
 # Build the romloader plugins.
 SET(PLUGINS_SOURCES_DIR "${CMAKE_HOME_DIRECTORY}/org.muhkuh.lua-romloader/targets/plugins")
 SET(TARGET_LIBUSB TARGET_libusb)
 SET(TARGET_LUA TARGET_lua54)
-SET(INSTALL_DIR_LUA_MODULES lua_plugins)
+SET(INSTALL_DIR_LUA_MODULES ${FLASHER_PACKAGE_DIR}/lua_plugins)
 ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
+
+
+#----------------------------------------------------------------------------
+#
+# Build a package for the selected platform.
+#
+SET(CPACK_OUTPUT_FILE_PREFIX ${CMAKE_BINARY_DIR}/..)
+SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
+SET(CPACK_PACKAGE_FILE_NAME "flasher_cli-${MBS_PROJECT_VERSION}-${JONCHKI_PLATFORM}")
+
+# Set the archive format.
+IF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+	# Build a "zip" archive on Windows platforms.
+	SET(CPACK_GENERATOR "ZIP")
+ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+	# Build a "tar.gz" archive on Linux platforms.
+	SET(CPACK_GENERATOR "TXZ")
+ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+
+INCLUDE(CPack)

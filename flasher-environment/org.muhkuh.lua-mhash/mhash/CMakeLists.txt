@@ -37,7 +37,7 @@ IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 ENDIF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 
 # Install the lua module.
-INSTALL(TARGETS TARGET_module_mhash_lua DESTINATION lua_plugins)
+INSTALL(TARGETS TARGET_module_mhash_lua DESTINATION ${FLASHER_PACKAGE_DIR}/lua_plugins)
 
 # Add tests for this module.
 IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))

@@ -21,17 +21,6 @@ IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 	SET_PROPERTY(TARGET TARGET_core PROPERTY LINK_FLAGS "-static -static-libgcc -static-libstdc++")
 ENDIF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 
-# Install the lua module.
-INSTALL(TARGETS TARGET_core
-        EXPORT EXPORT_package
-        LIBRARY DESTINATION lua_plugins/term
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
-
-INSTALL(FILES term/colors.lua term/cursor.lua term/init.lua
-        DESTINATION lua/term)
-
 # Add tests for this module.
 IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))
 	# Here are the MinGW specific tests.

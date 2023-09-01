@@ -14,5 +14,9 @@ ExternalProject_Add(TARGET_penlight
                     URL_HASH SHA1=0897cebc12325ad5eebe1eeaa1c211dde414bffc
                     CONFIGURE_COMMAND true
                     BUILD_COMMAND true
-                    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/penlight/src/TARGET_penlight/lua ${CMAKE_BINARY_DIR}/install/lua
+                    INSTALL_COMMAND true
+
 )
+
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/penlight/src/TARGET_penlight/lua
+        DESTINATION ${FLASHER_PACKAGE_DIR})

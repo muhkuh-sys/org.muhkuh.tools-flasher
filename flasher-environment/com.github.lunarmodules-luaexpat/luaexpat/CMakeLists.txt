@@ -21,16 +21,23 @@ IF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	LIST(APPEND PRJ_CMAKE_ARGS "-DTEST_SCRIPT_FOLDER=${CMAKE_HOME_DIRECTORY}/cmake/tests")
 ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
-LIST(APPEND PRJ_CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install")
 LIST(APPEND PRJ_CMAKE_ARGS "-DPYTHON_INTERPRETER=${PYTHON_INTERPRETER}")
 
 ExternalProject_Add(TARGET_luaexpat
-                    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/luaexpat-${VERSION_EXTERNAL}
+                    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/luaexpat
                     URL ${CMAKE_CURRENT_SOURCE_DIR}/luaexpat-${VERSION_EXTERNAL}.tar.gz
                     URL_HASH SHA1=ab282414ecb34487c6688a721a570f92541319da
-                    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/copy_over ${CMAKE_CURRENT_BINARY_DIR}/luaexpat-${VERSION_EXTERNAL}/src/TARGET_luaexpat
+                    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/copy_over ${CMAKE_CURRENT_BINARY_DIR}/luaexpat/src/TARGET_luaexpat
                     CMAKE_ARGS ${PRJ_CMAKE_ARGS}
                     TEST_BEFORE_INSTALL 1
-                    TEST_COMMAND pwd && ${CMAKE_MAKE_PROGRAM} test
-                    INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
+                    TEST_COMMAND ${CMAKE_MAKE_PROGRAM} test
+                    INSTALL_COMMAND true
 )
+
+SET(SRC_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/luaexpat/src/TARGET_luaexpat")
+SET(BLD_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/luaexpat/src/TARGET_luaexpat-build")
+
+INSTALL(FILES ${BLD_FOLDER}/lxp${CMAKE_SHARED_LIBRARY_SUFFIX}
+        DESTINATION ${FLASHER_PACKAGE_DIR}/lua_plugins)
+INSTALL(FILES ${SRC_FOLDER}/src/lxp/lom.lua ${SRC_FOLDER}/src/lxp/threat.lua ${SRC_FOLDER}/src/lxp/totable.lua
+        DESTINATION ${FLASHER_PACKAGE_DIR}/lua/lxp)

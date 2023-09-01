@@ -22,17 +22,26 @@ IF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 LIST(APPEND SUB_CMAKE_ARGS "-DLUA_LIBRARIES=${LUA_LIBRARIES}")
 LIST(APPEND SUB_CMAKE_ARGS "-DLUA_INCLUDE_DIR=${LUA_INCLUDE_DIR}")
-LIST(APPEND SUB_CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 LIST(APPEND SUB_CMAKE_ARGS "-DPYTHON_INTERPRETER=${PYTHON_INTERPRETER}")
 LIST(APPEND SUB_CMAKE_ARGS "-DTEST_SCRIPT_FOLDER=${CMAKE_HOME_DIRECTORY}/cmake/tests")
 
 ExternalProject_Add(TARGET_lua-term
-                    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/lua-term-${VERSION_EXTERNAL}
+                    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/lua-term
                     URL ${CMAKE_CURRENT_SOURCE_DIR}/lua-term-0.07.tar.gz
                     URL_HASH SHA1=c0e8fc9054e784fb10af9dca015f713442402833
                     DEPENDS TARGET_lua54
-                    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/copy-over ${CMAKE_CURRENT_BINARY_DIR}/lua-term-${VERSION_EXTERNAL}/src/TARGET_lua-term
+                    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/copy-over ${CMAKE_CURRENT_BINARY_DIR}/lua-term/src/TARGET_lua-term
                     CMAKE_ARGS ${SUB_CMAKE_ARGS}
                     TEST_COMMAND make test
-                    INSTALL_COMMAND make install
+                    INSTALL_COMMAND true
 )
+
+SET(SRC_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/lua-term/src/TARGET_lua-term")
+SET(BLD_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/lua-term/src/TARGET_lua-term-build")
+
+# Install the lua module.
+INSTALL(FILES ${BLD_FOLDER}/core${CMAKE_SHARED_LIBRARY_SUFFIX}
+        DESTINATION ${FLASHER_PACKAGE_DIR}/lua_plugins/term)
+
+INSTALL(FILES ${SRC_FOLDER}/term/colors.lua ${SRC_FOLDER}/term/cursor.lua ${SRC_FOLDER}/term/init.lua
+        DESTINATION ${FLASHER_PACKAGE_DIR}/lua/term)

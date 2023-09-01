@@ -371,6 +371,6 @@ subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, e
 
 astrCmd = [
     strMake,
-    'install'
+    'install', 'package'
 ]
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)

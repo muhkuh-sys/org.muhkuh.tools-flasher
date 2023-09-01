@@ -33,10 +33,13 @@ ExternalProject_Add(TARGET_lua54
                     INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
 )
 
-IF(${JONCHKI_PLATFORM_DIST_ID} STREQUAL "windows")
-	SET(LUA_LIBRARIES      "${CMAKE_BINARY_DIR}/install/lua5.4.dll"   CACHE INTERNAL "The complete path to the lua5.4 library.")
-ELSE(${JONCHKI_PLATFORM_DIST_ID} STREQUAL "windows")
-	SET(LUA_LIBRARIES      "${CMAKE_BINARY_DIR}/install/lua5.4.so"    CACHE INTERNAL "The complete path to the lua5.4 library.")
-ENDIF(${JONCHKI_PLATFORM_DIST_ID} STREQUAL "windows")
+SET(SRC_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/lua/src/TARGET_lua54")
+SET(BLD_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/lua/src/TARGET_lua54-build")
 
+INSTALL(PROGRAMS ${BLD_FOLDER}/lua5.4${CMAKE_EXECUTABLE_SUFFIX}
+        DESTINATION ${FLASHER_PACKAGE_DIR})
+INSTALL(FILES ${BLD_FOLDER}/lua5.4${CMAKE_SHARED_LIBRARY_SUFFIX}
+        DESTINATION ${FLASHER_PACKAGE_DIR})
+
+SET(LUA_LIBRARIES    "${CMAKE_CURRENT_BINARY_DIR}/lua/src/TARGET_lua54-build/lua5.4${CMAKE_SHARED_LIBRARY_SUFFIX}"  CACHE INTERNAL "The complete path to the lua5.4 library.")
 SET(LUA_INCLUDE_DIR  "${CMAKE_BINARY_DIR}/install/dev/include/lua5.4"  CACHE INTERNAL "The include folder for the lua5.4 library.")

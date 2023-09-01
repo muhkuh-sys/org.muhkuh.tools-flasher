@@ -36,15 +36,6 @@ SET_TARGET_PROPERTIES(TARGET_luaexpat PROPERTIES PREFIX "" OUTPUT_NAME "lxp")
 
 #-----------------------------------------------------------------------------
 #
-# Install the LUA modules.
-#
-INSTALL(TARGETS TARGET_luaexpat
-        LIBRARY DESTINATION lua_plugins)
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/lxp/lom.lua ${CMAKE_CURRENT_SOURCE_DIR}/src/lxp/threat.lua ${CMAKE_CURRENT_SOURCE_DIR}/src/lxp/totable.lua
-        DESTINATION lua/lxp/)
-
-#-----------------------------------------------------------------------------
-#
 # Add tests for the modules.
 #
 IF((${CMAKE_SYSTEM_NAME} STREQUAL "Windows") AND (${CMAKE_COMPILER_IS_GNUCC}))

@@ -14,5 +14,8 @@ ExternalProject_Add(TARGET_date
                     URL_HASH SHA1=8db5e32b67505e78d9dbb2e7931d215a3fce9ff8
                     CONFIGURE_COMMAND true
                     BUILD_COMMAND true
-                    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/date/src/TARGET_date/src/date.lua ${CMAKE_BINARY_DIR}/install/lua/
+                    INSTALL_COMMAND true
 )
+
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/date/src/TARGET_date/src/date.lua
+        DESTINATION ${FLASHER_PACKAGE_DIR}/lua)
