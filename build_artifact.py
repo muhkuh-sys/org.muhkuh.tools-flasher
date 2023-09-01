@@ -25,6 +25,7 @@ strCfg_projectFolder = os.path.dirname(os.path.realpath(__file__))
 # written there.
 strCfg_workingFolder = os.path.join(
     strCfg_projectFolder,
+    'flasher-environment',
     'build',
     tPlatform['platform_id']
 )
@@ -309,7 +310,6 @@ for strPath in astrFolders:
 tSetupXml = xml.etree.ElementTree.parse(
     os.path.join(
         strCfg_projectFolder,
-        '..',
         'setup.xml'
     )
 )
@@ -327,7 +327,7 @@ astrArguments = [
 ]
 subprocess.check_call(
     astrArguments,
-    cwd=os.path.join(strCfg_projectFolder, '..')
+    cwd=strCfg_projectFolder
 )
 
 
@@ -341,7 +341,11 @@ astrArguments = [
 ]
 subprocess.check_call(
     astrArguments,
-    cwd=os.path.join(strCfg_projectFolder, 'org.muhkuh.lua-romloader')
+    cwd=os.path.join(
+        strCfg_projectFolder,
+        'flasher-environment',
+        'org.muhkuh.lua-romloader'
+    )
 )
 
 
@@ -349,16 +353,20 @@ subprocess.check_call(
 #
 # Build the project.
 #
+strCmakeFolder = os.path.join(
+    strCfg_projectFolder,
+    'flasher-environment'
+)
 astrCmd = [
     'cmake',
     '-DCMAKE_INSTALL_PREFIX=""',
-    '-DPRJ_DIR=%s' % strCfg_projectFolder,
+    '-DPRJ_DIR=%s' % strCmakeFolder,
     '-DWORKING_DIR=%s' % strCfg_workingFolder,
     '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion
 ]
 astrCmd.extend(astrCMAKE_COMPILER)
 astrCmd.extend(astrCMAKE_PLATFORM)
-astrCmd.append(strCfg_projectFolder)
+astrCmd.append(strCmakeFolder)
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)
 
 astrCmd = [
