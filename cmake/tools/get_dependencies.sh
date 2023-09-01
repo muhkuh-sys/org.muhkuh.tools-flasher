@@ -18,6 +18,7 @@ done
 # conflict with the compiler builtins.
 find . -name "libc[._]*" -delete
 find . -name "libpthread.*" -delete
+find . -name "libdl[-.]*" -delete
 find . -name "stdio.h" -delete
 find . -name "math.h" -delete
 find . -name "signal.h" -delete
