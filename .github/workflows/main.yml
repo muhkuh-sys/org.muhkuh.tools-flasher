@@ -59,28 +59,26 @@ jobs:
           distribution-id: ubuntu
           distribution-version: "20.04"
           cpu-architecture: arm64
-
-# Do not build for Ubuntu 22.04 yet. There is no matching romloader artifact at the moment.
-#        - name: Ubuntu 22.04 x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: x86_64
-#        - name: Ubuntu 22.04 armhf
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: armhf
-#        - name: Ubuntu 22.04 arm64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: arm64
-#        - name: Ubuntu 22.04 riscv64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: riscv64
+        - name: Ubuntu 22.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 22.04 armhf
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: armhf
+        - name: Ubuntu 22.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 22.04 riscv64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: riscv64
     container: ${{ matrix.platform.image }}
     steps:
     - name: Checkout repository
