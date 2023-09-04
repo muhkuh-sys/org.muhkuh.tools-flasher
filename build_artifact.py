@@ -248,6 +248,11 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
     elif tPlatform['distribution_id'] == 'windows':
         # Cross build on linux for windows.
 
+        astrDeb = [
+            'pkg-config'
+        ]
+        install.install_host_debs(astrDeb)
+
         if tPlatform['cpu_architecture'] == 'x86':
             # Build for 32bit windows.
             astrCMAKE_COMPILER = [
