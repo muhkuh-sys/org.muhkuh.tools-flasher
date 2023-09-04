@@ -187,7 +187,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 	
     if fResult==true then 
         -- check helper signatures
-        fResult, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+        fResult, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
         if fResult ~= true then 
             tLog.error(strMsg or "Failed to verify the signatures of the helper files")
             fResult = false
@@ -502,7 +502,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 
             if tPlugin then
                 -- check helper signatures
-                fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
                 
                 if fOk ~= true then 
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
@@ -898,7 +898,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
             else
             
                 -- check helper signatures
-                fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
                 
                 if fOk ~= true then 
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")

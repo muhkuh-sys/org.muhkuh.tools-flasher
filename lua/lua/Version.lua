@@ -23,7 +23,7 @@ end
 -- @param strComponent The string to be converted.
 -- @return If an error occured, it returns nil and an error message as a string.
 --         If the function succeeded it returns the converted number.
-function Version:_componentToNumber(strComponent)
+function Version._componentToNumber(strComponent)
   -- Be pessimistic.
   local tResult = nil
   local strError = nil
@@ -57,7 +57,7 @@ function Version:_convertStringToList(strVersion)
 
   -- Convert all components to numbers.
   for _, strComponent in ipairs(astrComponents) do
-    local uiNumber, strMsg = self:_componentToNumber(strComponent)
+    local uiNumber, strMsg = self._componentToNumber(strComponent)
     if uiNumber==nil then
       tResult = nil
       strError = strMsg
@@ -69,7 +69,7 @@ function Version:_convertStringToList(strVersion)
 
   if tResult==true then
     -- Does the list contain at least one version number?
-    if table.maxn(auiComponents)==0 then
+    if #auiComponents==0 then
       tResult = nil
       strError = string.format("Invalid version: the string '%s' contains no version components.", strVersion)
     else

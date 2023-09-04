@@ -1,3 +1,15 @@
+Updates in CLI Flasher v2.0.0-dev14
+==============================
+
+* Fix get_uid command via JTAG interface and a running SW
+* Bugfix in usip_player 
+* Bugfix in signature verification
+* New version of helper binaries (read_sip, verify_sig) with baudrate fix
+
+* Misc. changes to build system, CI builds on github
+* Fix luacheck warnings in lua scripts
+
+
 Updates in CLI Flasher v2.0.0-dev13
 ==============================
 

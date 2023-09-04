@@ -1,11 +1,3 @@
-module("muhkuh_cli_init", package.seeall)
-
--- Set the search path for LUA plugins.
-package.cpath = package.cpath .. ";lua_plugins/?.so"
-
--- Set the search path for LUA modules.
-package.path = package.path .. ";lua/?.lua;lua/?/init.lua"
-
 -- Load the common romloader plugins.
 require("romloader_eth")
 require("romloader_usb")
