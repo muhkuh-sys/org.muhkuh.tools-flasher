@@ -830,7 +830,7 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     local tUsipNames
     -- list of all generated usip file paths
     if tFlasherHelper.fStoreTempFiles then
-        tResult, aDataList, tUsipNames = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
+        tResult, tUsipNames, aDataList = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
     else
         aDataList, tUsipNames = tUsipGen:gen_multi_usip(tUsipConfigDict)
         tResult = true
@@ -1139,7 +1139,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
                 tLog.info("Start read sip hboot image inside intram")
                 tFlasher.call_hboot(tPlugin, nil, true)
             elseif strPluginType ~= 'romloader_jtag' then
-                -- M2M protocol for rev2
+                -- M2M protocol for rev1
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
