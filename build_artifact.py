@@ -1,8 +1,7 @@
-#! /usr/bin/python2.7
+#! /usr/bin/python3
 
 from jonchki import cli_args
 from jonchki import jonchkihere
-from jonchki import vcs_id
 
 import os
 import subprocess
@@ -38,7 +37,7 @@ strCfg_jonchkiHerePath = os.path.join(
 )
 
 # This is the Jonchki version to use.
-strCfg_jonchkiVersion = '0.0.3.1'
+strCfg_jonchkiVersion = '0.0.11.1'
 
 # Select the verbose level for jonchki.
 # Possible values are "debug", "info", "warning", "error" and "fatal".
@@ -70,12 +69,6 @@ strCfg_jonchkiProjectConfiguration = os.path.join(
     'org.muhkuh.tools.flasher_cli',
     'jonchkicfg.xml'
 )
-strCfg_jonchkiFinalizer = os.path.join(
-    strCfg_projectFolder,
-    'jonchki',
-    'org.muhkuh.tools.flasher_cli',
-    'finalizer.lua'
-)
 # This is the artifact configuration file.
 strCfg_artifactConfiguration = os.path.join(
     strCfg_projectFolder,
@@ -87,12 +80,6 @@ strCfg_artifactConfiguration = os.path.join(
 
 # -
 # --------------------------------------------------------------------------
-
-# Try to get the VCS ID.
-strProjectVersionVcs, strProjectVersionVcsLong = vcs_id.get(
-    strCfg_projectFolder
-)
-print(strProjectVersionVcs, strProjectVersionVcsLong)
 
 # Build the netX tools.
 astrArguments = [
@@ -125,9 +112,17 @@ sys.stderr.flush()
 astrArguments = [strJonchki]
 astrArguments.append('install-dependencies')
 astrArguments.extend(['-v', strCfg_jonchkiVerbose])
+astrArguments.extend(['--project-root', strCfg_projectFolder])
+astrArguments.extend([
+    '--logfile',
+    os.path.join(strCfg_workingFolder, 'jonchki.log')
+])
+astrArguments.extend([
+    '--dependency-log',
+    os.path.join(strCfg_projectFolder, 'dependency-log.xml')
+])
 astrArguments.extend(['--syscfg', strCfg_jonchkiSystemConfiguration])
 astrArguments.extend(['--prjcfg', strCfg_jonchkiProjectConfiguration])
-astrArguments.extend(['--finalizer', strCfg_jonchkiFinalizer])
 astrArguments.extend(astrJonchkiPlatform)
 astrArguments.append(strCfg_artifactConfiguration)
 sys.exit(subprocess.call(astrArguments, cwd=strCfg_workingFolder))

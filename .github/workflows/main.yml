@@ -1,0 +1,107 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ dev_v2.0.0 ]
+    tags:
+    - '*'
+  pull_request:
+    branches: [ dev_v2.0.0 ]
+
+jobs:
+#  netxfirmware:
+#    runs-on: ubuntu-latest
+#    container: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#    steps:
+#    - name: Checkout repository
+#      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
+#      uses: actions/checkout@v1
+#      with:
+#        submodules: recursive
+#    - name: Disable Git safe directory
+#      run: git config --system --add safe.directory '*'
+#    - name: Build netX firmware
+#      run: python3 mbs/mbs
+#    - name: Upload artifacts
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: targets
+#        path: targets
+  build:
+#    needs: netxfirmware
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - name: Ubuntu 18.04 x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: x86
+        - name: Ubuntu 18.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 18.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 20.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 20.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: arm64
+
+# Do not build for Ubuntu 22.04 yet. There is no matching romloader artifact at the moment.
+#        - name: Ubuntu 22.04 x86_64
+#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#          distribution-id: ubuntu
+#          distribution-version: "22.04"
+#          cpu-architecture: x86_64
+#        - name: Ubuntu 22.04 armhf
+#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#          distribution-id: ubuntu
+#          distribution-version: "22.04"
+#          cpu-architecture: armhf
+#        - name: Ubuntu 22.04 arm64
+#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#          distribution-id: ubuntu
+#          distribution-version: "22.04"
+#          cpu-architecture: arm64
+#        - name: Ubuntu 22.04 riscv64
+#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+#          distribution-id: ubuntu
+#          distribution-version: "22.04"
+#          cpu-architecture: riscv64
+    container: ${{ matrix.platform.image }}
+    steps:
+    - name: Checkout repository
+      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
+      uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: Disable Git safe directory
+      run: git config --system --add safe.directory '*'
+#    - name: Download firmware
+#      # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
+#      uses: actions/download-artifact@v1
+#      with:
+#        name: targets
+    - name: Build
+      run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }} --cmake-define BUILDCFG_SKIP_NETX_FW=ON
+    - name: Pack artifacts
+      run: tar cfvz targets/artifacts.tar.gz targets/flasher_cli-*
+    - name: Upload artifacts
+      # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
+      uses: actions/upload-artifact@v1
+      with:
+        name: artifacts_${{ matrix.platform.distribution-id }}_${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
+        path: targets/artifacts.tar.gz

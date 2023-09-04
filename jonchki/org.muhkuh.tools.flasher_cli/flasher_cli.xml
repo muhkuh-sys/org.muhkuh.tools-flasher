@@ -9,4 +9,17 @@
 	<dependencies>
 		<dependency group="org.muhkuh.tools" module="flasher" artifact="lua5.1-flasher" version="${PROJECT_VERSION}"/>
 	</dependencies>
+	<actions>
+		<action name="finalizer" file="${prj_root}/jonchki/org.muhkuh.tools.flasher_cli/finalizer.lua"/>
+		<action name="pack" path="${install_base}">
+			local t = ...
+			local tResult = true
+
+			t:createPackageFile()
+			t:createHashFile()
+			t:createArchive('${prj_root}/targets/${default_archive_name}', 'native')
+
+			return tResult
+		</action>
+	</actions>
 </jonchki-artifact>
