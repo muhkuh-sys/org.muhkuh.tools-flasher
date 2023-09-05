@@ -1,7 +1,8 @@
 import groovy.json.JsonSlurperClassic
 
 node {
-    def ARTIFACTS_PATH1 = 'targets/jonchki/flasher_cli'
+    /* def ARTIFACTS_PATH1 = 'targets/jonchki/flasher_cli' */
+    def ARTIFACTS_PATH1 = 'targets'
     def ARTIFACTS_PATH2 = 'targets/jonchki/repository/org/muhkuh/tools/flasher/*'
     def strBuilds = env.JENKINS_SELECT_BUILDS
     def atBuilds = new JsonSlurperClassic().parseText(strBuilds)
