@@ -10,6 +10,7 @@ module("flasher_helper", package.seeall)
 local tFlasher = require 'flasher'
 local bit = require 'bit'
 local class = require 'pl.class'
+local path = require 'pl.path'
 
 -- exit code for detect_netx
 STATUS_OK = 0
@@ -184,6 +185,7 @@ end
 function connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
+	local ulConsoleMode
     print("connect to plugin")
 
     if tPlugin == nil then
@@ -196,11 +198,14 @@ function connect_retry(tPlugin, uLRetries)
     end
 
     while uLRetries > 0 do
+
         fCallSuccess, strError = pcall(function () tPlugin:Connect() end)
         if fCallSuccess then
             print("connect successful")
             break
         end
+		ulConsoleMode = tPlugin:get_console_mode()
+
         print("connect not successful")
         uLRetries = uLRetries - 1
         sleep_s(1)
@@ -434,7 +439,6 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 
 	local ulReadSipResult
 	local ulMagicResult
-	local strCalSipData
 	local strComSipData
 	local strAppSipData
 	local tRes
@@ -450,7 +454,7 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	-- extract the executable portion of the read_sip image from the data chunk 
 	-- and download it to RAM.
 	printf("download the read_sip binary to0x%08x", ulReadSipExeAddress)
-	local strReadSipExe = string.sub(strReadSipHbootImg, 0x40D)
+	strReadSipExe = string.sub(strReadSipHbootImg, 0x40D)
 	tFlasher.write_image(tPlugin, ulReadSipExeAddress, strReadSipExe)
 	
 	-- Set the FIRST_RUN_DONE flag in ReadSipResult. 
@@ -551,7 +555,7 @@ function detect_secure_boot_mode(aArgs)
 		strMsg = strMsg or "Could not connect to device."
 		
 	elseif tPlugin:GetTyp() == "romloader_uart" then
-		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+		fConnected, strMsg = connect_retry(tPlugin))
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -617,11 +621,11 @@ function detect_secure_boot_mode(aArgs)
 						printf("Error: Failed to load netX 90 exec_bxlr image: %s", strMsg or "unknown error")
 					else
 						printf("%d bytes loaded.", strImageBin:len())
-						flasher.write_image(tPlugin, 0x200c0, strImageBin)
+						tFlasher.write_image(tPlugin, 0x200c0, strImageBin)
 						tPlugin:write_data32(0x22000, 0xffffffff)
 						local ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 before running boot image: 0x%08x", ulVal)
-						local tRet = flasher.call_hboot(tPlugin)
+						local tRet = tFlasher.call_hboot(tPlugin)
 						print("return value from call_hboot:" , tRet)
 						local ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 after running boot image: 0x%08x", ulVal)
@@ -655,13 +659,14 @@ function detect_secure_boot_mode(aArgs)
 		end -- chip type
 
 	elseif tPlugin:GetTyp() == "romloader_jtag" then
-		local strReadSipPath = path.join("netx", "hboot", "unsigned", "netx90", "read_sip_M2M.bin")  --tFlasher.HELPER_FILES_PATH, 
+		local strReadSipPath = path.join("netx", "hboot", "unsigned", "netx90", "read_sip_M2M.bin")  --tFlasher.HELPER_FILES_PATH
+		local strReadSipBin
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
 		strReadSipBin, strMsg = loadBin(strReadSipPath)
-		if strReadSipBin == nil then 
+		if strReadSipBin == nil then
 			print(strMsg)
 		else
-			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+			fConnected, strMsg = connect_retry(tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
 	
 			if not fConnected then
@@ -696,14 +701,14 @@ function detect_secure_boot_mode(aArgs)
 					local SIZ_APP_SIP_HASH = 0x30
 					
 					local strZero = string.rep(string.char(0x55), SIZ_COM_SIP_HASH)
-					flasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
-					local strReadback = flasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
-					if strReadback ~= strZero then 
+					tFlasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
+					local strReadback = tFlasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
+					if strReadback ~= strZero then
 						printf("Failed to clear COM SIP hash")
 					else
 						local strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
-						flasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
-						local strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
+						tFlasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
+						local strReadback = tFlasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
 						if strReadback ~= strZero then 
 							printf("Failed to clear APP SIP hash")
 						else
@@ -717,8 +722,9 @@ function detect_secure_boot_mode(aArgs)
 							tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
-							else 
-								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+							else
+								fConnected, strMsg = connect_retry(tPlugin)
+								-- fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
 								
 								if not fConnected then
@@ -731,11 +737,11 @@ function detect_secure_boot_mode(aArgs)
 										print(strMsg)
 									else
 										-- Get the secure boot flags from the info pages.
-										OFF_COM_SIP_PROTECTION_FLAGS = 556+1
-										MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
-										OFF_APP_SIP_PROTECTION_FLAGS = 552+1
-										MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
-										
+										local OFF_COM_SIP_PROTECTION_FLAGS = 556+1
+										local MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										local OFF_APP_SIP_PROTECTION_FLAGS = 552+1
+										local MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+
 										local fSecureBootCOM = nil
 										local fSecureBootAPP = nil
 									
