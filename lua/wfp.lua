@@ -202,7 +202,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         -- Download the binary. (load the flasher binary into intram)
         aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
         -- get the board info
-        aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+        aBoardInfo = tFlasher.getBoardInfo(tPlugin, aAttr)
         exampleXml:addTarget(strTargetName)
         for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
             ucBus = tBusInfo.iIdx
@@ -777,9 +777,9 @@ print()
 -- tester = require 'tester_cli'(tLog)
 -- tester = require 'tester_cli'
 -- Ask the user to select a plugin.
-tester.fInteractivePluginSelection = true
+-- tester.fInteractivePluginSelection = true
 
-local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90")
+local strnetX90M2MImagePath = pl.path.join(tArgs.strSecureOption, "netx90")
 
 tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
 
