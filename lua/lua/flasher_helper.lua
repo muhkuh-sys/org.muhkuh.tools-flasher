@@ -1059,6 +1059,8 @@ function StringHandle:__getStringPosInBytes()
     return (self.ulCurrentPointer - 1)
 end
 
+
+
 function StringHandle:seek(strWhence, ulOffset)
 
     local ulNewOffset

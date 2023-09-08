@@ -19,10 +19,15 @@ local tFlasherHelper = require 'flasher_helper'
 local path = require 'pl.path'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
+local bit = require 'bit'
 
 
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
+
+local NETX90_DEFAULT_COM_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "com_sip_default_ff.bin")
+local NETX90_DEFAULT_APP_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "app_sip_default_ff.bin")
+
 
 -- global variables
 -- all supported log levels
@@ -36,14 +41,11 @@ local atLogLevels = {
 
 
 
-local separator = package.config:sub(1,1)
-local fIsRev2
-
 --------------------------------------------------------------------------
 -- ArgParser
 --------------------------------------------------------------------------
 
-strUsipPlayerGeneralHelp = [[
+local strUsipPlayerGeneralHelp = [[
     The USIP-Player is a Flasher extension to modify, read-out and verify the Secure-Info-Pages on a netX90.
 
     The secure info pages (SIPs) are a part of the secure boot functionality of the netX90 and are not supposed
@@ -96,7 +98,7 @@ tParser:flag "--enable_temp_files":hidden(true)
     end)
 
 -- Add the "usip" command and all its options.
-strBootswitchHelp = [[
+local strBootswitchHelp = [[
     Control the boot process after the execution of the sip update.
 
     Options:
@@ -107,12 +109,12 @@ strBootswitchHelp = [[
 ]]
 
 -- todo change help string
-strHelpSecP2 = [[
+local strHelpSecP2 = [[
     Path to helper files that are used after the last usip was executed.
 ]]
 
 
-strUsipHelp = [[
+local strUsipHelp = [[
     Loads an usip file on the netX, reset the netX and process
     the usip file to update the SecureInfoPage and continue standard boot process.
 ]]
@@ -146,14 +148,17 @@ tParserCommandUsip:flag('--disable_helper_signature_check')
 -- ):target('fExtendExec')
 tParserCommandUsip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
-tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target(
+    'strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandUsip:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
 
 
-strWriteSipsHelp = [[
+-- NXTFLASHER-565
+local strWriteSipsHelp = [[
     write APP and COM secure info page (SIP) based on default values
     the default values can be modified with the data from an USIP file
     the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
@@ -168,10 +173,11 @@ tParserWriteSips:option(
     )
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserWriteSips:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserWriteSips:option('--com_sip'):description("com SIP binary size 4kB"):target(
+    'strComSipBinPath'):default(NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
+tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
+    'strAppSipBinPath'):default(NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
 tParserWriteSips:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserWriteSips:flag('--verify_sig'):description(
-    "Verify the signature of an usip image against a netX, if the signature does not match, cancel the process!"
-):target('fVerifySigEnable')
 -- maybe keep option '--_no_verify'
 tParserWriteSips:flag('--no_verify'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
@@ -209,7 +215,7 @@ tParserVerifyInitialMode:flag('--disable_helper_signature_check')
 -- NXTFLASHER-550
 
 -- Add the "disable_security" command and all its options.
-strDisableSecurityHelp = [[
+local strDisableSecurityHelp = [[
     Disable security settings at COM and APP SIPs.
 
     The following parameters will be set:
@@ -229,7 +235,8 @@ strDisableSecurityHelp = [[
 
 ]]
 
-local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target('fCommandDisableSecurity')
+local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target(
+    'fCommandDisableSecurity')
 tParserCommandDisableSecurity:option(
     '-V --verbose'
 ):description(
@@ -247,16 +254,18 @@ tParserCommandDisableSecurity:flag('--no_verify_sip_content'):description(
 ):target('fVerifySipContentDisabled')
 tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
-tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandDisableSecurity:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
-tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
+tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target(
+    'strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
 
 
 
 -- Add the "set_sip_protection" command and all its options.
-strSetSipProtectionHelp = [[
+local strSetSipProtectionHelp = [[
     Set the SipProtectionCookie, enable protection of SIPs.
 
     The default COM SIP page for netX 90 rev2 is written.
@@ -272,7 +281,8 @@ strSetSipProtectionHelp = [[
     - update counter will be reset to zero
 ]]
 
-local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target('fCommandSipSelected')
+local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target(
+    'fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
 ):description(
@@ -285,7 +295,7 @@ tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('
 
 
 -- Add the "set_kek" command and all its options.
-strSetKekHelp = [[
+local strSetKekHelp = [[
     Set the KEK (Key exchange key).
     If the input parameter is set an usip file is afterwards loaded on the netX,
     reset the netX and process \n the usip file to update the SecureInfoPage and
@@ -325,7 +335,7 @@ tParserCommandKek:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
 -- Add the "verify_content" command and all its options.
-strVerifyHelp = [[
+local strVerifyHelp = [[
     Verify the content of a usip file against the content of a secure info page
 ]]
 local tParserVerifyContent = tParser:command('verify v', strVerifyHelp):target('fCommandVerifySelected')
@@ -344,16 +354,18 @@ tParserVerifyContent:option('-i --input'):description("USIP binary file path"):t
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
 tParserVerifyContent:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserVerifyContent:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
-strCheckCookieHelp = [[
+local strCheckCookieHelp = [[
     Check if the SIP protection cookie is set
 ]]
-local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target('fCommandCheckSIPCookie')
+local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target(
+    'fCommandCheckSIPCookie')
 tParserCheckSIPCookie:option(
     '-V --verbose'
 ):description(
@@ -364,14 +376,15 @@ tParserCheckSIPCookie:option(
 tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCheckSIPCookie:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCheckSIPCookie:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
 -- Add the "read_sip" command and all its options.
-strReadHelp = [[
+local strReadHelp = [[
     Read out the sip content and save it into a temporary folder
 ]]
 local tParserReadSip = tParser:command('read r', strReadHelp):target('fCommandReadSelected')
@@ -388,7 +401,8 @@ tParserReadSip:argument('output'):description(
 tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserReadSip:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
 tParserReadSip:flag('--disable_helper_signature_check')
@@ -399,7 +413,7 @@ tParserReadSip:flag('--disable_helper_signature_check')
 
 -- Add the "detect_secure_mode" command and note, that it is moved to "cli_flash.lua"
 
-strDetectSecureModeHelp = [[
+local strDetectSecureModeHelp = [[
 This command was moved into cli_flash.lua.
 ]]
 tParser:command(
@@ -419,14 +433,16 @@ tParserGetUid:option(
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserGetUid:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
-tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserGetUid:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
 -- Add command check_helper_signature chs
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target(
+    'fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -436,7 +452,8 @@ tParserCommandVerifyHelperSig:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- parse args
@@ -626,9 +643,7 @@ function chiptypeToName(iChiptype)
     local strNetxName
     -- First catch the unlikely case that "iChiptype" is nil.
 	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
-	if iChiptype==nil then
-		strNetxName = nil
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
+	if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
 		strNetxName = 'netx500'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
 		strNetxName = 'netx50'
@@ -636,15 +651,21 @@ function chiptypeToName(iChiptype)
 		strNetxName = 'netx10'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
 		strNetxName = 'netx56'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
 		strNetxName = 'netx4000'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
 		strNetxName = 'netx90_mpw'
     elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
 		strNetxName = 'netx90_rev_0'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
 		strNetxName = 'netx90'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
 		strNetxName = 'netiol'
     else
         strNetxName = nil
@@ -1258,8 +1279,8 @@ function verifyContent(
             -- set the sip file path to save the sip data
             strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
             strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
-    
-    
+
+
             -- write the com sip data to a file
             tLog.debug("Saving COM SIP to %s ", strComSipFilePath)
             local tFile = io.open(strComSipFilePath, "wb")
@@ -2162,6 +2183,50 @@ function readSIPviaFLash(tPlugin, strSipPage, aAttr)
     return strReadData, strMsg
 end
 
+-- write SIP data (4kB) into sekected SIP
+-- create a new hash for the data
+function writeSIPviaFLash(tPlugin, strSipPage, strSipData, aAttr)
+    local strMsg
+    local strWriteData
+    local strNewHash
+    local fResult
+    local fDetectResult
+
+    -- check if the selected flash is present
+    fDetectResult = tFlasher.detect(
+        tPlugin, aAttr,
+        SIP_ATTRIBUTES[strSipPage].iBus,
+        SIP_ATTRIBUTES[strSipPage].iUnit,
+        SIP_ATTRIBUTES[strSipPage].iChipSelect)
+
+    if not fDetectResult then
+        strMsg = "No Flash connected!"
+    else
+        -- get the write data from the handover parameter
+        local sipStringHandle = tFlasherHelper.StringHandle(strSipData)
+        strWriteData = sipStringHandle:read(0xFD0)
+        -- create a new hash
+        local tChunkHash = mhash.mhash_state()
+        tChunkHash:init(mhash.MHASH_SHA384)
+        tChunkHash:hash(strWriteData)
+        strNewHash = tChunkHash:hash_end()
+        -- apend the hash to the new data
+        strWriteData = strWriteData .. strNewHash
+
+        -- duplicate the data and write both mirrors at once
+        strWriteData = strWriteData .. strWriteData
+
+        -- erase flash before Writing
+        fResult, strMsg = tFlasher.eraseArea(tPlugin, aAttr, 0x0, 0x2000)
+        if fResult then
+            -- write first mirror of SIP
+            fResult, strMsg = tFlasher.flashArea(tPlugin, aAttr, 0x0, strWriteData)
+        end
+    end
+
+    return fResult, strMsg
+end
+
 -- take the data of the COM and APP SIP and check if the secure boot flags are set
 -- returns flags for each secure boot flag fSecureFlagComSet, fSecureFlagAppSet (true is set; False if not set)
 function check_secure_boot_flag(strComSipData, strAppSipData)
@@ -2370,16 +2435,109 @@ function verifyInitialMode(tPlugin, aAttr)
     return iResult, strMsg, strCalSipData
 end
 
-
--- write APP and COM secure info page (SIP) based on default values
--- the default values can be modified with the data from an USIP file
--- the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+-- upate the calibration values 'atTempDiode' inside the APP SIP with the values from the CAL SIP
 -- * copied from: CAL SIP offset 2192 (0x890) size: 48 (0x30)
 -- * copied to:   APP SIP offset 2048 (0x800) size: 48 (0x30)
-function writeAllSips(tPlugin, tUsipDataList, tUsipPathList, tUsipConfigDict)
+function apply_temp_diode_data(strAppSipData, strCalSipData)
+    -- apply temp diode parameter from cal page to app page
+    local strTempDiodeData = string.sub(strCalSipData, 0x890+1, 0x890 + 0x30)
+    local strNewAppSipData = string.format(
+        "%s%s%s",
+        string.sub(strAppSipData, 1, 0x800),
+        strTempDiodeData,
+        string.sub(strAppSipData, 0x800 + 1)
+    )
+    print(string.len(strNewAppSipData))
+    return strNewAppSipData
+end
+
+
+-- apply data from an usip file to APP and COM SIP data
+function apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+    local strNewComSipData = strComSipData
+    local strNewAppSipData = strAppSipData
+    local ulSipPage
+    local strUsedData
+    local strBefore
+    local strAfter
+    local tData 
+    local tSipPage
+
+    for ulChunks= 0, tUsipConfigDict.num_of_chunks - 1 do
+    --for _, tSipPage in ipairs(tUsipConfigDict.content) do
+        tSipPage = tUsipConfigDict.content[ulChunks]
+        ulSipPage = tSipPage.page_type_int
+        if ulSipPage == 1 then
+            strUsedData = strNewComSipData
+        elseif ulSipPage == 2 then
+            strUsedData = strNewAppSipData
+        end
+        for iDataIdx=0, tSipPage['ulDataCount'] do
+        -- for ulIdx, tData in ipairs(tSipPage.data) do
+            tData = tSipPage.data[iDataIdx]
+            strBefore = string.sub(strUsedData, 1, tData.offset_int)
+            strAfter = string.sub(strUsedData, tData.offset_int + tData.size_int + 1)
+            strUsedData = strBefore .. tData.patched_data ..strAfter
+        end
+        if ulSipPage == 1 then
+            strNewComSipData = strUsedData
+        elseif ulSipPage == 2 then
+            strNewAppSipData = strUsedData
+        end
+    end
+
+    return strNewComSipData, strNewAppSipData
+end
+
+-- write APP and COM secure info page (SIP) based on default values
+-- update temp diode calibratino values from CAL SIP to APP SIP
+-- the default values can be modified with the data from an USIP file
+function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption)
     local iResult
-	local strMsg
-	return iResult, strMsg
+    local strMsg
+    local fResult
+    local aAttr
+    local flasher_path = "netx/"
+    local strCalSipData
+    local strComSipData = strBaseComSipData
+    local strAppSipData = strBaseAppSipData
+
+    if strSecureOption == nil then
+        strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+    end
+
+    local fConnected
+    fConnected, strMsg = tFlasherHelper.connect_retry(tPlugin)
+    if fConnected then
+        aAttr = tFlasher.download(tPlugin, flasher_path, nil, true, strSecureOption)
+    end
+
+    -- check if any of the secure info pages are hidden
+    iResult, strMsg, strCalSipData = verifyInitialMode(tPlugin, aAttr)
+
+    if iResult == WS_RESULT_OK then
+        strAppSipData = apply_temp_diode_data(strAppSipData, strCalSipData)
+        if tUsipConfigDict ~= nil then
+            strComSipData, strAppSipData = apply_usip_data(strBaseComSipData, strBaseAppSipData, tUsipConfigDict)
+        end
+    end
+
+    if iResult == WS_RESULT_OK then
+        -- write the SIPs
+        fResult, strMsg = writeSIPviaFLash(tPlugin, "COM", strComSipData, aAttr)
+        if not fResult then
+            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    if iResult == WS_RESULT_OK then
+        -- write the SIPs
+        fResult, strMsg = writeSIPviaFLash(tPlugin, "APP", strAppSipData, aAttr)
+        if not fResult then
+            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+    return iResult, strMsg
 end
 
 -- print args
@@ -2822,6 +2980,54 @@ elseif tArgs.fCommandVerifyInitialMode then
         os.exit(iVerifyInitialModeResult)
     end
 --------------------------------------------------------------------------
+-- WRITE SIP COMMAND
+--------------------------------------------------------------------------
+elseif tArgs.fCommandWriteSips then
+    tLog.info("######################################")
+    tLog.info("# RUNNING WRITE SIP COMMAND          #")
+    tLog.info("######################################")
+    local strComSipBaseData
+    strComSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strComSipBinPath)
+    if strComSipBaseData == nil then
+        tLog.error(strErrorMsg)
+    end
+    local strAppSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strAppSipBinPath)
+    if strAppSipBaseData == nil then
+        tLog.error(strErrorMsg)
+    end
+    iWriteSipResult, strErrorMsg = writeAllSips(
+        tPlugin,
+        strComSipBaseData,
+        strAppSipBaseData,
+        tUsipConfigDict
+    )
+    if iWriteSipResult == WS_RESULT_OK then
+        fFinalResult = true
+    else
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        if iWriteSipResult == WS_RESULT_ERROR_SECURE_BOOT_ENABLED then
+            tLog.error('RESULT: secure boot enabled')
+        elseif iWriteSipResult == WS_RESULT_ERROR_SIP_PROTECTION_SET then
+            tLog.error('RESULT: SIP protection cookie is set')
+        elseif iWriteSipResult == WS_RESULT_ERROR_UNSPECIFIED then
+            tLog.error('RESULT:unspecified error occured')
+        elseif iWriteSipResult == WS_RESULT_ERROR_SIP_HIDDEN then
+            tLog.error('RESULT: one or more secure info page is hidden')
+        end
+        tLog.error(strErrorMsg)
+        tLog.info('RETURN: '.. iWriteSipResult)
+        os.exit(iWriteSipResult)
+    end
+
+--------------------------------------------------------------------------
 -- Disable Security COMMAND
 --------------------------------------------------------------------------
 elseif tArgs.fCommandDisableSecurity then
@@ -2920,7 +3126,6 @@ elseif tArgs.fCommandGetUidSelected then
         atPluginOptions,
         strExecReturnPath
     )
-
 
 --------------------------------------------------------------------------
 -- VERIFY CONTENT
