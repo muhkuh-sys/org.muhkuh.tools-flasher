@@ -315,19 +315,20 @@ end
 
 
 function netx90_disable_uart_pulldown_resistors(tPlugin)
+	local val_asic_ctrl_access_key
 	local addr_pad_ctrl_uart_rxd    = 0xff401028
 	local addr_pad_ctrl_uart_txd    = 0xff40102c
 	local addr_asic_ctrl_access_key = 0xff4012c0
-		
+
 	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
 	val_pad_ctrl_uart_rxd = bit.band(val_pad_ctrl_uart_rxd, 0xef)
-	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
+	val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_rxd, val_pad_ctrl_uart_rxd)
-	
+
 	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
 	val_pad_ctrl_uart_txd = bit.band(val_pad_ctrl_uart_txd, 0xef)
-	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
+	val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_txd, val_pad_ctrl_uart_txd)
 end
@@ -555,7 +556,7 @@ function detect_secure_boot_mode(aArgs)
 		strMsg = strMsg or "Could not connect to device."
 		
 	elseif tPlugin:GetTyp() == "romloader_uart" then
-		fConnected, strMsg = connect_retry(tPlugin))
+		fConnected, strMsg = connect_retry(tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -1021,6 +1022,8 @@ end
 function StringHandle:__getStringPosInBytes()
     return (self.ulCurrentPointer - 1)
 end
+
+
 
 function StringHandle:seek(strWhence, ulOffset)
 
