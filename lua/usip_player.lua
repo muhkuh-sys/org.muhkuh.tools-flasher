@@ -2576,6 +2576,8 @@ local strErrorMsg
 local tUsipConfigDict
 local strFileData
 local strData
+local fCallSuccess
+local ulConsoleMode
 
 -- set fFinalResult to false, be pessimistic
 local fFinalResult = false
@@ -2631,10 +2633,9 @@ if fCallSuccess then
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
-            fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+            fFinalResult, strErrorMsg, ulConsoleMode  = tFlasherHelper.connect_retry(tPlugin, 5)
             if fFinalResult == false then
                 tLog.error(strErrorMsg)
-                os.exit(1)
             else
                 iChiptype = tPlugin:GetChiptyp()
                 tLog.debug( "Found Chip type: %d", iChiptype )
@@ -2660,29 +2661,32 @@ end
 -- * working uart serial connection
 
 -- these checks can only be made in non secure mode or via jtag in secure mode
-if iChiptype then
-    strNetxName = chiptypeToName(iChiptype)
-    if not strNetxName then
-        tLog.error("Can not associate the chiptype with a netx name!")
-        os.exit(1)
+if fFinalResult then
+    if iChiptype then
+        strNetxName = chiptypeToName(iChiptype)
+        if not strNetxName then
+            tLog.error("Can not associate the chiptype with a netx name!")
+            os.exit(1)
+        end
+        -- check if the netX is supported
+        if strNetxName ~= "netx90" then
+            tLog.error("The connected netX (%s) is not supported.", strNetxName)
+            tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
+            os.exit(1)
+        elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+                iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+            tLog.debug("Detected netX90 rev1")
+        elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
+            tLog.debug("Detected netX90 rev2")
+        end
+    else
+        -- (!) TODO: FIX THIS TO A SOLUTION WHERE NOT JUST THE NETX90 IS SUPPORTED! (!)
+        -- (!) TODO: provide a function to detect a netX via uart terminal mode     (!)
+        strNetxName = "netx90"
+        tLog.warning("Behavior is undefined if connected to a different netX then netX90!")
     end
-    -- check if the netX is supported
-    if strNetxName ~= "netx90" then
-        tLog.error("The connected netX (%s) is not supported.", strNetxName)
-        tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
-        os.exit(1)
-    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
-            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
-        tLog.debug("Detected netX90 rev1")
-    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
-        tLog.debug("Detected netX90 rev2")
-    end
-else
-    -- (!) TODO: FIX THIS TO A SOLUTION WHERE NOT JUST THE NETX90 IS SUPPORTED! (!)
-    -- (!) TODO: provide a function to detect a netX via uart terminal mode     (!)
-    strNetxName = "netx90"
-    tLog.warning("Behavior is undefined if connected to a different netX then netX90!")
 end
+
 
 -- set read sip path
 strReadSipPath = path.join(strSecureOption, strNetxName, "read_sip_M2M.bin")
@@ -2736,7 +2740,7 @@ if tArgs.strSecureOptionPhaseTwo ~= strSecureOption then
     check_file(strResetReadSipPath)
 
 
-    strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
+    local strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
     local fHelpersOk = tHelperFiles.checkHelperFiles({strSecureOptionPhaseTwoDir}, astrHelpersToCheck)
     if not fHelpersOk then
         tLog.error("Error during file version checks.")
@@ -2751,47 +2755,49 @@ else
     strResetBootswitchPath = strBootswitchFilePath
 end
 
+if fFinalResult then
+    if tArgs.fCommandKekSelected then
+        -- set kek image paths
+        strKekHbootFilePath = path.join(strSecureOption, strNetxName, "set_kek.bin")
+        check_file(strKekHbootFilePath)
 
-if tArgs.fCommandKekSelected then
-    -- set kek image paths
-    strKekHbootFilePath = path.join(strSecureOption, strNetxName, "set_kek.bin")
-    check_file(strKekHbootFilePath)
-
-    -- strKekDummyUsipFilePath = path.join(strSecureOption, strNetxName, "set_kek.usp")
-    -- todo add flasher root path here
-    strKekDummyUsipFilePath = path.join("netx", "helper", "netx90", "set_kek.usp")
-    -- check if the set_kek file exists
-    if not path.exists(strKekHbootFilePath) then
-        tLog.error( "Set-KEK binary is not available at: %s", strKekHbootFilePath )
-        -- return here because of initial error
-        os.exit(1)
-    end
-    -- todo: check version
-    local strSetKekBin, strMsg = tHelperFiles.getHelperFile(strSecureOptionDir, "set_kek")
-    if not strSetKekBin then
-        tLog.error(strMsg or "unknown error")
-        tLog.error("Error during file version checks.")
-        -- return here because of initial error
-        os.exit(1)
-    end
-    -- check if the dummy kek usip file exists
-    if not path.exists(strKekDummyUsipFilePath) then
-        tLog.error( "Dummy kek usip is not available at: %s", strKekDummyUsipFilePath )
-        -- return here because of initial error
-        os.exit(1)
+        -- strKekDummyUsipFilePath = path.join(strSecureOption, strNetxName, "set_kek.usp")
+        -- todo add flasher root path here
+        strKekDummyUsipFilePath = path.join("netx", "helper", "netx90", "set_kek.usp")
+        -- check if the set_kek file exists
+        if not path.exists(strKekHbootFilePath) then
+            tLog.error( "Set-KEK binary is not available at: %s", strKekHbootFilePath )
+            -- return here because of initial error
+            os.exit(1)
+        end
+        -- todo: check version
+        local strSetKekBin, strMsg = tHelperFiles.getHelperFile(strSecureOptionDir, "set_kek")
+        if not strSetKekBin then
+            tLog.error(strMsg or "unknown error")
+            tLog.error("Error during file version checks.")
+            -- return here because of initial error
+            os.exit(1)
+        end
+        -- check if the dummy kek usip file exists
+        if not path.exists(strKekDummyUsipFilePath) then
+            tLog.error( "Dummy kek usip is not available at: %s", strKekDummyUsipFilePath )
+            -- return here because of initial error
+            os.exit(1)
+        end
     end
 end
 
-
--- check if valid bootswitch parameter are set
-if tArgs.strBootswitchParams then
-    if not (
-        tArgs.strBootswitchParams == "UART" or tArgs.strBootswitchParams == "ETH" or tArgs.strBootswitchParams == "MFW" or tArgs.strBootswitchParams == "JTAG"
-    ) then
-        tLog.error("Wrong Bootswitch parameter, please choose between JTAG, UART, ETH or MFW.")
-        tLog.error("If the boot process should continue normal do not use the bootswitch parameter.")
-        -- return here because of initial error
-        os.exit(1)
+if fFinalResult then
+    -- check if valid bootswitch parameter are set
+    if tArgs.strBootswitchParams then
+        if not (
+            tArgs.strBootswitchParams == "UART" or tArgs.strBootswitchParams == "ETH" or tArgs.strBootswitchParams == "MFW" or tArgs.strBootswitchParams == "JTAG"
+        ) then
+            tLog.error("Wrong Bootswitch parameter, please choose between JTAG, UART, ETH or MFW.")
+            tLog.error("If the boot process should continue normal do not use the bootswitch parameter.")
+            -- return here because of initial error
+            os.exit(1)
+        end
     end
 end
 
@@ -2809,28 +2815,30 @@ end
 --------------------------------------------------------------------------
 -- analyze the usip file
 --------------------------------------------------------------------------
-if tArgs.strUsipFilePath then
+if fFinalResult then
+    if tArgs.strUsipFilePath then
 
-    -- analyze the usip file
-    tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
+        -- analyze the usip file
+        tResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
 
-    -- print out the command output
-    -- tLog.info(tUsipAnalyzeOutput)
-    -- list of all usip files
-    local iGenMultiResult
-    -- check if multiple usip where found
-    if tResult ~= true then
-        tLog.error(strErrorMsg)
-        os.exit(1)
-    else
-        if (iChiptype == 14  or iChiptype == 17) and tUsipConfigDict["num_of_chunks"] > 1  then
-            iGenMultiResult, tUsipDataList, tUsipPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+        -- print out the command output
+        -- tLog.info(tUsipAnalyzeOutput)
+        -- list of all usip files
+        local iGenMultiResult
+        -- check if multiple usip where found
+        if tResult ~= true then
+            tLog.error(strErrorMsg)
+            os.exit(1)
         else
-            strData, strMsg = tFlasherHelper.loadBin(strUsipFilePath)
-            if strData then
-                tUsipDataList = {strData}
-                tUsipPathList = {strUsipFilePath}
-                iGenMultiResult = true
+            if (iChiptype == 14  or iChiptype == 17) and tUsipConfigDict["num_of_chunks"] > 1  then
+                iGenMultiResult, tUsipDataList, tUsipPathList = genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+            else
+                strData, strMsg = tFlasherHelper.loadBin(strUsipFilePath)
+                if strData then
+                    tUsipDataList = {strData}
+                    tUsipPathList = {strUsipFilePath}
+                    iGenMultiResult = true
+                end
             end
         end
     end
@@ -2840,73 +2848,75 @@ end
 -- do not verify the signature of the helper files if the read command is selected  -- why?
 -- todo: this seems incomplete, e.g. no checks are made for the verify command.
 -- old: if fIsSecure  and not tArgs.fCommandReadSelected then
-if fIsSecure and not tArgs.fCommandCheckHelperSignatureSelected then
-    if tArgs.fDisableHelperSignatureChecks==true then
-        tLog.info("Skipping signature checks for support files.")
+if fFinalResult then
+    if fIsSecure and not tArgs.fCommandCheckHelperSignatureSelected then
+        if tArgs.fDisableHelperSignatureChecks==true then
+            tLog.info("Skipping signature checks for support files.")
 
-    else
-        -- verify the signature of the used HTBL files
-        -- make a list of necessary files
-        local tblHtblFileData = {}
-        local tPathList = {}
-        local fDoVerify = false
-        if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
-            fDoVerify = true
-            strFileData, _ = tFlasherHelper.loadBin(strReadSipPath)
-            if strData == nil then
-                fFinalResult = false
-            end
-            table.insert(tblHtblFileData, strFileData)
-            table.insert( tPathList, strReadSipPath)
-        end
-        if tArgs.strBootswitchParams then
-            fDoVerify = true
-            if tArgs.strBootswitchParams == "JTAG" then
-                strFileData, _ = tFlasherHelper.loadBin(strExecReturnPath)
+        else
+            -- verify the signature of the used HTBL files
+            -- make a list of necessary files
+            local tblHtblFileData = {}
+            local tPathList = {}
+            local fDoVerify = false
+            if (tArgs.fVerifySigEnable or not tArgs.fVerifyContentDisabled) then
+                fDoVerify = true
+                strFileData, _ = tFlasherHelper.loadBin(strReadSipPath)
                 if strData == nil then
                     fFinalResult = false
                 end
-                table.insert( tblHtblFileData, strFileData)
-                table.insert( tPathList, strExecReturnPath)
-            else
-                strFileData, _ = tFlasherHelper.loadBin(strBootswitchFilePath)
+                table.insert(tblHtblFileData, strFileData)
+                table.insert( tPathList, strReadSipPath)
+            end
+            if tArgs.strBootswitchParams then
+                fDoVerify = true
+                if tArgs.strBootswitchParams == "JTAG" then
+                    strFileData, _ = tFlasherHelper.loadBin(strExecReturnPath)
+                    if strData == nil then
+                        fFinalResult = false
+                    end
+                    table.insert( tblHtblFileData, strFileData)
+                    table.insert( tPathList, strExecReturnPath)
+                else
+                    strFileData, _ = tFlasherHelper.loadBin(strBootswitchFilePath)
+                    if strData == nil then
+                        fFinalResult = false
+                    end
+                    table.insert( tblHtblFileData, strFileData)
+                    table.insert( tPathList, strBootswitchFilePath)
+                end
+            end
+
+            -- maybe only verify if set kek command selected
+            if tArgs.fCommandKekSelected then
+                strFileData, strErrorMsg = tFlasherHelper.loadBin(strKekHbootFilePath)
                 if strData == nil then
                     fFinalResult = false
                 end
-                table.insert( tblHtblFileData, strFileData)
-                table.insert( tPathList, strBootswitchFilePath)
+                table.insert(tblHtblFileData, strFileData)
+                table.insert( tPathList, strKekHbootFilePath)
             end
-        end
 
-        -- maybe only verify if set kek command selected
-        if tArgs.fCommandKekSelected then
-            strFileData, strErrorMsg = tFlasherHelper.loadBin(strKekHbootFilePath)
-            if strData == nil then
-                fFinalResult = false
-            end
-            table.insert(tblHtblFileData, strFileData)
-            table.insert( tPathList, strKekHbootFilePath)
-        end
+            -- TODO: how to be sure that the verify sig will work correct?
+            -- NOTE: If the verify_sig file is not signed correctly the process will fail
+            -- is there a way to verify the signature of the verify_sig itself?
+            -- if tArgs.fVerifySigEnable then
+            --     fDoVerify = true
+            --     table.insert( tblHtblFileData, strVerifySigPath )
 
-        -- TODO: how to be sure that the verify sig will work correct?
-        -- NOTE: If the verify_sig file is not signed correctly the process will fail
-        -- is there a way to verify the signature of the verify_sig itself?
-        -- if tArgs.fVerifySigEnable then
-        --     fDoVerify = true
-        --     table.insert( tblHtblFileData, strVerifySigPath )
+            if fDoVerify then
+                tLog.info("Checking signatures of support files...")
 
-        if fDoVerify then
-            tLog.info("Checking signatures of support files...")
+                -- check if every signature in the list is correct via MI
+                fOk = tVerifySignature.verifySignature(
+                    tPlugin, strPluginType, tblHtblFileData, tPathList, strTmpFolderPath, strVerifySigPath
+                )
 
-            -- check if every signature in the list is correct via MI
-            fOk = tVerifySignature.verifySignature(
-                tPlugin, strPluginType, tblHtblFileData, tPathList, strTmpFolderPath, strVerifySigPath
-            )
-
-            if not fOk then
-                tLog.error( "The Signatures of the support-files can not be verified." )
-                tLog.error( "Please check if the supported files are signed correctly" )
-                os.exit(1)
+                if not fOk then
+                    tLog.error( "The Signatures of the support-files can not be verified." )
+                    tLog.error( "Please check if the supported files are signed correctly" )
+                    os.exit(1)
+                end
             end
         end
     end
@@ -2914,12 +2924,11 @@ end
 
 
 
-
 -- check if the usip command is selected
 --------------------------------------------------------------------------
 -- USIP COMMAND
 --------------------------------------------------------------------------
-if tArgs.fCommandUsipSelected then
+if tArgs.fCommandUsipSelected and fFinalResult then
     tLog.info("######################################")
     tLog.info("# RUNNING USIP COMMAND               #")
     tLog.info("######################################")
@@ -2947,16 +2956,22 @@ elseif tArgs.fCommandVerifyInitialMode then
     local flasher_path = "netx/"
     local iVerifyInitialModeResult
 
-    if strSecureOption == nil then
-        strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+    if not fFinalResult and ulConsoleMode == 1 then
+        iVerifyInitialModeResult = WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+    elseif not fFinalResult then
+        iVerifyInitialModeResult = WS_RESULT_ERROR_UNSPECIFIED
+    else
+        if strSecureOption == nil then
+            strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+        end
+        local fConnected
+        fConnected, strErrorMsg = tFlasherHelper.connect_retry(tPlugin)
+        if fConnected then
+            aAttr = tFlasher.download(tPlugin, flasher_path, nil, true, strSecureOption)
+        end
+        iVerifyInitialModeResult, strErrorMsg = verifyInitialMode(tPlugin, aAttr)
     end
 
-    local fConnected
-    fConnected, strErrorMsg = tFlasherHelper.connect_retry(tPlugin)
-    if fConnected then
-        aAttr = tFlasher.download(tPlugin, flasher_path, nil, true, strSecureOption)
-    end
-    iVerifyInitialModeResult, strErrorMsg, _ = verifyInitialMode(tPlugin, aAttr)
 
     if iVerifyInitialModeResult == WS_RESULT_OK then
         fFinalResult = true
@@ -2991,20 +3006,27 @@ elseif tArgs.fCommandWriteSips then
     tLog.info("# RUNNING WRITE SIP COMMAND          #")
     tLog.info("######################################")
     local strComSipBaseData
-    strComSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strComSipBinPath)
-    if strComSipBaseData == nil then
-        tLog.error(strErrorMsg)
+
+    if not fFinalResult and ulConsoleMode == 1 then
+        iWriteSipResult = WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+    elseif not fFinalResult then
+        iWriteSipResult = WS_RESULT_ERROR_UNSPECIFIED
+    else
+        strComSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strComSipBinPath)
+        if strComSipBaseData == nil then
+            tLog.error(strErrorMsg)
+        end
+        local strAppSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strAppSipBinPath)
+        if strAppSipBaseData == nil then
+            tLog.error(strErrorMsg)
+        end
+        iWriteSipResult, strErrorMsg = writeAllSips(
+            tPlugin,
+            strComSipBaseData,
+            strAppSipBaseData,
+            tUsipConfigDict
+        )
     end
-    local strAppSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strAppSipBinPath)
-    if strAppSipBaseData == nil then
-        tLog.error(strErrorMsg)
-    end
-    iWriteSipResult, strErrorMsg = writeAllSips(
-        tPlugin,
-        strComSipBaseData,
-        strAppSipBaseData,
-        tUsipConfigDict
-    )
     if iWriteSipResult == WS_RESULT_OK then
         fFinalResult = true
     else
@@ -3034,7 +3056,7 @@ elseif tArgs.fCommandWriteSips then
 --------------------------------------------------------------------------
 -- Disable Security COMMAND
 --------------------------------------------------------------------------
-elseif tArgs.fCommandDisableSecurity then
+elseif tArgs.fCommandDisableSecurity and fFinalResult then
     tLog.info("##############################################")
     tLog.info("# RUNNING Disable Security Setting COMMAND   #")
     tLog.info("##############################################")
@@ -3056,7 +3078,7 @@ elseif tArgs.fCommandDisableSecurity then
 --------------------------------------------------------------------------
 -- Set SIP Command
 --------------------------------------------------------------------------
-elseif tArgs.fCommandSipSelected then
+elseif tArgs.fCommandSipSelected and fFinalResult then
     tLog.info("######################################")
     tLog.info("# RUNNING SET SIP PROTECTION COMMAND #")
     tLog.info("######################################")
@@ -3066,7 +3088,7 @@ elseif tArgs.fCommandSipSelected then
 --------------------------------------------------------------------------
 -- Set Key Exchange Key
 --------------------------------------------------------------------------
-elseif tArgs.fCommandKekSelected then
+elseif tArgs.fCommandKekSelected and fFinalResult then
     tLog.info("######################################")
     tLog.info("# RUNNING SET KEK COMMAND            #")
     tLog.info("######################################")
@@ -3088,7 +3110,7 @@ elseif tArgs.fCommandKekSelected then
 --------------------------------------------------------------------------
 -- READ SIP
 --------------------------------------------------------------------------
-elseif tArgs.fCommandReadSelected then
+elseif tArgs.fCommandReadSelected and fFinalResult then
     tLog.info("######################################")
     tLog.info("# RUNNING READ SIP COMMAND           #")
     tLog.info("######################################")
@@ -3112,14 +3134,14 @@ elseif tArgs.fCommandReadSelected then
 --------------------------------------------------------------------------
 -- DETECT SECURE MODE
 --------------------------------------------------------------------------
-elseif tArgs.fCommandDetectSelected then
+elseif tArgs.fCommandDetectSelected and fFinalResult then
     tLog.warning("Command detect_secure_mode was moved to cli_flash.lua")
     os.exit(1)
 
 --------------------------------------------------------------------------
 -- GET UNIQUE ID
 --------------------------------------------------------------------------
-elseif tArgs.fCommandGetUidSelected then
+elseif tArgs.fCommandGetUidSelected and fFinalResult then
     tLog.info("######################################")
     tLog.info("# RUNNING GET UID COMMAND            #")
     tLog.info("######################################")
@@ -3134,7 +3156,7 @@ elseif tArgs.fCommandGetUidSelected then
 --------------------------------------------------------------------------
 -- VERIFY CONTENT
 --------------------------------------------------------------------------
-elseif tArgs.fCommandVerifySelected then
+elseif tArgs.fCommandVerifySelected and fFinalResult then
 
     tLog.info("######################################")
     tLog.info("# RUNNING VERIFY CONTENT COMMAND     #")
@@ -3153,7 +3175,7 @@ elseif tArgs.fCommandVerifySelected then
         tLog.error(strErrorMsg)
     end
 
-elseif tArgs.fCommandCheckSIPCookie then
+elseif tArgs.fCommandCheckSIPCookie and fFinalResult then
 
     tLog.info("################################################")
     tLog.info("# RUNNING DETECT SIP PROTECTION COOKIE COMMAND #")
@@ -3209,7 +3231,7 @@ elseif tArgs.fCommandCheckSIPCookie then
 --------------------------------------------------------------------------
 -- VERIFY_HELPER_SIGNATURE COMMAND
 --------------------------------------------------------------------------
-elseif tArgs.fCommandCheckHelperSignatureSelected then
+elseif tArgs.fCommandCheckHelperSignatureSelected and fFinalResult then
     tLog.info("############################################")
     tLog.info("# RUNNING VERIFY_HELPER_SIGNATURES COMMAND #")
     tLog.info("############################################")
