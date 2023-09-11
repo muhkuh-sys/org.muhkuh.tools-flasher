@@ -114,12 +114,37 @@ local function printf(...) print(string.format(...)) end
 -- get plugin
 --------------------------------------------------------------------------
 
+local function is_text_string(x)
+	local b
+	if type(x) ~= "string" then 
+		return false
+	end
+	
+	for i=1, #x do
+		b = string.byte(x, i)
+		if b<32 or b>126 then
+			return false
+		end
+	end
+	
+	return true
+end
+
+
 local function show_plugin_options(tOpts)
 	print("Plugin options:")
 	for strPluginId, tPluginOptions in pairs(tOpts) do
 		print(string.format("For %s:", strPluginId))
 		for strKey, tVal in pairs(tPluginOptions) do
-			print(strKey, tVal)
+			if type(tVal) == "string" then 
+				if is_text_string(tVal) then 
+					print(strKey, tVal)
+				else 
+					print(strKey, "(binary)")
+				end
+			else 
+				print(strKey, tVal)
+			end
 		end
 	end
 end
