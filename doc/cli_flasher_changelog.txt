@@ -1,3 +1,11 @@
+Updates in CLI Flasher v2.0.0-dev15
+==============================
+* Bugfixes in module loading (wfp.lua and demo scripts)
+* Include the command line in the output
+* Do not attempt to print binary file when showing the plugin options.
+* Update romloader to v2.5.4-dev11
+  Bugfix in disable interrupts routine used when connecting to netx 90.
+
 Updates in CLI Flasher v2.0.0-dev14
 ==============================
 
