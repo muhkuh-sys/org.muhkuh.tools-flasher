@@ -513,7 +513,7 @@ elseif aArgs.iMode == MODE_HELP then
 
 elseif aArgs.iMode then
 	require("muhkuh_cli_init")
-	require("flasher")
+	flasher = require("flasher")
 	require("flasher_test")
 
 	tPlugin, strMsg = getPlugin(aArgs.strPluginName)
