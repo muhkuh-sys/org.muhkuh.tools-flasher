@@ -528,9 +528,12 @@ local function printArgs(tArguments)
   print("")
   print("Running CLI flasher with the following args:")
   print("--------------------------------------------")
+  print("Command line:", table.concat(arg, " ", -1, #arg))
+  
   printTable(tArguments, 0)
   print("")
 end
+
 
 
 --------------------------------------------------------------------------
@@ -992,9 +995,14 @@ local function main()
     local strMsg
 
     io.output():setvbuf("no")
-
+    
     aArgs = tParser:parse()
+    
+    -- todo: how to set this properly?
+    aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
 
+    printArgs(aArgs)
+    
     -- construct the argument list for DetectInterfaces
     aArgs.atPluginOptions = {
         romloader_jtag = {
@@ -1003,8 +1011,6 @@ local function main()
         }
     }
 
-    -- todo: how to set this properly?
-    aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
     if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
 
         local path = require 'pl.path'
@@ -1066,7 +1072,6 @@ local function main()
     end
 
 
-    printArgs(aArgs)
     local strHelperFileStatus = tHelperFiles.getStatusString()
     print(strHelperFileStatus)
     print()
