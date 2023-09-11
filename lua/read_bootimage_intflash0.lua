@@ -1,5 +1,5 @@
 require("muhkuh_cli_init")
-require("flasher")
+flasher = require("flasher")
 
 local function get_dword(strData, ulOffset)
 	return string.byte(strData,ulOffset) + string.byte(strData,ulOffset+1)*0x00000100 + string.byte(strData,ulOffset+2)*0x00010000 + string.byte(strData,ulOffset+3)*0x01000000

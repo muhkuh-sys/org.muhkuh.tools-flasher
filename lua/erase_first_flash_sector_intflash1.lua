@@ -1,5 +1,5 @@
 require("muhkuh_cli_init")
-require("flasher")
+flasher = require("flasher")
 
 tPlugin = tester.getCommonPlugin()
 if not tPlugin then
