@@ -61,8 +61,8 @@
 		<repository id="github2" type="url" cacheable="true" rescan="3600">
 			<root>https://github.com/muhkuh-sys</root>
 			<versions>[dotgroup]-romloader/releases</versions>
-			  <config>[dotgroup]-romloader/releases/download/v[version]-dev10/[artifact]-[version][platform].[extension]</config>
-			<artifact>[dotgroup]-romloader/releases/download/v[version]-dev10/[artifact]-[version][platform].[extension]</artifact>
+			  <config>[dotgroup]-romloader/releases/download/v[version]-dev11/[artifact]-[version][platform].[extension]</config>
+			<artifact>[dotgroup]-romloader/releases/download/v[version]-dev11/[artifact]-[version][platform].[extension]</artifact>
 		</repository>
 	</repositories>
 </jonchkicfg>
