@@ -71,7 +71,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
 
             if strSipData ~= tData['patched_data'] then
                 uResult = VERIFY_RESULT_FALSE
-                strErrorMsg = string.format("Data was not patched correctly to offset 0x%08x", tData['offset_int'])
+                strErrorMsg = string.format("Data was not patched correctly on %s SIP to offset 0x%08x", strCompSip, tData['offset_int'])
                 break
             end
         end
