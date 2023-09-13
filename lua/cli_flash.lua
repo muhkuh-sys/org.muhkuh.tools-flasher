@@ -526,9 +526,10 @@ end
 --   nothing
 local function printArgs(tArguments)
   print("")
+  print("Command line:" .. table.concat(arg, " ", -1, #arg))
+  print("")
   print("Running CLI flasher with the following args:")
   print("--------------------------------------------")
-  print("Command line:", table.concat(arg, " ", -1, #arg))
   
   printTable(tArguments, 0)
   print("")

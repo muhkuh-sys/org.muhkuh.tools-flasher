@@ -597,6 +597,8 @@ end
 --   nothing
 function printArgs(tArguments)
     tLog.info("")
+    tLog.info("Command line:" .. table.concat(arg, " ", -1, #arg))
+    tLog.info("")
     tLog.info("run usip_player.lua with the following args:")
     tLog.info("--------------------------------------------")
     printTable(tArguments, 0)

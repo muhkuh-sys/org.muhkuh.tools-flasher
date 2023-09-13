@@ -156,6 +156,8 @@ end
 
 function printArgs(tArgs, tLog)
     print("")
+    print("Command line:" .. table.concat(arg, " ", -1, #arg))
+    print("")
     print("run wfp.lua with the following args:")
     print("------------------------------------")
     printTable(tArgs, 0)
