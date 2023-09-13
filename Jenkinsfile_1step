@@ -30,12 +30,8 @@ node {
                     userRemoteConfigs: [[url: 'https://github.com/muhkuh-sys/org.muhkuh.tools-flasher.git']]
                 ])
         
-                /* Build the flasher. */
-                stage("flasher"){
-                    sh "python3 mbs/mbs"
-                }
-        
-                /* Build the project. */
+                /* Build the project (includes flasher binary and other 
+                   components like romloader etc. */
                 sh "./build_artifact.py ${atEntry[0]} ${atEntry[1]} ${atEntry[2]}"
         
                 /* Archive all artifacts. */
