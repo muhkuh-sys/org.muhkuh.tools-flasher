@@ -12,10 +12,6 @@ local atLogLevels = {
     'fatal'
 }
 
-VERIFY_RESULT_OK = 0
-VERIFY_RESULT_ERROR = 1
-VERIFY_RESULT_FALSE = 2
-
 local tSignatures = {}
 tSignatures[1] = {}  --ECC
 tSignatures[1][1] = 64  -- 265
@@ -31,6 +27,10 @@ local Sipper = class()
 function Sipper:_init(tLog)
     print("initialize Sipper")
     self.tLog = tLog
+
+    self.VERIFY_RESULT_OK = 0
+    self.VERIFY_RESULT_ERROR = 1
+    self.VERIFY_RESULT_FALSE = 2
 end
 
 function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
@@ -41,7 +41,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
     --  2: (VERIFY_RESULT_FALSE) verification failed
 
 
-    local uResult = VERIFY_RESULT_OK
+    local uResult = self.VERIFY_RESULT_OK
     local strErrorMsg = ""
     local strCompareSipData
     local strCompSip
@@ -55,7 +55,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
             strCompareSipData = strAppSipData
             strCompSip = "APP"
         else
-            uResult = VERIFY_RESULT_ERROR
+            uResult = self.VERIFY_RESULT_ERROR
             strErrorMsg = string.format("Unknown Secure Info Page '%'",
                     tUsipChunk['page_type_int'])
             break
@@ -70,7 +70,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
             local strSipData = tSipDataHandle:read(tData['size_int'])
 
             if strSipData ~= tData['patched_data'] then
-                uResult = VERIFY_RESULT_FALSE
+                uResult = self.VERIFY_RESULT_FALSE
                 strErrorMsg = string.format("Data was not patched correctly on %s SIP to offset 0x%08x", strCompSip, tData['offset_int'])
                 break
             end

@@ -1256,7 +1256,7 @@ local function verifyContent(
     atPluginOptions,
     strExecReturnPath
 )
-    local uVerifyResult = VERIFY_RESULT_OK
+    local uVerifyResult = tSipper.VERIFY_RESULT_OK
 
     tLog.info("Verify USIP content ... ")
     tLog.debug( "Reading out SecureInfoPages via %s", strPluginType )
@@ -1269,7 +1269,7 @@ local function verifyContent(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
-        uVerifyResult = VERIFY_RESULT_ERROR
+        uVerifyResult = tSipper.VERIFY_RESULT_ERROR
     else
 
         if tFlasherHelper.getStoreTempFiles() then
@@ -1605,7 +1605,7 @@ local function usip(
                     atResetPluginOptions,
                     strResetExecReturnPath
             )
-            if uVerifyResult == VERIFY_RESULT_OK then
+            if uVerifyResult == tSipper.VERIFY_RESULT_OK then
                 fOk = true
             else
                 fOk = false
@@ -2129,7 +2129,7 @@ local function verify_content(
         )
 
     else
-        uVerifyResult = VERIFY_RESULT_ERROR
+        uVerifyResult = tSipper.VERIFY_RESULT_ERROR
         tLog.error(strErrorMsg)
     end
 
@@ -2576,7 +2576,7 @@ local strData
 -- set fFinalResult to false, be pessimistic
 local fFinalResult = false
 local iWriteSipResult
-local uResultCode = VERIFY_RESULT_ERROR
+local uResultCode = tSipper.VERIFY_RESULT_ERROR
 --------------------------------------------------------------------------
 -- INITIAL VALUES
 --------------------------------------------------------------------------
@@ -3142,7 +3142,7 @@ elseif tArgs.fCommandVerifySelected then
         strReadSipPath,
         strExecReturnPath
     )
-    if uResultCode == VERIFY_RESULT_OK then
+    if uResultCode == tSipper.VERIFY_RESULT_OK then
         fFinalResult = true
     else
         fFinalResult = false
@@ -3162,7 +3162,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         strReadSipPath,
         strExecReturnPath
     )
-    if uResultCode == VERIFY_RESULT_OK then
+    if uResultCode == tSipper.VERIFY_RESULT_OK then
         tLog.info('')
         tLog.info('####  ######      ######  ######## ######## ')
         tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
@@ -3173,7 +3173,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         tLog.info('####  ######      ######  ########    ##    ')
         tLog.info('')
         tLog.info('RESULT: SIP protection cookie is set')
-    elseif uResultCode == VERIFY_RESULT_ERROR then
+    elseif uResultCode == tSipper.VERIFY_RESULT_ERROR then
         -- print ERROR if an error occurred
         tLog.error("")
         tLog.error("######## #######  #######   ######  ####### ")
@@ -3185,7 +3185,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
         tLog.error("")
         tLog.error('RESULT: ERROR')
-    elseif uResultCode == VERIFY_RESULT_FALSE then
+    elseif uResultCode == tSipper.VERIFY_RESULT_FALSE then
         -- print NOT SET if verify_content came back negative
         tLog.error("")
         tLog.error("##    ##  #######  ########     ######  ######## ######## ")
