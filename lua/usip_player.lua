@@ -67,7 +67,7 @@ local strUsipPlayerGeneralHelp = [[
        |- helper
           |- netx90                         -- helper files that can't be signed
 
-    |- lua5.1(.exe)                         -- lua executable
+    |- lua5.4(.exe)                         -- lua executable
     |- usip_player.lua                      -- usip_player lua file
 
 
