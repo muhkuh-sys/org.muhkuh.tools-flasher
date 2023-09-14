@@ -101,7 +101,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
 
     local tResult = true
     local strErrorMsg = ""
-    local strChunkID = nil
+    local strChunkID
     local strSkipSize
     local ulSkipSize
     local strChunkSize
