@@ -83,7 +83,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
     return uResult, strErrorMsg
 end
 
-function Sipper:compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize)
+function Sipper.compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize)
     local tResult = true
     local strErrorMsg = ""
     for idx=0, ulSize do
