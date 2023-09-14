@@ -19,7 +19,6 @@ local tFlasherHelper = require 'flasher_helper'
 local path = require 'pl.path'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
-local bit = require 'bit'
 
 
 -- uncomment for debugging with LuaPanda
@@ -2247,7 +2246,7 @@ function check_secure_boot_flag(strComSipData, strAppSipData)
         fComSipStringHandle:seek("set", 0x22C)
         strComProtectionOptionFLags = fComSipStringHandle:read(0x2)
         ulProtectionOptionFLags = tFlasherHelper.bytes_to_uint32(strComProtectionOptionFLags)
-        if bit.band(ulProtectionOptionFLags, COM_SIP_SECURE_BOOT_ENABLED) ~= 0 then
+        if (ulProtectionOptionFLags & COM_SIP_SECURE_BOOT_ENABLED) ~= 0 then
             fSecureFlagComSet = true
         else
             fSecureFlagComSet = false
@@ -2258,7 +2257,7 @@ function check_secure_boot_flag(strComSipData, strAppSipData)
         fAppSipStringHandle:seek("set", 0x228)
         strAppProtectionOptionFLags = fAppSipStringHandle:read(0x2)
         ulProtectionOptionFLags = tFlasherHelper.bytes_to_uint32(strAppProtectionOptionFLags)
-        if bit.band(ulProtectionOptionFLags, APP_SIP_SECURE_BOOT_ENABLED) ~= 0 then
+        if (ulProtectionOptionFLags & APP_SIP_SECURE_BOOT_ENABLED) ~= 0 then
             fSecureFlagAppSet = true
         else
             fSecureFlagAppSet = false
@@ -2338,13 +2337,13 @@ function checkHideSipRegister(tPlugin)
         ulValCal = tPlugin:read_data32(IFLASH_SPECIAL_CFG_CAL)
         ulValCom = tPlugin:read_data32(IFLASH_SPECIAL_CFG_COM)
         ulValApp = tPlugin:read_data32(IFLASH_SPECIAL_CFG_APP)
-        if bit.band(ulValCal, 0xF) ~= 0 then
+        if (ulValCal & 0xF) ~= 0 then
             fHideSet = true
             strErrorMsg = "CAL page hide flag is set"
-        elseif bit.band(ulValCom, 0xF) ~= 0 then
+        elseif (ulValCom & 0xF) ~= 0 then
             fHideSet = true
             strErrorMsg = "COM page hide flag is set"
-        elseif bit.band(ulValApp, 0xF) ~= 0 then
+        elseif (ulValApp & 0xF) ~= 0 then
             fHideSet = true
             strErrorMsg = "APP page hide flag is set"
         end
