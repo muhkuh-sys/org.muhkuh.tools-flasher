@@ -639,6 +639,7 @@ end
 -- transfer integer chiptype into a netx name
 -- returns netX name as a string otherwise nil
 function chiptypeToName(iChiptype)
+    local romloader = _G.romloader
     local strNetxName
     -- First catch the unlikely case that "iChiptype" is nil.
 	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
@@ -1707,6 +1708,7 @@ function set_kek(
     local fProcessUsip = false
     local strMsg
     local strFirstUsipData
+    local romloader = _G.romloader
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
@@ -2664,6 +2666,7 @@ if iChiptype then
         os.exit(1)
     end
     -- check if the netX is supported
+    local romloader = _G.romloader
     if strNetxName ~= "netx90" then
         tLog.error("The connected netX (%s) is not supported.", strNetxName)
         tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
