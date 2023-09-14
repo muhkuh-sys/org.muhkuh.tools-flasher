@@ -377,7 +377,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
 end
 
 
-function main()
+local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
     local tUsipData
     local tParserCommandAnalyze = tParser:command('gen_data_block g', ''):target('fCommandAnalyzeSelected')
@@ -404,7 +404,7 @@ function main()
 
     if tArgs.fCommandAnalyzeSelected == true then
         print("=== gen_data_block ===")
-        sipper = Sipper(tLog)
+        local sipper = Sipper(tLog)
         sipper:gen_data_block(tArgs.strInputFilePath, tArgs.strOutputFilePath)
     end
 end
