@@ -336,23 +336,19 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
                 print(string.len(strBindingData))
                 strBindingData = strBindingData .. strAnchorMask
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 print(string.len(strBindingData))
             elseif ulPageSelect == 2 then
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 strBindingData = strBindingData .. strUUID
                 strBindingData = strBindingData .. strAnchor
                 strBindingData = strBindingData .. strUUIDMask
