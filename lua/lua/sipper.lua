@@ -231,7 +231,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
                             "Unknown key strength extracted: %s (allowed are [1, 2, 3])", ulKeyStrength
                     )
                 end
-                local currentOffset = tBinStringHandle:seek()
+                tBinStringHandle:seek()
                 ulSignatureSize = tSignatures[ulKeyAlgorithm][ulKeyStrength]
                 strDataContent = tBinStringHandle:read(ulContentSize)
                 strSignature = tBinStringHandle:read(ulSignatureSize)
@@ -379,7 +379,6 @@ end
 
 local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
-    local tUsipData
     local tParserCommandAnalyze = tParser:command('gen_data_block g', ''):target('fCommandAnalyzeSelected')
     tParserCommandAnalyze:argument('input_file', 'input file')
                          :target('strInputFilePath')
