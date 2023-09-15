@@ -2516,7 +2516,7 @@ local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsip
     if iResult == WS_RESULT_OK then
         strAppSipData = apply_temp_diode_data(strAppSipData, strCalSipData)
         if tUsipConfigDict ~= nil then
-            strComSipData, strAppSipData = apply_usip_data(strBaseComSipData, strBaseAppSipData, tUsipConfigDict)
+            strComSipData, strAppSipData = apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
         end
     end
 
