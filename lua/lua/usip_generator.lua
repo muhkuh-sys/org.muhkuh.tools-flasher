@@ -208,15 +208,15 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
                         strErrorMsg = "Identity conflict occur! Multiple Chunks in one file with colliding identities."
                         break
                     else
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_0_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_1_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_2_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_3_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "uuid_mask_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_0_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_1_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_2_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_3_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_0_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_1_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_2_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_3_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "uuid_mask_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_0_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_1_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_2_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_3_int")
                     end
                 end
             end
@@ -231,7 +231,7 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     return tResult, strErrorMsg, self.tUsipConfigDict
 end
 
-function UsipGenerator:__check_binding_value(tInputTable, tOutputTable, strCompareKey)
+function UsipGenerator.__check_binding_value(tInputTable, tOutputTable, strCompareKey)
     if tOutputTable[strCompareKey] ~= ("unknown") then
         local ulValueInput = tInputTable[strCompareKey]
         local ulValueOutput = tOutputTable[strCompareKey]
