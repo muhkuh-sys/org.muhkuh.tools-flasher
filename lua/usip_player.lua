@@ -2466,7 +2466,7 @@ end
 -- write APP and COM secure info page (SIP) based on default values
 -- update temp diode calibratino values from CAL SIP to APP SIP
 -- the default values can be modified with the data from an USIP file
-local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption
+local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption,
                             fSetSipProtectionCookie, strComOutputFile, strAppOutputFile)
     local iResult
     local strMsg
