@@ -139,8 +139,8 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
 end
 
 function UsipGenerator:analyze_usip(strUsipFilePath)
-    local tResult = true -- be optimistic
-    local strErrorMsg = ""
+    local tResult
+    local strErrorMsg
     local tUsipFileContent
     local iUsipChunkIdx
 
@@ -270,7 +270,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
     if tUsipFileHandle ~= nil then
 
-        local iUsipFileOffset = 0
+        local iUsipFileOffset
 
 
         -- read whole file and find the first USIP chunk
@@ -541,5 +541,3 @@ end
 
 
 return UsipGenerator
-
-
