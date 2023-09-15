@@ -22,6 +22,12 @@ local UsipGenerator = class()
 function UsipGenerator:_init(tLog)
     print("initialize USIP Generator")
     self.tLog = tLog
+
+    -- This is the SIP protection cookie.
+    self.strSipProtectionCookie = string.char(
+        0x8b, 0x42, 0x3b, 0x75, 0xe2, 0x63, 0x25, 0x62,
+        0x8a, 0x1e, 0x31, 0x6b, 0x28, 0xb4, 0xd7, 0x03
+    )
 end
 
 function UsipGenerator:gen_multi_usip(tUsipConfigDict)
@@ -493,6 +499,16 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     tUsipFileHandle:close()
     return tResult, strErrorMsg, tUsipFileContent, iUsipChunkIdx
 end
+
+
+--- Set the SIP protection cookie in a COM SIP.
+-- @param strComSipData The COM SIP where the cookie should be set.
+-- @return The modified COM SIP page.
+function UsipGenerator:setSipProtectionCookie(strComSipData)
+    -- Replace the first 16 bytes of the COM page with the SIP protection cookie.
+    return self.strSipProtectionCookie .. string.sub(strComSipData, 16+1)
+end
+
 
 local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")

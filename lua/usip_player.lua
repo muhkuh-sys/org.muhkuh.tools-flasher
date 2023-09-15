@@ -185,6 +185,10 @@ tParserWriteSips:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
+tParserWriteSips:flag('--set_sip_protection')
+    :description('Set the SIP protection cookie.')
+    :target('fSetSipProtectionCookie')
+    :default(false)
 
 -- NXTFLASHER-692
 local strVerifyInitialModeHelp = [[
@@ -2490,7 +2494,8 @@ end
 -- write APP and COM secure info page (SIP) based on default values
 -- update temp diode calibratino values from CAL SIP to APP SIP
 -- the default values can be modified with the data from an USIP file
-local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption)
+local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption
+                            fSetSipProtectionCookie)
     local iResult
     local strMsg
     local fResult
@@ -2514,6 +2519,11 @@ local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsip
     iResult, strMsg, strCalSipData = verifyInitialMode(tPlugin, aAttr)
 
     if iResult == WS_RESULT_OK then
+        -- Set the SIP protection cookie if requested.
+        if fSetSipProtectionCookie then
+            strComSipData = tUsipGen:setSipProtectionCookie(strComSipData)
+        end
+
         strAppSipData = apply_temp_diode_data(strAppSipData, strCalSipData)
         if tUsipConfigDict ~= nil then
             strComSipData, strAppSipData = apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
@@ -2999,7 +3009,9 @@ elseif tArgs.fCommandWriteSips then
         tPlugin,
         strComSipBaseData,
         strAppSipBaseData,
-        tUsipConfigDict
+        tUsipConfigDict,
+        nil,
+        tArgs.fSetSipProtectionCookie
     )
     if iWriteSipResult == WS_RESULT_OK then
         fFinalResult = true
