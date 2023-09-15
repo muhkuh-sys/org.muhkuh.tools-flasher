@@ -189,6 +189,15 @@ tParserWriteSips:flag('--set_sip_protection')
     :description('Set the SIP protection cookie.')
     :target('fSetSipProtectionCookie')
     :default(false)
+tParserWriteSips:option('--com_sip_output')
+    :description('Write the generated COM SIP page to COM_OUTPUT_FILE. Do not flash it to the device.')
+    :argname('<COM_OUTPUT_FILE>')
+    :target('strComOutputFile')
+tParserWriteSips:option('--app_sip_output')
+    :description('Write the generated APP SIP page to APP_OUTPUT_FILE. Do not flash it to the device.')
+    :argname('<APP_OUTPUT_FILE>')
+    :target('strAppOutputFile')
+
 
 -- NXTFLASHER-692
 local strVerifyInitialModeHelp = [[
@@ -2495,7 +2504,7 @@ end
 -- update temp diode calibratino values from CAL SIP to APP SIP
 -- the default values can be modified with the data from an USIP file
 local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption
-                            fSetSipProtectionCookie)
+                            fSetSipProtectionCookie, strComOutputFile, strAppOutputFile)
     local iResult
     local strMsg
     local fResult
@@ -2532,17 +2541,43 @@ local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsip
 
     if iResult == WS_RESULT_OK then
         -- write the SIPs
-        fResult, strMsg = writeSIPviaFLash(tPlugin, "COM", strComSipData, aAttr)
-        if not fResult then
-            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        if strComOutputFile~=nil then
+            local utils = require 'pl.utils'
+            local fWriteResult, strWriteMessage = utils.writefile(strComOutputFile, strComSipData, true)
+            if fWriteResult~=true then
+                strMsg = string.format(
+                    'Failed to write the generated COM page to the output file "%s": %s',
+                    strComOutputFile,
+                    strWriteMessage
+                )
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        else
+            fResult, strMsg = writeSIPviaFLash(tPlugin, "COM", strComSipData, aAttr)
+            if not fResult then
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
         end
     end
 
     if iResult == WS_RESULT_OK then
         -- write the SIPs
-        fResult, strMsg = writeSIPviaFLash(tPlugin, "APP", strAppSipData, aAttr)
-        if not fResult then
-            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        if strAppOutputFile~=nil then
+            local utils = require 'pl.utils'
+            local fWriteResult, strWriteMessage = utils.writefile(strAppOutputFile, strAppSipData, true)
+            if fWriteResult~=true then
+                strMsg = string.format(
+                    'Failed to write the generated APP page to the output file "%s": %s',
+                    strComOutputFile,
+                    strWriteMessage
+                )
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        else
+            fResult, strMsg = writeSIPviaFLash(tPlugin, "APP", strAppSipData, aAttr)
+            if not fResult then
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
         end
     end
     return iResult, strMsg
@@ -3011,7 +3046,9 @@ elseif tArgs.fCommandWriteSips then
         strAppSipBaseData,
         tUsipConfigDict,
         nil,
-        tArgs.fSetSipProtectionCookie
+        tArgs.fSetSipProtectionCookie,
+        tArgs.strComOutputFile,
+        tArgs.strAppOutputFile
     )
     if iWriteSipResult == WS_RESULT_OK then
         fFinalResult = true
