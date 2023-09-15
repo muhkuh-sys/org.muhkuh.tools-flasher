@@ -52,7 +52,8 @@ local OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- E
 local OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
 local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
 local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
-local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}    -- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}    -- Reset the netX by triggering a watchdog reset
 
 
 M.MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -1563,6 +1564,49 @@ function M.identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
+end
+
+function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
+	local romloader = require("romloader")
+	local strPluginType = tPlugin:GetTyp()
+	local iChipType = tPlugin:GetChiptyp()
+	
+	-- For netX90 chips use the reset in the flasher binary
+	if (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90)
+	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90_MPW)
+	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90B)
+	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90C) then
+		print("Resetting from RAM")
+		local aulParameter =
+		{
+			OPERATION_MODE_Reset,                          -- operation mode: reset
+		}
+		local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+		return ulValue == 0
+	else
+		-- Reset triggering the watchdog directly
+		local ulM2MMajor = tPlugin:get_mi_version_maj()
+		local ulM2MMinor = tPlugin:get_mi_version_min()
+		if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
+			print("use call usip command to reset netx")
+			flasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
+												 -- image again
+			flasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
+		else
+			print("reset netx via watchdog")
+			tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
+		end
+
+		if fOk then
+			if strMsg then
+				print(strMsg)
+			end
+			return 0==0
+		else
+			printf("Error: %s", strMsg or "unknown error")
+			return 0==1
+		end
+	end
 end
 
 return M
