@@ -510,6 +510,45 @@ function UsipGenerator:setSipProtectionCookie(strComSipData)
 end
 
 
+-- apply data from an usip file to APP and COM SIP data
+function UsipGenerator.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+    local strNewComSipData = strComSipData
+    local strNewAppSipData = strAppSipData
+    local ulSipPage
+    local strUsedData
+    local strBefore
+    local strAfter
+    local tData
+    local tSipPage
+
+    for ulChunks= 0, tUsipConfigDict.num_of_chunks - 1 do
+    --for _, tSipPage in ipairs(tUsipConfigDict.content) do
+        tSipPage = tUsipConfigDict.content[ulChunks]
+        ulSipPage = tSipPage.page_type_int
+        if ulSipPage == 1 then
+            strUsedData = strNewComSipData
+        elseif ulSipPage == 2 then
+            strUsedData = strNewAppSipData
+        end
+        for iDataIdx=0, tSipPage['ulDataCount'] do
+        -- for ulIdx, tData in ipairs(tSipPage.data) do
+            tData = tSipPage.data[iDataIdx]
+            strBefore = string.sub(strUsedData, 1, tData.offset_int)
+            strAfter = string.sub(strUsedData, tData.offset_int + tData.size_int + 1)
+            strUsedData = strBefore .. tData.patched_data ..strAfter
+        end
+        if ulSipPage == 1 then
+            strNewComSipData = strUsedData
+        elseif ulSipPage == 2 then
+            strNewAppSipData = strUsedData
+        end
+    end
+
+    return strNewComSipData, strNewAppSipData
+end
+
+
+
 local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
 
