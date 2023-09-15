@@ -233,9 +233,9 @@ end
 
 function UsipGenerator:__check_binding_value(tInputTable, tOutputTable, strCompareKey)
     if tOutputTable[strCompareKey] ~= ("unknown") then
-        ulValueInput = tInputTable[strCompareKey]
-        ulValueOutput = tOutputTable[strCompareKey]
-        ulNewVal = ulValueInput | ulValueOutput
+        local ulValueInput = tInputTable[strCompareKey]
+        local ulValueOutput = tOutputTable[strCompareKey]
+        local ulNewVal = ulValueInput | ulValueOutput
         tOutputTable[strCompareKey] = ulNewVal
     else
         tOutputTable[strCompareKey] = tInputTable[strCompareKey]
@@ -495,9 +495,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     return tResult, strErrorMsg, tUsipFileContent, iUsipChunkIdx
 end
 
-function main()
+local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
-    local tUsipData
 
     local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file')
                                          :target('fCommandAnalyzeSelected')
@@ -523,10 +522,10 @@ function main()
 
     if tArgs.fCommandAnalyzeSelected == true then
         print("=== Analyze ===")
-        usip_gen = UsipGenerator(tLog)
-        tResult, strErrorMsg, tUsipData = usip_gen:analyze_usip(tArgs.strUsipFilePath, tArgs.strJsonFilePath)
+        local usip_gen = UsipGenerator(tLog)
+        local tResult, strErrorMsg, tUsipData = usip_gen:analyze_usip(tArgs.strUsipFilePath, tArgs.strJsonFilePath)
 
-        strOutputDir = ".tmp"
+        local strOutputDir = ".tmp"
         usip_gen:gen_multi_usip_hboot(tUsipData, strOutputDir)
     end
 end
