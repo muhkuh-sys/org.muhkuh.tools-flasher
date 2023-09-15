@@ -2,9 +2,7 @@
 
 local argparse = require 'argparse'
 local mhash = require 'mhash'
-local pl = require 'pl.import_into'()
 local class = require 'pl.class'
-local path = require 'pl.path'
 local tFlasherHelper = require 'flasher_helper'
 
 local atLogLevels = {
@@ -117,6 +115,7 @@ end
 function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPrefix)
     local tResult = true
 
+    local path = require 'pl.path'
     if not path.exists(strOutputDir) then
         path.mkdir(strOutputDir)
     end
@@ -130,7 +129,7 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     local strUsipData
 
     for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
-        local strOutputFilePath = pl.path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
+        local strOutputFilePath = path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
         table.insert(aOutputList, strOutputFilePath)
 
         strUsipData = aDataList[iIdx+1]
@@ -180,6 +179,7 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     -- header checksum
     self.tUsipConfigDict["header_check_sum"] = "unknown"
 
+    local path = require 'pl.path'
     if path.exists(strUsipFilePath) then
         local tUsipFileHandle = io.open(strUsipFilePath, 'rb')
 
