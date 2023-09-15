@@ -120,7 +120,7 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     end
 
     local aOutputList = {}
-    local aDataList, tDataNames = self:gen_multi_usip(tUsipConfigDict)
+    local aDataList = self:gen_multi_usip(tUsipConfigDict)
     local strUsipData
 
     for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
@@ -247,7 +247,6 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     local strErrorMsg = ""
     local tUsipFileHandle
     local i
-    local j
     local tUsipFileContent = {}
     local ulSignatureSize = 4
     local iUsipChunkIdx = 0
@@ -278,7 +277,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
         -- Note: this will cause an error if the string "USIP" occurs
         -- somewhere before the first USIP chunk.
         local strUsipFileContent = tUsipFileHandle:read("*a")
-        i, j = string.find(strUsipFileContent, "USIP")
+        i = string.find(strUsipFileContent, "USIP")
         iUsipFileOffset = i - 1
 
         -- reset the file pointer
@@ -443,7 +442,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = ulDataSize
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
-                    local current = tUsipFileHandle:seek()
+                    tUsipFileHandle:seek()
                     local strPatchedData = tUsipFileHandle:read(ulDataSize)
                     mh_sha384:hash(strPatchedData)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["patched_data"] = strPatchedData
@@ -474,7 +473,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["padding"] = ""
                 end
 
-                local current = tUsipFileHandle:seek()
+                tUsipFileHandle:seek()
                 local strSignature = tUsipFileHandle:read(ulSignatureSize)
                 tUsipFileContent[iUsipChunkIdx]["signature"] = strSignature
 
