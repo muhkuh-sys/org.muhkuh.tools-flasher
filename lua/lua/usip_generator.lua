@@ -200,7 +200,10 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
 
             for iIdx = 0, (self.tUsipConfigDict["num_of_chunks"] - 1) do
                 if tUsipFileContent[iIdx]['key_idx_int'] ~= 255 then
-                    if self.tUsipConfigDict["uuid_int"] ~= "unknown" and self.tUsipConfigDict["uuid_int"] ~= tUsipFileContent[iIdx]["uuid_int"] then
+                    if(
+                        self.tUsipConfigDict["uuid_int"] ~= "unknown" and
+                        self.tUsipConfigDict["uuid_int"] ~= tUsipFileContent[iIdx]["uuid_int"]
+                    ) then
                         tResult = false
                         strErrorMsg = "Identity conflict occur! Multiple Chunks in one file with colliding identities."
                         break
@@ -298,7 +301,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
                 print(string.format("Skip over '%s' chunk", strChunkId))
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8
 
             elseif strChunkId == "USIP" then
                 self.tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
@@ -476,7 +480,8 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
                 tUsipFileContent[iUsipChunkIdx]["sha384_hash"] = mh_sha384:hash_end()
 
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8
                 -- increment the index
                 iUsipChunkIdx = iUsipChunkIdx + 1
             end
@@ -493,13 +498,21 @@ end
 function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
     local tUsipData
-    local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file'):target('fCommandAnalyzeSelected')
-    tParserCommandAnalyze:argument('usip_file', 'input usip file'):target('strUsipFilePath')
-    tParserCommandAnalyze:argument('json_file', 'json file'):target('strJsonFilePath')
-    tParserCommandAnalyze                    :option(
-            '-V --verbose'
-    )                                        :description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-            table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+
+    local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file')
+                                         :target('fCommandAnalyzeSelected')
+    tParserCommandAnalyze:argument('usip_file', 'input usip file')
+                        :target('strUsipFilePath')
+    tParserCommandAnalyze:argument('json_file', 'json file')
+                         :target('strJsonFilePath')
+    tParserCommandAnalyze:option('-V --verbose')
+                         :description(string.format(
+                             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', ')
+                         ))
+                         :argname('<LEVEL>')
+                         :default('debug')
+                         :target('strLogLevel')
 
     local tArgs = tParser:parse()
 
