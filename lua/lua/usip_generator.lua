@@ -305,6 +305,12 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
             -- get the chunk size
             ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize) * 4
+            tLog.debug(
+                'Found chunk "%s" at offset 0x%04x with 0x%04x bytes.',
+                strChunkId,
+                iUsipFileOffset,
+                ulChunkSize
+            )
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
                 tLog.debug(string.format("Skip over '%s' chunk", strChunkId))
