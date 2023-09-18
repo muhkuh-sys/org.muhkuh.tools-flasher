@@ -556,8 +556,154 @@ function UsipGenerator.apply_usip_data(strComSipData, strAppSipData, tUsipConfig
 end
 
 
+--- Update the hash for a COM and APP secure info page.
+-- The hash is used to check the integrity of the pages. It is a SHA384 sum over the complete data area.
+-- @param strSipData The data of the complete secure info page.
+-- @return The updated page.
+function UsipGenerator.updateSipHash(strSipData)
+    -- Get the data part of the page.
+    local strData = string.sub(strSipData, 1, 0x0fd0)
+    -- Get the hash for the data part.
+    local mh = mhash.mhash_state()
+    mh:init(mhash.MHASH_SHA384)
+    mh:hash(strData)
+    local strHash = mh:hash_end()
+    -- Return the updated page.
+    return strData .. strHash
+end
+
+
+function UsipGenerator:gen_uniform_data(strComSipTemplate, strAppSipTemplate, strUsipFilePath, fSetSipProtectionCookie)
+    local tLog = self.tLog
+    local strComSipData
+    local strAppSipData
+    local strMessage
+
+    -- The template data for the COM and APP secure info page must have 4096 bytes.
+    local sizComSipPage = string.len(strComSipTemplate)
+    local sizAppSipPage = string.len(strAppSipTemplate)
+    if sizComSipPage~=4096 then
+        strMessage = string.format('The COM SIP template must have 4096 bytes, but it has %d.', sizComSipPage)
+
+    elseif sizAppSipPage~=4096 then
+        strMessage = string.format('The APP SIP template must have 4096 bytes, but it has %d.', sizAppSipPage)
+
+    else
+        -- Analyze the USIP file.
+        local tUsipAnalyzeResult, strUsipAnalyzeMsg, tUsipConfigDict = self:analyze_usip(strUsipFilePath)
+        if tUsipAnalyzeResult~=true then
+            strMessage = string.format(
+                'Failed to analyze the USIP data from "%s": %s',
+                strUsipFilePath,
+                strUsipAnalyzeMsg
+            )
+
+        else
+            -- Dump the analyzed USIP data.
+            -- This is a lot of output including some binary data. Do not print this by default, even not on
+            -- the "debug" level.
+            -- tLog.debug('USIP contents: %s', require 'pl.pretty'.write(tUsipConfigDict))
+
+            -- Use the template as the initial contents for the secure info pages.
+            strComSipData = strComSipTemplate
+            strAppSipData = strAppSipTemplate
+
+            -- Set the SIP protection cookie if requested.
+            if fSetSipProtectionCookie then
+                strComSipData = self:setSipProtectionCookie(strComSipData)
+            end
+
+            -- Apply the USIP file to the secure info pages.
+            strComSipData, strAppSipData = self.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+
+            -- Update the hashes.
+            strComSipData = self.updateSipHash(strComSipData)
+            strAppSipData = self.updateSipHash(strAppSipData)
+        end
+    end
+
+    return strComSipData, strAppSipData, strMessage
+end
+
+
+function UsipGenerator:cmd_gen_uniform_data(strComSipTemplatePath, strAppSipTemplatePath, strUsipFilePath,
+                                            strComOutputFile, strAppOutputFile,
+                                            fSetSipProtectionCookie)
+    local tLog = self.tLog
+
+    local utils = require 'pl.utils'
+    tLog.debug('Reading COM SIP template from "%s".', strComSipTemplatePath)
+    local strComSipTemplate, strComSipReadError = utils.readfile(strComSipTemplatePath, true)
+    if strComSipTemplate==nil then
+        tLog.error(
+            'Failed to read the COM SIP template from "%s": %s',
+            strComSipTemplatePath,
+            strComSipReadError
+        )
+    else
+        tLog.debug('Reading APP SIP template from "%s".', strAppSipTemplatePath)
+        local strAppSipTemplate, strAppSipReadError = utils.readfile(strAppSipTemplatePath, true)
+        if strAppSipTemplate==nil then
+            tLog.error(
+                'Failed to read the APP SIP template from "%s": %s',
+                strAppSipTemplatePath,
+                strAppSipReadError
+            )
+        else
+            tLog.debug('Generating uniform data...')
+            local strComSipPage, strAppSipPage, strMessage = self:gen_uniform_data(
+                strComSipTemplate,
+                strAppSipTemplate,
+                strUsipFilePath,
+                fSetSipProtectionCookie
+            )
+            if strComSipPage==nil or strAppSipPage==nil then
+                tLog.error('Failed to generate the uniform data: %s', strMessage)
+            else
+                local fWriteComResult, strWriteComMessage = utils.writefile(strComOutputFile, strComSipPage, true)
+                if fWriteComResult~=true then
+                    tLog.error(
+                        'Failed to write the generated COM SIP data to "%s": %s',
+                        strComOutputFile,
+                        strWriteComMessage
+                    )
+                else
+                    local fWriteAppResult, strWriteAppMessage = utils.writefile(strAppOutputFile, strAppSipPage, true)
+                    if fWriteAppResult~=true then
+                        tLog.error(
+                            'Failed to write the generated APP SIP data to "%s": %s',
+                            strAppOutputFile,
+                            strWriteAppMessage
+                        )
+                    else
+                        tLog.info('Generated uniform COM SIP data: "%s"',strComOutputFile)
+                        tLog.info('Generated uniform APP SIP data: "%s"',strAppOutputFile)
+                    end
+                end
+            end
+        end
+    end
+end
+
 
 local function main()
+    -- Get the path to this source file.
+    local strThisModulePath = debug.getinfo(1, "S").source:sub(2)
+    -- Construct the path to the helper binaries starting at this module.
+    local path = require 'pl.path'
+    local strHelperFilesPath = path.normpath(
+        path.join(
+            path.dirname(strThisModulePath),
+            '..',
+            'netx',
+            'helper'
+        )
+    )
+
+    -- Get the path to the default COM and APP SIP templates.
+    local NETX90_DEFAULT_COM_SIP_BIN = path.join(strHelperFilesPath, 'netx90', 'com_sip_default_ff.bin')
+    local NETX90_DEFAULT_APP_SIP_BIN = path.join(strHelperFilesPath, 'netx90', 'app_sip_default_ff.bin')
+
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
 
     local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file')
@@ -575,6 +721,42 @@ local function main()
                          :default('debug')
                          :target('strLogLevel')
 
+    local tParserCommandUniform = tParser:command('uniform u', ''):target('fCommandUniformSelected')
+    tParserCommandUniform:argument('usip_input')
+                        :argname('<USIP_FILE>')
+                        :description("Apply the contents of USIP_FILE to the secure info pages.")
+                        :target('strUsipFilePath')
+    tParserCommandUniform:argument('com_sip_output')
+                        :argname('<COM_OUTPUT_FILE>')
+                        :description('Write the generated COM SIP page to COM_OUTPUT_FILE.')
+                        :target('strComOutputFile')
+    tParserCommandUniform:argument('app_sip_output')
+                        :argname('<APP_OUTPUT_FILE>')
+                        :description('Write the generated APP SIP page to APP_OUTPUT_FILE.')
+                        :target('strAppOutputFile')
+    tParserCommandUniform:option('--com_sip_template')
+                        :argname('<COM_TEMPLATE_FILE>')
+                        :description("Read the default COM SIP contents from COM_TEMPLATE_FILE.")
+                        :target('strComSipTemplatePath')
+                        :default(NETX90_DEFAULT_COM_SIP_BIN)
+    tParserCommandUniform:option('--app_sip_template')
+                        :argname('<APP_TEMPLATE_FILE>')
+                        :description("Read the default APP SIP contents from APP_TEMPLATE_FILE.")
+                        :target('strAppSipTemplatePath')
+                        :default(NETX90_DEFAULT_APP_SIP_BIN)
+    tParserCommandUniform:flag('--set_sip_protection')
+                        :description('Set the SIP protection cookie.')
+                        :target('fSetSipProtectionCookie')
+                        :default(false)
+    tParserCommandUniform:option('-V --verbose')
+                        :description(string.format(
+                            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                            table.concat(atLogLevels, ', ')
+                        ))
+                        :argname('<LEVEL>')
+                        :default('debug')
+                        :target('strLogLevel')
+
     local tArgs = tParser:parse()
 
     local tLogWriterConsole = require 'log.writer.console'.new()
@@ -589,6 +771,18 @@ local function main()
 
         local strOutputDir = ".tmp"
         usip_gen:gen_multi_usip_hboot(tUsipData, strOutputDir)
+
+    elseif tArgs.fCommandUniformSelected then
+        tLog.info('Generate uniform data.')
+        local usip_gen = UsipGenerator(tLog)
+        usip_gen:cmd_gen_uniform_data(
+            tArgs.strComSipTemplatePath,
+            tArgs.strAppSipTemplatePath,
+            tArgs.strUsipFilePath,
+            tArgs.strComOutputFile,
+            tArgs.strAppOutputFile,
+            tArgs.fSetSipProtectionCookie
+        )
     end
 end
 
