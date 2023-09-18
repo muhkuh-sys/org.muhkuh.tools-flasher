@@ -18,7 +18,7 @@ local atLogLevels = {
 local UsipGenerator = class()
 
 function UsipGenerator:_init(tLog)
-    print("initialize USIP Generator")
+    tLog.debug("initialize USIP Generator")
     self.tLog = tLog
 
     -- This is the SIP protection cookie.
@@ -148,8 +148,9 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     local strErrorMsg
     local tUsipFileContent
     local iUsipChunkIdx
+    local tLog = self.tLog
 
-    self.tLog.info(string.format("Analyzing usip file: %s", strUsipFilePath))
+    tLog.info(string.format("Analyzing usip file: %s", strUsipFilePath))
 
     self.strUsipFilePath = strUsipFilePath
 
@@ -187,7 +188,7 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
         tUsipFileHandle:seek("set", 16)
         local strHeaderImgSize = tUsipFileHandle:read(4)
         self.tUsipConfigDict["header_image_size"] = strHeaderImgSize
-        --print(string.format("%02X ", string.byte(strHeaderImgSize)))
+        tLog.debug("Header size: 0x%02X bytes", string.byte(strHeaderImgSize))
 
         -- read 28 bytes at offset 32 for the sha224
         tUsipFileHandle:seek("set", 32)
@@ -256,6 +257,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     local tUsipFileContent = {}
     local ulSignatureSize = 4
     local iUsipChunkIdx = 0
+    local tLog = self.tLog
 
     local tSignatures = {}
     tSignatures[1] = {}  --ECC
@@ -297,7 +299,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             local ulChunkSize
 
             if strChunkId == nil or tFlasherHelper.bytes_to_uint32(strChunkId) == 0 then
-                print("No Chunk ID found. End of loop.")
+                tLog.debug("No Chunk ID found. End of loop.")
                 break
             end
 
@@ -305,12 +307,12 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize) * 4
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
-                print(string.format("Skip over '%s' chunk", strChunkId))
+                tLog.debug(string.format("Skip over '%s' chunk", strChunkId))
                 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
                 iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8
 
             elseif strChunkId == "USIP" then
-                self.tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
+                tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
 
                 -- add new entry for this USIP chunk
                 tUsipFileContent[iUsipChunkIdx] = {}
@@ -386,21 +388,21 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                         tUsipFileContent[iUsipChunkIdx][string.format("anchor_mask_%s_int", idx)] = ulAnchorMask
                     end
 
-                    print("strKeyAlgorithm offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strKeyAlgorithm offset " ..tUsipFileHandle:seek())
                     -- extract the key algorithm
                     local strKeyAlgorithm = tUsipFileHandle:read(1)
                     local ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm)
                     tUsipFileContent[iUsipChunkIdx]["key_algorithm"] = strKeyAlgorithm
 
 
-                    print("strKeyStrength offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strKeyStrength offset " ..tUsipFileHandle:seek())
                     -- extract key strength
                     local strKeyStrength = tUsipFileHandle:read(1)
                     local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength)
                     tUsipFileContent[iUsipChunkIdx]["key_strength"] = strKeyStrength
 
                     tUsipFileHandle:seek("set", tUsipFileHandle:seek()-2)
-                    print("strPaddedKey offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strPaddedKey offset " ..tUsipFileHandle:seek())
                     -- extract padded key
                     local strPaddedKey = tUsipFileHandle:read(520)
                     tUsipFileContent[iUsipChunkIdx]["padded_key"] = strPaddedKey
@@ -429,7 +431,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                 local iDataIdx = 0
                 local ulExtractedDataSize = 0
                 tUsipFileContent[iUsipChunkIdx]["data"] = {}
-                print("Data part offset " .. tUsipFileHandle:seek())
+                tLog.debug("Data part offset " .. tUsipFileHandle:seek())
 
                 while tResult do
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx] = {}
@@ -459,7 +461,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     if ulDataLeftSize <= 1 then
 
 
-                        print("exit loop")
+                        tLog.debug("exit loop")
                         break
                     end
                     iDataIdx = iDataIdx + 1
@@ -575,7 +577,7 @@ local function main()
     local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
 
     if tArgs.fCommandAnalyzeSelected == true then
-        print("=== Analyze ===")
+        tLog.debug("=== Analyze ===")
         local usip_gen = UsipGenerator(tLog)
         local tResult, strErrorMsg, tUsipData = usip_gen:analyze_usip(tArgs.strUsipFilePath, tArgs.strJsonFilePath)
 
