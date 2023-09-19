@@ -23,6 +23,13 @@
 
 #include "netx_consoleapp.h"
 
+/**
+ * \brief Configures the watchdog and starts it.
+ * After 1 seconda watchdog reset will trigger.
+ * 
+ * \return NETX_CONSOLEAPP_RESULT_T NETX_CONSOLEAPP_RESULT_OK If the watchdog was activated
+ *                                  NETX_CONSOLEAPP_RESULT_ERROR If the chip type is not supported
+ */
 NETX_CONSOLEAPP_RESULT_T resetNetX(void);
 
 
