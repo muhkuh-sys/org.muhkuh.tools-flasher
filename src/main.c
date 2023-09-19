@@ -793,7 +793,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
 	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
 	uprintf("Activating watchdog\n");
 	retVal = resetNetX();
-	 uprintf("Watchdog activated\n");
+	uprintf("Watchdog activated\n");
 	return retVal;
 }
 

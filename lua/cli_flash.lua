@@ -828,8 +828,12 @@ local function exec(aArgs)
 		tPlugin:Disconnect()
 
 		if aArgs.fCommandResetSelected then
-			tFlasherHelper.sleep_s(1)  -- Wait 1 second after disconnecting for the watchdog to trigger
-			strMsg = "Reset command finished"
+			if fOk then
+				tFlasherHelper.sleep_s(1)  -- Wait 1 second after disconnecting for the watchdog reset to finish
+				strMsg = "Reset command finished"
+			else
+				strMsg = "Reset command failed"
+			end
 		end
 
 		collectgarbage('collect')

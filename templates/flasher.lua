@@ -1566,17 +1566,26 @@ function M.identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 	return ulValue == 0
 end
 
+
+--------------------------------------------------------------------------
+-- Function to reset a netX through the flasher binary by
+-- triggering a watchdog reset
+--------------------------------------------------------------------------
 function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 	local romloader = require("romloader")
-	local strPluginType = tPlugin:GetTyp()
 	local iChipType = tPlugin:GetChiptyp()
-	
-	-- For netX90 chips use the reset in the flasher binary
-	if (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90)
-	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90_MPW)
-	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90B)
-	or (iChipType == romloader.ROMLOADER_CHIPTYP_NETX90C) then
-		print("Resetting from RAM")
+	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
+
+	-- Only netX90s are officially supported. All other chips require activating the RESET_NETX_ENABLE_ALL bool
+	-- List of netX types in romloader repo -> romloader_def.h
+	if iChipType == romloader.ROMLOADER_CHIPTYP_NETX90
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90_MPW
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90B
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90C
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90D
+	or RESET_NETX_ENABLE_ALL
+	then
+		print("Resetting On-Chip")
 		local aulParameter =
 		{
 			OPERATION_MODE_Reset,                          -- operation mode: reset
@@ -1584,28 +1593,8 @@ function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 		local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 		return ulValue == 0
 	else
-		-- Reset triggering the watchdog directly
-		local ulM2MMajor = tPlugin:get_mi_version_maj()
-		local ulM2MMinor = tPlugin:get_mi_version_min()
-		if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
-			print("use call usip command to reset netx")
-			flasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
-												 -- image again
-			flasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
-		else
-			print("reset netx via watchdog")
-			tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
-		end
-
-		if fOk then
-			if strMsg then
-				print(strMsg)
-			end
-			return 0==0
-		else
-			printf("Error: %s", strMsg or "unknown error")
-			return 0==1
-		end
+		print("Error: This netX type does not support the reset_netx command")
+		return 0==1
 	end
 end
 
