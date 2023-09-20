@@ -33,29 +33,29 @@ NETX_CONSOLEAPP_RESULT_T resetNetX(void){
     #if (ASIC_TYP==ASIC_TYP_NETIOL)
     // This is untested and purely theoretical
     uprintf("Warning: netIOL resets are untested!");
-    volatile uint32_t *pAddr_WdgSysCfg         = (uint32_t*) ulWdgBaseAddr + 0;  /** wdg_sys_cfg */
-    volatile uint32_t *pAddr_wdgSysCmd         = (uint32_t*) ulWdgBaseAddr + 1;  /** wdg_sys_cmd */
-    volatile uint32_t *pAddr_wdgSysPrescaleRld = (uint32_t*) ulWdgBaseAddr + 2;  /** wdg_sys_cnt_upper_rld */
-    volatile uint32_t *pAddr_wdgSysCounterRld  = (uint32_t*) ulWdgBaseAddr + 3;  /** wdg_sys_cnt_lower_rld */
+    volatile uint32_t *pulWdgSysCfg         = (uint32_t*) ulWdgBaseAddr + 0;  /** wdg_sys_cfg */
+    volatile uint32_t *pulWdgSysCmd         = (uint32_t*) ulWdgBaseAddr + 1;  /** wdg_sys_cmd */
+    volatile uint32_t *pulWdgSysPrescaleRld = (uint32_t*) ulWdgBaseAddr + 2;  /** wdg_sys_cnt_upper_rld */
+    volatile uint32_t *pulWdgSysCounterRld  = (uint32_t*) ulWdgBaseAddr + 3;  /** wdg_sys_cnt_lower_rld */
     
     // Disable WDG
-    *pAddr_WdgSysCfg = (0x3Fa<<2);
-    if(*pAddr_WdgSysCfg % 2 != 0){
+    *pulWdgSysCfg = (0x3FAu<<2);
+    if((*pulWdgSysCfg & 0x01) != 0){
         uprintf("Warning: could not disable watchdog on netIOL\n");
     }
 
     // Prescaler reload registers
-    *pAddr_wdgSysPrescaleRld = 0x07FF;
+    *pulWdgSysPrescaleRld = 0x07FFul;
     // WDG counter reload registers
-    *pAddr_wdgSysCounterRld = 0xFFFF;
+    *pulWdgSysCounterRld = 0xFFFFul;
 
     // Enable WDG
-    *pAddr_WdgSysCfg = (0x3Fa<<2)|0x1;
+    *pulWdgSysCfg = (0x3FAu<<2)|0x1;
 
     // Trigger watchdog
-    *pAddr_wdgSysCmd = 0x72B4;
-    *pAddr_wdgSysCmd = 0xDE80;
-    *pAddr_wdgSysCmd = 0xD281;
+    *pulWdgSysCmd = 0x72B4ul;
+    *pulWdgSysCmd = 0xDE80ul;
+    *pulWdgSysCmd = 0xD281ul;
 
     return NETX_CONSOLEAPP_RESULT_OK;
     #else
@@ -64,23 +64,23 @@ NETX_CONSOLEAPP_RESULT_T resetNetX(void){
         return NETX_CONSOLEAPP_RESULT_ERROR;
     }
 
-    volatile uint32_t *pAddr_WdgCtrl =       (uint32_t*) ulWdgBaseAddr + 0;   /** Watchdog control register */
-    volatile uint32_t *pAddr_WdgIrqTimeout = (uint32_t*) ulWdgBaseAddr + 2;   /** Watchdog Reset timeout register */
-    volatile uint32_t *pAddr_WdgResTimeout = (uint32_t*) ulWdgBaseAddr + 3;   /** Watchdog IRQ timeout register */
+    volatile uint32_t *pulWdgCtrl =       (uint32_t*) ulWdgBaseAddr + 0;   /** Watchdog control register */
+    volatile uint32_t *pulWdgIrqTimeout = (uint32_t*) ulWdgBaseAddr + 2;   /** Watchdog Reset timeout register */
+    volatile uint32_t *pulWdgResTimeout = (uint32_t*) ulWdgBaseAddr + 3;   /** Watchdog IRQ timeout register */
 
     // Enable write access to timeout registers
-    *pAddr_WdgCtrl = (*pAddr_WdgCtrl) | (1u<<31u);
+    *pulWdgCtrl = (*pulWdgCtrl) | (1u<<31u);
 
     // IRQ after 0.8 seconds (Units in 100µs, interrupt not handled)
-    *pAddr_WdgIrqTimeout = 0.8*10000; // Factor 10'000 so the left number is timeout in seconds
+    *pulWdgIrqTimeout = 0.8*10000; // Factor 10'000 so the left number is timeout in seconds
     // Reset 0.2 seconds after unhandled IRQ
-    *pAddr_WdgResTimeout = 0.2*10000;
+    *pulWdgResTimeout = 0.2*10000;
 
     // Trigger watchdog once to start it
-    *pAddr_WdgCtrl = (*pAddr_WdgCtrl) | (1u<<28u);
+    *pulWdgCtrl = (*pulWdgCtrl) | (1u<<28u);
 
     // Readback register to guarantee activating the watchdog has finished
-    *pAddr_WdgCtrl = (*pAddr_WdgCtrl);
+    *pulWdgCtrl = (*pulWdgCtrl);
 
     return NETX_CONSOLEAPP_RESULT_OK;
 
