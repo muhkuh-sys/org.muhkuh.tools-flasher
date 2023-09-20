@@ -30,34 +30,32 @@ static const uint32_t ulWdgBaseAddr = 0;
 #endif
 
 NETX_CONSOLEAPP_RESULT_T resetNetX(void){
-    #if (ASIC_TYP==ASIC_TYP_NETX4000 || ASIC_TYP==ASIC_TYP_NETX4000_RELAXED)
-    //These require special treatment and are not implemented yet
-    uprintf("Error: This hardware is not supported");
-    return NETX_CONSOLEAPP_RESULT_ERROR;
-    #elif (ASIC_TYP==ASIC_TYP_NETIOL)
+    #if (ASIC_TYP==ASIC_TYP_NETIOL)
     // This is untested and purely theoretical
     uprintf("Warning: netIOL resets are untested!");
     volatile uint32_t *pAddr_WdgSysCfg         = (uint32_t*) ulWdgBaseAddr + 0;  /** wdg_sys_cfg */
     volatile uint32_t *pAddr_wdgSysCmd         = (uint32_t*) ulWdgBaseAddr + 1;  /** wdg_sys_cmd */
     volatile uint32_t *pAddr_wdgSysPrescaleRld = (uint32_t*) ulWdgBaseAddr + 2;  /** wdg_sys_cnt_upper_rld */
     volatile uint32_t *pAddr_wdgSysCounterRld  = (uint32_t*) ulWdgBaseAddr + 3;  /** wdg_sys_cnt_lower_rld */
-    if(1==0){
-        // Immediately asserts a WDG reset, will not work because flasher will not return
-        *pAddr_wdgSysCmd = 0xDEAD;
+    
+    // Disable WDG
+    *pAddr_WdgSysCfg = (0x3Fa<<2);
+    if(*pAddr_WdgSysCfg % 2 != 0){
+        uprintf("Warning: could not disable watchdog on netIOL\n");
     }
-    else{
-        // Assume 100MHz system clk rate (from datasheet), set WDG for 1sec
-        // Prescaler reload registers
-        *pAddr_wdgSysPrescaleRld = 10000;
-        // WDG counter reload registers
-        *pAddr_wdgSysCounterRld = 10000;
 
-        // Activate WDG
-        *pAddr_WdgSysCfg = (0x3Fa<<2)|0x3;
+    // Prescaler reload registers
+    *pAddr_wdgSysPrescaleRld = 0x07FF;
+    // WDG counter reload registers
+    *pAddr_wdgSysCounterRld = 0xFFFF;
 
-        // Readback to make sure activation was executed
-        *pAddr_WdgSysCfg = *pAddr_WdgSysCfg;
-    }
+    // Enable WDG
+    *pAddr_WdgSysCfg = (0x3Fa<<2)|0x1;
+
+    // Trigger watchdog
+    *pAddr_wdgSysCmd = 0x72B4;
+    *pAddr_wdgSysCmd = 0xDE80;
+    *pAddr_wdgSysCmd = 0xD281;
 
     return NETX_CONSOLEAPP_RESULT_OK;
     #else
@@ -73,10 +71,10 @@ NETX_CONSOLEAPP_RESULT_T resetNetX(void){
     // Enable write access to timeout registers
     *pAddr_WdgCtrl = (*pAddr_WdgCtrl) | (1u<<31u);
 
-	// IRQ after 0.8 seconds (Units in 100µs, interrupt not handled)
-	*pAddr_WdgIrqTimeout = 0.8*10000; // Factor 10'000 so the left number is timeout in seconds
-	// Reset 0.2 seconds after unhandled IRQ
-	*pAddr_WdgResTimeout = 0.2*10000;
+    // IRQ after 0.8 seconds (Units in 100µs, interrupt not handled)
+    *pAddr_WdgIrqTimeout = 0.8*10000; // Factor 10'000 so the left number is timeout in seconds
+    // Reset 0.2 seconds after unhandled IRQ
+    *pAddr_WdgResTimeout = 0.2*10000;
 
     // Trigger watchdog once to start it
     *pAddr_WdgCtrl = (*pAddr_WdgCtrl) | (1u<<28u);

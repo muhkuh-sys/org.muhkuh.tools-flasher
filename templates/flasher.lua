@@ -1572,7 +1572,6 @@ end
 -- triggering a watchdog reset
 --------------------------------------------------------------------------
 function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
-	local romloader = require("romloader")
 	local iChipType = tPlugin:GetChiptyp()
 	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
 
@@ -1594,7 +1593,7 @@ function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 		return ulValue == 0
 	else
 		print("Error: This netX type does not support the reset_netx command")
-		return 0==1
+		return false
 	end
 end
 
