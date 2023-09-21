@@ -793,11 +793,11 @@ if fBuildIsFull==True:
         'targets/testbench/netx/helper/netx90/hboot_netx90_exec_bxlr.bin':              hboot_netx90_exec_bxlr_bin,
         'targets/testbench/netx/helper/netx90/com_default_rom_init_ff_netx90_rev2.bin': 'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
         'targets/testbench/netx/helper/netx90/set_kek.usp':                             'helper_binaries/netx90/set_kek.usp',
+        'targets/testbench/netx/helper/netx90/set_sip_protection_cookie.usp':     set_sip_protection_cookie_com_usp,
 
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings.usp':     disable_security_settings_usp,
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings_com.usp': disable_security_settings_com_usp,
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings_app.usp': disable_security_settings_app_usp,
-        'targets/testbench/netx/hboot/unsigned/netx90_usip/set_sip_protection_cookie.usp':     set_sip_protection_cookie_com_usp,
 
         'targets/testbench/doc/flasher.html':              doc,
         'targets/testbench/doc/spi_flash_types.html':      tDocSpiFlashTypesHtml,
