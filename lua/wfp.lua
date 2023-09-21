@@ -31,7 +31,7 @@ function WFPXml:addTarget(strTargetName)
 	self.tTarget = xml.new("Target")
 	self.tTarget:set_attrib("netx", strTargetName)
 	self.nodeFlasherPack:add_child(self.tTarget)
-	
+
 end
 
 function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
@@ -40,13 +40,13 @@ function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
 	self.tTarget:add_child(tFlash)
-	
+
 	tData = xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
-	
+
 	tErase = xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
@@ -118,14 +118,14 @@ end
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
--- returns 
---   data if successful 
+-- returns
+--   data if successful
 --   nil, message if an error occurred
 function loadBin(strFilePath)
 	local strData
 	local tFile
 	local strMsg
-	
+
 	tFile, strMsg = io.open(strFilePath, "rb")
 	if tFile then
 		strData = tFile:read("*a")
@@ -184,19 +184,19 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         tLog.error(strError)
         fResult = false
     end
-	
-    if fResult==true then 
+
+    if fResult==true then
         -- check helper signatures
         fResult, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
-        if fResult ~= true then 
+        if fResult ~= true then
             tLog.error(strMsg or "Failed to verify the signatures of the helper files")
             fResult = false
         end
     end
-    
+
     if fResult==true then
         exampleXml = WFPXml(nil, tLog)
-        
+
         iChiptype = tPlugin:GetChiptyp()
         strTargetName = tWfpControl.atChiptyp2name[iChiptype]
         -- Download the binary. (load the flasher binary into intram)
@@ -212,28 +212,28 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
                 ucUnit = tUnitInfo.iIdx
                 -- add only unit 2 and 3 for IFlash of netx90
                 if strTargetName == "NETX90" and ucBus == 2 then
-                    if ucUnit == 2 or ucUnit == 3 then 
+                    if ucUnit == 2 or ucUnit == 3 then
                         exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
                     end
                 -- only add Unit 0 Flashes to example
                 elseif ucUnit == 0 then
                     exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
-                end 
+                end
             end
         end
-    
+
         exampleXml:exportXml(tArgs.strWfpControlFile)
-    end 
-    
+    end
+
     return fResult
 end
 
 
 function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
-    
+
     local archive = require 'archive'
     local fOk=true
-    
+
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
@@ -357,7 +357,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                             tEntry:set_gname('wfp')
                             tEntry:set_ctime(ulCreationTime, 0)
                             tEntry:set_mtime(ulModTime, 0)
-                            
+
                             tArchive:write_header(tEntry)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
@@ -437,13 +437,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 		-- read the offset and size for each area inside the flash
 		-- copy the contents to different bin files
 		-- copy xml file
-      
+
     local ulSize
     local ulOffset
     local DestinationFolder = tArgs.strBackupPath
     local DestinationXml = DestinationFolder .. "/wfp.xml"
     local strMsg
-   
+
     local fOk = true --be optimistic
 	-- overwrite :
 	-- check if the directory exists
@@ -486,10 +486,10 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 
         if fOk == true then
 
-           
+
            -- Select a plugin and connect to the netX.
             local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
-   
+
             if tPlugin then
                 fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
                 if fOk == false then
@@ -503,8 +503,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
             if tPlugin then
                 -- check helper signatures
                 fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
-                
-                if fOk ~= true then 
+
+                if fOk ~= true then
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
                     fOk = false
                 else
@@ -518,7 +518,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                     else
                         -- Download the binary. (load the flasher binary into intram)
                         local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
-    
+
                         -- Loop over all flashes. (inside xml)
                         for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                             local strBusName = tTargetFlash.strBus
@@ -531,17 +531,17 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                                 local ulUnit = tTargetFlash.ulUnit
                                 local ulChipSelect = tTargetFlash.ulChipSelect
                                 tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
-    
+
                                 -- Detect the device and check if the size is in 32 bit range.
                                 local fDetectOk, strMsg
                                 fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected exists inside the hardware
-    
+
                                 if fDetectOk ~= true then
                                     tLog.error(strMsg)
                                     fOk = false
                                     break
                                 end
-    
+
                                 for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
                                     -- Is this a data area?
                                     if tData.strType == "Data" then
@@ -550,7 +550,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                                             fOk = false
                                             break
                                         end
-    
+
                                         local strFile
                                         if tWfpControl:getHasSubdirs() == true then
                                             tLog.info("WFP archive uses subdirs.")
@@ -561,17 +561,17 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                                         end
                                         ulOffset = tData.ulOffset
                                         ulSize = tData.ulSize
-    
+
                                         tLog.info(
                                             'read data from area 0x%08x-0x%08x  ".',
                                             ulOffset,
                                             ulOffset + ulSize
                                         )
-    
+
                                         -- continue with reading the selected area
-    
+
                                         -- read
-    
+
                                         strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
                                         if strData == nil then
                                             fOk = false
@@ -579,13 +579,13 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                                         else
                                             -- save the read area  to the output file (write binary)
                                             local fileName = DestinationFolder .. "/" .. strFile
-                                            
+
                                             -- create the subdirectory inside the output folder if it does not exist
                                             local strSubFolderPath = pl.path.dirname(fileName)
                                                 if not pl.path.exists(strSubFolderPath) then
                                                     pl.dir.makepath(strSubFolderPath)
                                                 end
-    
+
                                             pl.utils.writefile(fileName, strData, true)
                                         end
                                     elseif tData.strType == "Erase" then
@@ -595,8 +595,8 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                             end
                         end
                     end
-                end 
-                
+                end
+
 
             end
         end
@@ -624,8 +624,8 @@ end
 
 
 local strEpilog = [==[
-Note: the command 'check_helper_signature' and the optional arguments 
-for secure boot mode (--sec, --comp, --disable_helper_signature_check) 
+Note: the command 'check_helper_signature' and the optional arguments
+for secure boot mode (--sec, --comp, --disable_helper_signature_check)
 are only valid for the netX 90.
 ]==]
 
@@ -740,18 +740,18 @@ if tArgs.strSecureOption == nil then
 	tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
 end
 
--- If a signed helper directory was specified (--sec) 
+-- If a signed helper directory was specified (--sec)
 -- and it is not the default (unsigned) directory,
 -- and the flag --disable_helper_signature_check was not specified,
 -- and the command is one that connects to the netx and uses the flasher,
 -- set a list of helper files to be checked later after connecting.
-if tArgs.strSecureOption ~= nil 
-and tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION 
+if tArgs.strSecureOption ~= nil
+and tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION
 and tArgs.fDisableHelperSignatureChecks ~= true then
-    if tArgs.fCommandFlashSelected               -- flash         
-    or tArgs.fCommandReadSelected                -- read          
-    or tArgs.fCommandVerifySelected              -- verify        
-    or tArgs.fCommandExampleSelected             -- example         
+    if tArgs.fCommandFlashSelected               -- flash
+    or tArgs.fCommandReadSelected                -- read
+    or tArgs.fCommandVerifySelected              -- verify
+    or tArgs.fCommandExampleSelected             -- example
     then
         tArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
     end
@@ -896,11 +896,11 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tLog.error('No plugin selected, nothing to do!')
                 fOk = false
             else
-            
+
                 -- check helper signatures
                 fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
-                
-                if fOk ~= true then 
+
+                if fOk ~= true then
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
                     fOk = false
                 else
@@ -914,14 +914,14 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                     else
                         -- Download the binary.
                         local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, tArgs.bCompMode, tArgs.strSecureOption)
-    
+
                         -- Verify command now moved above Target Flash Loop to collect data for each flash before running verification
                         if tArgs.fCommandVerifySelected == true then
                             -- new verify function here
                             fOk = wfp_verify.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
                             tLog.info('verification result: %s', tostring(fOk))
                         else
-    
+
                             -- Loop over all flashes. (inside xml)
                             for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                                 local strBusName = tTargetFlash.strBus
@@ -934,16 +934,16 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                     local ulUnit = tTargetFlash.ulUnit
                                     local ulChipSelect = tTargetFlash.ulChipSelect
                                     tLog.debug('Processing bus: %s, unit: %d, chip select: %d', strBusName, ulUnit, ulChipSelect)
-    
+
                                     -- Detect the device and check if the size is in 32 bit range.
                                     local fDetectOk
-                                    fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) 
+                                    fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect)
                                     if fDetectOk ~= true then
                                         tLog.error(strMsg)
                                         fOk = false
                                         break
                                     end
-                                    
+
                                     if tArgs.fCommandFlashSelected == true then
                                         -- loop over data inside xml
                                         for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
@@ -953,7 +953,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                 local ulSize = tData.ulSize
                                                 local strCondition = tData.strCondition
                                                 tLog.info('Found erase 0x%08x-0x%08x and condition "%s".', ulOffset, ulOffset + ulSize, strCondition)
-    
+
                                                 if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
                                                     tLog.info('Not processing erase : prevented by condition.')
                                                 else
@@ -976,11 +976,11 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                     tLog.info('WFP archive does not use subdirs.')
                                                     strFile = pl.path.basename(tData.strFile)
                                                 end
-    
+
                                                 local ulOffset = tData.ulOffset
                                                 local strCondition = tData.strCondition
                                                 tLog.info('Found file "%s" with offset 0x%08x and condition "%s".', strFile, ulOffset, strCondition)
-    
+
                                                 if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
                                                     tLog.info('Not processing file %s : prevented by condition.', strFile)
                                                 else
@@ -996,7 +996,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                             tLog.warning('Not touching the flash as dry run is selected.')
                                                         else
                                                             tLog.debug('Flashing %d bytes...', sizData)
-    
+
                                                             fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, sizData)
                                                             if fOk ~= true then
                                                                 tLog.error('Failed to erase the area: %s', strMsg)
@@ -1017,7 +1017,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         end
                                     end
                                 end
-    
+
                                 if fOk ~= true then
                                     break
                                 end
