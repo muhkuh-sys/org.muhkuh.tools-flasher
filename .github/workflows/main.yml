@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ dev_v2.0.0_monolithic_build ]
+    branches: [ dev_v2.0.0 ]
     tags:
     - '*'
   pull_request:
