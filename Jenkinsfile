@@ -8,41 +8,38 @@ node {
     def strBuilds = env.JENKINS_SELECT_BUILDS
     def atBuilds = new JsonSlurperClassic().parseText(strBuilds)
 
-    docker.image("mbs_ubuntu_1804_x86_64").inside('-u root') {
-        /* Clean before the build. */
-        sh 'rm -rf .[^.] .??* *'
+    atBuilds.each { atEntry ->
+        stage("${atEntry[0]} ${atEntry[1]} ${atEntry[2]}"){
 
-        checkout([$class: 'GitSCM',
-            branches: [[name: env.GIT_BRANCH_SPECIFIER]],
-            doGenerateSubmoduleConfigurations: false,
-            extensions: [
-                [$class: 'SubmoduleOption',
-                    disableSubmodules: false,
-                    recursiveSubmodules: true,
-                    reference: '',
-                    trackingSubmodules: false
-                ]
-            ],
-            submoduleCfg: [],
-            userRemoteConfigs: [[url: 'https://github.com/muhkuh-sys/org.muhkuh.tools-flasher.git']]
-        ])
-
-        /* Build the flasher. */
-        stage("flasher"){
-            sh "python3 mbs/mbs"
-        }
-
-        atBuilds.each { atEntry ->
-            stage("${atEntry[0]} ${atEntry[1]} ${atEntry[2]}"){
-                /* Build the project. */
+            docker.image("${atEntry[3]}").inside('-u root') {
+                /* Clean before the build. */
+                sh 'rm -rf .[^.] .??* *'
+        
+                checkout([$class: 'GitSCM',
+                    branches: [[name: env.GIT_BRANCH_SPECIFIER]],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [
+                        [$class: 'SubmoduleOption',
+                            disableSubmodules: false,
+                            recursiveSubmodules: true,
+                            reference: '',
+                            trackingSubmodules: false
+                        ]
+                    ],
+                    submoduleCfg: [],
+                    userRemoteConfigs: [[url: 'https://github.com/muhkuh-sys/org.muhkuh.tools-flasher.git']]
+                ])
+        
+                /* Build the project (includes flasher binary and other 
+                   components like romloader etc. */
                 sh "./build_artifact.py ${atEntry[0]} ${atEntry[1]} ${atEntry[2]}"
+        
+                /* Archive all artifacts. */
+                archiveArtifacts artifacts: "${ARTIFACTS_PATH1}/*.tar.gz,${ARTIFACTS_PATH1}/*.zip,${ARTIFACTS_PATH2}/*.hash,${ARTIFACTS_PATH2}/*.pom,${ARTIFACTS_PATH2}/*.xml,${ARTIFACTS_PATH2}/*.zip"
+        
+                /* Clean up after the build. */
+                sh 'rm -rf .[^.] .??* *'
             }
         }
-
-        /* Archive all artifacts. */
-        archiveArtifacts artifacts: "${ARTIFACTS_PATH1}/*.tar.gz,${ARTIFACTS_PATH1}/*.zip,${ARTIFACTS_PATH2}/*.hash,${ARTIFACTS_PATH2}/*.pom,${ARTIFACTS_PATH2}/*.xml,${ARTIFACTS_PATH2}/*.zip"
-
-        /* Clean up after the build. */
-        sh 'rm -rf .[^.] .??* *'
     }
 }
