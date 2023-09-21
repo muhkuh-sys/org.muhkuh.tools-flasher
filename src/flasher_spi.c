@@ -665,10 +665,16 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 	progress_bar_init(ulEndAdr-ulStartAdr);
 	while(currAdr < ulEndAdr)
 	{
+		unsigned char partialSector = 0;
 		/* Read a set of sectors */
 		while(currSector < nrSectorsInLargestErase)
 		{
-			if(currAdr >= ulEndAdr) break; /* Stop reading if we reached the end */
+			if(currAdr >= ulEndAdr){
+				partialSector = 1;
+				break; /* Stop reading if we reached the end */
+			}else if (currAdr == ulStartAdr){
+				partialSector = 1;
+			}
 			retVal = Drv_SpiReadFlash(ptFlashDescription, currAdr, pucSpiBuffer, sectorSizeBytes);
 			if(retVal != NETX_CONSOLEAPP_RESULT_OK)
 			{
@@ -721,8 +727,10 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 
 				// uprintf("OpSz:0x%4x, Empty: %d, Total: %d\n", eraseTypes[eraseCmd].Size, nrChunksEmpty, nrSectorsEraseable);
 
-				/* Use erase command if less than 20% of sectors are empty, otherwise go to the next command */
-				if((10*nrChunksEmpty) <= (2*nrSectorsEraseable))
+				/* Use erase command if less than 20% of sectors are empty
+				 * If we're in the first or last block, only erase if no sectors erasable by the command are empty to prevent erasing too far.
+				*/
+				if(((10*nrChunksEmpty) <= (2*nrSectorsEraseable) && partialSector == 0) || (nrChunksEmpty == 0))
 				{
 					unsigned long eraseAdr = currAdr + offset*sectorSizeBytes - currSector*sectorSizeBytes;
 					//uprintf("Erase with command: 0x%2x\n",eraseTypes[eraseCmd].OpCode);
