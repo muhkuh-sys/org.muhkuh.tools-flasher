@@ -1209,8 +1209,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             end
             if fResult then
                 ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
-                if (bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0) and
-                        (bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0) then
+                if ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
+                        ((ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0) then
                     strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
                     strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
                     strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
@@ -1218,10 +1218,10 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
                     aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
                     aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
                     aStrUUIDs[3] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 8))
-                elseif bit.band(ulReadSipResult, COM_SIP_INVALID_MSK) ~= 0 then
+                elseif (ulReadSipResult & COM_SIP_INVALID_MSK) ~= 0 then
                     strErrorMsg = "Could not get a valid copy of the COM SIP"
                     fResult = false
-                elseif bit.band(ulReadSipResult, APP_SIP_INVALID_MSK) ~= 0 then
+                elseif (ulReadSipResult & APP_SIP_INVALID_MSK) ~= 0 then
                     strErrorMsg = "Could not get a valid copy of the APP SIP"
                     fResult = false
                 end
@@ -1421,7 +1421,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
     tLog.debug( "ulHbootResult: %s ", ulHbootResult )
-    ulHbootResult = bit.band(ulHbootResult, 0x107)
+    ulHbootResult = ulHbootResult & 0x107
     -- TODO: include description
     if ulHbootResult == 0x107 then
         tLog.info( "Successfully set KEK" )
@@ -1785,16 +1785,16 @@ function set_kek(
             local iCopySizeInBytes = iMaxImageSizeInBytes + iCopyUsipSize + iMaxOptionSizeInBytes
 
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(iCopySizeInBytes, 0xff)
+                iCopySizeInBytes & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 8), 0xff)
+                (iCopySizeInBytes >> 8) & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 16), 0xff)
+                (iCopySizeInBytes >> 16) & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 24), 0xff)
+                (iCopySizeInBytes >> 24) & 0xff
             )
             -- reserved
             strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)

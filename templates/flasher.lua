@@ -25,7 +25,6 @@ local M = {}
 --
 -----------------------------------------------------------------------------
 
-local bit = require("bit")
 local romloader = require 'romloader'
 local tHelperFiles = require 'helper_files'
 
@@ -392,10 +391,10 @@ local function set_parameterblock(tPlugin, ulAddress, aulParameters, fnCallbackP
 		-- printf(strSetMem, ulAddress+4*(i-1), v)
 
 		strBin = strBin .. string.char(
-      bit.band(v,0xff),
-      bit.band(bit.rshift(v,8),0xff),
-      bit.band(bit.rshift(v,16),0xff),
-      bit.band(bit.rshift(v,24),0xff)
+      v & 0xff,
+      (v >>  8) & 0xff,
+      (v >> 16) & 0xff,
+      (v >> 24) & 0xff
     )
 	end
 	M.write_image(tPlugin, ulAddress, strBin, fnCallbackProgress)

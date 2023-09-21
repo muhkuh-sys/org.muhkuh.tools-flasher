@@ -1,0 +1,15 @@
+diff -uNr zlib-1.2.13/CMakeLists.txt zlib-1.2.13_patched/CMakeLists.txt
+--- zlib-1.2.13/CMakeLists.txt	2023-05-25 11:31:13.045102848 +0200
++++ zlib-1.2.13_patched/CMakeLists.txt	2023-05-25 11:31:20.725112008 +0200
+@@ -174,6 +174,11 @@
+ #    set_target_properties(zlib PROPERTIES SUFFIX "1.dll")
+ #endif()
+ 
++# The static library will be linked with a shared object later. Add "-fPIC" on GCC systems or X64 builds break.
++IF("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU"  AND  "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
++    SET_TARGET_PROPERTIES(zlibstatic PROPERTIES COMPILE_FLAGS -fPIC)
++ENDIF("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU"  AND  "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
++
+ if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
+     install(TARGETS zlibstatic
+         EXPORT EXPORT_package

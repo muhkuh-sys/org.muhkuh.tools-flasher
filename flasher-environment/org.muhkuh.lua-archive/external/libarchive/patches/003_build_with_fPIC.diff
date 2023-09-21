@@ -1,0 +1,23 @@
+diff -uNr libarchive-3.6.1/CMakeLists.txt libarchive-3.6.1_patched/CMakeLists.txt
+--- libarchive-3.6.1/CMakeLists.txt	2022-04-19 10:52:31.341015859 +0200
++++ libarchive-3.6.1_patched/CMakeLists.txt	2022-04-19 10:54:01.477069158 +0200
+@@ -101,16 +101,17 @@
+ # relaxed somewhat in final shipping versions.
+ IF (CMAKE_C_COMPILER_ID MATCHES "^GNU$" OR
+     CMAKE_C_COMPILER_ID MATCHES "^Clang$")
+-  SET(CMAKE_REQUIRED_FLAGS "-Wall -Wformat -Wformat-security")
++  SET(CMAKE_REQUIRED_FLAGS "-fPIC -Wall -Wformat -Wformat-security")
+   #################################################################
+   # Set compile flags for all build types.
+-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wformat -Wformat-security")
++  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall -Wformat -Wformat-security")
+   if (ENABLE_WERROR)
+     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+   endif ()
+   #################################################################
+   # Set compile flags for debug build.
+   # This is added into CMAKE_C_FLAGS when CMAKE_BUILD_TYPE is "Debug"
++  SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fPIC")
+   SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+   SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wextra")
+   SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wunused")
