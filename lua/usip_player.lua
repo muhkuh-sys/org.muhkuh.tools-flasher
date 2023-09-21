@@ -394,7 +394,7 @@ if tArgs.strSecureOption == nil then
     tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
 end
 if tArgs.strSecureOptionPhaseTwo == nil then
-    tArgs.strSecureOptionPhaseTwo = tFlasher.DEFAULT_HBOOT_OPTION
+    tArgs.strSecureOptionPhaseTwo = tArgs.strSecureOption
 end
 -- convert the parameter strBootswitchParams to all upper case
 if tArgs.strBootswitchParams ~= nil then
