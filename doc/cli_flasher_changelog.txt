@@ -1,5 +1,19 @@
+Updates in CLI Flasher v2.0.0-dev16
+==============================
+
+* Switch to Lua 5.4
+* Overhaul of build system: dependencies are now integrated as submodules 
+  and are built together with the flasher.
+* The netx_reset command of the cli_flasher now works also in secure boot mode.
+  (the reset is now triggered by code running on the netX, a subcommand
+  of the CLI flasher.)
+* Use the value of --sec as default value for --sec_p2 instead of the 
+  unsigned directory.
+
+
 Updates in CLI Flasher v2.0.0-dev15
 ==============================
+
 * Bugfixes in module loading (wfp.lua and demo scripts)
 * Include the command line in the output
 * Do not attempt to print binary file when showing the plugin options.
