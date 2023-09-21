@@ -38,7 +38,7 @@ end
 
 
 function M.callback_progress(a,b)
-	print(string.format("%d%% (%d/%d)", a*100/b, a, b))
+	print(string.format("%d%% (%d/%d)", math.floor(a*100/b), a, b))
 	return true
 end
 
