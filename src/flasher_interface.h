@@ -50,14 +50,15 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_Erase            = 1,
 	OPERATION_MODE_Read             = 2,
 	OPERATION_MODE_Verify           = 3,
-	OPERATION_MODE_Checksum         = 4,    /* build a checksum over the contents of a specified area of a device */
-	OPERATION_MODE_Detect           = 5,    /* detect a device */
-	OPERATION_MODE_IsErased         = 6,    /* check if the specified area of a device is erased */
-	OPERATION_MODE_GetEraseArea     = 7,    /* expand an area to the erase block borders */
-	OPERATION_MODE_GetBoardInfo     = 8,    /* get bus and unit information */
-	OPERATION_MODE_EasyErase        = 9,    /* A combination of GetEraseArea, IsErased and Erase. */
+	OPERATION_MODE_Checksum         = 4,     /* build a checksum over the contents of a specified area of a device */
+	OPERATION_MODE_Detect           = 5,     /* detect a device */
+	OPERATION_MODE_IsErased         = 6,     /* check if the specified area of a device is erased */
+	OPERATION_MODE_GetEraseArea     = 7,     /* expand an area to the erase block borders */
+	OPERATION_MODE_GetBoardInfo     = 8,     /* get bus and unit information */
+	OPERATION_MODE_EasyErase        = 9,     /* A combination of GetEraseArea, IsErased and Erase. */
 	OPERATION_MODE_SpiMacroPlayer   = 10,    /* Play an SPI macro. */
-	OPERATION_MODE_Identify			= 11	/* Blink the status LED for 5 seconds to visualy identify the hardware */
+	OPERATION_MODE_Identify         = 11,    /* Blink the status LED for 5 seconds to visualy identify the hardware */
+	OPERATION_MODE_Reset            = 13,    /* Reset the netX chip using a watchdog reset */
 } OPERATION_MODE_T;
 
 

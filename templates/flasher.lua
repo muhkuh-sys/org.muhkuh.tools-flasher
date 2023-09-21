@@ -52,7 +52,8 @@ local OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- E
 local OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
 local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
 local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
-local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}	-- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}    -- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}    -- Reset the netX by triggering a watchdog reset
 
 
 M.MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -1563,6 +1564,37 @@ function M.identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 	return ulValue == 0
+end
+
+
+--------------------------------------------------------------------------
+-- Function to reset a netX through the flasher binary by
+-- triggering a watchdog reset
+--------------------------------------------------------------------------
+function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
+	local iChipType = tPlugin:GetChiptyp()
+	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
+
+	-- Only netX90s are officially supported. All other chips require activating the RESET_NETX_ENABLE_ALL bool
+	-- List of netX types in romloader repo -> romloader_def.h
+	if iChipType == romloader.ROMLOADER_CHIPTYP_NETX90
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90_MPW
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90B
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90C
+	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90D
+	or RESET_NETX_ENABLE_ALL
+	then
+		print("Resetting On-Chip")
+		local aulParameter =
+		{
+			OPERATION_MODE_Reset,                          -- operation mode: reset
+		}
+		local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+		return ulValue == 0
+	else
+		print("Error: This netX type does not support the reset_netx command")
+		return false
+	end
 end
 
 return M

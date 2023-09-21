@@ -695,7 +695,7 @@ local function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to read board info"
 				end
-	        elseif aArgs.fParserCommandIdentifyNetxSelected then
+	        elseif aArgs.fParserCommandIdentifyNetxSelected or aArgs.fCommandResetSelected then
                 -- no action nescessary
 				fOk = true;
 			else
@@ -815,13 +815,28 @@ local function exec(aArgs)
 		if fOk and aArgs.fCommandReadSelected then
 			fOk, strMsg = tFlasherHelper.writeBin(strDataFileName, strData)
 		end
+
         -- identify_netx
         if aArgs.fParserCommandIdentifyNetxSelected then
             fOk = flasher.identify(tPlugin, aAttr)
 			strMsg = "LED sequence finished"
         end
 
+		if aArgs.fCommandResetSelected then
+			fOk = flasher.reset(tPlugin, aAttr)
+		end
+
 		tPlugin:Disconnect()
+
+		if aArgs.fCommandResetSelected then
+			if fOk then
+				tFlasherHelper.sleep_s(1)  -- Wait 1 second after disconnecting for the watchdog reset to finish
+				strMsg = "Reset command finished"
+			else
+				strMsg = "Reset command failed"
+			end
+		end
+
 		collectgarbage('collect')
 	end
 
@@ -1061,12 +1076,11 @@ local function main()
         or aArgs.fCommandTestCliSelected             -- testcli
         or aArgs.fCommandInfoSelected                -- info
         or aArgs.fParserCommandIdentifyNetxSelected  -- identify_netx
+        or aArgs.fCommandResetSelected               -- reset_netx
         then
             aArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
-
         elseif aArgs.fCommandDetectNetxSelected          -- detect_netx
             or aArgs.fCommandDetectSecureBootSelected    -- detect_secure_boot_mode
-            or aArgs.fCommandResetSelected               -- reset_netx
         then
             aArgs.aHelperKeysForSigCheck = {"start_mi"}
         end
@@ -1085,33 +1099,6 @@ local function main()
     if aArgs.fCommandListInterfacesSelected then
         tFlasherHelper.list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
         os.exit(0)
-
-    elseif aArgs.fCommandResetSelected then
-
-        local tPlugin
-        tPlugin, strMsg = tFlasherHelper.getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
-        local strPluginType = tPlugin:GetTyp()
-        local ulM2MMajor = tPlugin:get_mi_version_maj()
-        local ulM2MMinor = tPlugin:get_mi_version_min()
-        if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
-            print("use call usip command to reset netx")
-            flasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
-                                                 -- image again
-            flasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
-        else
-            print("reset netx via watchdog")
-            tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
-        end
-
-        if fOk then
-            if strMsg then
-                print(strMsg)
-            end
-            os.exit(0)
-        else
-            printf("Error: %s", strMsg or "unknown error")
-            os.exit(1)
-        end
 
     elseif aArgs.fCommandDetectNetxSelected then
         iRet, strMsg = tFlasherHelper.detect_chiptype(aArgs)
