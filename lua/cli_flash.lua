@@ -25,6 +25,8 @@ local tVerifySignature = require 'verify_signature'
 
 local FLASHER_PATH = "netx/"
 
+local ALLOW_INTERNAL_CHIPSELECTS = false
+
 --------------------------------------------------------------------------
 -- Usage
 --------------------------------------------------------------------------
@@ -1002,6 +1004,17 @@ local function main()
             jtag_frequency_khz = aArgs.iJtagKhz
         }
     }
+
+    -- Catch internal chipselects.
+    if(
+        ALLOW_INTERNAL_CHIPSELECTS~=true and
+        aArgs.iBus==flasher.BUS_IFlash and
+        (aArgs.iUnit==1 or aArgs.iUnit==2) and
+        aArgs.iChipSelect==3
+    ) then
+      print("Error: invalid chipselect: " .. tostring(aArgs.iChipSelect))
+      os.exit(1)
+    end
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
