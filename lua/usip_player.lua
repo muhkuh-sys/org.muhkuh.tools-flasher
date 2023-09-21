@@ -2389,8 +2389,7 @@ end
 
 -- set the path for set_sip_protection_cookie.usp
 if tArgs.fCommandCheckSIPCookie then
-    -- todo move to helper files folder (this will not be signed)
-    strUsipFilePath = path.join(strSecureOption, "netx90_usip" ,"set_sip_protection_cookie.usp")
+    strUsipFilePath = path.join("netx", "helper" , "netx90", "set_sip_protection_cookie.usp")
 end
 
 --------------------------------------------------------------------------

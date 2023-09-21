@@ -446,7 +446,7 @@ if 'NETX90' in atPickNetxForBuild:
         ASIC_TYP='NETX90B')
 
     set_sip_protection_cookie_com_usp = env_netx90_nodbg_secure.HBootImage(
-        os.path.join('targets', 'disable_security_settings', 'set_sip_protection_cookie.usp'),
+        os.path.join('targets', 'detect_sip_protection', 'set_sip_protection_cookie.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'set_sip_protection_cookie.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
         HBOOTIMAGE_KNOWN_FILES=dict(),
@@ -681,13 +681,13 @@ if fBuildIsFull==True:
     tArcList.AddFiles('netx/helper/netx90/',
         hboot_netx90_exec_bxlr_bin,
         'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
-        'helper_binaries/netx90/set_kek.usp')
+        'helper_binaries/netx90/set_kek.usp',
+        set_sip_protection_cookie_com_usp)
         
     tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
         disable_security_settings_usp,
         disable_security_settings_com_usp,
-        disable_security_settings_app_usp,
-        set_sip_protection_cookie_com_usp)
+        disable_security_settings_app_usp)
     
     tArcList.AddFiles('netx/debug/',
         bin_netx4000_dbg,
