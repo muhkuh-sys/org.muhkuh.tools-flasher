@@ -54,20 +54,20 @@ strUsipPlayerGeneralHelp = [[
 
     Folder structure inside flasher:
     |- flasher_cli-X.Y.Z                     -- main folder
-    |- .tmp                                  -- temporary folder created by the usip_player to save temp files
-    |- doc
-    |- lua                                   -- more lua files
-    |- lua_plugins                            -- lua plugins
-    |- netx
-       |- hboot                             -- hboot images, necessary for for the flasher
-          |- unsigned                       -- unsigned hboot images
-             |- netx90                      -- netx specific folder containing hboot images
-             |- netx90_usip                 -- netx specific folder containing usip images
-       |- helper
-          |- netx90                         -- helper files that can't be signed
-
-    |- lua5.1(.exe)                         -- lua executable
-    |- usip_player.lua                      -- usip_player lua file
+       |- .tmp                               -- temporary folder created by the usip_player to save temp files
+       |- doc
+       |- lua                                -- more lua files
+       |- lua_plugins                        -- lua plugins
+       |- netx
+          |- hboot                           -- hboot images, necessary for for the flasher
+             |- unsigned                     -- unsigned hboot images
+                |- netx90                    -- netx specific folder containing hboot images
+                |- netx90_usip               -- netx specific folder containing usip images
+          |- helper
+             |- netx90                       -- helper files that must not be signed
+       
+       |- lua5.4(.exe)                       -- lua executable
+       |- usip_player.lua                    -- usip_player lua file
 
 
     To use the usip_player in secure mode:
