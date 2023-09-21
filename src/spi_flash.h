@@ -46,7 +46,7 @@
 /** 
  * Represents the OpCode and area sizes of an erase instructions.
  * Size in Byte.
- * Empty/Invalid entires should have a size of 0 (and OpCode of 0xFF)
+ * Empty/Invalid entires should have a size of 0
 */
 typedef struct FLASHER_SPI_ERASE_STRUCT
 {
@@ -61,11 +61,12 @@ typedef struct FLASHER_SPI_ERASE_STRUCT
  */
 typedef struct FLASHER_SPI_FLASH_STRUCT
 {
-	SPIFLASH_ATTRIBUTES_T tAttributes;                                    /**< @brief attributes of the flash.      */
-	FLASHER_SPI_CFG_T tSpiDev;                                            /**< @brief SPI device and it's settings. */
-	FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest) */
-	unsigned long ulSectorSize;                                           /**< @brief size of one sector in bytes.  */
-	unsigned int uiSlaveId;                                               /**< @brief SPI Slave Id of the flash.    */
+	SPIFLASH_ATTRIBUTES_T tAttributes;                                    /**< @brief attributes of the flash.                                                   */
+	FLASHER_SPI_CFG_T tSpiDev;                                            /**< @brief SPI device and it's settings.                                              */
+	FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest)              */
+  unsigned short usNrEraseOperations;                                   /**< @brief Number of valid erase operations contained in the tSpiErase array          */
+	unsigned long ulSectorSize;                                           /**< @brief size of one sector in bytes.                                               */
+	unsigned int uiSlaveId;                                               /**< @brief SPI Slave Id of the flash.                                                 */
 	unsigned int uiPageAdrShift;                                          /**< @brief bit shift for the page part of the address, 0 means no page / byte split.  */
 	unsigned int uiSectorAdrShift;                                        /**< @brief bit shift for one sector, 0 means no page / byte split.                    */
 } FLASHER_SPI_FLASH_T;
@@ -87,5 +88,12 @@ const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode);
 
 int board_get_spi_driver(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_CFG_T *ptSpiDev);
 
-#endif
+/**
+ * \brief Sorts an array of erase operations by size in ascending order.
+ * 
+ * \param ptEraseArray Pointer to array of erase operations
+ * \param iNrEntries Nr of elements which will be sorted beginning at element [0]
+ */
+void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const int iNrEntries);
 
+#endif

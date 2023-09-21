@@ -407,50 +407,32 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 	else /* If the detected list is used, fill out the erase codes as good as possible*/
 	{
-		/* Clear entries*/
-		for (int entry = 0; entry < 4; entry++)
+		/* Clear entries */
+		for (unsigned int entry = 0; entry < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; entry++)
 		{
 			ptFlash->tSpiErase[entry].OpCode = 0;
 			ptFlash->tSpiErase[entry].Size = 0;
 		}
 
 		/* Required for sorting */
-		unsigned int nrEraseOps = 0;
+		ptFlash->usNrEraseOperations = 0;
 
 		/* Sector erase (always exists) */
 		ptFlash->tSpiErase[0].OpCode = ptSr->ucEraseSectorOpcode;
 		ptFlash->tSpiErase[0].Size = ptSr->ulSectorPages*ptSr->ulPageSize;
-		nrEraseOps++;
+		ptFlash->usNrEraseOperations++;
 
 		/* Page erase (if it exists) */
 		if(ptSr->ucErasePageOpcode != 0x00){
 			ptFlash->tSpiErase[1].OpCode = ptSr->ucErasePageOpcode;
 			ptFlash->tSpiErase[1].Size = ptSr->ulPageSize;
-			nrEraseOps++;
+			ptFlash->usNrEraseOperations++;
 		}
 
 		// If other erase commands are included in the XML, read them in here
 
 		/* Sort the erase commands so the smallest is in element 0 */
-		for(unsigned int sortPos = 0; sortPos < nrEraseOps; sortPos++){
-			unsigned long tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
-			unsigned char tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
-			unsigned int tmpMinPos = sortPos;
-			for(unsigned int eraseCmd = sortPos + 1; eraseCmd < nrEraseOps; eraseCmd++)
-			{
-				if(ptFlash->tSpiErase[eraseCmd].Size <= tmpEraseSize)
-				{
-					tmpEraseSize = ptFlash->tSpiErase[eraseCmd].Size;
-					tmpEraseOpCode = ptFlash->tSpiErase[eraseCmd].OpCode;
-					tmpMinPos = eraseCmd;
-				}
-			}
-			tmpEraseSize = ptFlash->tSpiErase[sortPos].Size;
-			tmpEraseOpCode = ptFlash->tSpiErase[sortPos].OpCode;
-			ptFlash->tSpiErase[sortPos] = ptFlash->tSpiErase[tmpMinPos];
-			ptFlash->tSpiErase[tmpMinPos].Size = tmpEraseSize;
-			ptFlash->tSpiErase[tmpMinPos].OpCode = tmpEraseOpCode;
-		}
+		spi_sort_erase_entries(ptFlash->tSpiErase, ptFlash->usNrEraseOperations);
 
 		/* Print sorted list of operations */
 		uprintf(". Erase operations:\n");
@@ -1810,3 +1792,19 @@ const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode)
 }
 
 
+
+void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const int iNrEntries){
+	// Sort for each position
+	for(unsigned int pos1 = 0; pos1 < iNrEntries-1; pos1++){
+		unsigned int min_pos = pos1;
+		for(unsigned int pos2 = pos1+1; pos2 < iNrEntries; pos2++){
+			if(ptEraseArray[pos2].Size < ptEraseArray[min_pos].Size){
+				min_pos = pos2;
+			}
+		}
+
+		FLASHER_SPI_ERASE_T tTmpErase = ptEraseArray[pos1];
+		ptEraseArray[pos1] = ptEraseArray[min_pos];
+		ptEraseArray[min_pos] = tTmpErase;
+	}
+}

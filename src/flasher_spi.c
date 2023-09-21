@@ -620,22 +620,7 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 	const FLASHER_SPI_ERASE_T *eraseTypes = ptFlashDescription->tSpiErase;
 	
 	/* Nr of valid entries */
-	unsigned int nrEraseOps = 0;
-	for(int operation = FLASHER_SPI_NR_ERASE_INSTRUCTIONS-1; operation >= 0; operation--)
-	{
-		if(eraseTypes[operation].Size != 0 && eraseTypes[operation].OpCode != 0xFF)
-		{
-			nrEraseOps++;
-		}
-	}
-
-	/* Fallback to normal erase due to lack of erase operations */
-	if(nrEraseOps < 2)
-	{
-		uprintf(". Less than two erase operations detected, using normal erase\n");
-		retVal = spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
-		return retVal;
-	}
+	unsigned int nrEraseOps = ptFlashDescription->usNrEraseOperations;
 
 	/* Get sector size, set a cap if it exceeds the read buffer size */
 	unsigned long sectorSizeBytes = attributes.ulSectorPages * attributes.ulPageSize;
@@ -725,26 +710,26 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 			for(unsigned int offsetFactor = 0; offsetFactor < sizeFactor; offsetFactor++)
 			{
 				unsigned int offset = offsetFactor*nrSectorsEraseable;
-				unsigned char needToErase = 1;
+				unsigned int nrChunksEmpty = 0;
 				for(unsigned int sector = offset; sector < nrSectorsEraseable+offset; sector++)
 				{
 					if(bitmapReadBit(sector,sectorBitmap) == 0)
 					{
-						needToErase = 0;
+						nrChunksEmpty++;
 					}
 				}
 
-				 /* XXX The command is currently only used if all considered sectors are dirty.
-					Using a certain ratio of empty/dirty sectors may improve erase performance.
-				 */
-				if(needToErase == 1)
+				// uprintf("OpSz:0x%4x, Empty: %d, Total: %d\n", eraseTypes[eraseCmd].Size, nrChunksEmpty, nrSectorsEraseable);
+
+				/* Use erase command if less than 20% of sectors are empty, otherwise go to the next command */
+				if((10*nrChunksEmpty) <= (2*nrSectorsEraseable))
 				{
 					unsigned long eraseAdr = currAdr + offset*sectorSizeBytes - currSector*sectorSizeBytes;
-					//uprintf("Erase SectorSize: %d",eraseTypes[eraseCmd].OpCode);
+					//uprintf("Erase with command: 0x%2x\n",eraseTypes[eraseCmd].OpCode);
 					retVal = Drv_SpiEraseFlashArea(ptFlashDescription, eraseAdr, eraseTypes[eraseCmd].OpCode);
 					if(retVal != 0)
 					{
-						uprintf("! Error erasing flash area at 0x%2x!\n", eraseAdr);
+						uprintf("! Error erasing flash area at 0x%8x!\n", eraseAdr);
 						return retVal;
 					}
 
