@@ -18,6 +18,21 @@ local tVerifySignature = require 'verify_signature'
 
 
 
+local atName2Bus = {
+    ['Parflash'] = tFlasher.BUS_Parflash,
+    ['Spi'] = tFlasher.BUS_Spi,
+    ['IFlash'] = tFlasher.BUS_IFlash,
+    ['SDIO'] = tFlasher.BUS_SDIO
+}
+local atBus2Name = {
+    [tFlasher.BUS_Parflash] = 'Parflash',
+    [tFlasher.BUS_Spi] = 'Spi',
+    [tFlasher.BUS_IFlash] = 'IFlash',
+    [tFlasher.BUS_SDIO] = 'SDIO'
+}
+
+
+
 function WFPXml:_init(version, tLog)
     -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
     version = version or "1.3.0"
@@ -35,19 +50,19 @@ function WFPXml:addTarget(strTargetName)
 end
 
 function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
-	tFlash = xml.new("Flash")
+	local tFlash = xml.new("Flash")
 	tFlash:set_attrib("bus", strBus)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
 	self.tTarget:add_child(tFlash)
 
-	tData = xml.new("Data")
+	local tData = xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
 
-	tErase = xml.new("Erase")
+	local tErase = xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
 	tFlash:add_child(tErase)
@@ -56,7 +71,7 @@ end
 
 function WFPXml:exportXml(outputDir)
     self.tLog.info("export example XML ", outputDir)
-    strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
+    local strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
     pl.utils.writefile(outputDir, strXmlData)
 end
 
@@ -106,7 +121,7 @@ local atLogLevels = {
     'fatal'
 }
 
-function show_plugin_options(tOpts)
+local function show_plugin_options(tOpts)
 	print("Plugin options:")
 	for strPluginId, tPluginOptions in pairs(tOpts) do
 		print(string.format("For %s:", strPluginId))
@@ -121,7 +136,7 @@ end
 -- returns
 --   data if successful
 --   nil, message if an error occurred
-function loadBin(strFilePath)
+local function loadBin(strFilePath)
 	local strData
 	local tFile
 	local strMsg
@@ -139,7 +154,7 @@ function loadBin(strFilePath)
 	return strData, strMsg
 end
 
-function printTable(tTable, ulIndent)
+local function printTable(tTable, ulIndent)
     local strIndentSpace = string.rep(" ", ulIndent)
     for key, value in pairs(tTable) do
         if type(value) == "table" then
@@ -154,7 +169,7 @@ function printTable(tTable, ulIndent)
     end
 end
 
-function printArgs(tArgs, tLog)
+local function printArgs(tArgs, tLog)
     print("")
     print("run wfp.lua with the following args:")
     print("------------------------------------")
@@ -163,7 +178,7 @@ function printArgs(tArgs, tLog)
 end
 
 
-function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOption)
+local function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOption)
 	-- create an example xml based on the selected plugin (NXTFLASHER-264)
 
     tLog.info("Creating example control XML")
@@ -196,21 +211,21 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
     end
 
     if fResult==true then
-        exampleXml = WFPXml(nil, tLog)
+        local exampleXml = WFPXml(nil, tLog)
 
         iChiptype = tPlugin:GetChiptyp()
-        strTargetName = tWfpControl.atChiptyp2name[iChiptype]
+        local strTargetName = tWfpControl.atChiptyp2name[iChiptype]
         -- Download the binary. (load the flasher binary into intram)
         aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
         -- get the board info
         aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
         exampleXml:addTarget(strTargetName)
         for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
-            ucBus = tBusInfo.iIdx
-            strBus = atBus2Name[ucBus]
+            local ucBus = tBusInfo.iIdx
+            local strBus = atBus2Name[ucBus]
             for iUnitCnt,tUnitInfo in ipairs(tBusInfo.aUnitInfo) do
-                ucChipSelect = 0
-                ucUnit = tUnitInfo.iIdx
+                local ucChipSelect = 0
+                local ucUnit = tUnitInfo.iIdx
                 -- add only unit 2 and 3 for IFlash of netx90
                 if strTargetName == "NETX90" and ucBus == 2 then
                     if ucUnit == 2 or ucUnit == 3 then
@@ -230,7 +245,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 end
 
 
-function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
+local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
 
     local archive = require 'archive'
     local fOk=true
@@ -327,7 +342,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                     -- Create a new archive.
                     local tArchive = archive.ArchiveWrite()
                     local tFormat = archive.ARCHIVE_FORMAT_TAR_GNUTAR
-                    tArcResult = tArchive:set_format(tFormat)
+                    local tArcResult = tArchive:set_format(tFormat)
                     if tArcResult ~= 0 then
                         tLog.error('Failed to set the archive format to ID %d: %s', tFormat, tArchive:error_string())
                         fOk = false
@@ -436,7 +451,7 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
     return fOk
 end
 
-function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
+local function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 	-- create a backup for all flash areas in netX
 	-- read the flash areas and save the images to reinstall them later
 	-- Steps:
@@ -599,7 +614,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                                         -- continue with reading the selected area
 
                                         -- read
-
+                                        local strData
                                         strData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
                                         if strData == nil then
                                             fOk = false
@@ -957,7 +972,7 @@ if strnetX90M2MImageBin == nil then
     os.exit(1)
 end
 
-atPluginOptions = {
+local atPluginOptions = {
     romloader_jtag = {
     jtag_reset = "Attach", -- HardReset, SoftReset or Attach
     jtag_frequency_khz = 6000 -- optional
@@ -967,26 +982,13 @@ atPluginOptions = {
     }
 }
 
-atName2Bus = {
-    ['Parflash'] = tFlasher.BUS_Parflash,
-    ['Spi'] = tFlasher.BUS_Spi,
-    ['IFlash'] = tFlasher.BUS_IFlash,
-    ['SDIO'] = tFlasher.BUS_SDIO
-}
-atBus2Name = {
-    [tFlasher.BUS_Parflash] = 'Parflash',
-    [tFlasher.BUS_Spi] = 'Spi',
-    [tFlasher.BUS_IFlash] = 'IFlash',
-    [tFlasher.BUS_SDIO] = 'SDIO'
-}
-
-
 -- Create the WFP controller.
 local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
 local strMsg
 if tArgs.fCommandReadSelected == true then
+    local strReadXml
     fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tFlasher, tArgs.bCompMode, tArgs.strSecureOption)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
