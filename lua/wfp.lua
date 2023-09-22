@@ -961,7 +961,7 @@ print()
 -- tester = require 'tester_cli'(tLog)
 -- tester = require 'tester_cli'
 -- Ask the user to select a plugin.
-tester.fInteractivePluginSelection = true
+_G.tester.fInteractivePluginSelection = true
 
 local strnetX90M2MImagePath = pl.path.join(tArgs.strSecureOption, "netx90")
 
