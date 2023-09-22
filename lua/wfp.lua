@@ -220,10 +220,10 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
         -- get the board info
         aBoardInfo = tFlasher.getBoardInfo(tPlugin, aAttr)
         exampleXml:addTarget(strTargetName)
-        for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
+        for _,tBusInfo in ipairs(aBoardInfo) do
             local ucBus = tBusInfo.iIdx
             local strBus = atBus2Name[ucBus]
-            for iUnitCnt,tUnitInfo in ipairs(tBusInfo.aUnitInfo) do
+            for _,tUnitInfo in ipairs(tBusInfo.aUnitInfo) do
                 local ucChipSelect = 0
                 local ucUnit = tUnitInfo.iIdx
                 -- add only unit 2 and 3 for IFlash of netx90
@@ -279,7 +279,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
             -- Collect all file references from the control file.
             local atFiles = {}
             local atSortedFiles = {}
-            for strTarget, tTarget in pairs(tWfpControl.atConfigurationTargets) do
+            for _, tTarget in pairs(tWfpControl.atConfigurationTargets) do
                 for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                     local strBusName = tTargetFlash.strBus
                     local tBus = atName2Bus[strBusName]
@@ -288,7 +288,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                         fOk = false
                         break
                     else
-                        for tDataidx, tData in ipairs(tTargetFlash.atData) do
+                        for _, tData in ipairs(tTargetFlash.atData) do
                             local strFile = tData.strFile
                             -- Skip erase entries.
                             if strFile ~= nil then
@@ -585,7 +585,7 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
                                     break
                                 end
 
-                                for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
+                                for _, tData in ipairs(tTargetFlash.atData) do
                                     -- Is this a data area?
                                     if tData.strType == "Data" then
                                         if (tData.ulSize) == nil then
@@ -1150,7 +1150,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
 
                                     if tArgs.fCommandFlashSelected == true then
                                         -- loop over data inside xml
-                                        for ulDataIdx, tData in ipairs(tTargetFlash.atData) do
+                                        for _, tData in ipairs(tTargetFlash.atData) do
                                             -- Is this an erase command?
                                             if tData.strFile == nil then
                                                 local ulOffset = tData.ulOffset
@@ -1272,7 +1272,7 @@ elseif tArgs.fCommandListSelected == true then
     else
         tLog.info('WFP conditions:')
         local atConditions = tWfpControl:getConditions()
-        for uiConditionIdx, tCondition in ipairs(atConditions) do
+        for _, tCondition in ipairs(atConditions) do
             local strTest = tCondition.test
             local tConstraints = tCondition.constraints
             local strCheck = ''
