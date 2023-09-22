@@ -178,7 +178,7 @@ local function printArgs(tArgs, tLog)
 end
 
 
-local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
+local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPluginOptions)
 	-- create an example xml based on the selected plugin (NXTFLASHER-264)
 
     tLog.info("Creating example control XML")
@@ -451,7 +451,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
     return fOk
 end
 
-local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
+local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPluginOptions)
 	-- create a backup for all flash areas in netX
 	-- read the flash areas and save the images to reinstall them later
 	-- Steps:
@@ -974,11 +974,11 @@ end
 
 local atPluginOptions = {
     romloader_jtag = {
-    jtag_reset = "Attach", -- HardReset, SoftReset or Attach
-    jtag_frequency_khz = 6000 -- optional
+        jtag_reset = "Attach", -- HardReset, SoftReset or Attach
+        jtag_frequency_khz = 6000 -- optional
     },
     romloader_uart = {
-    netx90_m2m_image = strnetX90M2MImageBin
+        netx90_m2m_image = strnetX90M2MImageBin
     }
 }
 
@@ -988,13 +988,13 @@ local tWfpControl = wfp_control(tLogWriterFilter)
 local fOk = true
 if tArgs.fCommandReadSelected == true then
     local strReadXml
-    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption)
+    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
     end
 elseif tArgs.fCommandExampleSelected == true then
     print("EXAMPLE")
-    fOk = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption)
+    fOk = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
 elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
