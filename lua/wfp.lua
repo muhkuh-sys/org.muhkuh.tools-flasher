@@ -97,11 +97,11 @@ local function __getNetxPath()
         if string.sub(strPath, -5) == '?.lua' then
             -- Cut off the "?.lua" part.
             -- Expect the "netx" folder one below the module folder.
-            local strPath = pl.path.join(pl.path.dirname(pl.path.dirname(pl.path.abspath(strPath))), 'netx')
-            if pl.path.exists(strPath) ~= nil and pl.path.isdir(strPath) == true then
+            local strNetxPath = pl.path.join(pl.path.dirname(pl.path.dirname(pl.path.abspath(strPath))), 'netx')
+            if pl.path.exists(strNetxPath) ~= nil and pl.path.isdir(strNetxPath) == true then
                 -- Append a directory separator at the end of the path.
                 -- Otherwise the flasher will not be happy.
-                strPathNetx = strPath .. pl.path.sep
+                strPathNetx = strNetxPath .. pl.path.sep
                 break
             end
         end
@@ -371,17 +371,17 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             local strData = pl.utils.readfile(strWfpControlFile, true)
                             local ulCreationTime = pl.file.creation_time(strWfpControlFile)
                             local ulModTime = pl.file.modified_time(strWfpControlFile)
-                            local tEntry = archive.ArchiveEntry()
+                            local tEntryCtrl = archive.ArchiveEntry()
 
-                            tEntry:set_pathname('wfp.xml')
-                            tEntry:set_size(string.len(strData))
-                            tEntry:set_filetype(archive.AE_IFREG)
-                            tEntry:set_perm(420)
-                            tEntry:set_gname('wfp')
-                            tEntry:set_ctime(ulCreationTime, 0)
-                            tEntry:set_mtime(ulModTime, 0)
+                            tEntryCtrl:set_pathname('wfp.xml')
+                            tEntryCtrl:set_size(string.len(strData))
+                            tEntryCtrl:set_filetype(archive.AE_IFREG)
+                            tEntryCtrl:set_perm(420)
+                            tEntryCtrl:set_gname('wfp')
+                            tEntryCtrl:set_ctime(ulCreationTime, 0)
+                            tEntryCtrl:set_mtime(ulModTime, 0)
 
-                            tArchive:write_header(tEntry)
+                            tArchive:write_header(tEntryCtrl)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
 
