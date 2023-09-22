@@ -963,7 +963,7 @@ print()
 -- Ask the user to select a plugin.
 tester.fInteractivePluginSelection = true
 
-local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90")
+local strnetX90M2MImagePath = pl.path.join(tArgs.strSecureOption, "netx90")
 
 tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
 
