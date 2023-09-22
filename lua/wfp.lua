@@ -4,6 +4,7 @@ local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
 local wfp_control = require 'wfp_control'
 local wfp_verify = require 'wfp_verify'
+_G.tester = require 'tester_cli'
 
 --local tFlasher = require 'flasher'(tLog)
 local tFlasher = require 'flasher'
