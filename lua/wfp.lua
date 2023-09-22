@@ -218,7 +218,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
         -- Download the binary. (load the flasher binary into intram)
         aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
         -- get the board info
-        aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+        aBoardInfo = tFlasher.getBoardInfo(tPlugin, aAttr)
         exampleXml:addTarget(strTargetName)
         for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
             local ucBus = tBusInfo.iIdx
