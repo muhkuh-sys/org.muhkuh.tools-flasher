@@ -187,7 +187,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     local iChiptype
     local aAttr
     local aBoardInfo
-    local fResult = true
+    local fResult
     local strMsg
 
     local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
