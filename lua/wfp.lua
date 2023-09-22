@@ -986,7 +986,6 @@ local atPluginOptions = {
 local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
-local strMsg
 if tArgs.fCommandReadSelected == true then
     local strReadXml
     fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption)
