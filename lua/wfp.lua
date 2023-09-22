@@ -187,7 +187,8 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 
     if fResult==true then
         -- check helper signatures
-        fResult, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+        fResult, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption,
+                                                                       tArgs.aHelperKeysForSigCheck)
         if fResult ~= true then
             tLog.error(strMsg or "Failed to verify the signatures of the helper files")
             fResult = false
@@ -237,7 +238,10 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
         if fOverwrite ~= true then
-            tLog.error('The output archive "%s" already exists. Use "--overwrite" to force overwriting it.', strWfpArchiveFile)
+            tLog.error(
+                'The output archive "%s" already exists. Use "--overwrite" to force overwriting it.',
+                strWfpArchiveFile
+            )
             fOk = false
         else
             local tFsResult, strError = pl.file.delete(strWfpArchiveFile)
@@ -341,7 +345,11 @@ function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fB
                         local tTimeNow = os.time()
                         tArcResult = tArchive:open_filename(strWfpArchiveFile)
                         if tArcResult ~= 0 then
-                            tLog.error('Failed to open the archive "%s": %s', strWfpArchiveFile, tArchive:error_string())
+                            tLog.error(
+                                'Failed to open the archive "%s": %s',
+                                strWfpArchiveFile,
+                                tArchive:error_string()
+                            )
                             fOk = false
                         else
                             -- Add the control file.
@@ -488,7 +496,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 
 
            -- Select a plugin and connect to the netX.
-            local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+            local tPlugin, strError = tFlasherHelper.getPlugin(
+                tArgs.strPluginName,
+                tArgs.strPluginType,
+                atPluginOptions
+            )
 
             if tPlugin then
                 fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
@@ -502,7 +514,11 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 
             if tPlugin then
                 -- check helper signatures
-                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(
+                    tPlugin,
+                    tArgs.strSecureOption,
+                    tArgs.aHelperKeysForSigCheck
+                )
 
                 if fOk ~= true then
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
@@ -530,11 +546,23 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
                             else
                                 local ulUnit = tTargetFlash.ulUnit
                                 local ulChipSelect = tTargetFlash.ulChipSelect
-                                tLog.debug("Processing bus: %s, unit: %d, chip select: %d", strBusName, ulUnit, ulChipSelect)
+                                tLog.debug(
+                                    "Processing bus: %s, unit: %d, chip select: %d",
+                                    strBusName,
+                                    ulUnit,
+                                    ulChipSelect
+                                )
 
                                 -- Detect the device and check if the size is in 32 bit range.
                                 local fDetectOk, strMsg
-                                fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect) --detect whether the flash i have selected exists inside the hardware
+                                --detect whether the flash i have selected exists inside the hardware
+                                fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(
+                                    tPlugin,
+                                    aAttr,
+                                    tBus,
+                                    ulUnit,
+                                    ulChipSelect
+                                )
 
                                 if fDetectOk ~= true then
                                     tLog.error(strMsg)
@@ -629,7 +657,8 @@ for secure boot mode (--sec, --comp, --disable_helper_signature_check)
 are only valid for the netX 90.
 ]==]
 
-local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand"):epilog(strEpilog)
+local tParser = argparse('wfp', 'Flash, list and create WFP packages.'):command_target("strSubcommand")
+                                                                       :epilog(strEpilog)
 
 tParser:flag "-v --version":description "Show version info and exit. ":action(function()
     require("flasher_version")
@@ -645,94 +674,232 @@ tParser:flag "--disable_helper_version_check":hidden(true)
     end)
 
 -- Add the "flash" command and all its options.
-local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.'):target('fCommandFlashSelected')
-tParserCommandFlash:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
-tParserCommandFlash:flag('-d --dry-run'):description('Dry run. Connect to a netX and read all data from the WFP, but to not alter the flash.'):default(false):target('fDryRun')
-tParserCommandFlash:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
-tParserCommandFlash:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandFlash:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandFlash:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.')
+                                   :target('fCommandFlashSelected')
+tParserCommandFlash:argument('archive', 'The WFP file to process.')
+                   :target('strWfpArchiveFile')
+tParserCommandFlash:flag('-d --dry-run')
+                   :description('Dry run. Connect to a netX and read all data from the WFP, ' ..
+                                'but to not alter the flash.')
+                   :default(false)
+                   :target('fDryRun')
+tParserCommandFlash:option('-c --condition')
+                   :description('Add a condition in the form KEY=VALUE.')
+                   :count('*')
+                   :target('astrConditions')
+tParserCommandFlash:option('-V --verbose')
+                   :description(string.format(
+                     'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                     table.concat(atLogLevels, ', ')
+                   ))
+                   :argname('<LEVEL>')
+                   :default('debug')
+                   :target('strLogLevel')
+tParserCommandFlash:option('-p --plugin_name')
+                   :description("plugin name")
+                   :target('strPluginName')
+tParserCommandFlash:option('-t --plugin_type')
+                   :description("plugin type")
+                   :target('strPluginType')
 tParserCommandFlash:mutex(
-        tParserCommandFlash:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandFlash:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+    tParserCommandFlash:flag('--comp')
+                       :description("use compatibility mode for netx90 M2M interfaces")
+                       :target('bCompMode')
+                       :default(false),
+    tParserCommandFlash:option('--sec')
+                       :description("Path to signed image directory")
+                       :target('strSecureOption')
+                       :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandFlash:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+tParserCommandFlash:flag('--disable_helper_signature_check')
+                   :description('Disable signature checks on helper files.')
+                   :target('fDisableHelperSignatureChecks')
+                   :default(false)
 
 -- Add the "verify" command and all its options.
-local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
-tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
-tParserCommandVerify:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
-tParserCommandVerify:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.')
+                                    :target('fCommandVerifySelected')
+tParserCommandVerify:argument('archive', 'The WFP file to process.')
+                    :target('strWfpArchiveFile')
+tParserCommandVerify:option('-c --condition')
+                    :description('Add a condition in the form KEY=VALUE.')
+                    :count('*')
+                    :target('astrConditions')
+tParserCommandVerify:option('-V --verbose')
+                    :description(string.format(
+                      'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                      table.concat(atLogLevels, ', ')
+                    ))
+                    :argname('<LEVEL>')
+                    :default('debug')
+                    :target('strLogLevel')
+tParserCommandVerify:option('-p --plugin_name')
+                    :description("plugin name")
+                    :target('strPluginName')
+tParserCommandVerify:option('-t --plugin_type')
+                    :description("plugin type")
+                    :target('strPluginType')
 tParserCommandVerify:mutex(
-        tParserCommandVerify:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandVerify:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+    tParserCommandVerify:flag('--comp')
+                        :description("use compatibility mode for netx90 M2M interfaces")
+                        :target('bCompMode')
+                        :default(false),
+    tParserCommandVerify:option('--sec')
+                        :description("Path to signed image directory")
+                        :target('strSecureOption')
+                        :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandVerify:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+tParserCommandVerify:flag('--disable_helper_signature_check')
+                    :description('Disable signature checks on helper files.')
+                    :target('fDisableHelperSignatureChecks')
+                    :default(false)
 
 -- Add the "Read" command and all its options.
-local tParserCommandRead =
-    tParser:command("read r", "read command based on XML control file."):target("fCommandReadSelected")
-tParserCommandRead:argument("xml", "The XML control file."):target("strWfpControlFile")
-tParserCommandRead:argument("output_dir", "The destination path to create the backup."):target("strBackupPath")
-tParserCommandRead:option("-a --archive", 'Create a WFP file from the output directory.'):default(nil):target('strWfpArchiveFile')
-tParserCommandRead:flag('-s --simple'):description('Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
-tParserCommandRead:option("-V --verbose"):description(
-    string.format(
-        "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
-        table.concat(atLogLevels, ", ")
-    )
-):argname("<LEVEL>"):default("debug"):target("strLogLevel")
-tParserCommandRead:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
-tParserCommandRead:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandRead:flag("-o --overwrite"):description(
-    "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
-):default(false):target("fOverwrite")
+local tParserCommandRead = tParser:command("read r",
+                                           "read command based on XML control file.")
+                                  :target("fCommandReadSelected")
+tParserCommandRead:argument("xml", "The XML control file.")
+                  :target("strWfpControlFile")
+tParserCommandRead:argument("output_dir", "The destination path to create the backup.")
+                  :target("strBackupPath")
+tParserCommandRead:option("-a --archive", 'Create a WFP file from the output directory.')
+                  :default(nil)
+                  :target('strWfpArchiveFile')
+tParserCommandRead:flag('-s --simple')
+                  :description('Build a SWFP file without compression.')
+                  :default(false)
+                  :target('fBuildSWFP')
+tParserCommandRead:option("-V --verbose")
+                  :description(string.format(
+                    "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
+                    table.concat(atLogLevels, ", ")
+                  ))
+                  :argname("<LEVEL>")
+                  :default("debug")
+                  :target("strLogLevel")
+tParserCommandRead:option("-p --plugin_name")
+                  :description("plugin name")
+                  :target("strPluginName")
+tParserCommandRead:option('-t --plugin_type')
+                  :description("plugin type")
+                  :target('strPluginType')
+tParserCommandRead:flag("-o --overwrite")
+                  :description("Overwrite an existing folder. " ..
+                               "The default is to do nothing if the target folder already exists.")
+                  :default(false)
+                  :target("fOverwrite")
 tParserCommandRead:mutex(
-        tParserCommandRead:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandRead:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+    tParserCommandRead:flag('--comp')
+                      :description("use compatibility mode for netx90 M2M interfaces")
+                      :target('bCompMode')
+                      :default(false),
+    tParserCommandRead:option('--sec')
+                      :description("Path to signed image directory")
+                      :target('strSecureOption')
+                      :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandRead:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+tParserCommandRead:flag('--disable_helper_signature_check')
+                  :description('Disable signature checks on helper files.')
+                  :target('fDisableHelperSignatureChecks')
+                  :default(false)
 
 -- Add the "list" command and all its options.
-local tParserCommandList = tParser:command('list l', 'List the contents of the WFP.'):target('fCommandListSelected')
-tParserCommandList:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
-tParserCommandList:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+local tParserCommandList = tParser:command('list l',
+                                           'List the contents of the WFP.')
+                                  :target('fCommandListSelected')
+tParserCommandList:argument('archive', 'The WFP file to process.')
+                  :target('strWfpArchiveFile')
+tParserCommandList:option('-V --verbose')
+                  :description(string.format(
+                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                    table.concat(atLogLevels, ', ')
+                  ))
+                  :argname('<LEVEL>')
+                  :default('debug')
+                  :target('strLogLevel')
 
 -- Add the "pack" command and all its options.
-local tParserCommandPack = tParser:command('pack p', 'Pack a WFP based on an XML.'):target('fCommandPackSelected')
-tParserCommandPack:argument('xml', 'The XML control file.'):target('strWfpControlFile')
-tParserCommandPack:argument('archive', 'The WFP file to create.'):target('strWfpArchiveFile')
-tParserCommandPack:flag('-o --overwrite'):description('Overwrite an existing WFP archive. The default is to do nothing if the target archive already exists.'):default(false):target('fOverwrite')
-tParserCommandPack:flag('-s --simple'):description('Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
-tParserCommandPack:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+local tParserCommandPack = tParser:command('pack p',
+                                           'Pack a WFP based on an XML.')
+                                  :target('fCommandPackSelected')
+tParserCommandPack:argument('xml', 'The XML control file.')
+                  :target('strWfpControlFile')
+tParserCommandPack:argument('archive', 'The WFP file to create.')
+                  :target('strWfpArchiveFile')
+tParserCommandPack:flag('-o --overwrite')
+                  :description('Overwrite an existing WFP archive. ' ..
+                               'The default is to do nothing if the target archive already exists.')
+                  :default(false)
+                  :target('fOverwrite')
+tParserCommandPack:flag('-s --simple')
+                  :description('Build a SWFP file without compression.')
+                  :default(false)
+                  :target('fBuildSWFP')
+tParserCommandPack:option('-V --verbose')
+                  :description(string.format(
+                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                    table.concat(atLogLevels, ', ')
+                  ))
+                  :argname('<LEVEL>')
+                  :default('debug')
+                  :target('strLogLevel')
 
 -- Add the "example" command and all its options.
-local tParserCommandExample = tParser:command('example e', 'Create example XML for connected netX.'):target('fCommandExampleSelected')
-tParserCommandExample:argument('xml', 'Output example XML control file.'):target('strWfpControlFile')
-tParserCommandExample:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
-tParserCommandExample:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandExample:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+local tParserCommandExample = tParser:command('example e',
+                                              'Create example XML for connected netX.')
+                                     :target('fCommandExampleSelected')
+tParserCommandExample:argument('xml', 'Output example XML control file.')
+                     :target('strWfpControlFile')
+tParserCommandExample:option("-p --plugin_name")
+                     :description("plugin name")
+                     :target("strPluginName")
+tParserCommandExample:option('-t --plugin_type')
+                     :description("plugin type")
+                     :target('strPluginType')
+tParserCommandExample:option('-V --verbose')
+                     :description(string.format(
+                       'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                       table.concat(atLogLevels, ', ')
+                     ))
+                     :argname('<LEVEL>')
+                     :default('debug')
+                     :target('strLogLevel')
 tParserCommandExample:mutex(
-        tParserCommandExample:flag('--comp'):description("use compatibility mode for netx90 M2M interfaces"):target('bCompMode'):default(false),
-        tParserCommandExample:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+    tParserCommandExample:flag('--comp')
+                         :description("use compatibility mode for netx90 M2M interfaces")
+                         :target('bCompMode')
+                         :default(false),
+    tParserCommandExample:option('--sec')
+                         :description("Path to signed image directory")
+                         :target('strSecureOption')
+                         :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandExample:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
+tParserCommandExample:flag('--disable_helper_signature_check')
+                     :description('Disable signature checks on helper files.')
+                     :target('fDisableHelperSignatureChecks')
+                     :default(false)
 
 
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target('fCommandCheckHelperSignatureSelected')
-tParserCommandVerifyHelperSig:option(
-    '-V --verbose'
-):description(
-    string.format(
-        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
-    )
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs',
+                                                      'Verify the signatures of the helper files.')
+                                             :target('fCommandCheckHelperSignatureSelected')
+tParserCommandVerifyHelperSig:option('-V --verbose')
+                             :description(string.format(
+                               'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                               table.concat(atLogLevels, ', '
+                             ))
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandVerifyHelperSig:option('-p --plugin_name')
+                             :description("plugin name")
+                            :target('strPluginName')
+tParserCommandVerifyHelperSig:option('-t --plugin_type')
+                             :description("plugin type")
+                             :target("strPluginType")
+tParserCommandVerifyHelperSig:option('--sec')
+                             :description("Path to signed image directory")
+                             :target('strSecureOption')
+                             :default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 local tArgs = tParser:parse()
 
@@ -844,7 +1011,12 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                 tLog.error('Condition "%s" is invalid.', strCondition)
                 fOk = false
             elseif atWfpConditions[strKey] ~= nil then
-                tLog.error('Redefinition of condition "%s" from "%s" to "%s".', strKey, strValue, atWfpConditions[strKey])
+                tLog.error(
+                    'Redefinition of condition "%s" from "%s" to "%s".',
+                    strKey,
+                    strValue,
+                    atWfpConditions[strKey]
+                )
                 fOk = false
             else
                 tLog.info('Setting condition "%s" = "%s".', strKey, strValue)
@@ -883,7 +1055,11 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
 
         if fOk == true then
             -- Select a plugin and connect to the netX.
-            local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
+            local tPlugin, strError = tFlasherHelper.getPlugin(
+                tArgs.strPluginName,
+                tArgs.strPluginType,
+                atPluginOptions
+            )
 
             if tPlugin then
                 fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
@@ -898,7 +1074,11 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
             else
 
                 -- check helper signatures
-                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(
+                    tPlugin,
+                    tArgs.strSecureOption,
+                    tArgs.aHelperKeysForSigCheck
+                )
 
                 if fOk ~= true then
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
@@ -913,12 +1093,23 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                         fOk = false
                     else
                         -- Download the binary.
-                        local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, tArgs.bCompMode, tArgs.strSecureOption)
+                        local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil,
+                                                        tArgs.bCompMode, tArgs.strSecureOption)
 
-                        -- Verify command now moved above Target Flash Loop to collect data for each flash before running verification
+                        -- Verify command now moved above Target Flash Loop to collect data for each flash before
+                        -- running verification
                         if tArgs.fCommandVerifySelected == true then
                             -- new verify function here
-                            fOk = wfp_verify.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
+                            fOk = wfp_verify.verifyWFP(
+                                tTarget,
+                                tWfpControl,
+                                iChiptype,
+                                atWfpConditions,
+                                tPlugin,
+                                tFlasher,
+                                aAttr,
+                                tLog
+                            )
                             tLog.info('verification result: %s', tostring(fOk))
                         else
 
@@ -933,11 +1124,22 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                 else
                                     local ulUnit = tTargetFlash.ulUnit
                                     local ulChipSelect = tTargetFlash.ulChipSelect
-                                    tLog.debug('Processing bus: %s, unit: %d, chip select: %d', strBusName, ulUnit, ulChipSelect)
+                                    tLog.debug(
+                                        'Processing bus: %s, unit: %d, chip select: %d',
+                                        strBusName,
+                                        ulUnit,
+                                        ulChipSelect
+                                    )
 
                                     -- Detect the device and check if the size is in 32 bit range.
                                     local fDetectOk
-                                    fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(tPlugin, aAttr, tBus, ulUnit, ulChipSelect)
+                                    fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(
+                                        tPlugin,
+                                        aAttr,
+                                        tBus,
+                                        ulUnit,
+                                        ulChipSelect
+                                    )
                                     if fDetectOk ~= true then
                                         tLog.error(strMsg)
                                         fOk = false
@@ -952,15 +1154,25 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                 local ulOffset = tData.ulOffset
                                                 local ulSize = tData.ulSize
                                                 local strCondition = tData.strCondition
-                                                tLog.info('Found erase 0x%08x-0x%08x and condition "%s".', ulOffset, ulOffset + ulSize, strCondition)
+                                                tLog.info(
+                                                    'Found erase 0x%08x-0x%08x and condition "%s".',
+                                                    ulOffset,
+                                                    ulOffset + ulSize,
+                                                    strCondition
+                                                )
 
-                                                if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
+                                                if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
                                                     tLog.info('Not processing erase : prevented by condition.')
                                                 else
                                                     if tArgs.fDryRun == true then
                                                         tLog.warning('Not touching the flash as dry run is selected.')
                                                     else
-                                                        fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, ulSize)
+                                                        fOk, strMsg = tFlasher.eraseArea(
+                                                            tPlugin,
+                                                            aAttr,
+                                                            ulOffset,
+                                                            ulSize
+                                                        )
                                                         if fOk ~= true then
                                                             tLog.error('Failed to erase the area: %s', strMsg)
                                                             break
@@ -979,10 +1191,18 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
 
                                                 local ulOffset = tData.ulOffset
                                                 local strCondition = tData.strCondition
-                                                tLog.info('Found file "%s" with offset 0x%08x and condition "%s".', strFile, ulOffset, strCondition)
+                                                tLog.info(
+                                                    'Found file "%s" with offset 0x%08x and condition "%s".',
+                                                    strFile,
+                                                    ulOffset,
+                                                    strCondition
+                                                )
 
-                                                if tWfpControl:matchCondition(atWfpConditions, strCondition) ~= true then
-                                                    tLog.info('Not processing file %s : prevented by condition.', strFile)
+                                                if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
+                                                    tLog.info(
+                                                        'Not processing file %s : prevented by condition.',
+                                                        strFile
+                                                    )
                                                 else
                                                     -- Loading the file data from the archive.
                                                     local strData = tWfpControl:getData(strFile)
@@ -993,17 +1213,29 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                     else
                                                         local sizData = string.len(strData)
                                                         if tArgs.fDryRun == true then
-                                                            tLog.warning('Not touching the flash as dry run is selected.')
+                                                            tLog.warning(
+                                                                'Not touching the flash as dry run is selected.'
+                                                            )
                                                         else
                                                             tLog.debug('Flashing %d bytes...', sizData)
 
-                                                            fOk, strMsg = tFlasher.eraseArea(tPlugin, aAttr, ulOffset, sizData)
+                                                            fOk, strMsg = tFlasher.eraseArea(
+                                                                tPlugin,
+                                                                aAttr,
+                                                                ulOffset,
+                                                                sizData
+                                                            )
                                                             if fOk ~= true then
                                                                 tLog.error('Failed to erase the area: %s', strMsg)
                                                                 fOk = false
                                                                 break
                                                             else
-                                                                fOk, strMsg = tFlasher.flashArea(tPlugin, aAttr, ulOffset, strData)
+                                                                fOk, strMsg = tFlasher.flashArea(
+                                                                    tPlugin,
+                                                                    aAttr,
+                                                                    ulOffset,
+                                                                    strData
+                                                                )
                                                                 if fOk ~= true then
                                                                     tLog.error('Failed to flash the area: %s', strMsg)
                                                                     fOk = false
