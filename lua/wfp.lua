@@ -394,9 +394,9 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                                     tLog.info('Pack WFP without subdirs.')
                                     tEntry:set_pathname(pl.path.basename(tAttr.strFilename))
                                 end
-                                local strData = pl.utils.readfile(tAttr.strFilename, true)
-                                local ulCreationTime = pl.file.creation_time(tAttr.strFilename)
-                                local ulModTime = pl.file.modified_time(tAttr.strFilename)
+                                strData = pl.utils.readfile(tAttr.strFilename, true)
+                                ulCreationTime = pl.file.creation_time(tAttr.strFilename)
+                                ulModTime = pl.file.modified_time(tAttr.strFilename)
 
                                 tEntry:set_size(string.len(strData))
                                 tEntry:set_filetype(archive.AE_IFREG)
@@ -569,7 +569,7 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption)
                                 )
 
                                 -- Detect the device and check if the size is in 32 bit range.
-                                local fDetectOk, strMsg
+                                local fDetectOk
                                 --detect whether the flash i have selected exists inside the hardware
                                 fDetectOk, strMsg = tFlasher.detectAndCheckSizeLimit(
                                     tPlugin,
