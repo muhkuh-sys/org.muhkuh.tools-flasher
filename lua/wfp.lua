@@ -5,10 +5,6 @@ local pl = require 'pl.import_into'()
 local wfp_control = require 'wfp_control'
 local wfp_verify = require 'wfp_verify'
 
-local class = require 'pl.class'
-local WFPXml = class()
-local xml = require 'pl.xml'
-
 --local tFlasher = require 'flasher'(tLog)
 local tFlasher = require 'flasher'
 local tFlasherHelper = require 'flasher_helper'
@@ -33,6 +29,8 @@ local atBus2Name = {
 
 
 
+local xml = require 'pl.xml'
+local WFPXml = require 'pl.class'()
 function WFPXml:_init(version, tLog)
     -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
     version = version or "1.3.0"
