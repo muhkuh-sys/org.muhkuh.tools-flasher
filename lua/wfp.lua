@@ -119,6 +119,7 @@ local atLogLevels = {
     'fatal'
 }
 
+--[[
 local function show_plugin_options(tOpts)
 	print("Plugin options:")
 	for strPluginId, tPluginOptions in pairs(tOpts) do
@@ -128,7 +129,9 @@ local function show_plugin_options(tOpts)
 		end
 	end
 end
+--]]
 
+--[[
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
 -- returns
@@ -151,6 +154,7 @@ local function loadBin(strFilePath)
 	end
 	return strData, strMsg
 end
+--]]
 
 local function printTable(tTable, ulIndent)
     local strIndentSpace = string.rep(" ", ulIndent)
@@ -355,7 +359,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             end
                         end
 
-                        local tTimeNow = os.time()
+                        -- local tTimeNow = os.time()
                         tArcResult = tArchive:open_filename(strWfpArchiveFile)
                         if tArcResult ~= 0 then
                             tLog.error(
