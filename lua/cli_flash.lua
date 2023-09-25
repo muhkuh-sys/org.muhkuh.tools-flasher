@@ -188,6 +188,13 @@ function addJtagResetArg(tParserCommand)
     tOption.choices = {"hard", "soft", "attach" }
 end
 
+-- #Todo choose a better name
+function addSkipSfdpErase(tParserCommand)
+    tParserCommand:flag('--skip_sfdp_erase')
+            :description('Skip reading SFDP data to get erase operations. Only use operations predefined in fash table.')
+            :target('bSkipSfdpErase'):default(false)
+end
+
 local argparse = require 'argparse'
 
 local strEpilog = [==[
@@ -297,6 +304,7 @@ addPluginTypeArg(tParserCommandSmartErase)
 addJtagResetArg(tParserCommandSmartErase)
 addJtagKhzArg(tParserCommandSmartErase)
 addSecureArgs(tParserCommandSmartErase)
+addSkipSfdpErase(tParserCommandSmartErase)
 
 
 -- verify
@@ -646,7 +654,11 @@ function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+				local bUseSfdpErase = false
+				if not aArgs.bSkipSfdpErase and aArgs.fCommandSmartEraseSelected  then
+					bUseSfdpErase = true
+				end
+				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect, nil, nil, nil, bUseSfdpErase)
 				if fOk ~= true then
 					fOk = false
 				else

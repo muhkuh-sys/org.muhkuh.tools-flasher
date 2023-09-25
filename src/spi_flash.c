@@ -253,12 +253,13 @@ extern const char _binary_spi_flash_types_exo_end[];
 /*! detect_flash
 *   Convert the linear input address to the device's addressing mode
 *
-*   \param   ptFls              pointer to the instance of the spi flash
-*   \param   ulLinearAddress    linear address                  
-*                                                                              
+*   \param   ptFlash              pointer to the instance of the spi flash
+*   \param   pptFlashAttr         Pointer chain to struct with attributes of the flash
+*   \param   ucUseSfdpErase       Use erase operations gathered from SFDP data instead of table entries
+*
 *   \return  RX_OK              status successfully returned
 */
-static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_T **pptFlashAttr, char *pcBufferEnd)
+static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_T **pptFlashAttr, char *pcBufferEnd, uint8_t ucUseSfdpErase)
 {
 	int           iResult = 1;
 	int           fFoundId;
@@ -433,6 +434,20 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 
 		/* Sort the erase commands so the smallest is in element 0 */
 		spi_sort_erase_entries(ptFlash->tSpiErase, ptFlash->usNrEraseOperations);
+
+		// Try overwriting the erase entries with SFDP data
+		if (ucUseSfdpErase == 1){
+			FLASHER_SPI_FLASH_T tDummyFlash = *ptFlash;
+			tDummyFlash.usNrEraseOperations = 0;
+			sfdp_detect(&tDummyFlash);
+			
+			// Only overwrite if SFDP contains more instructions than the table
+			if(tDummyFlash.usNrEraseOperations > ptFlash->usNrEraseOperations){
+				for(unsigned char i = 0; i < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; i++){
+					ptFlash->tSpiErase[i] = tDummyFlash.tSpiErase[i];
+				}
+			}
+		}
 
 		/* Print sorted list of operations */
 		uprintf(". Erase operations:\n");
@@ -726,12 +741,13 @@ int board_get_spi_driver(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SP
 *   Initializes the FLASH
 *               
 *   \param  ptFls   Pointer to FLASH Control Block
-*                                                                              
+*   \param  ulFlags Detect flags as bitfield. Used for bit 0: Use SFDP erase entries
+*
 *   \return  RX_OK                   FLASH successfully initialized
 *            Drv_SpiS_INVALID        Specified Flash Control Block invalid
 *            Drv_SpiS_UNKNOWN_FLASH  failed to detect the serial FLASH
 */
-int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd)
+int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, uint32_t ulFlags)
 {
 	int   iResult;
 	const SPIFLASH_ATTRIBUTES_T *ptFlashAttr;
@@ -757,7 +773,7 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 	else
 	{
 		/* try to autodetect the flash */
-		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd);
+		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd, (ulFlags & 0x01));
 		if( iResult!=0 )
 		{
 			//uprintf("ERROR: Drv_SpiInitializeFlash: detect_flash failed with %d.\n", iResult);
@@ -1793,7 +1809,7 @@ const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode)
 
 
 
-void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const int iNrEntries){
+void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const unsigned int iNrEntries){
 	// Sort for each position
 	for(unsigned int pos1 = 0; pos1 < iNrEntries-1; pos1++){
 		unsigned int min_pos = pos1;

@@ -477,9 +477,10 @@ end
 
 
 -- check if a device is available on tBus/ulUnit/ulChipSelect
-function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter)
+function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter, bUseSfdpErase)
 	local aulParameter
 	atParameter = atParameter or {}
+	local ulFlags = 0
 	
 	
 	if tBus==BUS_Spi then
@@ -504,7 +505,12 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 		-- Set the MMIO configuration. The default is 0xffffffff (no MMIO pins).
 		local ulMmioConfiguration = atParameter.ulMmioConfiguration
 		ulMmioConfiguration = ulMmioConfiguration or 0xffffffff
-		
+
+		-- Set flag for use of SFDP erase operation if smart_erse command was used
+		if bUseSfdpErase then
+			ulFlags = ulFlags + 1
+		end
+
 		aulParameter =
 		{
 			OPERATION_MODE_Detect,                -- operation mode: detect
@@ -516,7 +522,10 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 			ulIdleCfg,                            -- idle configuration
 			ulSpiMode,                            -- mode
 			ulMmioConfiguration,                  -- MMIO configuration
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlags,                              -- Status flags
+												  -- Bit 0: Use SFDP erase operations
+												  -- Bit 31-1: reserved
 		}
 	elseif tBus==BUS_Parflash then
 		-- Set the allowed bus widths. This parameter is not used yet.
@@ -534,7 +543,8 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlags,                              -- Status flags. Bit 31-0: reserved
 		}
   elseif tBus==BUS_IFlash then
     aulParameter =
@@ -548,7 +558,8 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
       0,                                    -- reserved
       0,                                    -- reserved
       0,                                    -- reserved
-      aAttr.ulDeviceDesc                    -- data block for the device description
+      aAttr.ulDeviceDesc,                   -- data block for the device description
+      ulFlags,                              -- Status flags. Bit 31-0: reserved
     }
 	elseif tBus==BUS_SDIO then
 		aulParameter = {
@@ -561,7 +572,8 @@ function detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, f
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlags,                              -- Status flags. Bit 31-0: reserved
 		}
 
 	else

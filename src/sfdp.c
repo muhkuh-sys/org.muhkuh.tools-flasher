@@ -150,7 +150,7 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 		 *  8-Bit for the OpCode
 		 */
 		const unsigned char DWORD_8_START = 7*4; /* Nr of DWords starts at 1*/
-		unsigned int nrEraseOps = 0; /* Required for sorting */
+		unsigned short nrEraseOps = 0; /* Required for sorting */
 
 		/* Clear the array */
 		for(int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++){

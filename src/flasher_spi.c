@@ -30,6 +30,7 @@
   */
  
 #include <string.h>
+#include <stdint.h>
 
 #include "flasher_spi.h"
 #include "spi_flash.h"
@@ -894,13 +895,16 @@ NETX_CONSOLEAPP_RESULT_T spi_verify(const FLASHER_SPI_FLASH_T *ptFlashDescriptio
  * @param ptSpiConfiguration [in]  Configuration of the SPI interface, e.g. the clock frequency.
  * @param ptFlashDescription [out] Information about the flash device, if any was identified.
  * @param pcBufferEnd        [in]  Pointer to the end of a buffer at least 8 KB in size.
+ * @param tFlags           [in]  32-Bit detect flag bitfield.
+ *                                 Bit    0: Always use SFDP to get erase operations
+ *                                 Bit 31-1: reserved
  *
  * @return
  * - NETX_CONSOLEAPP_RESULT_OK: a device was detected and the device information is stored in ptFlashDescription.
  * - NETX_CONSOLEAPP_RESULT_ERROR: no device was detected or an error occurred.
  */
 
-NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd)
+NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd, uint32_t ulFlags)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	int iResult;
@@ -909,7 +913,7 @@ NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfigurat
 	/* try to detect flash */
 	uprintf(". Detecting SPI flash on unit %d, chip select %d...\n", ptSpiConfiguration->uiUnit, ptSpiConfiguration->uiChipSelect);
 	ptFlashDescription->uiSlaveId = ptSpiConfiguration->uiChipSelect;
-	iResult = Drv_SpiInitializeFlash(ptSpiConfiguration, ptFlashDescription, pcBufferEnd);
+	iResult = Drv_SpiInitializeFlash(ptSpiConfiguration, ptFlashDescription, pcBufferEnd, ulFlags);
 	if( iResult!=0 )
 	{
 		/* failed to detect the SPI flash */

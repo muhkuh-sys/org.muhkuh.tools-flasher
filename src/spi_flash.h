@@ -38,6 +38,8 @@
 #ifndef __SPI_FLASH_H__
 #define __SPI_FLASH_H__
 
+#include <stdint.h>
+
 #include "spi.h"
 #include "spi_flash_types.h"
 
@@ -73,7 +75,7 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 
 /*-----------------------------------*/
 
-int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd);
+int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, uint32_t flags);
 int Drv_SpiEraseFlashPage         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashArea         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
 int Drv_SpiEraseFlashSector       (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
@@ -94,6 +96,6 @@ int board_get_spi_driver(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SP
  * \param ptEraseArray Pointer to array of erase operations
  * \param iNrEntries Nr of elements which will be sorted beginning at element [0]
  */
-void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const int iNrEntries);
+void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const unsigned int iNrEntries);
 
 #endif

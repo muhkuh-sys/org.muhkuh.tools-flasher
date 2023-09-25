@@ -23,6 +23,7 @@
 
 
 #include <string.h>
+#include <stdint.h>
 
 #include "cfi_flash.h"
 #include "internal_flash/internal_flash.h"
@@ -33,7 +34,7 @@
 #endif
 /*-------------------------------------*/
 
-#define FLASHER_INTERFACE_VERSION 0x00030000
+#define FLASHER_INTERFACE_VERSION 0x00040000  // TODO Is this only a minor version change since it should be compatible?
 
 
 typedef enum BUS_ENUM
@@ -145,6 +146,7 @@ typedef struct CMD_PARAMETER_DETECT_STRUCT
 		//SDIO_OPTIONS_T tSdioOptions;
 	} uSourceParameter;
 	DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	uint32_t ulFlags;
 } CMD_PARAMETER_DETECT_T;
 
 
