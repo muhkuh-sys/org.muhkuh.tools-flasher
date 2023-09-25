@@ -429,6 +429,81 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         end
       end
     end
+
+  elseif strCurrentPath=='/FlasherPackage/Target/Sip' then
+    -- Get the mandatory attribute "page". It can have the values "COM" or "APP" in any upper/lower case.
+    local strPage = atAttributes['page']
+    if strPage==nil or strPage=='' then
+      -- No page specified.
+      aLxpAttr.tResult = nil
+      aLxpAttr.tLog.error('Error in line %d, col %d: attribute "page" is not set.', iPosLine, iPosColumn)
+    else
+      local strPage = string.upper(strPage)
+      if strPage~='COM' and strPage~='APP' then
+        -- Invalid "page" value.
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "page" must be "COM" or "APP".', iPosLine, iPosColumn)
+      else
+        -- Get the mandatory attribute "file".
+        local strFile = atAttributes['file']
+        if strFile==nil or strFile=='' then
+          -- No file specified.
+          aLxpAttr.tResult = nil
+          aLxpAttr.tLog.error('Error in line %d, col %d: attribute "file" is not set.', iPosLine, iPosColumn)
+        else
+          -- Get the optional attribute "setKEK". The default value is "false".
+          local fSetKEK = false
+          local strSetKEK = atAttributes['setKEK']
+          if strSetKEK~=nil and strSetKEK~='' then
+            fSetKEK = stringToBool(strSetKEK)
+          end
+          if fSetKEK==nil then
+            -- Invalid "setKEK".
+            aLxpAttr.tResult = nil
+            aLxpAttr.tLog.error('Error in line %d, col %d: attribute "setKEK" must evaluate to a boolean.', iPosLine, iPosColumn)
+          else
+            -- Get the optional attribute "condition". The default value is the empty string.
+            local strCondition = atAttributes['condition']
+            if strCondition==nil then
+              strCondition = ''
+            end
+
+            -- Translate the "page" and "setKEK" attributes to unit and chipselect.
+            local ulUnit
+            local ulChipSelect
+            if strPage=='COM' then
+              -- Write the COM page. This is unit 1.
+              ulUnit = 1
+              -- If the KEK should be set, the page must be patched. This is achieved with CS 3.
+              -- If the KEK should not be set, the unmodified page should be written. This is achieved with CS 1.
+              --
+              -- The following expression results to 3 if "fSetKEK" is true, and 1 if it is false.
+              ulChipSelect = fSetKEK and 3 or 1
+            else
+              -- Write the APP page. This is unit 2.
+              ulUnit = 2
+              -- The calibration is always set. This is achieved with CS 3.
+              ulChipSelect = 3
+            end
+
+            -- Create a new flash entry in the current target.
+            table.insert(aLxpAttr.tCurrentTarget.atFlashes, {
+              strBus = 'IFlash',
+              ulUnit = ulUnit,
+              ulChipSelect = ulChipSelect,
+              atData = {
+                {
+                  strType = "Data",
+                  strFile = strFile,
+                  ulOffset = 0,
+                  strCondition = strCondition
+                }
+              }
+            })
+          end
+        end
+      end
+    end
   end
 
 end
