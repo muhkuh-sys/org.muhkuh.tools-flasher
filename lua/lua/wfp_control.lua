@@ -250,8 +250,8 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
     -- The attribute "name" is required.
-    local strName = atAttributes['name']
-    if strName==nil or strName=='' then
+    local strConditionName = atAttributes['name']
+    if strConditionName==nil or strConditionName=='' then
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: missing attribute "name".', iPosLine, iPosColumn)
     else
@@ -271,7 +271,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           iPosColumn
         )
       else
-        aLxpAttr.tCondition = { name=strName, default=strDefault, test=strTest }
+        aLxpAttr.tCondition = { name=strConditionName, default=strDefault, test=strTest }
       end
     end
 
@@ -487,7 +487,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: attribute "page" is not set.', iPosLine, iPosColumn)
     else
-      local strPage = string.upper(strPage)
+      strPage = string.upper(strPage)
       if strPage~='COM' and strPage~='APP' then
         -- Invalid "page" value.
         aLxpAttr.tResult = nil
