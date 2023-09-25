@@ -164,11 +164,11 @@ local atStringToBool = {
   ["NO"]    = false,
   ["Y"]     = true,
   ["N"]     = false,
-  ["1"]     = true, 
+  ["1"]     = true,
   ["0"]     = false
 }
 
---- Map a string value to a boolean value. 
+--- Map a string value to a boolean value.
 -- Accepts a variety of inputs:
 -- true/false, t/f, yes/no, y/n, 1/0 independent of case.
 -- see hboot_image.py __string_to_bool
@@ -177,7 +177,7 @@ local atStringToBool = {
 local function stringToBool(strBool)
   strBool = string.upper(strBool)
   return atStringToBool[strBool]
-end 
+end
 
 --- Expat callback function for starting an element.
 -- This function is part of the callbacks for the expat parser.
@@ -210,7 +210,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       -- Reject the control file if the version is >= 1.4
       local tVersion_1_4 = aLxpAttr.Version()
       tVersion_1_4:set("1.4")
-      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then 
+      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then
         aLxpAttr.tResult = nil
         aLxpAttr.tLog.error('Error in line %d, col %d: Control file version %s is not supported', iPosLine, iPosColumn, strVersion)
       end
@@ -218,16 +218,16 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       -- Print a warning if the version is < 1.2 but the has_subdirs attribute is used
       local tVersion_1_2 = aLxpAttr.Version()
       tVersion_1_2:set("1.2")
-      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then 
+      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then
         aLxpAttr.tLog.warning('Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute', iPosLine, iPosColumn)
-      end 
-      
+      end
+
       -- Evaluate the value of has_subdirs to a boolean value.
       -- Default is false if has_subdirs is not present.
-      local fHasSubdirs 
+      local fHasSubdirs
       if strHasSubdirs == nil then
-        fHasSubdirs = false 
-      else 
+        fHasSubdirs = false
+      else
         fHasSubdirs = stringToBool(strHasSubdirs)
         if fHasSubdirs==nil then
           aLxpAttr.tResult = nil
@@ -235,7 +235,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         end
       end
       aLxpAttr.fHasSubdirs = fHasSubdirs
-      
+
     end
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
@@ -373,7 +373,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           --aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is not set.', iPosLine, iPosColumn)
       else
           ulSize = tonumber(strSize)
-        
+
       end
       local strCondition = atAttributes['condition']
       if strCondition==nil then
@@ -783,7 +783,7 @@ end
 --- Get the value of tVersion.
 -- @return a version
 function WfpControl:getVersion()
-  
+
   return self.tConfigurationVersion
 end
 
