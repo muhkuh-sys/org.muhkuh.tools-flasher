@@ -19,10 +19,10 @@ function WfpControl:_init(tLogWriter)
   self.lxp = require 'lxp'
 
   -- Get the logger object from the system configuration.
-  local tLogWriter = require 'log.writer.prefix'.new('[WfpControl] ', tLogWriter)
+  local tLogWriterWfp = require 'log.writer.prefix'.new('[WfpControl] ', tLogWriter)
   self.tLog = require 'log'.new(
     'trace',
-    tLogWriter,
+    tLogWriterWfp,
     require 'log.formatter.format'.new()
   )
 
