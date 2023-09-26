@@ -5,7 +5,6 @@ local mhash = require 'mhash'
 local pl = require 'pl.import_into'()
 local class = require 'pl.class'
 local path = require 'pl.path'
-local bit = require 'bit'
 local tFlasherHelper = require 'flasher_helper'
 
 local atLogLevels = {
@@ -233,7 +232,7 @@ function UsipGenerator:__check_binding_value(tInputTable, tOutputTable, strCompa
     if tOutputTable[strCompareKey] ~= ("unknown") then
         ulValueInput = tInputTable[strCompareKey]
         ulValueOutput = tOutputTable[strCompareKey]
-        ulNewVal = bit.bor(ulValueInput, ulValueOutput)
+        ulNewVal = ulValueInput | ulValueOutput
         tOutputTable[strCompareKey] = ulNewVal
     else
         tOutputTable[strCompareKey] = tInputTable[strCompareKey]

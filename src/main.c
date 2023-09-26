@@ -33,6 +33,9 @@
 #include "spi_macro_player.h"
 #include "sha1.h"
 
+/* Reset functionality */
+#include "reset.h"
+
 #include "flasher_interface.h"
 #include "flasher_header.h"
 #include "units.h"
@@ -838,6 +841,15 @@ static NETX_CONSOLEAPP_RESULT_T opMode_identify(void)
 
 
 /* ------------------------------------- */
+static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
+{
+	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
+	uprintf("Activating watchdog\n");
+	retVal = resetNetX();
+	return retVal;
+}
+
+/* ------------------------------------- */
 
 #define FLAG_STARTADR 1
 #define FLAG_ENDADR 2
@@ -975,6 +987,12 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		ulPars = 0;
 		uprintf(". Mode: Visually identify hardware\n");
 		break;
+
+	case OPERATION_MODE_Reset:
+		ulPars = 0;
+		uprintf(". Mode: Reset netX from binary\n");
+		break;
+
 
 	case OPERATION_MODE_SmartErase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
@@ -1336,6 +1354,10 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			
 			case OPERATION_MODE_Identify:
 				tResult = opMode_identify();
+				break;
+
+			case OPERATION_MODE_Reset:
+				tResult = opMode_reset();
 				break;
 
 			case OPERATION_MODE_SmartErase:

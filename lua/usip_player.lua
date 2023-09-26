@@ -54,20 +54,20 @@ strUsipPlayerGeneralHelp = [[
 
     Folder structure inside flasher:
     |- flasher_cli-X.Y.Z                     -- main folder
-    |- .tmp                                  -- temporary folder created by the usip_player to save temp files
-    |- doc
-    |- lua                                   -- more lua files
-    |- lua_plugins                            -- lua plugins
-    |- netx
-       |- hboot                             -- hboot images, necessary for for the flasher
-          |- unsigned                       -- unsigned hboot images
-             |- netx90                      -- netx specific folder containing hboot images
-             |- netx90_usip                 -- netx specific folder containing usip images
-       |- helper
-          |- netx90                         -- helper files that can't be signed
-
-    |- lua5.1(.exe)                         -- lua executable
-    |- usip_player.lua                      -- usip_player lua file
+       |- .tmp                               -- temporary folder created by the usip_player to save temp files
+       |- doc
+       |- lua                                -- more lua files
+       |- lua_plugins                        -- lua plugins
+       |- netx
+          |- hboot                           -- hboot images, necessary for for the flasher
+             |- unsigned                     -- unsigned hboot images
+                |- netx90                    -- netx specific folder containing hboot images
+                |- netx90_usip               -- netx specific folder containing usip images
+          |- helper
+             |- netx90                       -- helper files that must not be signed
+       
+       |- lua5.4(.exe)                       -- lua executable
+       |- usip_player.lua                    -- usip_player lua file
 
 
     To use the usip_player in secure mode:
@@ -345,28 +345,16 @@ tParserReadSip:flag('--disable_helper_signature_check')
     :default(false)
 
 
--- Add the "detect_secure_mode" command and all its options.
+-- Add the "detect_secure_mode" command and note, that it is moved to "cli_flash.lua"
 
 strDetectSecureModeHelp = [[
 This command was moved into cli_flash.lua.
 ]]
-local tParserDetectSecure = tParser:command(
+tParser:command(
     'detect_secure_mode', strDetectSecureModeHelp
 ):target('fCommandDetectSelected')
-tParserDetectSecure:option(
-    '-V --verbose'
-):description(
-    string.format(
-        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
-    )
-):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserDetectSecure:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserDetectSecure:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
--- tParserDetectSecure:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
--- tParserDetectSecure:flag('--extend_exec'):description(
---     "Use an execute-chunk to activate JTAG."
--- ):target('fExtendExec')
-tParserDetectSecure:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
+
+
 -- Add the "get_uid" command and all its options.
 local tParserGetUid = tParser:command('get_uid gu', 'Get the unique ID.'):target('fCommandGetUidSelected')
 tParserGetUid:option(
@@ -378,13 +366,14 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+tParserGetUid:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
--- tParserGetUid:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
 
+-- Add command check_helper_signature chs
 local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
@@ -405,7 +394,7 @@ if tArgs.strSecureOption == nil then
     tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
 end
 if tArgs.strSecureOptionPhaseTwo == nil then
-    tArgs.strSecureOptionPhaseTwo = tFlasher.DEFAULT_HBOOT_OPTION
+    tArgs.strSecureOptionPhaseTwo = tArgs.strSecureOption
 end
 -- convert the parameter strBootswitchParams to all upper case
 if tArgs.strBootswitchParams ~= nil then
@@ -607,6 +596,8 @@ end
 -- returns
 --   nothing
 function printArgs(tArguments)
+    tLog.info("")
+    tLog.info("Command line:" .. table.concat(arg, " ", -1, #arg))
     tLog.info("")
     tLog.info("run usip_player.lua with the following args:")
     tLog.info("--------------------------------------------")
@@ -840,7 +831,7 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     local aDataList
     local tUsipNames
     -- list of all generated usip file paths
-    if tFlasherHelper.fStoreTempFiles then
+    if tFlasherHelper.getStoreTempFiles() then
         tResult, aDataList, tUsipNames = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
     else
         aDataList, tUsipNames = tUsipGen:gen_multi_usip(tUsipConfigDict)
@@ -928,7 +919,7 @@ function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
 
         if string.len( strUsipData ) == 0x8000 then
             -- set combined file path
-            if tFlasherHelper.fStoreTempFiles then
+            if tFlasherHelper.getStoreTempFiles() then
                 -- only store temporary file when it is enabled
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")  -- todo use handover parameter for file name
                 -- write the data back to the usip binary file
@@ -984,7 +975,7 @@ function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePa
         -- the first 64 bytes are the boot header
         -- todo: find better way to strip the last 0 values (end indication of hboot image)
         strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strExecReturnData, 65 )
-        if tFlasherHelper.fStoreTempFiles then
+        if tFlasherHelper.getStoreTempFiles() then
             -- set combined file path
             if strOutputFileName == nil then
                 strCombinedUsipPath = path.join( strTmpFolderPath, "combined.usp")
@@ -1119,7 +1110,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             strReadSipData, strTmpFolderPath, tArgs.strBootswitchParams
         )
         tLog.debug(strMsg)
-    elseif tArgs.strBootswitchParams == "JTAG" then
+    elseif tArgs.strBootswitchParams == "JTAG" or
+     (strPluginType == 'romloader_jtag' and  tArgs.strBootswitchParams == nil) then
         tLog.debug("Extending USIP file with exec.")
         -- todo why do we still hand over the path (strExecReturnPath) instead of using helper files method
         fOk, strReadSipData, strMsg = extendExecReturnData(
@@ -1149,7 +1141,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
                 tLog.info("Start read sip hboot image inside intram")
                 tFlasher.call_hboot(tPlugin, nil, true)
             elseif strPluginType ~= 'romloader_jtag' then
-                -- M2M protocol for rev2
+                -- M2M protocol for rev1
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
                 -- reset the value of the read sip result address
@@ -1217,8 +1209,8 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             end
             if fResult then
                 ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
-                if (bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0) and
-                        (bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 or bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0) then
+                if ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
+                        ((ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0) then
                     strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
                     strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
                     strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
@@ -1226,10 +1218,10 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
                     aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
                     aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
                     aStrUUIDs[3] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 8))
-                elseif bit.band(ulReadSipResult, COM_SIP_INVALID_MSK) ~= 0 then
+                elseif (ulReadSipResult & COM_SIP_INVALID_MSK) ~= 0 then
                     strErrorMsg = "Could not get a valid copy of the COM SIP"
                     fResult = false
-                elseif bit.band(ulReadSipResult, APP_SIP_INVALID_MSK) ~= 0 then
+                elseif (ulReadSipResult & APP_SIP_INVALID_MSK) ~= 0 then
                     strErrorMsg = "Could not get a valid copy of the APP SIP"
                     fResult = false
                 end
@@ -1277,7 +1269,7 @@ function verifyContent(
         uVerifyResult = VERIFY_RESULT_ERROR
     else
 
-        if tFlasherHelper.fStoreTempFiles then
+        if tFlasherHelper.getStoreTempFiles() then
             tLog.debug("Saving content to files...")
             -- save the content to a file if the flag is set
             -- set the sip file path to save the sip data
@@ -1429,7 +1421,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
     tLog.debug( "ulHbootResult: %s ", ulHbootResult )
-    ulHbootResult = bit.band(ulHbootResult, 0x107)
+    ulHbootResult = ulHbootResult & 0x107
     -- TODO: include description
     if ulHbootResult == 0x107 then
         tLog.info( "Successfully set KEK" )
@@ -1793,16 +1785,16 @@ function set_kek(
             local iCopySizeInBytes = iMaxImageSizeInBytes + iCopyUsipSize + iMaxOptionSizeInBytes
 
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(iCopySizeInBytes, 0xff)
+                iCopySizeInBytes & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 8), 0xff)
+                (iCopySizeInBytes >> 8) & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 16), 0xff)
+                (iCopySizeInBytes >> 16) & 0xff
             )
             strSetKekOptions = strSetKekOptions .. string.char(
-                bit.band(bit.rshift(iCopySizeInBytes, 24), 0xff)
+                (iCopySizeInBytes >> 24) & 0xff
             )
             -- reserved
             strSetKekOptions = strSetKekOptions .. string.char(0x00, 0x00, 0x00, 0x00)
@@ -1939,7 +1931,7 @@ function set_kek(
                             -- be pessimistic again
                             fOk = false
 
-                            if tFlasherHelper.fStoreTempFiles then
+                            if tFlasherHelper.getStoreTempFiles() then
 
                                 -- save the combined file into the temporary folder
                                 local strKekHbootCombPath = path.join( strTmpFolderPath, "kek_hboot_comb.bin")
@@ -2003,6 +1995,7 @@ function read_sip(
 )
 
     local fOk = false
+    local strPluginType
 
     -- get the plugin type
     strPluginType = tPlugin:GetTyp()
@@ -2057,7 +2050,12 @@ function read_sip(
 end
 
 
-function get_uid(tPlugin, strTmpFolderPath, strReadSipPath, atPluginOptions, strExecReturnPath)
+function get_uid(
+    tPlugin,
+    strTmpFolderPath,
+    strReadSipPath,
+    atPluginOptions,
+    strExecReturnPath)
 
     local fOk = false
     local strPluginType
@@ -2377,7 +2375,7 @@ if tArgs.strBootswitchParams then
     if not (
         tArgs.strBootswitchParams == "UART" or tArgs.strBootswitchParams == "ETH" or tArgs.strBootswitchParams == "MFW" or tArgs.strBootswitchParams == "JTAG"
     ) then
-        tLog.error("Wrong Bootswitch parameter, please choose between UART, ETH or MFW.")
+        tLog.error("Wrong Bootswitch parameter, please choose between JTAG, UART, ETH or MFW.")
         tLog.error("If the boot process should continue normal do not use the bootswitch parameter.")
         -- return here because of initial error
         os.exit(1)
@@ -2385,14 +2383,13 @@ if tArgs.strBootswitchParams then
 end
 
 -- check if the temp folder exists, if it does not exists, create it
-if not exists(strTmpFolderPath) and tFlasherHelper.fStoreTempFiles then
+if not exists(strTmpFolderPath) and tFlasherHelper.getStoreTempFiles() then
     path.mkdir(strTmpFolderPath)
 end
 
 -- set the path for set_sip_protection_cookie.usp
 if tArgs.fCommandCheckSIPCookie then
-    -- todo move to helper files folder (this will not be signed)
-    strUsipFilePath = path.join(strSecureOption, "netx90_usip" ,"set_sip_protection_cookie.usp")
+    strUsipFilePath = path.join("netx", "helper" , "netx90", "set_sip_protection_cookie.usp")
 end
 
 --------------------------------------------------------------------------

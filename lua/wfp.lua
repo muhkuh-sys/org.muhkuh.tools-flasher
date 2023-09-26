@@ -156,6 +156,8 @@ end
 
 function printArgs(tArgs, tLog)
     print("")
+    print("Command line:" .. table.concat(arg, " ", -1, #arg))
+    print("")
     print("run wfp.lua with the following args:")
     print("------------------------------------")
     printTable(tArgs, 0)
@@ -187,7 +189,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
 	
     if fResult==true then 
         -- check helper signatures
-        fResult, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+        fResult, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
         if fResult ~= true then 
             tLog.error(strMsg or "Failed to verify the signatures of the helper files")
             fResult = false
@@ -202,7 +204,7 @@ function example_xml(tArgs, tLog, tFlasher, tWfpControl, bCompMode, strSecureOpt
         -- Download the binary. (load the flasher binary into intram)
         aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
         -- get the board info
-        aBoardInfo = flasher.getBoardInfo(tPlugin, aAttr)
+        aBoardInfo = tFlasher.getBoardInfo(tPlugin, aAttr)
         exampleXml:addTarget(strTargetName)
         for iBusCnt,tBusInfo in ipairs(aBoardInfo) do
             ucBus = tBusInfo.iIdx
@@ -502,7 +504,7 @@ function backup(tArgs, tLog, tWfpControl, tFlasher, bCompMode, strSecureOption)
 
             if tPlugin then
                 -- check helper signatures
-                fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
                 
                 if fOk ~= true then 
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
@@ -777,9 +779,9 @@ print()
 -- tester = require 'tester_cli'(tLog)
 -- tester = require 'tester_cli'
 -- Ask the user to select a plugin.
-tester.fInteractivePluginSelection = true
+-- tester.fInteractivePluginSelection = true
 
-local strnetX90M2MImagePath = path.join(tArgs.strSecureOption, "netx90")
+local strnetX90M2MImagePath = pl.path.join(tArgs.strSecureOption, "netx90")
 
 tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
 
@@ -898,7 +900,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
             else
             
                 -- check helper signatures
-                fOk, strMsg = verify_signature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
+                fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(tPlugin, tArgs.strSecureOption, tArgs.aHelperKeysForSigCheck)
                 
                 if fOk ~= true then 
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")

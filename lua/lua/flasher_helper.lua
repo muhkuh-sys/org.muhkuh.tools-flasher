@@ -1,53 +1,57 @@
-module("flasher_helper", package.seeall)
+local M = {}
+
 -----------------------------------------------------------------------------
--- Copyright (C) 2017 Hilscher Gesellschaft f�r Systemautomation mbH
+-- Copyright (C) 2017 Hilscher Gesellschaft für Systemautomation mbH
 --
 -- Description:
 --   flasher_helper.lua: helper function for CLI Flasher
 --
 -----------------------------------------------------------------------------
 
-local tFlasher = require 'flasher'
-local bit = require 'bit'
 local class = require 'pl.class'
 
 -- exit code for detect_netx
-STATUS_OK = 0
-STATUS_ERROR = 1
-STATUS_START_MI_IMAGE_FAILED = 2
+local STATUS_OK = 0
+local STATUS_ERROR = 1
+local STATUS_START_MI_IMAGE_FAILED = 2
 
 -- exit codes for detect_secure_boot_mode
-SECURE_BOOT_DISABLED = 0
-SECURE_BOOT_ENABLED = 5
-SECURE_BOOT_ONLY_APP_ENABLED = 50
-SECURE_BOOT_UNKNOWN = 2
-SECURE_BOOT_ERROR = 1
+local SECURE_BOOT_DISABLED = 0
+local SECURE_BOOT_ENABLED = 5
+local SECURE_BOOT_ONLY_APP_ENABLED = 50
+local SECURE_BOOT_UNKNOWN = 2
+local SECURE_BOOT_ERROR = 1
 
 --------------------------------------------------------------------------
 -- helpers
 --------------------------------------------------------------------------
 
 -- Checking is enabled by default.
-fStoreTempFiles = false
+local fStoreTempFiles = false
 
 -- Disable the checks
-function disableStoreTempFiles()
+function M.disableStoreTempFiles()
     -- print("Disabling automatic helper file checks")
     fStoreTempFiles = false
 end
 
 -- Enable the checks
-function enableStoreTempFiles()
+function M.enableStoreTempFiles()
     -- print("Enabling automatic helper file checks")
     fStoreTempFiles = true
 end
+
+function M.getStoreTempFiles()
+  return fStoreTempFiles
+end
+
 
 -- strData, strMsg loadBin(strFilePath)
 -- Load a binary file.
 -- returns
 --   data if successful
 --   nil, message if an error occurred
-function loadBin(strFilePath)
+function M.loadBin(strFilePath)
 	local strData
 	local tFile
 	local strMsg
@@ -69,7 +73,7 @@ end
 -- fOk, strMsg writeBin(strName, strBin)
 -- Write string to binary file.
 -- returns true or false, message
-function writeBin(strName, bin)
+function M.writeBin(strName, bin)
 	local f, msg = io.open(strName, "wb")
 	if f then
 		f:write(bin)
@@ -82,7 +86,7 @@ function writeBin(strName, bin)
 end
 
 -- get hex representation (no spaces) of a byte string
-function getHexString(strBin)
+function M.getHexString(strBin)
 	local strHex = ""
 	for i=1, strBin:len() do
 		strHex = strHex .. string.format("%02x", strBin:byte(i))
@@ -92,7 +96,7 @@ end
 
 -- Convert a binary string to an unsigned integer.
 -- str must be 1 to 4 bytes long and in little-endian byte order.
-function bytes_to_uint32(str)
+function M.bytes_to_uint32(str)
     local ulValue = 0
 
     for i= str:len(), 1, -1 do
@@ -103,11 +107,47 @@ function bytes_to_uint32(str)
 end
 
 
-function printf(...) print(string.format(...)) end
+local function printf(...) print(string.format(...)) end
 
 --------------------------------------------------------------------------
 -- get plugin
 --------------------------------------------------------------------------
+
+local function is_text_string(x)
+	local b
+	if type(x) ~= "string" then 
+		return false
+	end
+	
+	for i=1, #x do
+		b = string.byte(x, i)
+		if b<32 or b>126 then
+			return false
+		end
+	end
+	
+	return true
+end
+
+
+local function show_plugin_options(tOpts)
+	print("Plugin options:")
+	for strPluginId, tPluginOptions in pairs(tOpts) do
+		print(string.format("For %s:", strPluginId))
+		for strKey, tVal in pairs(tPluginOptions) do
+			if type(tVal) == "string" then 
+				if is_text_string(tVal) then 
+					print(strKey, tVal)
+				else 
+					print(strKey, "(binary)")
+				end
+			else 
+				print(strKey, tVal)
+			end
+		end
+	end
+end
+
 
 -- Show the available interfaces and let the user select one interactively.
 --
@@ -118,18 +158,19 @@ function printf(...) print(string.format(...)) end
 -- is scanned.
 -- If strPluginType is nil, all plugin providers are scanned.
 
-function SelectPlugin(strPattern, strPluginType, atPluginOptions)
+local function SelectPlugin(_, strPluginType, atPluginOptions)
 	local iInterfaceIdx
 	local aDetectedInterfaces
 	local tPlugin
-	local strPattern = strPattern or ".*"
+  local strInterface
+  local __MUHKUH_PLUGINS = _G.__MUHKUH_PLUGINS
 
 	show_plugin_options(atPluginOptions)
 
 	repeat do
 		-- Detect all interfaces.
 		aDetectedInterfaces = {}
-		for i,v in ipairs(__MUHKUH_PLUGINS) do
+		for _,v in ipairs(__MUHKUH_PLUGINS) do
 			if strPluginType == nil or strPluginType == v:GetID() then
 				local iDetected
 				print(string.format("Detecting interfaces with plugin %s", v:GetID()))
@@ -143,7 +184,14 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 		-- Show all detected interfaces.
 		print("Please select the interface:")
 		for i,v in ipairs(aDetectedInterfaces) do
-			print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+			print(string.format(
+        "%d: %s (%s) Used: %s, Valid: %s",
+        i,
+        v:GetName(),
+        v:GetTyp(),
+        tostring(v:IsUsed()),
+        tostring(v:IsValid())
+      ))
 		end
 		print("R: rescan")
 		print("C: cancel")
@@ -157,7 +205,11 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 		--  1) the user requested a rescan ("r")
 		--  2) the user canceled the selection ("c")
 		--  3) the input is a number and it is an index to an entry in aDetectedInterfaces
-		end until strInterface=="r" or strInterface=="c" or (iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces)
+		end until (
+      strInterface=="r" or
+      strInterface=="c" or
+      (iInterfaceIdx~=nil and iInterfaceIdx>0 and iInterfaceIdx<=#aDetectedInterfaces)
+    )
 	-- Scan again if the user requested it.
 	end until strInterface~="r"
 
@@ -171,17 +223,7 @@ function SelectPlugin(strPattern, strPluginType, atPluginOptions)
 	return tPlugin
 end
 
-function show_plugin_options(tOpts)
-	print("Plugin options:")
-	for strPluginId, tPluginOptions in pairs(tOpts) do
-		print(string.format("For %s:", strPluginId))
-		for strKey, tVal in pairs(tPluginOptions) do
-			print(strKey, tVal)
-		end
-	end
-end
-
-function connect_retry(tPlugin, uLRetries)
+function M.connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
     print("connect to plugin")
@@ -203,7 +245,7 @@ function connect_retry(tPlugin, uLRetries)
         end
         print("connect not successful")
         uLRetries = uLRetries - 1
-        sleep_s(1)
+        M.sleep_s(1)
         if uLRetries > 0 then
             print("retry connecting ... ")
         end
@@ -216,23 +258,30 @@ end
 -- This function assumes that the name starts with the name of the interface,
 -- e.g. romloader_uart, and scans only for interfaces whose type is contained
 -- in the name string.
-function getPluginByName(strName, strPluginType, atPluginOptions)
+local function getPluginByName(strName, strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
-	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+	for _, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			local iDetected
 			local aDetectedInterfaces = {}
 
-			local strPluginType = tPluginClass:GetID()
-			if strName:match(strPluginType) then
+			local strPluginClassType = tPluginClass:GetID()
+			if strName:match(strPluginClassType) then
 				print(string.format("Detecting interfaces with plugin %s", tPluginClass:GetID()))
 				iDetected = tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 				print(string.format("Found %d interfaces with plugin %s", iDetected, tPluginClass:GetID()))
 			end
 
 			for i,v in ipairs(aDetectedInterfaces) do
-				print(string.format("%d: %s (%s) Used: %s, Valid: %s", i, v:GetName(), v:GetTyp(), tostring(v:IsUsed()), tostring(v:IsValid())))
+				print(string.format(
+          "%d: %s (%s) Used: %s, Valid: %s",
+          i,
+          v:GetName(),
+          v:GetTyp(),
+          tostring(v:IsUsed()),
+          tostring(v:IsValid())
+        ))
 				if strName == v:GetName() then
 					if not v:IsValid() then
 						return nil, "Plugin is not valid"
@@ -262,7 +311,7 @@ end
 -- a plugin provider, e.g. "romloader_uart"), only this plugin provider
 -- is scanned.
 
-function getPlugin(strPluginName, strPluginType, atPluginOptions)
+function M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	local tPlugin, strError
 	if strPluginName then
 		-- get the plugin by name
@@ -279,20 +328,19 @@ function getPlugin(strPluginName, strPluginType, atPluginOptions)
 end
 
 
-function printf(...) print(string.format(...)) end
-function list_interfaces(strPluginType, atPluginOptions)
+function M.list_interfaces(strPluginType, atPluginOptions)
 	show_plugin_options(atPluginOptions)
 
 	-- detect all interfaces
 	local aDetectedInterfaces = {}
-	for iPluginClass, tPluginClass in ipairs(__MUHKUH_PLUGINS) do
+	for _, tPluginClass in ipairs(_G.__MUHKUH_PLUGINS) do
 		if strPluginType == nil or strPluginType == tPluginClass:GetID() then
 			tPluginClass:DetectInterfaces(aDetectedInterfaces, atPluginOptions)
 		end
 	end
 	-- filter used and non valid interfaces
 	local aUnusedInterfaces = {}
-	for i,v in ipairs(aDetectedInterfaces) do
+	for _,v in ipairs(aDetectedInterfaces) do
 		if not v:IsUsed() and v:IsValid() then
 				table.insert(aUnusedInterfaces, v)
 		end
@@ -309,34 +357,35 @@ function list_interfaces(strPluginType, atPluginOptions)
 end
 
 
-function netx90_disable_uart_pulldown_resistors(tPlugin)
+local function netx90_disable_uart_pulldown_resistors(tPlugin)
 	local addr_pad_ctrl_uart_rxd    = 0xff401028
 	local addr_pad_ctrl_uart_txd    = 0xff40102c
 	local addr_asic_ctrl_access_key = 0xff4012c0
-		
+
 	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
-	val_pad_ctrl_uart_rxd = bit.band(val_pad_ctrl_uart_rxd, 0xef)
+	val_pad_ctrl_uart_rxd = val_pad_ctrl_uart_rxd & 0xef
 	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_rxd, val_pad_ctrl_uart_rxd)
-	
+
 	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
-	val_pad_ctrl_uart_txd = bit.band(val_pad_ctrl_uart_txd, 0xef)
-	local val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
+	val_pad_ctrl_uart_txd = val_pad_ctrl_uart_txd & 0xef
+	val_asic_ctrl_access_key = tPlugin:read_data32(addr_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_asic_ctrl_access_key, val_asic_ctrl_access_key)
 	tPlugin:write_data32(addr_pad_ctrl_uart_txd, val_pad_ctrl_uart_txd)
 end
 
-function netx90_check_uart_padctrl(tPlugin)
+local function netx90_check_uart_padctrl(tPlugin)
 	local addr_pad_ctrl_uart_rxd = 0xff401028
 	local addr_pad_ctrl_uart_txd = 0xff40102c
 	local val_pad_ctrl_uart_rxd = tPlugin:read_data32(addr_pad_ctrl_uart_rxd)
 	local val_pad_ctrl_uart_txd = tPlugin:read_data32(addr_pad_ctrl_uart_txd)
 	printf("val_pad_ctrl_uart_rxd: 0x%08x", val_pad_ctrl_uart_rxd)
 	printf("val_pad_ctrl_uart_txd: 0x%08x", val_pad_ctrl_uart_txd)
-end 
+end
 
-function detect_chiptype(aArgs)
+function M.detect_chiptype(aArgs)
+  local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -347,7 +396,7 @@ function detect_chiptype(aArgs)
 
 	local iRet = STATUS_OK -- assume success
 
-	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
@@ -372,7 +421,7 @@ function detect_chiptype(aArgs)
 				print("Disabling pull-down resistors for UART RXD and TXD")
 				netx90_disable_uart_pulldown_resistors(tPlugin)
 				netx90_check_uart_padctrl(tPlugin)
-				
+
 				print("Detecting PHY version on netX 90 Rev1")
 				local bootpins = require("bootpins")
 				bootpins:_init()
@@ -409,15 +458,15 @@ end
 
 
 -- return tRes OR nil, strErrorMsg
-function readSip_via_jtag(tPlugin, strReadSipHbootImg)
+local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
+  local tFlasher = require 'flasher'
 	local strErrorMsg = ""
 
-	local strReadSipExe
 	local ulReadSipExeAddress    = 0x00060000 -- Load address for the read_sip executable
 	local ulReadSipDataAddress   = 0x00062000 -- Location where read_sip stores the SIP pages.
 
 	-- The magic cookie is set by the read_sip program to indicate its state.
-	local ulReadSipMagicAddress  = 0x00065004 -- Location of the read_sip magic cookie 
+	local ulReadSipMagicAddress  = 0x00065004 -- Location of the read_sip magic cookie
 	local MAGIC_COOKIE_INIT      = 0x5541494d -- (MIAU) read_sip has entered pass 1, before resetting
 	local MAGIC_COOKIE_END       = 0x464f4f57 -- (WOOF) read_sip has finished pass 2, info pages validated/copied.
 
@@ -425,16 +474,12 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	local ulReadSipResultAddress = 0x00065000
 	local COM_SIP_CPY_VALID_MSK  = 0x00000001
 	local COM_SIP_VALID_MSK      = 0x00000002
-	local UID_CPY_MSK            = 0x00000004
-	local COM_SIP_INVALID_MSK    = 0x00000010
 	local APP_SIP_CPY_VALID_MSK  = 0x00000100
 	local APP_SIP_VALID_MSK      = 0x00000200
-	local APP_SIP_INVALID_MSK    = 0x00001000
 	local FIRST_RUN_DONE         = 0x00010000 -- read_sip pass 1 done, shortly before reset
 
 	local ulReadSipResult
 	local ulMagicResult
-	local strCalSipData
 	local strComSipData
 	local strAppSipData
 	local tRes
@@ -447,23 +492,23 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	-- printf("intflash 1 protection info: 0x%08x", ulIflash1ProtectionInfo)
 	-- printf("intflash 2 protection info: 0x%08x", ulIflash2ProtectionInfo)
 
-	-- extract the executable portion of the read_sip image from the data chunk 
+	-- extract the executable portion of the read_sip image from the data chunk
 	-- and download it to RAM.
 	printf("download the read_sip binary to0x%08x", ulReadSipExeAddress)
 	local strReadSipExe = string.sub(strReadSipHbootImg, 0x40D)
 	tFlasher.write_image(tPlugin, ulReadSipExeAddress, strReadSipExe)
-	
-	-- Set the FIRST_RUN_DONE flag in ReadSipResult. 
+
+	-- Set the FIRST_RUN_DONE flag in ReadSipResult.
 	-- This prevents read_sip from performing a reset.
 	printf("reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
 	tPlugin:write_data32(ulReadSipResultAddress, FIRST_RUN_DONE)
 
-	-- Set the cookie to MAGIC_COOKIE_INIT. 
+	-- Set the cookie to MAGIC_COOKIE_INIT.
 	-- This prevents read_sip from clearing the ReadSipResult.
 	tPlugin:write_data32(ulReadSipMagicAddress, MAGIC_COOKIE_INIT)
 
-	--sleep_s(2) -- what for?
-	
+	--M.sleep_s(2) -- what for?
+
 	print("Start read_sip binary via call")
 	tFlasher.call(
 			tPlugin,
@@ -475,22 +520,22 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 	ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
 	-- printf("read_sip magic cookie value: 0x%08x", ulMagicResult)
 	-- printf("read_sip result: 0x%08x", ulReadSipResult)
-	
+
 	if ulMagicResult ~= MAGIC_COOKIE_END then
 		strErrorMsg = "An error has occurred while executing read_sip (MAGIC_COOKIE_END not found)."
-	else 
+	else
 		printf("read_sip has finished (found MAGIC_COOKIE_END).")
-	
+
 		-- ignore the CAL page.
 		--strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
 
-		fComSipOk = bit.band(ulReadSipResult, COM_SIP_VALID_MSK) ~= 0
-		fComCopyOk = bit.band(ulReadSipResult, COM_SIP_CPY_VALID_MSK) ~= 0 
+		local fComSipOk = (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0
+		local fComCopyOk = (ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0
 		if fComSipOk or fComCopyOk then
 			strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
 		end
-		
-		if fComCopyOk then 
+
+		if fComCopyOk then
 			print("The COM SIP copy is valid.")
 		elseif fComSipOk then
 			print("The COM SIP copy is invalid.")
@@ -500,13 +545,13 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			print("The COM SIP is not available.")
 		end
 
-		fAppSipOk = bit.band(ulReadSipResult, APP_SIP_VALID_MSK) ~= 0
-		fAppCopyOk = bit.band(ulReadSipResult, APP_SIP_CPY_VALID_MSK) ~= 0 
+		local fAppSipOk = (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0
+		local fAppCopyOk = (ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0
 		if fAppSipOk or fAppCopyOk then
 			strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 		end
 
-		if fAppCopyOk then 
+		if fAppCopyOk then
 			print("The APP SIP Copy is valid.")
 		elseif fAppSipOk then
 			print("The APP SIP Copy is invalid.")
@@ -526,11 +571,13 @@ function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 			strAppSipData = strAppSipData
 		}
 	end
-	
+
 	return tRes, strErrorMsg
 end
 
-function detect_secure_boot_mode(aArgs)
+function M.detect_secure_boot_mode(aArgs)
+  local tFlasher = require 'flasher'
+  local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -546,10 +593,12 @@ function detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
-	local tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+  local path = require 'pl.path'
+
+	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
-		
+
 	elseif tPlugin:GetTyp() == "romloader_uart" then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
@@ -611,19 +660,19 @@ function detect_secure_boot_mode(aArgs)
 					local strImagePath = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "hboot_netx90_exec_bxlr.bin")
 					printf("Trying to load netX 90 exec_bxlr image from %s", strImagePath)
 
-					strImageBin, strMsg = loadBin(strImagePath)
+					strImageBin, strMsg = M.loadBin(strImagePath)
 
 					if strImageBin == nil then
 						printf("Error: Failed to load netX 90 exec_bxlr image: %s", strMsg or "unknown error")
 					else
 						printf("%d bytes loaded.", strImageBin:len())
-						flasher.write_image(tPlugin, 0x200c0, strImageBin)
+						tFlasher.write_image(tPlugin, 0x200c0, strImageBin)
 						tPlugin:write_data32(0x22000, 0xffffffff)
 						local ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 before running boot image: 0x%08x", ulVal)
-						local tRet = flasher.call_hboot(tPlugin)
+						local tRet = tFlasher.call_hboot(tPlugin)
 						print("return value from call_hboot:" , tRet)
-						local ulVal = tPlugin:read_data32(0x22000)
+						ulVal = tPlugin:read_data32(0x22000)
 						printf("Value at 0x22000 after running boot image: 0x%08x", ulVal)
 
 						if (ulVal == 0) then
@@ -655,102 +704,116 @@ function detect_secure_boot_mode(aArgs)
 		end -- chip type
 
 	elseif tPlugin:GetTyp() == "romloader_jtag" then
-		local strReadSipPath = path.join("netx", "hboot", "unsigned", "netx90", "read_sip_M2M.bin")  --tFlasher.HELPER_FILES_PATH, 
+		local strReadSipPath = path.join(
+      "netx",
+      "hboot",
+      "unsigned",
+      "netx90",
+      "read_sip_M2M.bin"
+    )  --tFlasher.HELPER_FILES_PATH,
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
-		strReadSipBin, strMsg = loadBin(strReadSipPath)
-		if strReadSipBin == nil then 
+    local strReadSipBin
+		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
+		if strReadSipBin == nil then
 			print(strMsg)
 		else
 			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
-	
+
 			if not fConnected then
 				print("Failed to connect.")
 			else
 				iChiptype = tPlugin:GetChiptyp()
 				strChipName = tPlugin:GetChiptypName(iChiptype)
-	
+
 				if iChiptype == nil or iChiptype == romloader.ROMLOADER_CHIPTYP_UNKNOWN then
 					print("Could not detect chip type")
 					strMsg = "Failed to get chip type"
-	
+
 				elseif iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90B
 				and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90C
 				and iChiptype~=romloader.ROMLOADER_CHIPTYP_NETX90D then
 					strMsg = "detect_secure_boot_mode supports only netX 90 Rev.1 and 2"
-	
+
 				else
 					printf("Chip type: %s (%d) (may be suspicious, PHY version not verified)", strChipName, iChiptype)
-					
+
 					-- Make sure that the SIP copies in RAM are updated, if they are enabled at all.
-					-- We do this by clearing the hashes of the SIP copies and then triggering a reset 
+					-- We do this by clearing the hashes of the SIP copies and then triggering a reset
 					-- by closing and re-opening the JTAG connection.
-					-- The reset mechanism built into read_sip is NOT used, because that would require 
+					-- The reset mechanism built into read_sip is NOT used, because that would require
 					-- read_sip to be signed if secure boot is on.
-	
+
 					local COM_SIP_COPY_ADDR = 0x200a7000 -- address of the copied com secure info page
 					local APP_SIP_COPY_ADDR = 0x200a6000 -- address of the copied app secure info page
 					local OFF_COM_SIP_HASH = 0x0fd0
 					local OFF_APP_SIP_HASH = 0x0fd0
 					local SIZ_COM_SIP_HASH = 0x30
 					local SIZ_APP_SIP_HASH = 0x30
-					
+
 					local strZero = string.rep(string.char(0x55), SIZ_COM_SIP_HASH)
-					flasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
-					local strReadback = flasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
-					if strReadback ~= strZero then 
+					tFlasher.write_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, strZero)
+					local strReadback = tFlasher.read_image(tPlugin, COM_SIP_COPY_ADDR+OFF_COM_SIP_HASH, SIZ_COM_SIP_HASH)
+					if strReadback ~= strZero then
 						printf("Failed to clear COM SIP hash")
 					else
-						local strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
-						flasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
-						local strReadback = flasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
-						if strReadback ~= strZero then 
+						strZero = string.rep(string.char(0x55), SIZ_APP_SIP_HASH)
+						tFlasher.write_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, strZero)
+						strReadback = tFlasher.read_image(tPlugin, APP_SIP_COPY_ADDR+OFF_APP_SIP_HASH, SIZ_APP_SIP_HASH)
+						if strReadback ~= strZero then
 							printf("Failed to clear APP SIP hash")
 						else
 							tPlugin:Disconnect()
 							strPluginName = tPlugin:GetName()
 							strPluginType = tPlugin:GetTyp()
-							if atPluginOptions.romloader_jtag.jtag_reset == "Attach" then 
+							if atPluginOptions.romloader_jtag.jtag_reset == "Attach" then
 								atPluginOptions.romloader_jtag.jtag_reset = "SoftReset"
 							end
-							
-							tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+
+							tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
-							else 
+							else
 								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
-								
+
 								if not fConnected then
 									print("Failed to reconnect.")
 								else
-									-- read the SIP pages 
-									local tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
-		
-									if tRes == nil then 
+									-- read the SIP pages
+                  local tRes
+									tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
+
+									if tRes == nil then
 										print(strMsg)
 									else
 										-- Get the secure boot flags from the info pages.
-										OFF_COM_SIP_PROTECTION_FLAGS = 556+1
-										MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
-										OFF_APP_SIP_PROTECTION_FLAGS = 552+1
-										MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
-										
+										local OFF_COM_SIP_PROTECTION_FLAGS = 556+1
+										local MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+										local OFF_APP_SIP_PROTECTION_FLAGS = 552+1
+										local MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT = 4
+
 										local fSecureBootCOM = nil
 										local fSecureBootAPP = nil
-									
-										if tRes.strComSipData ~= nil then 
+
+										if tRes.strComSipData ~= nil then
 											local bSecureBootCOM = tRes.strComSipData:byte(OFF_COM_SIP_PROTECTION_FLAGS)
 											-- printf("COM secure boot options bit 0-7: 0x%02x", bSecureBootCOM)
-											fSecureBootCOM = (bit.band(bSecureBootCOM, MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT)
-										end 
-										
-										if tRes.strAppSipData ~= nil then 
+											fSecureBootCOM = (
+                        (bSecureBootCOM & MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
+                        MSK_COM_SIP_PROTECTION_FLAGS_SECURE_BOOT
+                      )
+										end
+
+										if tRes.strAppSipData ~= nil then
 											local bSecureBootAPP = tRes.strAppSipData:byte(OFF_APP_SIP_PROTECTION_FLAGS)
 											-- printf("APP secure boot options bit 0-7: 0x%02x", bSecureBootAPP)
-											fSecureBootAPP = (bit.band(bSecureBootAPP, MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) == MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT)
-										end 
-		
+											fSecureBootAPP = (
+                        (bSecureBootAPP & MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT) ==
+                        MSK_APP_SIP_PROTECTION_FLAGS_SECURE_BOOT
+                      )
+										end
+
 										-- Derive the secure boot status.
 										if fSecureBootCOM == false and fSecureBootAPP == false then
 											iSecureBootStatus = SECURE_BOOT_DISABLED
@@ -758,13 +821,13 @@ function detect_secure_boot_mode(aArgs)
 											iSecureBootStatus = SECURE_BOOT_ENABLED
 										elseif fSecureBootCOM == false and fSecureBootAPP == true then
 											iSecureBootStatus = SECURE_BOOT_ONLY_APP_ENABLED
-										else 
+										else
 											iSecureBootStatus = SECURE_BOOT_UNKNOWN
 										end
 									end -- tRes == nil
 								end -- fConnected the 2nd time
 							end -- getPlugin
-						end -- clear APP SIP hash 
+						end -- clear APP SIP hash
 					end -- clear COM SIP Hash
 				end -- chip typ e netx 90
 			end -- connected the 1st time
@@ -790,7 +853,7 @@ function detect_secure_boot_mode(aArgs)
 	end
 
 	tPlugin:Disconnect()
-	
+
 	return iSecureBootStatus, strMsg
 
 end
@@ -799,7 +862,7 @@ end
 
 -- Sleep for a number of seconds
 -- (between seconds and seconds+1)
-function sleep_s(seconds)
+function M.sleep_s(seconds)
 	local t1 = os.time()
 	local t2
 	repeat
@@ -831,7 +894,8 @@ end
 -- RES_TIMEOUT: at base address + 12
 -- bit 15-0 RESET timeout in units of 100 µs
 
-function reset_netx_via_watchdog(aArgs, tPlugin)
+function M.reset_netx_via_watchdog(aArgs, tPlugin)
+  local romloader = require 'romloader'
 	local fOk
 	local strMsg
 
@@ -840,7 +904,7 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
         local strPluginType  = aArgs.strPluginType
         local atPluginOptions= aArgs.atPluginOptions
         -- open the plugin
-        tPlugin, strMsg = getPlugin(strPluginName, strPluginType, atPluginOptions)
+        tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
     end
 
 	local atChiptyp2WatchdogBase = {
@@ -894,7 +958,7 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
 				-- check if it is disabled
 				ulVal = tPlugin:read_data16(ulAddr_wdg_sys_cfg)
 				ulVal = ulVal % 2
-				--ulVal = bit.band(ulVal, 1)
+				--ulVal = ulVal & 1
 				if ulVal ~= 0 then
 					print("Warning: cannot disable watchdog on netIOL")
 				end
@@ -941,11 +1005,11 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
 			end
 
 			tPlugin:Disconnect()
-			tPlugin = nil
+			collectgarbage('collect')
 
 			-- Wait 1 second (actually between 1 and 2 seconds)
 			if (fOk == true) then
-				sleep_s(1)
+				M.sleep_s(1)
 			end
 		end
 	end
@@ -953,50 +1017,51 @@ function reset_netx_via_watchdog(aArgs, tPlugin)
 	return fOk, strMsg
 end
 
-function switch_endian(ulValue)
+function M.switch_endian(ulValue)
     local ulNewValue = 0
     local mskedVal
     local shiftedVal
 
-    mskedVal = bit.band(ulValue, 0x000000ff)
-    shiftedVal = bit.lshift(mskedVal, 24)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+    mskedVal = ulValue & 0x000000ff
+    shiftedVal = mskedVal << 24
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0x0000ff00)
-    shiftedVal = bit.lshift(mskedVal, 8)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0x0000ff00
+    shiftedVal = mskedVal << 8
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0x00ff0000)
-    shiftedVal = bit.rshift(mskedVal, 8)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0x00ff0000
+    shiftedVal = mskedVal >> 8
+    ulNewValue = ulNewValue | shiftedVal
 
-	mskedVal = bit.band(ulValue, 0xff000000)
-    shiftedVal = bit.rshift(mskedVal, 24)
-    ulNewValue = bit.bor(ulNewValue, shiftedVal)
+	mskedVal = ulValue & 0xff000000
+    shiftedVal = mskedVal >> 24
+    ulNewValue = ulNewValue | shiftedVal
 
     return ulNewValue
 end
 
-function dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
-
+function M.dump_intram(tPlugin, ulAddress, ulSize, strOutputFolder, strOutputFileName)
+  local path = require 'pl.path'
+  local tFlasher = require 'flasher'
 	local strOutputFilePath = path.join(strOutputFolder, strOutputFileName)
 
 	local strTraceDumpData = tPlugin:read_image(ulAddress, ulSize, tFlasher.default_callback_progress, ulSize)
 
-	writeBin(strOutputFilePath, strTraceDumpData)
+  M.writeBin(strOutputFilePath, strTraceDumpData)
 end
 
-function dump_trace(tPlugin, strOutputFolder, strOutputFileName)
+function M.dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 	local ulTraceAddress = 0x200a0000
 	local ulDumpSize = 0x8000
-	dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
+	M.dump_intram(tPlugin, ulTraceAddress, ulDumpSize, strOutputFolder, strOutputFileName)
 end
 
 
 -- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
 -- !! this class does not provide every functionality of a file handle !!
 
-StringHandle = class()
+local StringHandle = class()
 
 function StringHandle:_init(strData)
     self.strData = strData
@@ -1037,6 +1102,10 @@ function StringHandle:seek(strWhence, ulOffset)
     return self:__getStringPosInBytes()
 end
 
-function StringHandle:close()
+function StringHandle.close()
     -- dummy function that does nothing
 end
+
+M.StringHandle = StringHandle
+
+return M
