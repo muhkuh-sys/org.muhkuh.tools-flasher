@@ -30,7 +30,6 @@
   */
  
 #include <string.h>
-#include <stdint.h>
 
 #include "flasher_spi.h"
 #include "spi_flash.h"
@@ -615,6 +614,16 @@ static int bitmapReadBit(unsigned long bitPos, unsigned int* bitmap)
  */
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescription, const unsigned long ulStartAdr, const unsigned long ulEndAdr)
 {
+	#if ASIC_TYP==ASIC_TYP_NETIOL
+	// Not supported due to memory constraints, fall back to normal erase
+	return spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
+
+	// Supress -Wunused errors, will never be called
+	unsigned int tmp;
+	bitmapWriteBit(0,0,&tmp);
+	bitmapReadBit(0,&tmp);
+	sectorIsEmpty(0,(unsigned char*)&tmp);
+	#else
 	/* Be Pessimistic */
 	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
 	const SPIFLASH_ATTRIBUTES_T attributes = ptFlashDescription->tAttributes;
@@ -661,6 +670,9 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 	unsigned long currAdr = ulStartAdr;
 	unsigned long currSector = 0;
 	currSector = (currAdr % maxEraseSize)/sectorSizeBytes;
+
+	/* Information for debugging */
+	unsigned int eraseOpCount[FLASHER_SPI_NR_ERASE_INSTRUCTIONS] = {0};
 
 	/* Go through entire erase area */
 	progress_bar_init(ulEndAdr-ulStartAdr);
@@ -746,6 +758,8 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 					{
 						bitmapWriteBit(0, sector, sectorBitmap);
 					}
+
+					eraseOpCount[eraseCmd]++;
 				}
 			}
 		}
@@ -754,7 +768,15 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 		progress_bar_set_position(currAdr-ulStartAdr);
 	}
 	progress_bar_finalize();
+
+
+	uprintf(". Erase operation usage:\n");
+	for(unsigned int i = 0; i < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; i++){
+	uprintf(". OpCode: 0x%2x  Count:%u\n", eraseTypes[i].OpCode, eraseOpCount[i]);
+	}
+
 	return retVal;
+	#endif
 }
 
 /*-----------------------------------*/
@@ -904,7 +926,7 @@ NETX_CONSOLEAPP_RESULT_T spi_verify(const FLASHER_SPI_FLASH_T *ptFlashDescriptio
  * - NETX_CONSOLEAPP_RESULT_ERROR: no device was detected or an error occurred.
  */
 
-NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd, uint32_t ulFlags)
+NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd, FLASHER_SPI_FLAGS_T ulFlags)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	int iResult;

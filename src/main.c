@@ -78,7 +78,10 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 	case BUS_SPI:
 		/* Use SPI flash */
 		uprintf("SPI flash\n");
-		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End), ptParameter->ulFlags);
+		FLASHER_SPI_FLAGS_T flags = {
+			.rawValue = ptParameter->ulFlags
+		};
+		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End), flags);
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
 			ptDeviceDescription->fIsValid = 1;

@@ -446,6 +446,7 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 				for(unsigned char i = 0; i < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; i++){
 					ptFlash->tSpiErase[i] = tDummyFlash.tSpiErase[i];
 				}
+				ptFlash->usNrEraseOperations = tDummyFlash.usNrEraseOperations;
 			}
 		}
 
@@ -747,7 +748,7 @@ int board_get_spi_driver(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SP
 *            Drv_SpiS_INVALID        Specified Flash Control Block invalid
 *            Drv_SpiS_UNKNOWN_FLASH  failed to detect the serial FLASH
 */
-int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, uint32_t ulFlags)
+int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, FLASHER_SPI_FLAGS_T tFlags)
 {
 	int   iResult;
 	const SPIFLASH_ATTRIBUTES_T *ptFlashAttr;
@@ -773,7 +774,7 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 	else
 	{
 		/* try to autodetect the flash */
-		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd, (ulFlags & 0x01));
+		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd, tFlags.bits.bUseSfdpErase);
 		if( iResult!=0 )
 		{
 			//uprintf("ERROR: Drv_SpiInitializeFlash: detect_flash failed with %d.\n", iResult);

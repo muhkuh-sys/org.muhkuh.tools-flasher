@@ -23,7 +23,6 @@
 
 
 #include <string.h>
-#include <stdint.h>
 
 #include "cfi_flash.h"
 #include "internal_flash/internal_flash.h"
@@ -34,7 +33,7 @@
 #endif
 /*-------------------------------------*/
 
-#define FLASHER_INTERFACE_VERSION 0x00040000  // TODO Is this only a minor version change since it should be compatible?
+#define FLASHER_INTERFACE_VERSION 0x00040000
 
 
 typedef enum BUS_ENUM
