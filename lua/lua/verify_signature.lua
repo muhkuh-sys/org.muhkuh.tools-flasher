@@ -248,7 +248,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
   local atResults
   local strSecPathNx90 = path.join(strSecureOption, "netx90")
   local tHelperFiles = require 'helper_files'
-  local _, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+  local _, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
 
   if astrPaths == nil then
       fOk = false
@@ -267,7 +267,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
       else
           local strPluginType = tPlugin:GetTyp()
           fOk, atResults = M.verifySignature(
-              tPlugin, strPluginType, astrPaths, astrFileData, tempFolderConfPath, strVerifySigPath
+              tPlugin, strPluginType, astrFileData, astrPaths, tempFolderConfPath, strVerifySigPath
           )
 
           tHelperFiles.showFileCheckResults(atResults)
