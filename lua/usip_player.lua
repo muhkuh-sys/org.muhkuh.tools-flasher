@@ -144,7 +144,6 @@ tParserCommandUsip:flag('--disable_helper_signature_check')
 -- tParserCommandUsip:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
-tParserCommandUsip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
 tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
@@ -193,7 +192,6 @@ tParserCommandDisableSecurity:flag('--no_verify_usip_sig'):description(
 tParserCommandDisableSecurity:flag('--no_verify_sip_content'):description(
     "Do not verify the content of an usip image against a netX SIP content after writing the usip."
 ):target('fVerifySipContentDisabled')
-tParserCommandDisableSecurity:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 -- todo add more help here
 tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandDisableSecurity:flag('--no_reset'
@@ -264,7 +262,6 @@ tParserCommandKek:flag('--disable_helper_signature_check')
 -- tParserCommandKek:flag('--extend_exec'):description(
 --     "Extends the usip file with an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
-tParserCommandKek:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserCommandKek:option('--sec'):description("Path to signed image directory"):target('strSecureOption'
 ):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandKek:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'
@@ -291,7 +288,6 @@ tParserVerifyContent:option('-i --input'):description("USIP binary file path"):t
 -- tParserVerifyContent:flag('--extend_exec'):description(
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
-tParserVerifyContent:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserVerifyContent:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -311,7 +307,6 @@ tParserCheckSIPCookie:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCheckSIPCookie:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCheckSIPCookie:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -335,7 +330,6 @@ tParserReadSip:argument('output'):description(
 ):target("strOutputFolder")
 tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserReadSip:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
@@ -366,7 +360,6 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserGetUid:option('--bootswitch'):description(strBootswitchHelp):target('strBootswitchParams')
 tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -1102,17 +1095,17 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
     local uLRetries = 5
 
     local strPluginName = tPlugin:GetName()
+    local strPluginType = tPlugin:GetTyp()
     local strReadSipData = tFlasherHelper.loadBin(strHbootPath)
 
     if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
-        tLog.debug("Extending USIP file with bootswitch.")
+        tLog.debug("Extending read sip binary with bootswitch.")
         fOk, strReadSipData, strMsg = extendBootswitchData(
             strReadSipData, strTmpFolderPath, tArgs.strBootswitchParams
         )
         tLog.debug(strMsg)
-    elseif tArgs.strBootswitchParams == "JTAG" or
-     (strPluginType == 'romloader_jtag' and  tArgs.strBootswitchParams == nil) then
-        tLog.debug("Extending USIP file with exec.")
+    elseif tArgs.strBootswitchParams == "JTAG" then
+        tLog.debug("Extending read sip binary with exec.")
         -- todo why do we still hand over the path (strExecReturnPath) instead of using helper files method
         fOk, strReadSipData, strMsg = extendExecReturnData(
             strReadSipData, strTmpFolderPath, strExecReturnPath
@@ -2214,6 +2207,13 @@ if fCallSuccess then
         -- get plugin name
         strPluginName = tPlugin:GetName()
 
+        if strPluginType == "romloader_eth" then
+            tArgs.strBootswitchParams = "ETH"
+        elseif strPluginType == "romloader_uart" then
+            tArgs.strBootswitchParams = "UART"
+        elseif strPluginType == "romloader_jtag" then
+            tArgs.strBootswitchParams = "JTAG"
+        end
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
