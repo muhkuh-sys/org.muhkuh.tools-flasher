@@ -1,3 +1,8 @@
+Updates in CLI Flasher v2.0.0-dev19
+==============================
+
+* updated required version for flasher_netx90_hboot.bin inside helper_files.lua
+
 Updates in CLI Flasher v2.0.0-dev18
 ==============================
 
