@@ -1,3 +1,8 @@
+Updates in CLI Flasher v2.0.0-dev17
+==============================
+
+* remove bootswitch arguments from usip_player. Bootswitch is now used by default based on the selected interface.
+
 Updates in CLI Flasher v2.0.0-dev16
 ==============================
 
