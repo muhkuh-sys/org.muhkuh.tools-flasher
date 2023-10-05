@@ -527,6 +527,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
             -- Translate the "page" and "setKEK" attributes to unit and chipselect.
             local ulUnit
             local ulChipSelect
+            local fDouble = false
             if strPage=='COM' then
               -- Write the COM page. This is unit 1.
               ulUnit = 1
@@ -535,6 +536,12 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
               --
               -- The following expression results to 3 if "fSetKEK" is true, and 1 if it is false.
               ulChipSelect = fSetKEK and 3 or 1
+
+              -- CS 3 handles the duplication of the SIP internally.
+              -- CS 1 needs 2 separate entries.
+              if ulChipSelect~=3 then
+                fDouble = true
+              end
             else
               -- Write the APP page. This is unit 2.
               ulUnit = 2
@@ -542,19 +549,30 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
               ulChipSelect = 3
             end
 
+            -- Create a new data entry.
+            local atData = {
+              {
+                strType = "Data",
+                strFile = strFile,
+                ulOffset = 0,
+                strCondition = strCondition
+              }
+            }
+            if fDouble then
+              table.insert(atData, {
+                strType = "Data",
+                strFile = strFile,
+                ulOffset = 4096,
+                strCondition = strCondition
+              })
+            end
+
             -- Create a new flash entry in the current target.
             table.insert(aLxpAttr.tCurrentTarget.atFlashes, {
               strBus = 'IFlash',
               ulUnit = ulUnit,
               ulChipSelect = ulChipSelect,
-              atData = {
-                {
-                  strType = "Data",
-                  strFile = strFile,
-                  ulOffset = 0,
-                  strCondition = strCondition
-                }
-              }
+              atData = atData
             })
           end
         end
