@@ -1471,7 +1471,11 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_erase(CMD_PARAMETER_ERASE_T *ptPa
 	unsigned long ulEraseBlockSize;
 	unsigned long ulBlockOffset;
 	unsigned long ulOffset;
+	unsigned char ucData;
+	const unsigned char *pucCnt;
+	const unsigned char *pucEnd;
 	INTERNAL_FLASH_AREA_T tFlashArea;
+	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 
 
 	ulOffsetStart = ptParameter->ulStartAdr;
@@ -1506,6 +1510,35 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_erase(CMD_PARAMETER_ERASE_T *ptPa
 				/* Erase both SIP pages. */
 				ulOffsetEnd = 2U * IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 				tResult = NETX_CONSOLEAPP_RESULT_OK;
+
+				/* Do not erase an existing KEK. */
+				if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS )
+				{
+					tResult = iflash_get_controller(ptAttr, 0, &tFlashBlock);
+					if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+					{
+						/* Select read mode and main array or info page */
+						internal_flash_select_read_mode_and_clear_caches(ptAttr, tFlashBlock.ptIFlashCfgArea);
+
+						/* Check the flash area [0x0740,0x07ff] for 0xff.
+						 * The bitwise "and" operation over the complete area has the result of 0xff if and only if the
+						 * complete area is filled with 0xff.
+						 */
+						ucData = 0xffU;
+						pucCnt = (const unsigned char*)(HOSTADDR(intflash0) + tFlashBlock.ulUnitOffsetInBytes);
+						pucCnt += 0x0740U;
+						pucEnd = pucCnt + 0xc0U;
+						do
+						{
+							ucData &= *(pucCnt++);
+						} while( pucCnt<pucEnd );
+						if( ucData!=0xffU )
+						{
+							tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+							uprintf("! Refusing to erase existing KEK.\n");
+						}
+					}
+				}
 			}
 		}
 		else
