@@ -146,7 +146,7 @@ tParserCommandUsip:flag('--disable_helper_signature_check')
 -- ):target('fExtendExec')
 -- todo add more help here
 tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo')
 tParserCommandUsip:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
@@ -264,8 +264,7 @@ tParserCommandKek:flag('--disable_helper_signature_check')
 -- ):target('fExtendExec')
 tParserCommandKek:option('--sec'):description("Path to signed image directory"):target('strSecureOption'
 ):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandKek:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo'
-):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandKek:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo')
 tParserCommandKek:flag('--no_reset'
 ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
 ):target('fDisableReset'):default(false)
@@ -1095,7 +1094,6 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
     local uLRetries = 5
 
     local strPluginName = tPlugin:GetName()
-    local strPluginType = tPlugin:GetTyp()
     local strReadSipData = tFlasherHelper.loadBin(strHbootPath)
 
     if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
