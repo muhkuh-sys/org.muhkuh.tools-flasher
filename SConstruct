@@ -711,6 +711,7 @@ if fBuildIsFull==True:
     tArcList.AddFiles('lua/',
         lua_flasher,
         'lua/flasher_test.lua',
+        'lua/lua/wfp_verify.lua',
         'lua/lua/helper_files.lua',
         'lua/lua/Version.lua',
         'lua/lua/wfp_control.lua', 
@@ -748,7 +749,6 @@ if fBuildIsFull==True:
         'lua/read_bootimage_intflash2.lua',
         'lua/read_complete_flash.lua',
         'lua/wfp.lua',
-        'lua/wfp_verify.lua',
         lua_flasher_version,
         tDemoShowEraseAreas)
 
@@ -816,6 +816,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher_test.lua':                          'lua/flasher_test.lua',
         'targets/testbench/lua/helper_files.lua':                          'lua/lua/helper_files.lua', 
         'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/wfp_verify.lua':                            'lua/lua/wfp_verify.lua',
         'targets/testbench/lua/verify_signature.lua':                      'lua/lua/verify_signature.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
@@ -847,7 +848,6 @@ if fBuildIsFull==True:
         'targets/testbench/read_complete_flash.lua':                       'lua/read_complete_flash.lua',
         'targets/testbench/usip_player.lua':                               'lua/usip_player.lua',
         'targets/testbench/wfp.lua':                                       'lua/wfp.lua',
-        'targets/testbench/wfp_verify.lua':                                'lua/wfp_verify.lua',
         'targets/testbench/show_erase_areas.lua':                          tDemoShowEraseAreas,
 
         # collect the lib files in a directory
