@@ -52,8 +52,8 @@
 */
 typedef struct FLASHER_SPI_ERASE_STRUCT
 {
-  unsigned char OpCode;
-  unsigned long Size;
+	unsigned char OpCode;
+	unsigned long Size;
 } FLASHER_SPI_ERASE_T;
 #define FLASHER_SPI_NR_ERASE_INSTRUCTIONS 4
 
@@ -65,12 +65,12 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 {
 	SPIFLASH_ATTRIBUTES_T tAttributes;                                    /**< @brief attributes of the flash.                                                   */
 	FLASHER_SPI_CFG_T tSpiDev;                                            /**< @brief SPI device and it's settings.                                              */
-	FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest)              */
-  unsigned short usNrEraseOperations;                                   /**< @brief Number of valid erase operations contained in the tSpiErase array          */
 	unsigned long ulSectorSize;                                           /**< @brief size of one sector in bytes.                                               */
 	unsigned int uiSlaveId;                                               /**< @brief SPI Slave Id of the flash.                                                 */
 	unsigned int uiPageAdrShift;                                          /**< @brief bit shift for the page part of the address, 0 means no page / byte split.  */
 	unsigned int uiSectorAdrShift;                                        /**< @brief bit shift for one sector, 0 means no page / byte split.                    */
+	FLASHER_SPI_ERASE_T tSpiErase[FLASHER_SPI_NR_ERASE_INSTRUCTIONS];     /**< @brief Sorted list of SPI erase instructions (Element 0 is smallest)              */
+	unsigned short usNrEraseOperations;                                   /**< @brief Number of valid erase operations contained in the tSpiErase array          */
 } FLASHER_SPI_FLASH_T;
 
 /*-----------------------------------*/
