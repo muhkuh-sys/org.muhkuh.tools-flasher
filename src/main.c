@@ -324,6 +324,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 
 /* ------------------------------------- */
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
 /**
  * \brief opMode function for the smart erase feature.
@@ -380,8 +381,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppP
 	}
 	return tResult;
 }
-
-
+#endif
 /* ------------------------------------- */
 
 
@@ -1003,6 +1003,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Reset netX from binary\n");
 		break;
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
 	case OPERATION_MODE_SmartErase:
 		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
@@ -1012,7 +1013,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Smart Erase\n");
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		break;
-
+#endif
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -1371,8 +1372,14 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				break;
 
 			case OPERATION_MODE_SmartErase:
+#if CFG_INCLUDE_SMART_ERASE==1
 				tResult = opMode_smartErase(ptAppParams);
 				break;
+#else
+				/* This is possible since the parameters for normal and smart erase are identical. */
+				tResult = opMode_erase(ptAppParams);
+				break;
+#endif
 			}
 		}
 	}

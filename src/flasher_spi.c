@@ -538,6 +538,8 @@ NETX_CONSOLEAPP_RESULT_T spi_flash(const FLASHER_SPI_FLASH_T *ptFlashDescription
 
 /*-----------------------------------*/
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
 /**
  * \brief Check if a memory sector is empty (all 0xFF)
  * 
@@ -615,16 +617,6 @@ static int bitmapReadBit(unsigned long bitPos, unsigned int* bitmap)
  */
 NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescription, const unsigned long ulStartAdr, const unsigned long ulEndAdr)
 {
-	#if ASIC_TYP==ASIC_TYP_NETIOL
-	// Not supported due to memory constraints, fall back to normal erase
-	return spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
-
-	// Supress -Wunused errors, will never be called
-	unsigned int tmp;
-	bitmapWriteBit(0,0,&tmp);
-	bitmapReadBit(0,&tmp);
-	sectorIsEmpty(0,(unsigned char*)&tmp);
-	#else
 	/* Be Pessimistic */
 	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
 	const SPIFLASH_ATTRIBUTES_T attributes = ptFlashDescription->tAttributes;
@@ -787,8 +779,8 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 	}
 
 	return retVal;
-	#endif
 }
+#endif
 
 /*-----------------------------------*/
 

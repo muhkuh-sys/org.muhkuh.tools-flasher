@@ -1035,7 +1035,7 @@ function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMess
 	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
 	if ulSize == 0xffffffff then
 		ulEndOffset = ulSize
-		ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 		if not (ulEraseStart and ulEraseEnd) then
 			return false, "getEraseArea failed!"
 		end
@@ -1047,10 +1047,10 @@ function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMess
 	
 	print(string.format("Area:  [0x%08x, 0x%08x[", ulDeviceOffset, ulEndOffset))
 	print("Checking if the area is already empty")
-	fIsErased = isErased(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+	fIsErased = M.isErased(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 
 	-- Get area to erase, this aligns the operation to the flash sectors
-	ulEraseStart,ulEraseEnd = getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+	ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 	if not (ulEraseStart and ulEraseEnd) then
 		return false, "Unable to get erase area!"
 	end
@@ -1058,12 +1058,12 @@ function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMess
 	print("Smart-Erasing flash")
 	print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseStart, ulEraseEnd))
 
-	fIsErased = smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	fIsErased = M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	if fIsErased~=true then
 		return false, "Failed to erase the area! (Failure during smart_erase)"
 	else
 		print("Checking if the area has been erased")
-		fIsErased = isErased(tPlugin, aAttr,  ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		fIsErased = M.isErased(tPlugin, aAttr,  ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
 		if fIsErased~=true then
 			return false, "Failed to erase the area! (isErased check failed)"
 		end

@@ -77,7 +77,9 @@ typedef struct FLASHER_SPI_FLASH_STRUCT
 
 int Drv_SpiInitializeFlash        (const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, FLASHER_SPI_FLAGS_T flags);
 int Drv_SpiEraseFlashPage         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
+#if CFG_INCLUDE_SMART_ERASE==1
 int Drv_SpiEraseFlashArea         (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode);
+#endif
 int Drv_SpiEraseFlashSector       (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress);
 int Drv_SpiEraseFlashMultiSectors (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearStartAddress, unsigned long ulLinearEndAddress);
 int Drv_SpiEraseFlashComplete     (const FLASHER_SPI_FLASH_T *ptFlash);

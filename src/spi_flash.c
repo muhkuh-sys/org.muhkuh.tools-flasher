@@ -408,6 +408,8 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 	}
 	else /* If the detected list is used, fill out the erase codes as good as possible*/
 	{
+		
+#if CFG_INCLUDE_SMART_ERASE==1
 		/* Clear entries */
 		for (unsigned int entry = 0; entry < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; entry++)
 		{
@@ -456,7 +458,7 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 		{
 			uprintf(". OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
 		}
-
+#endif
 	}
 
 	/* return result only if the pointer is not NULL */
@@ -938,6 +940,7 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 	return iResult;
 }
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
 /**
  * \brief Erase an area of the specified SPI flash using the provided opCode
@@ -1008,7 +1011,7 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 	DEBUGMSG(ZONE_FUNCTION, ("-Drv_SpiEraseFlashSector(): iResult=%d.\n", iResult));
 	return iResult;
 }
-
+#endif
 
 /*! Drv_SpiEraseFlashSector
 *   Erases a Sector in the specified serial FLASH
@@ -1809,6 +1812,7 @@ const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode)
 }
 
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
 void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const unsigned int iNrEntries){
 	// Sort for each position
@@ -1825,3 +1829,4 @@ void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const unsigned in
 		ptEraseArray[min_pos] = tTmpErase;
 	}
 }
+#endif

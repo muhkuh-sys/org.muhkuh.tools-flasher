@@ -144,6 +144,8 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 	{
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
 		/** Read erase instruction entries from JEDEC Basic Flash Parametes
 		 *  Read starting from DWORD 8, there are 4 erase entries each with:
 		 *  8-Bit for the size in 2^N format
@@ -180,7 +182,7 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 		{
 			uprintf("OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
 		}
-
+#endif
 		/* Clear the complete structure. */
 		memset(&tSfdpAttributes, 0, sizeof(tSfdpAttributes));
 
