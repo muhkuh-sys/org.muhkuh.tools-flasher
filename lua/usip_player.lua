@@ -1411,7 +1411,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
 
     local ulHbootResult = tPlugin:read_data32(ulHbootResultAddress)
 
-    tLog.debug( "ulHbootResult: %s ", ulHbootResult )
+    tLog.debug( "ulHbootResult: 0x%08x ", ulHbootResult )
     ulHbootResult = ulHbootResult & 0x107
     -- TODO: include description
     if ulHbootResult == 0x107 then
