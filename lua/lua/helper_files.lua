@@ -81,8 +81,8 @@ local atHelperFileVersions = {
     {
         key = "set_kek",
         filename = "set_kek.bin",
-        version = "Ver:GITv1.0.0-dev4-0-g58cd77a73d9f:reV",
-        version_offset = 0xEB4
+        version = "Ver:GITV1.0.1-0-g2b9bae0aa19a:reV",
+        version_offset = 0x9e0
     },
 
     {   -- This is verify_sig_intram from the build
@@ -95,7 +95,7 @@ local atHelperFileVersions = {
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.0-dev19",
+        version = "GITv2.0.0-dev20",
         version_offset = 0x0410
     },
 
