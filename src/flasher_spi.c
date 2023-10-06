@@ -43,6 +43,7 @@
 
 #define SPI_BUFFER_SIZE 8192
 unsigned char pucSpiBuffer[SPI_BUFFER_SIZE];
+#define SPI_ERASE_BITMAP_ENTRY_CNT 32  /* Used by smart_erase. Allows erase commands of up to 1024 sectors size */
 
 /*-----------------------------------*/
 
@@ -642,29 +643,39 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 		return NETX_CONSOLEAPP_RESULT_ERROR;
 	}
 
-	/* This assumes the erase entries are sorted (which they should be) */
-	unsigned long maxEraseSize = eraseTypes[nrEraseOps-1].Size;
+	unsigned long maxEraseSize = 0;
+	unsigned long nrSectorsInLargestErase = 0;
+	unsigned short usBitmapReady = 0;
+	while(usBitmapReady == 0){
+		/* This assumes the erase entries are sorted (which they should be) */
+		maxEraseSize = eraseTypes[nrEraseOps-1].Size;
 
-	/* Maximum number of chunks we consider at once, limited by the largest erase instruction */
-	unsigned long nrSectorsInLargestErase = maxEraseSize/sectorSizeBytes;
+		/* Maximum number of chunks we consider at once, limited by the largest erase instruction */
+		nrSectorsInLargestErase = maxEraseSize/sectorSizeBytes;
 
-	/* Number of bytes we need in the sector bitmap (+1 to account for rounding) */
-	unsigned int bitPerMapEntry = (sizeof(unsigned int)*8);
-	unsigned int bitmapSize = nrSectorsInLargestErase / bitPerMapEntry + 1;
+		/* Number of bytes we need in the sector bitmap (+1 to account for rounding) */
+		unsigned int bitPerMapEntry = (sizeof(unsigned int)*8);
+		unsigned int bitmapSize = nrSectorsInLargestErase / bitPerMapEntry + 1;
+
+		if(bitmapSize > SPI_ERASE_BITMAP_ENTRY_CNT){
+			nrEraseOps = nrEraseOps-1;  // We ignore the current erase command going forward
+			if(nrEraseOps == 0){
+				uprintf("! Remembering too many memory sections required for all erase commands, falling back to normal erase\n");
+				retVal = spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
+				return retVal;
+			}
+		}else{
+			usBitmapReady = 1;
+		}
+	}
 	
 	/* Bitmap to store the erase status by sector */
-	#define SPI_ERASE_BITMAP_ENTRY_CNT 32 /* This should be more than enough, allows erase commands of up to 1024 sectors */
 	unsigned int sectorBitmap[SPI_ERASE_BITMAP_ENTRY_CNT];
 	for (unsigned int i = 0; i < SPI_ERASE_BITMAP_ENTRY_CNT; i++)
 	{
 		sectorBitmap[i] = 0;
 	}
 	
-	if(bitmapSize > SPI_ERASE_BITMAP_ENTRY_CNT){
-		uprintf("! Remembering too many memory sections required for largest erase command, falling back to normal erase\n");
-		retVal = spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
-		return retVal;
-	}
 
 	/* For the first iteration, align the sector map with sectors of largest erase command */
 	unsigned long currAdr = ulStartAdr;
