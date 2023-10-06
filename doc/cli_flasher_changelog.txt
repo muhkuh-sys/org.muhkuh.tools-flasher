@@ -1,3 +1,9 @@
+Updates in CLI Flasher v2.0.0-dev20
+==============================
+
+* Bugfix: incorrect handling of the --sec_phase2 argument
+* update set_kek binary to v1.0.1
+
 Updates in CLI Flasher v2.0.0-dev19
 ==============================
 
