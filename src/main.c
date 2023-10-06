@@ -358,14 +358,24 @@ static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppP
 
 	case BUS_ParFlash:
 		/*  use parallel flash - not yet implemented.  */
-	case BUS_IFlash:
-		/*  use internal flash - not yet implemented.  */
-	case BUS_SDIO:
-		/*  use sdio flash - not yet implemented.  */
-	default: /* Fallthrough for all unsupported flash types */
-		uprintf("! This type of flash is not yet supported by smart_erase\n");
+		uprintf("! Parallel flash is not yet supported by smart_erase\n");
 		uprintf("! Falling back to normal erase routine\n");
 		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_IFlash:
+		/*  use internal flash - not yet implemented.  */
+		uprintf("! Internal flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_SDIO:
+		/*  use sdio flash - not yet implemented.  */
+		uprintf("! SDIO flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	default: /* Unknown/wrong flash types */
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
 		break;
 	}
 	return tResult;
