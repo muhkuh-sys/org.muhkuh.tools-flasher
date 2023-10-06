@@ -1001,7 +1001,7 @@ end
 -- Smart Erase. Erase an area in SPI-Flash with automatic choice of the optimal erase Commands.
 -- The start and end addresses must be aligned to sector boundaries as
 -- set by getEraseArea.
-function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+function M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
 	local aulParameter = 
 	{
 		OPERATION_MODE_SmartErase,                     -- operation mode: smart_erase
@@ -1027,7 +1027,7 @@ function smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage
 -- Failed to erase the area! (isErased check failed)
 
 
-function smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
+function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
 	local fIsErased
 	local ulEndOffset
 	local ulEraseStart,ulEraseEnd
