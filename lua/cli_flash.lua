@@ -725,11 +725,11 @@ local function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				local bUseSfdpErase = false
+				local ulDetectFlags = 0
 				if not aArgs.bSkipSfdpErase and aArgs.fCommandSmartEraseSelected  then
-					bUseSfdpErase = true
+					ulDetectFlags = FLAG_DETECT_SPI_USE_SFDP_ERASE
 				end
-				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect, nil, nil, nil, bUseSfdpErase)
+				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect, nil, nil, nil, ulDetectFlags)
 				if fOk ~= true then
 					fOk = false
 				else

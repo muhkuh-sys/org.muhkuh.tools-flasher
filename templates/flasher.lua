@@ -101,6 +101,10 @@ local FLASHER_DIR = path.currentdir()
 M.DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 M.HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
 
+-- M.detect() optional flags
+-- Flags specific to SPI mode
+FLAG_DETECT_SPI_USE_SFDP_ERASE = 1
+
 --------------------------------------------------------------------------
 -- callback/progress functions,
 -- read/write image, call
@@ -495,11 +499,10 @@ end
 
 
 -- check if a device is available on tBus/ulUnit/ulChipSelect
-function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter, bUseSfdpErase)
+function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter, ulFlags)
 	local aulParameter
 	atParameter = atParameter or {}
-	local ulFlags = 0
-
+	local ulFlagsLocal = ulFlags or 0
 
 	if tBus==M.BUS_Spi then
 		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
@@ -524,11 +527,6 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 		local ulMmioConfiguration = atParameter.ulMmioConfiguration
 		ulMmioConfiguration = ulMmioConfiguration or 0xffffffff
 
-		-- Set flag for use of SFDP erase operation if smart_erse command was used
-		if bUseSfdpErase then
-			ulFlags = ulFlags + 1
-		end
-
 		aulParameter =
 		{
 			OPERATION_MODE_Detect,                -- operation mode: detect
@@ -541,7 +539,7 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			ulSpiMode,                            -- mode
 			ulMmioConfiguration,                  -- MMIO configuration
 			aAttr.ulDeviceDesc,                   -- data block for the device description
-			ulFlags,                              -- Status flags
+			ulFlagsLocal,                         -- Status flags
 												  -- Bit 0: Use SFDP erase operations
 												  -- Bit 31-1: reserved
 		}
@@ -562,7 +560,7 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			aAttr.ulDeviceDesc,                   -- data block for the device description
-			ulFlags,                              -- Status flags. Bit 31-0: reserved
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
   elseif tBus==M.BUS_IFlash then
     aulParameter =
@@ -577,7 +575,7 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
       0,                                    -- reserved
       0,                                    -- reserved
       aAttr.ulDeviceDesc,                   -- data block for the device description
-      ulFlags,                              -- Status flags. Bit 31-0: reserved
+      ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
     }
 	elseif tBus==M.BUS_SDIO then
 		aulParameter = {
@@ -591,7 +589,7 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			aAttr.ulDeviceDesc,                   -- data block for the device description
-			ulFlags,                              -- Status flags. Bit 31-0: reserved
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
 
 	else
