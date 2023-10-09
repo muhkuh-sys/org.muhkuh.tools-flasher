@@ -366,7 +366,7 @@ tParserGetUid:flag('--disable_helper_signature_check')
     :default(false)
 
 -- Add command check_helper_signature chs
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', strUsipHelp):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target('fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
