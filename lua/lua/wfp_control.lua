@@ -327,6 +327,17 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           iPosColumn,
           strChipSelect
         )
+      -- Do not allow the internal chip select 3 for the info pages.
+      elseif strBus=='IFlash' and (ulUnit==1 or ulUnit==2) and ulChipSelect==3 then
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: invalid combination of bus, unit and chipselect: %s/%d/%d',
+          iPosLine,
+          iPosColumn,
+          strBus,
+          ulUnit,
+          ulChipSelect
+        )
       end
     end
 
