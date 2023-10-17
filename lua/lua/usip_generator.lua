@@ -521,10 +521,10 @@ end
 
 
 if pcall(debug.getlocal, 4, 1) then
-    print("USIP Generator used as Library")
+    -- print("USIP Generator used as Library")
     -- do nothing
 else
-    print("Main file")
+    -- print("Main file")
     main()
 end
 
