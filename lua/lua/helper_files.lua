@@ -74,28 +74,28 @@ local atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev6-0-gc3bd1bac5a05:reV",
+        version = "Ver:GIT1.0.0-a6b90f4f0edc:reV",
         version_offset = 0x1044
     },
 
     {
         key = "set_kek",
         filename = "set_kek.bin",
-        version = "Ver:GITV1.0.1-0-g2b9bae0aa19a:reV",
-        version_offset = 0x9e0
+        version = "Ver:GIT1.0.2-25d94c5965e4:reV",
+        version_offset = 0xa0c
     },
 
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev4-0-gc2509531c238+:reV",
-        version_offset = 0xC80
+        version = "Ver:GIT1.0.0-79972a719369:reV",
+        version_offset = 0x93c
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.0-dev20",
+        version = "GITv2.0.0",
         version_offset = 0x0410
     },
 
