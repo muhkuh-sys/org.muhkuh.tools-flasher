@@ -290,16 +290,30 @@ end
 
 
 function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    local fOk = true
+    local strMsg = nil
     local romloader = require 'romloader'
     local iChiptype = tPlugin:GetChiptyp()
+
     if (iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
         or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C
         or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D)
         and astrKeys ~= nil then
-        return verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
-    else
-        return true
+
+        -- start_mi only needs to be checked when romloader_uart is used.
+        local strPluginType = tPlugin:GetTyp()
+        local astrKeysToCheck = {}
+        for i, strHelperKey in ipairs(astrKeys) do
+            if strHelperKey~="start_mi" or strPluginType == "romloader_uart" then
+                table.insert(astrKeysToCheck, strHelperKey)
+            end
+        end
+
+        fOk, strMsg = verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeysToCheck)
     end
+
+    return fOk, strMsg
 end
+
 
 return M
