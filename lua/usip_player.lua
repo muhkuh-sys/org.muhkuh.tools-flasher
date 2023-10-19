@@ -2218,16 +2218,16 @@ end
 -- INITIAL CHECKS
 --------------------------------------------------------------------------
 -- check if the usip file exists
-if tArgs.strUsipFilePath and not path.exists(tArgs.strUsipFilePath) then
-    tLog.error( "Could not find file %s", tArgs.strUsipFilePath )
-    -- return here because of initial error
-    os.exit(1)
-else
-    -- note: this is also entered if tArgs.strUsipFilePath is not set.
-    tLog.info("Found USIP file ... ")
-    strUsipFilePath = tArgs.strUsipFilePath
+if tArgs.strUsipFilePath then 
+    if path.exists(tArgs.strUsipFilePath) then
+        tLog.info("Found USIP file ... ")
+        strUsipFilePath = tArgs.strUsipFilePath
+    else
+        -- exit with an error if the file does not exist
+        tLog.error( "Could not find file %s", tArgs.strUsipFilePath )
+        os.exit(1)
+    end
 end
-
 
 -- check for a Plugin
 -- get the plugin
