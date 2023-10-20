@@ -1084,13 +1084,9 @@ local function main()
 			if aArgs.fDisableHelperSignatureChecks ~= true then
 				aArgs.aHelperKeysForSigCheck = astrHelpersToCheck
 			else
-				print("Warning: Helper signature checks disabled!")
+				print("Skipping signature checks for helper files.")
 			end
 		end
-	
-
-
-
 	end
 
 	-- construct the option list for DetectInterfaces

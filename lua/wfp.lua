@@ -812,7 +812,7 @@ else
         if tArgs.fDisableHelperSignatureChecks ~= true then
             tArgs.aHelperKeysForSigCheck = astrHelpersToCheck
         else
-            tLog.warning("Helper signature checks disabled!")
+            tLog.info("Skipping signature checks for helper files.")
         end
     end
 

@@ -2360,7 +2360,7 @@ local strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strN
 
 -- If no helpers are required, skip the checks.
 if #astrHelpersToCheck == 0 then
-    tLog.info("No helper binaries required - Skipping version/signature tests.")
+    tLog.info("Skipping version/signature tests for helper files.")
 else     
     -- Print the list.
     tLog.info("Required helper binaries:")
@@ -2401,7 +2401,7 @@ else
     -- - the command is not check_helper_signature 
     if fIsSecure and not tArgs.fCommandCheckHelperSignatureSelected then
         if tArgs.fDisableHelperSignatureChecks==true then
-            tLog.info("Skipping signature checks for support files.")
+            tLog.info("Skipping signature checks for helper files.")
         else
             local fOk, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecureOptionDir}, astrHelpersToCheck)
             if not fOk then
