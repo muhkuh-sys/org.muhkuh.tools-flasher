@@ -661,7 +661,7 @@ tParserCommandFlash:mutex(
 tParserCommandFlash:flag('--disable_helper_signature_check'):description('Disable signature checks on helper files.'):target('fDisableHelperSignatureChecks'):default(false)
 
 -- Add the "verify" command and all its options.
-local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.'):target('fCommandVerifySelected')
+local tParserCommandVerify = tParser:command('verify v', 'Verify the contents of the WFP.'):target('fCommandVerifySelected')
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
 tParserCommandVerify:option('-c --condition'):description('Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
 tParserCommandVerify:option('-V --verbose'):description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
@@ -675,7 +675,7 @@ tParserCommandVerify:flag('--disable_helper_signature_check'):description('Disab
 
 -- Add the "Read" command and all its options.
 local tParserCommandRead =
-    tParser:command("read r", "read command based on XML control file."):target("fCommandReadSelected")
+    tParser:command("read r", "Read command based on XML control file."):target("fCommandReadSelected")
 tParserCommandRead:argument("xml", "The XML control file."):target("strWfpControlFile")
 tParserCommandRead:argument("output_dir", "The destination path to create the backup."):target("strBackupPath")
 tParserCommandRead:option("-a --archive", 'Create a WFP file from the output directory.'):default(nil):target('strWfpArchiveFile')

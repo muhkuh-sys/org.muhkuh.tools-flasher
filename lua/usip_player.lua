@@ -264,11 +264,11 @@ tParserCommandKek:option('-p --plugin_name'):description("plugin name"):target('
 tParserCommandKek:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandKek:flag('--verify_sig'):description(
     "Verify the signature of an usip image against a netX, stop if the signature is not valid. \n" .. 
-    "The netX will ignore USIP images that are incorrectly signed."
+    "The netX will ignore USIP images with an invalid signature."
 ):target('fVerifySigEnable')
 :default(false)
 tParserCommandKek:flag('--no_verify'):description(
-    "Do not verify the content of an usip image against a netX."
+    "Do not verify the content of an usip image against a netX SIP content after writing the usip."
 ):target('fVerifyContentDisabled')
 tParserCommandKek:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
