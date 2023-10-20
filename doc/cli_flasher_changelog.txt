@@ -1,3 +1,180 @@
+
+Updates in CLI Flasher v2.0.0
+(Changes since version 1.8.1)
+==============================
+
+General:
+
+* Various changes to the command line interface.
+  Please use -h to view the command line options for each command.
+
+* Switched to Lua 5.4
+
+* Improve the reliability of UART communication
+
+
+For netX 90 Rev.1/2: 
+
+* Now working in secure boot mode on the netX 90 Rev.1 and Rev.2, 
+  including ethernet if the ethernet machine interface is active.
+
+* The tools can now connect to a netX 90 Rev.1 or Rev.2 in the UART terminal console
+  or secure boot mode by running a HBoot image that starts the machine interface (start_mi).
+  If the netX is in secure boot mode, this boot image needs to be signed with the firmware key.
+
+* Disable the pull-down resistors of the UART RXD/TXD pins.
+  - when the flasher binary or boot image is executed 
+  - when read_sip, verify_signature or set_kek is executed 
+  - when start_mi is executed
+  - when detect_netx is executed and the chip type is netx 90 rev.1
+
+
+CLI Flasher, WFP:
+* If the device size is 0xffffffff bytes or more (4 gigabytes), the device is rejected.
+
+CLI flasher:
+* netX 90 Rev.1/Rev.2:
+  Implemented the 'hash' and 'verify_hash' commands on the netX 90.
+
+* netX 90 Rev.1/Rev.2:
+  Added the command detect_secure_boot_mode. 
+  This command tests the behaviour of the console and determines the secure boot settings.
+  The result is passed via the exit code:
+  SECURE_BOOT_DISABLED = 0: COM and APP CPUs are open
+  SECURE_BOOT_ENABLED = 5: COM CPU is secure, APP CPU unknown
+  SECURE_BOOT_ONLY_APP_ENABLED = 50: APP CPU is secure, COM CPU is not
+  SECURE_BOOT_UNKNOWN = 2: If the netX has just been reset into console mode 
+                           (SYS LED blinking), COM and APP CPU are in open 
+                           mode. Otherwise, the mode is unknown.
+  SECURE_BOOT_ERROR = 1: The secure boot mode could not be detected.
+
+* netX 90 Rev.1/Rev.2:
+  Use the new secure flasher functions on the command line
+  Add two new optional_args '--comp' and '--sec':
+    - '--comp': use compatibility mode for netx90 M2M interfaces
+        - per default the hboot mode is used for netx90 m2m communication
+        - when this flag is set, the binary mode is used.
+    - '--sec': path to secure images used for secure M2M connection
+        - path to a folder where all signed versions of the images from 'netx/hboot/unsigned' are stored
+
+* netX 90 Rev.1/Rev.2:
+  The netx_reset command of the cli_flasher now works also in secure boot mode.
+  (the reset is now triggered by code running on the netX, a subcommand
+  of the CLI flasher.)
+
+* The flash device size is printed as an unsigned number.
+
+* netX 90 Rev.1/Rev.2:
+  detect_netx now works when the netx is in the UART terminal console or in secure boot mode.
+  If the boot image to start the machine interface has been downloaded, but failed to execute,
+  because it is not signed or not correctly signed, the following error is returned: 
+  "start_mi image has been rejected or execution has failed." 
+  and the script exits with exit code 2.
+  (All other commands exit with exit code 1 when an error occurs.)
+
+  If a netx 90 Rev.1 was detected during Connect(), but no connection has been made (the machine 
+  interface could not be started), the exact chip type could not be determined. 
+  In this case, the "suspicious" chip type is printed:
+  netX90 Rev1 (suspicious, PHY version not checked)
+
+* Added the 'identify_netx' command.
+  It allows the visual identification of hardware by flashing
+  the system LED in a Yellow Yellow Green Green pattern for 5 seconds
+
+* Updated libusb version to 1.0.26
+  (todo: explain)
+
+USIP Player:
+* The SIPper and USIP Generator were replaced with Lua implementations
+
+* The underlying protocols used by the USIP player have been changed.
+  It no longer uses the UART text console protocol, but the 
+  packet-based machine-to-machine protocol.
+  
+* Read command now takes the output folder as a positional argument (was '-o' '--output')
+
+* Add the parameter -t (plugin type)
+
+* Remove the option '--extend_exec' and set its functionality as the default for jtag interfaces 
+
+* remove bootswitch arguments from usip_player. Bootswitch is now used by default based on the selected interface.
+
+* Merge parameters '--sec' and '--sec_sp' to one parameter
+
+* add argument '--sec_phase2', '--sec_p2' (used to be argument '--reset').
+  * argument used to select helper images for phase 2 of USIP command.
+  * phase 2 is the reset after the last USIP booted and also the verification of the loaded USIP content.
+  
+* add argument '--no_reset'.
+  * argument is used to completely skip phase 2 of USIP command.
+  
+* '--no_verify' now only skips the verification of the USIP content inside the SIP (the reset will still be done).
+
+* New command detect_sip_protection_cookie
+
+* New command disable_security.
+  This command applies an USIP file that 
+  - disables secure boot on the COM and APP CPU,
+  - enables the copying and disables the hiding of the COM and APP info pages 
+  - disables the security level on the COM and APP info pages
+
+* Avoid unneccessary splitting of USIP images (SIPper)
+
+* No longer store temporary files inside flasher directory
+
+* Fix get_uid command via JTAG interface and a running SW
+
+
+JTAG interface:
+* Add support for the SEGGER J-Link adapter with VID 0x1366/PID 0x1020.
+
+* Updated the error message that is shown if, while connecting to the 
+  netx 90 via JTAG, the chip type cannot be detected:
+  Error: Could not detect the chip type.
+  The debug access port might be disabled.
+
+* On netx 90, disable interrupts when connecting 
+  to improve reliability when a running firmware is interrupted.
+
+
+
+Version and signature checks on helper files for netx 90 Rev.1/Rev.2 
+=====================================================================
+* Added version and signature checks for helper files supplied via  
+  the --sec and --sec_p2 options.
+  
+  Before making any changes to the flash contents, the signatures of the
+  helper files are checked whether they pass the signature verification on 
+  the connected netX device.
+
+  There is an automatic, on-the-fly verification that is limited to the 
+  helper files that are potentially required for the selected command.
+  This verification may be disabled by supplying the command line flag 
+  --disable_helper_signature_check
+  
+  The version and signature verification can also be performed explicitly
+  by running the command 'check_helper_signature' in the CLI flasher, 
+  wfp or USIP player.
+  This command takes a directory containing signed helper binaries 
+  and validates their signatures against the keys stored in the netx.
+  
+  The following helper files may be checked:
+  bootswitch.bin
+  hboot_start_mi_netx90_com_intram.bin
+  return_exec.bin
+  read_sip_M2M.bin
+  verify_sig.bin
+  set_kek.bin
+  hboot_start_mi_netx90_com_intram.bin
+  
+  When the connection is made via UART, the start_mi binary 
+  may be required to connect. After this, verify_sig is used to check 
+  the signatures of the other helper files before they are used.
+  If start_mi or verify_sig are the wrong version or incorrectly signed,
+  the connection or the initial signature verification may fail.
+
+
+
 Updates in CLI Flasher v2.0.0-dev20
 ==============================
 
