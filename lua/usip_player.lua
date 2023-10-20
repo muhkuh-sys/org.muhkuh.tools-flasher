@@ -2647,11 +2647,68 @@ elseif tArgs.fCommandVerifySelected then
         strReadSipPath,
         strExecReturnPath
     )
+--    if uResultCode == VERIFY_RESULT_OK then
+--        tLog.info("The data in the info page(s) is equal to the data in the USIP file.")
+--        if strErrorMsg then 
+--            tLog.info(strErrorMsg)
+--        end
+--        fFinalResult = true
+--    elseif uResultCode == VERIFY_RESULT_FALSE then 
+--        tLog.error("The data in the info page(s) differs from the data in the USIP file:")
+--        tLog.error(strErrorMsg or "Unknown error")
+--        fFinalResult = false
+--    else
+--        tLog.info("The data in the info page(s) could not compared to the data in the USIP file as an error occurred:")
+--        tLog.error(strErrorMsg or "Unknown error")
+--        fFinalResult = false
+--    end
+    
     if uResultCode == VERIFY_RESULT_OK then
-        fFinalResult = true
+        tLog.info('')
+        tLog.error("")
+        tLog.error("########  ######   ##    ##  ######  ##      ")
+        tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
+        tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
+        tLog.error("#######  ##    ##  ##    ## ######## ##      ")
+        tLog.error("##       ##  ####  ##    ## ##    ## ##      ")
+        tLog.error("##       ##   ###  ##    ## ##    ## ##      ")
+        tLog.error("########  ##### ##  ######  ##    ## ########")
+        tLog.info('')
+        tLog.info('RESULT: The data in the info page(s) is equal to the data in the USIP file.')
+        if strErrorMsg then 
+            tLog.info(strErrorMsg)
+        end
+        
+    elseif uResultCode == VERIFY_RESULT_FALSE then
+        tLog.error("")
+        tLog.error("##    ##  #######  ########     ########  ######   ##    ##  ######  ##      ")
+        tLog.error("###   ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
+        tLog.error("####  ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
+        tLog.error("## ## ## ##     ##    ##        #######  ##    ##  ##    ## ######## ##      ")
+        tLog.error("##  #### ##     ##    ##        ##       ##  ####  ##    ## ##    ## ##      ")
+        tLog.error("##   ### ##     ##    ##        ##       ##   ###  ##    ## ##    ## ##      ")
+        tLog.error("##    ##  #######     ##        ########  ##### ##  ######  ##    ## ########")
+        tLog.error("")
+        tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
+        tLog.error(strErrorMsg or "Unknown error")
+
     else
-        fFinalResult = false
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        tLog.info("RESULT: The data in the info page(s) could not be checked as an error has occurred:")
+        tLog.error(strErrorMsg or "Unknown error")
+        
     end
+    tLog.info('RETURN: '.. uResultCode)
+    os.exit(uResultCode)
+    
 
 elseif tArgs.fCommandCheckSIPCookie then
 
