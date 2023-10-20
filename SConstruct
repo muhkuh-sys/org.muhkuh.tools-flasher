@@ -389,6 +389,7 @@ if 'NETX90' in atPickNetxForBuild:
     output_path = os.path.join('targets', output_dir_name)
     hboot_netx90_flasher_bin =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
     strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
+    strHbootDefinitionTemplateTmp = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_template.xml" )
     strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_nodbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
     
@@ -398,7 +399,10 @@ if 'NETX90' in atPickNetxForBuild:
 
     netx90_bin_file_path = str(bin_netx90_nodbg_secure[0])
  
-    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+
+    atEnv.DEFAULT.Version(strHbootDefinition, strHbootDefinitionTemplateTmp)
+    
 
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_nodbg_secure.HBootImage(
@@ -412,7 +416,8 @@ if 'NETX90' in atPickNetxForBuild:
         print("one of these files does not exists: ")
         for f in [strKeyRomPath, tPublicOptionPatchTable]:
             print("    %s" % f)
-            
+    
+    
     # build hboot_netx90_exec_bxlr.bin
     hboot_netx90_exec_bxlr_bin = env_netx90_nodbg_secure.HBootImage(
         os.path.join('targets', 'hboot_netx90_exec_bxlr', 'hboot_netx90_exec_bxlr.bin'),
