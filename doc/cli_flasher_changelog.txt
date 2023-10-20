@@ -6,6 +6,7 @@ General:
 
 * Various changes to the command line interface.
   Please use -h to view the command line options for each command.
+* Names of subcommands may be shortened, e.g. 'detect_secure_boot_mode' to 'dsbm'
 * Switched from Lua 5.1 to Lua 5.4.
 * Major changes to build system. 
   The flasher now builds all required components. All components 
@@ -72,12 +73,14 @@ USIP Player:
   * argument is used to completely skip phase 2 of USIP command.
 * '--no_verify' now only skips the verification of the USIP content inside 
   the SIP (the reset will still be done).
-* New command detect_sip_protection_cookie
-* New command disable_security.
+* New command 'detect_sip_protection'.
+* New command 'disable_security'.
   This command applies an USIP file that 
   - disables secure boot on the COM and APP CPU,
   - enables the copying and disables the hiding of the COM and APP info pages 
   - disables the security level on the COM and APP info pages
+* Command 'detect_secure_mode' was moved to CLI Flasher and renamed to
+  'detect_secure_boot_mode'.
 * No longer store temporary files inside flasher directory
 * Change: get_uid command works via JTAG interface and a running SW
 
