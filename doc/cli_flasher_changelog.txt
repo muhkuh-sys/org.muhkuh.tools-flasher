@@ -1,4 +1,13 @@
 
+Updates in CLI Flasher v2.0.1
+==============================
+Usip Player:
+* Bugfix: set_kek did not work 
+
+Common:
+* Rename "support file" to "helper file" in message strings.
+
+
 Updates in CLI Flasher v2.0.0
 ==============================
 
