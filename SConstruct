@@ -650,89 +650,89 @@ doc = atEnv.DEFAULT.Asciidoc('targets/doc/flasher.html', 'doc/flasher.asciidoc',
 #
 # Build the artifact.
 #
-if fBuildIsFull==True:
-    strGroup = 'org.muhkuh.tools'
-    strModule = 'flasher'
-
-    # Split the group by dots.
-    aGroup = strGroup.split('.')
-    # Build the path for all artifacts.
-    strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
-
-
-    strArtifact = 'lua5.4-flasher'
-
-    tArcList = atEnv.DEFAULT.ArchiveList('zip')
-
-    tArcList.AddFiles('netx/',
-        bin_netx4000_nodbg,
-        bin_netx500_nodbg,
-        bin_netx90_mpw_nodbg,
-        bin_netx90_nodbg,
-        bin_netx90_nodbg_secure,
-        bin_netx56_nodbg,
-        bin_netx50_nodbg,
-        bin_netx10_nodbg,
-        bin_netiol_nodbg,
-        'bootpins_netx90/bootpins_netx90.bin')
-
-    tArcList.AddFiles('netx/hboot/unsigned/netx90/',
-        hboot_netx90_flasher_bin,
-        'helper_binaries/netx90/bootswitch.bin',
-        'helper_binaries/netx90/read_sip_M2M.bin',
-        'helper_binaries/netx90/return_exec.bin',
-        'helper_binaries/netx90/set_kek.bin',
-        'helper_binaries/netx90/verify_sig.bin',
-        'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
-        
-    tArcList.AddFiles('netx/helper/netx90/',
-        hboot_netx90_exec_bxlr_bin,
-        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
-        'helper_binaries/netx90/set_kek.usp',
-        set_sip_protection_cookie_com_usp)
-        
-    tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
-        disable_security_settings_usp,
-        disable_security_settings_com_usp,
-        disable_security_settings_app_usp)
-    
-    tArcList.AddFiles('netx/debug/',
-        bin_netx4000_dbg,
-        bin_netx500_dbg,
-        bin_netx90_mpw_dbg,
-        bin_netx90_dbg,
-        bin_netx56_dbg,
-        bin_netx50_dbg,
-        bin_netx10_dbg,
-        bin_netiol_dbg)
-
-    tArcList.AddFiles('doc/',
-        doc,
-        tDocSpiFlashTypesHtml,
-        tDocSpiFlashListTxt, 
-        "doc/cli_flasher_changelog.txt")
-
-    tArcList.AddFiles('lua/',
-        lua_flasher,
-        'lua/flasher_test.lua',
-        'lua/lua/helper_files.lua',
-        'lua/lua/Version.lua',
-        'lua/lua/wfp_control.lua', 
-        'bootpins_netx90/bootpins.lua',
-        'lua/lua/flasher_helper.lua', 
-        'lua/lua/sipper.lua',
-        'lua/lua/usip_generator.lua',
-        'lua/lua/usip_player_conf.lua',
-        'lua/lua/verify_signature.lua',
-        )
-
-    tArcList.AddFiles('',
-        'lua/cli_flash.lua',
-        'lua/usip_player.lua',
-        'lua/muhkuh_cli_init.lua',
-        'lua/wfp.lua',
-        'lua/wfp_verify.lua',
-        lua_flasher_version)
+#if fBuildIsFull==True:
+#    strGroup = 'org.muhkuh.tools'
+#    strModule = 'flasher'
+#
+#    # Split the group by dots.
+#    aGroup = strGroup.split('.')
+#    # Build the path for all artifacts.
+#    strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
+#
+#
+#    strArtifact = 'lua5.4-flasher'
+#
+#    tArcList = atEnv.DEFAULT.ArchiveList('zip')
+#
+#    tArcList.AddFiles('netx/',
+#        bin_netx4000_nodbg,
+#        bin_netx500_nodbg,
+#        bin_netx90_mpw_nodbg,
+#        bin_netx90_nodbg,
+#        bin_netx90_nodbg_secure,
+#        bin_netx56_nodbg,
+#        bin_netx50_nodbg,
+#        bin_netx10_nodbg,
+#        bin_netiol_nodbg,
+#        'bootpins_netx90/bootpins_netx90.bin')
+#
+#    tArcList.AddFiles('netx/hboot/unsigned/netx90/',
+#        hboot_netx90_flasher_bin,
+#        'helper_binaries/netx90/bootswitch.bin',
+#        'helper_binaries/netx90/read_sip_M2M.bin',
+#        'helper_binaries/netx90/return_exec.bin',
+#        'helper_binaries/netx90/set_kek.bin',
+#        'helper_binaries/netx90/verify_sig.bin',
+#        'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
+#        
+#    tArcList.AddFiles('netx/helper/netx90/',
+#        hboot_netx90_exec_bxlr_bin,
+#        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+#        'helper_binaries/netx90/set_kek.usp',
+#        set_sip_protection_cookie_com_usp)
+#        
+#    tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
+#        disable_security_settings_usp,
+#        disable_security_settings_com_usp,
+#        disable_security_settings_app_usp)
+#    
+#    tArcList.AddFiles('netx/debug/',
+#        bin_netx4000_dbg,
+#        bin_netx500_dbg,
+#        bin_netx90_mpw_dbg,
+#        bin_netx90_dbg,
+#        bin_netx56_dbg,
+#        bin_netx50_dbg,
+#        bin_netx10_dbg,
+#        bin_netiol_dbg)
+#
+#    tArcList.AddFiles('doc/',
+#        doc,
+#        tDocSpiFlashTypesHtml,
+#        tDocSpiFlashListTxt, 
+#        "doc/cli_flasher_changelog.txt")
+#
+#    tArcList.AddFiles('lua/',
+#        lua_flasher,
+#        'lua/flasher_test.lua',
+#        'lua/lua/helper_files.lua',
+#        'lua/lua/Version.lua',
+#        'lua/lua/wfp_control.lua', 
+#        'bootpins_netx90/bootpins.lua',
+#        'lua/lua/flasher_helper.lua', 
+#        'lua/lua/sipper.lua',
+#        'lua/lua/usip_generator.lua',
+#        'lua/lua/usip_player_conf.lua',
+#        'lua/lua/verify_signature.lua',
+#        )
+#
+#    tArcList.AddFiles('',
+#        'lua/cli_flash.lua',
+#        'lua/usip_player.lua',
+#        'lua/muhkuh_cli_init.lua',
+#        'lua/wfp.lua',
+#        'lua/wfp_verify.lua',
+#        lua_flasher_version)
 
 #        'lua/demo_getBoardInfo.lua',
 #        'lua/erase_complete_flash.lua',
@@ -757,8 +757,8 @@ if fBuildIsFull==True:
 #        'lua/read_complete_flash.lua',
 #        tDemoShowEraseAreas)
 
-    strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
-    tArtifact = atEnv.DEFAULT.Archive('%s.zip' % strBasePath, None, ARCHIVE_CONTENTS = tArcList)
+#    strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
+#    tArtifact = atEnv.DEFAULT.Archive('%s.zip' % strBasePath, None, ARCHIVE_CONTENTS = tArcList)
 
 
     #----------------------------------------------------------------------------
