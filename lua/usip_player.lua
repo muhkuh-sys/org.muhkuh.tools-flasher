@@ -2388,6 +2388,7 @@ else
     strExecReturnPath      = tHelperFiles.getHelperPath(strSecureOptionDir, "return_exec")
     strVerifySigPath       = tHelperFiles.getHelperPath(strSecureOptionDir, "verify_sig")
     strBootswitchFilePath  = tHelperFiles.getHelperPath(strSecureOptionDir, "bootswitch")
+    strKekHbootFilePath    = tHelperFiles.getHelperPath(strSecureOptionDir, "set_kek")
 
     strResetReadSipPath    = tHelperFiles.getHelperPath(strSecureOptionPhaseTwoDir, "read_sip_m2m")
     strResetExecReturnPath = tHelperFiles.getHelperPath(strSecureOptionPhaseTwoDir, "return_exec")
@@ -2403,6 +2404,7 @@ else
         if tArgs.fDisableHelperSignatureChecks==true then
             tLog.info("Skipping signature checks for helper files.")
         else
+            tLog.info("Checking signatures of helper files...")
             local fOk, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecureOptionDir}, astrHelpersToCheck)
             if not fOk then
                 -- This error should not occur, as all files have previously been checked.
@@ -2771,7 +2773,7 @@ elseif tArgs.fCommandCheckHelperSignatureSelected then
     tLog.info("# RUNNING VERIFY_HELPER_SIGNATURES COMMAND #")
     tLog.info("############################################")
 
-    tLog.info("Checking signatures of support files...**")
+    tLog.info("Checking signatures of helper files...**")
 
     local usipPlayerConf = require 'usip_player_conf'
     local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
