@@ -650,7 +650,7 @@ doc = atEnv.DEFAULT.Asciidoc('targets/doc/flasher.html', 'doc/flasher.asciidoc',
 #
 # Build the artifact.
 #
-#if fBuildIsFull==True:
+if fBuildIsFull==True:
 #    strGroup = 'org.muhkuh.tools'
 #    strModule = 'flasher'
 #
