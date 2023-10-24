@@ -188,7 +188,7 @@ end
 -- - Print the results
 
 function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions, strSecureOption)
-    tLog.info("Checking signatures of support files...**")
+    tLog.info("Checking signatures of helper files...**")
 
     local usipPlayerConf = require 'usip_player_conf'
     local strTmpFolderPath = usipPlayerConf.tempFolderConfPath
@@ -254,7 +254,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
       fOk = false
       strMsg = "Bug: some helper files are unknown"
   else
-      tLog.info("Checking signatures of support files ...**")
+      tLog.info("Checking signatures of helper files ...**")
 
       local usipPlayerConf = require 'usip_player_conf'
       local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
