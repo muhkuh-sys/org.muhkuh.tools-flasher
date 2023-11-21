@@ -1,27 +1,22 @@
 <?xml version="1.0"?>
 <HBootImage type="REGULAR" device="INTFLASH" has_header="True" has_end="True" offset="0x0">
-	<Chunks>
+    <Chunks>
  
-    	<!-- Reserve next 1k for secure boot hash table -->
-    	<Skip absolute="0x03F4" fill="0x27" />
-		
-	
-		<Data>
-			<File name="@tElf0"/>
-		</Data>
-		
-    	<!-- replace next chunk with skip chunk -->
-      <!--   0x6400 0000 : SQIROM base address                          -->
-      <!-- - 0x0010 0000 : INTFLASH base address                        -->
-      <!-- + 0x0000 0180 : firmware file header of nxe file.            -->
-      <!-- + 0x0000 0040 : boot_header of external hboot_image file     -->
-      <!-- =============                                                -->
-      <!--   0x63F0 01C0 : absolute address for skip incomplete         -->
+        <!-- Reserve next 1k for secure boot hash table -->
+        <Skip absolute="0x03F4" fill="0x27" />
+        
+        <Data>
+            <File name="@tElf0"/>
+        </Data>
+        
+        <!-- This chunk is located between the data and the exec chunk
+             to ensure that the hash for this chunk is checked. -->
+        <Text>Ver:${PROJECT_VERSION_GIT_ID}:reV</Text>
 
         <Execute start_app="false" lock_firewall="true" activate_debugging="true" apply_firewall_settings="true">
             <File name="@tElf0" />
-			<R0>${__BUFFER_START__}</R0>
+            <R0>${__BUFFER_START__}</R0>
         </Execute>
-	</Chunks>
+    </Chunks>
 </HBootImage>
 

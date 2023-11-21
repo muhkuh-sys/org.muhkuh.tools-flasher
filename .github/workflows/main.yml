@@ -2,11 +2,11 @@ name: CI Build
 
 on:
   push:
-    branches: [ dev_v2.0.0_monolithic_build ]
+    branches: [ master ]
     tags:
     - '*'
   pull_request:
-    branches: [ dev_v2.0.0 ]
+    branches: [ master ]
 
 jobs:
 #  netxfirmware:
@@ -34,11 +34,6 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - name: Ubuntu 16.04 x86
-          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1604_x86:latest
-          distribution-id: ubuntu
-          distribution-version: "16.04"
-          cpu-architecture: x86
         - name: Ubuntu 18.04 x86
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86:latest
           distribution-id: ubuntu
@@ -54,6 +49,11 @@ jobs:
           distribution-id: ubuntu
           distribution-version: "18.04"
           cpu-architecture: arm64
+        - name: Ubuntu 20.04 x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86
         - name: Ubuntu 20.04 x86_64
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
           distribution-id: ubuntu

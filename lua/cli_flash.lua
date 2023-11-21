@@ -483,13 +483,9 @@ local tParserCommandCheckHelperVersion = tParser:command(
 addSecureArgs(tParserCommandCheckHelperVersion)
 
 -- check_helper_signature
-local strUsipHelp = [[
-    Loads an usip file on the netX, reset the netX and process
-    the usip file to update the SecureInfoPage and continue standard boot process.
-]]
 local tParserCommandCheckHelperSignature = tParser:command(
   'check_helper_signature chs',
-  strUsipHelp
+  'Verify the signatures of the helper files.'
 ):target('fCommandCheckHelperSignatureSelected')
 -- tParserCommandCheckHelperSignature:option(
 --     '-V --verbose'
@@ -528,11 +524,15 @@ end
 --   nothing
 local function printArgs(tArguments)
   print("")
+  print("Command line:" .. table.concat(arg, " ", -1, #arg))
+  print("")
   print("Running CLI flasher with the following args:")
   print("--------------------------------------------")
+  
   printTable(tArguments, 0)
   print("")
 end
+
 
 
 --------------------------------------------------------------------------
@@ -638,10 +638,10 @@ local function exec(aArgs)
 		if fOk then
 			-- check helper signatures
 			fOk, strMsg = tVerifySignature.verifyHelperSignatures_wrap(
-        tPlugin,
-        aArgs.strSecureOption,
-        aArgs.aHelperKeysForSigCheck
-      )
+				tPlugin,
+				aArgs.strSecureOption,
+				aArgs.aHelperKeysForSigCheck
+			  )
 		end
 
 		-- On netx 4000, there may be a boot image in intram that makes it
@@ -693,7 +693,7 @@ local function exec(aArgs)
 					fOk = false
 					strMsg = "Failed to read board info"
 				end
-	        elseif aArgs.fParserCommandIdentifyNetxSelected then
+	        elseif aArgs.fParserCommandIdentifyNetxSelected or aArgs.fCommandResetSelected then
                 -- no action nescessary
 				fOk = true;
 			else
@@ -813,13 +813,28 @@ local function exec(aArgs)
 		if fOk and aArgs.fCommandReadSelected then
 			fOk, strMsg = tFlasherHelper.writeBin(strDataFileName, strData)
 		end
+
         -- identify_netx
         if aArgs.fParserCommandIdentifyNetxSelected then
             fOk = flasher.identify(tPlugin, aAttr)
 			strMsg = "LED sequence finished"
         end
 
+		if aArgs.fCommandResetSelected then
+			fOk = flasher.reset(tPlugin, aAttr)
+		end
+
 		tPlugin:Disconnect()
+
+		if aArgs.fCommandResetSelected then
+			if fOk then
+				tFlasherHelper.sleep_s(1)  -- Wait 1 second after disconnecting for the watchdog reset to finish
+				strMsg = "Reset command finished"
+			else
+				strMsg = "Reset command failed"
+			end
+		end
+
 		collectgarbage('collect')
 	end
 
@@ -997,13 +1012,37 @@ local function main()
 
     aArgs = tParser:parse()
 
-    -- construct the argument list for DetectInterfaces
-    aArgs.atPluginOptions = {
-        romloader_jtag = {
-            jtag_reset = aJtagResetOptions[aArgs.strJtagReset],
-            jtag_frequency_khz = aArgs.iJtagKhz
-        }
-    }
+
+	local astrHelpersToCheck = {}
+
+	-- Define which helper fines are (potentially) required for the selected
+	-- command and check presence and version.
+	if aArgs.fCommandFlashSelected               -- flash
+	or aArgs.fCommandReadSelected                -- read
+	or aArgs.fCommandEraseSelected               -- erase
+	or aArgs.fCommandVerifySelected              -- verify
+	or aArgs.fCommandVerifyHashSelected          -- verify_hash
+	or aArgs.fCommandHashSelected                -- hash
+	or aArgs.fCommandDetectSelected              -- detect
+	or aArgs.fCommandTestSelected                -- test
+	or aArgs.fCommandTestCliSelected             -- testcli
+	or aArgs.fCommandInfoSelected                -- info
+	or aArgs.fParserCommandIdentifyNetxSelected  -- identify_netx
+	or aArgs.fCommandResetSelected then          -- reset_netx
+		astrHelpersToCheck = {"start_mi", "verify_sig", "flasher_netx90_hboot"}
+
+	-- detect_secure_boot_mode: exec_bxlr / read_sip are used, but unsigned
+	elseif aArgs.fCommandDetectNetxSelected          -- detect_netx
+		or aArgs.fCommandDetectSecureBootSelected then   -- detect_secure_boot_mode
+		astrHelpersToCheck = {"start_mi", "verify_sig"}
+
+	elseif aArgs.fCommandCheckHelperVersionSelected then -- check_helper_version
+		-- nothing to check here, because it is handled further down.
+		astrHelpersToCheck = {}
+
+	elseif aArgs.fCommandCheckHelperSignatureSelected then -- check_helper_signature
+		astrHelpersToCheck = {"start_mi", "verify_sig"}
+	end
 
     -- Catch internal chipselects.
     if(
@@ -1018,71 +1057,61 @@ local function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
-    if aArgs.strSecureOption ~= nil and aArgs.fCommandCheckHelperVersionSelected ~= true then
-
-        local path = require 'pl.path'
-        local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
-
---        Test code - todo: remove
---        print()
---        print("checkHelperFiles")
---        tHelperFiles.checkHelperFiles({strnetX90HelperPath_Default, strnetX90HelperPath}, {"start_mi", "bootswitch"})
---
---        print()
---        print("getHelperFile without checking (false)")
---        local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", false)
---
---        print()
---        print("getHelperFile with checking (true) (if globally enabled)")
---        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi", true)
-
-        print()
-        -- print("getHelperFile with checking (nil) (default)")
-        local strnetX90M2MImageBin
-        strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
-
-        if strnetX90M2MImageBin then
-            aArgs.atPluginOptions.romloader_uart = {
-                netx90_m2m_image = strnetX90M2MImageBin
-            }
-        else
-            printf(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
-            --printf("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
-            os.exit(1)
-        end
-    end
-
-    if aArgs.strSecureOption ~= nil
-    and aArgs.strSecureOption ~= flasher.DEFAULT_HBOOT_OPTION
-    and aArgs.fDisableHelperSignatureChecks ~= true then
-
-        if aArgs.fCommandFlashSelected               -- flash
-        or aArgs.fCommandReadSelected                -- read
-        or aArgs.fCommandEraseSelected               -- erase
-        or aArgs.fCommandVerifySelected              -- verify
-        or aArgs.fCommandVerifyHashSelected          -- verify_hash
-        or aArgs.fCommandHashSelected                -- hash
-        or aArgs.fCommandDetectSelected              -- detect
-        or aArgs.fCommandTestSelected                -- test
-        or aArgs.fCommandTestCliSelected             -- testcli
-        or aArgs.fCommandInfoSelected                -- info
-        or aArgs.fParserCommandIdentifyNetxSelected  -- identify_netx
-        then
-            aArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
-
-        elseif aArgs.fCommandDetectNetxSelected          -- detect_netx
-            or aArgs.fCommandDetectSecureBootSelected    -- detect_secure_boot_mode
-            or aArgs.fCommandResetSelected               -- reset_netx
-        then
-            aArgs.aHelperKeysForSigCheck = {"start_mi"}
-        end
-    end
-
-
     printArgs(aArgs)
-    local strHelperFileStatus = tHelperFiles.getStatusString()
-    print(strHelperFileStatus)
-    print()
+
+	local path = require 'pl.path'
+	local strnetX90UnsignedHelperPath = path.join(flasher.DEFAULT_HBOOT_OPTION, "netx90")
+	local strnetX90HelperPath = path.join(aArgs.strSecureOption, "netx90")
+	printf("Helper path: %s", strnetX90HelperPath)
+	local strnetX90M2MImageBin
+
+	if #astrHelpersToCheck == 0 then
+		print ("No helper binaries required - Skipping version/signature tests.")
+	else
+		print("Helpers to check:")
+		for _, v in ipairs (astrHelpersToCheck) do
+			print(v)
+		end
+
+		-- check the helper versions
+		local fHelpersOk = tHelperFiles.checkHelperFiles(
+			{strnetX90UnsignedHelperPath, strnetX90HelperPath},
+			astrHelpersToCheck)
+		if not fHelpersOk then
+			print("Error during file version checks.")
+			os.exit(1)
+		end
+
+		-- if #aArgs.astrHelpersToCheck > 0, start_mi is always included.
+		strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
+		if strnetX90M2MImageBin == nil then
+			printf(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
+			os.exit(1)
+		end
+
+		-- if a signed helper directory is specified on the command line,
+		-- set aArgs.aHelperKeysForSigCheck, unless --disable_helper_signature_check
+		-- is specified, too.
+		if aArgs.strSecureOption ~= nil
+		and aArgs.strSecureOption ~= flasher.DEFAULT_HBOOT_OPTION then
+			if aArgs.fDisableHelperSignatureChecks ~= true then
+				aArgs.aHelperKeysForSigCheck = astrHelpersToCheck
+			else
+				print("Skipping signature checks for helper files.")
+			end
+		end
+	end
+
+	-- construct the option list for DetectInterfaces
+	aArgs.atPluginOptions = {
+		romloader_jtag = {
+			jtag_reset = aJtagResetOptions[aArgs.strJtagReset],
+			jtag_frequency_khz = aArgs.iJtagKhz
+		},
+		romloader_uart = {
+			netx90_m2m_image = strnetX90M2MImageBin
+		}
+	}
 
 
     fOk = true
@@ -1092,33 +1121,6 @@ local function main()
     if aArgs.fCommandListInterfacesSelected then
         tFlasherHelper.list_interfaces(aArgs.strPluginType, aArgs.atPluginOptions)
         os.exit(0)
-
-    elseif aArgs.fCommandResetSelected then
-
-        local tPlugin
-        tPlugin, strMsg = tFlasherHelper.getPlugin(aArgs.strPluginName, aArgs.strPluginType, aArgs.atPluginOptions)
-        local strPluginType = tPlugin:GetTyp()
-        local ulM2MMajor = tPlugin:get_mi_version_maj()
-        local ulM2MMinor = tPlugin:get_mi_version_min()
-        if ulM2MMajor == 3 and ulM2MMinor >= 1 and strPluginType ~= "romloader_jtag" then
-            print("use call usip command to reset netx")
-            flasher.write_data32(0x200C0, 0x0)  -- delete possible cookie in data area to avoid booting the same
-                                                 -- image again
-            flasher.call_usip(tPlugin) -- use call usip command as workaround to trigger reset
-        else
-            print("reset netx via watchdog")
-            tFlasherHelper.reset_netx_via_watchdog(nil, tPlugin)
-        end
-
-        if fOk then
-            if strMsg then
-                print(strMsg)
-            end
-            os.exit(0)
-        else
-            printf("Error: %s", strMsg or "unknown error")
-            os.exit(1)
-        end
 
     elseif aArgs.fCommandDetectNetxSelected then
         iRet, strMsg = tFlasherHelper.detect_chiptype(aArgs)

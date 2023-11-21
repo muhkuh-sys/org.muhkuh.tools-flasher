@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 1111
 #-------------------------------------------------------------------------#
 #   Copyright (C) 2011 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
@@ -118,6 +118,7 @@ flasher_sources_lib = """
 	src/spi_macro_player.c
 	src/strata.c
 	src/units.c
+	src/reset.c
 """
 
 
@@ -221,6 +222,7 @@ flasher_sources_lib_netiol = """
 	src/units.c
 	src/netiol/board.c
 	src/drv_spi_hsoc_v2.c
+	src/reset.c
 """
 
 
@@ -251,7 +253,7 @@ atEnv.DEFAULT.Version('targets/version/flasher_version.xsl', 'templates/flasher_
 from datetime import datetime
 tBuildTime = datetime.now()
 strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
-tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': '-dev14'}
+tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': ''}
 lua_flasher_version_tmp = atEnv.DEFAULT.Version('targets/version/flasher_version_TMP.lua', 'templates/flasher_version.lua')
 lua_flasher_version = atEnv.DEFAULT.Filter('#/targets/version/flasher_version.lua', lua_flasher_version_tmp, SUBSTITUTIONS=tDict)
 
@@ -388,6 +390,7 @@ if 'NETX90' in atPickNetxForBuild:
     output_path = os.path.join('targets', output_dir_name)
     hboot_netx90_flasher_bin =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
     strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
+    strHbootDefinitionTemplateTmp = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_template.xml" )
     strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_nodbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
     
@@ -397,7 +400,10 @@ if 'NETX90' in atPickNetxForBuild:
 
     netx90_bin_file_path = str(bin_netx90_nodbg_secure[0])
  
-    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+
+    atEnv.DEFAULT.Version(strHbootDefinition, strHbootDefinitionTemplateTmp)
+    
 
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_nodbg_secure.HBootImage(
@@ -411,7 +417,8 @@ if 'NETX90' in atPickNetxForBuild:
         print("one of these files does not exists: ")
         for f in [strKeyRomPath, tPublicOptionPatchTable]:
             print("    %s" % f)
-            
+    
+    
     # build hboot_netx90_exec_bxlr.bin
     hboot_netx90_exec_bxlr_bin = env_netx90_nodbg_secure.HBootImage(
         os.path.join('targets', 'hboot_netx90_exec_bxlr', 'hboot_netx90_exec_bxlr.bin'),
@@ -447,7 +454,7 @@ if 'NETX90' in atPickNetxForBuild:
         ASIC_TYP='NETX90B')
 
     set_sip_protection_cookie_com_usp = env_netx90_nodbg_secure.HBootImage(
-        os.path.join('targets', 'disable_security_settings', 'set_sip_protection_cookie.usp'),
+        os.path.join('targets', 'detect_sip_protection', 'set_sip_protection_cookie.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'set_sip_protection_cookie.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
         HBOOTIMAGE_KNOWN_FILES=dict(),
@@ -645,115 +652,218 @@ doc = atEnv.DEFAULT.Asciidoc('targets/doc/flasher.html', 'doc/flasher.asciidoc',
 # Build the artifact.
 #
 if fBuildIsFull==True:
-    strGroup = 'org.muhkuh.tools'
-    strModule = 'flasher'
+#    strGroup = 'org.muhkuh.tools'
+#    strModule = 'flasher'
+#
+#    # Split the group by dots.
+#    aGroup = strGroup.split('.')
+#    # Build the path for all artifacts.
+#    strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
+#
+#
+#    strArtifact = 'lua5.4-flasher'
+#
+#    tArcList = atEnv.DEFAULT.ArchiveList('zip')
+#
+#    tArcList.AddFiles('netx/',
+#        bin_netx4000_nodbg,
+#        bin_netx500_nodbg,
+#        bin_netx90_mpw_nodbg,
+#        bin_netx90_nodbg,
+#        bin_netx90_nodbg_secure,
+#        bin_netx56_nodbg,
+#        bin_netx50_nodbg,
+#        bin_netx10_nodbg,
+#        bin_netiol_nodbg,
+#        'bootpins_netx90/bootpins_netx90.bin')
+#
+#    tArcList.AddFiles('netx/hboot/unsigned/netx90/',
+#        hboot_netx90_flasher_bin,
+#        'helper_binaries/netx90/bootswitch.bin',
+#        'helper_binaries/netx90/read_sip_M2M.bin',
+#        'helper_binaries/netx90/return_exec.bin',
+#        'helper_binaries/netx90/set_kek.bin',
+#        'helper_binaries/netx90/verify_sig.bin',
+#        'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
+#        
+#    tArcList.AddFiles('netx/helper/netx90/',
+#        hboot_netx90_exec_bxlr_bin,
+#        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+#        'helper_binaries/netx90/set_kek.usp',
+#        set_sip_protection_cookie_com_usp)
+#        
+#    tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
+#        disable_security_settings_usp,
+#        disable_security_settings_com_usp,
+#        disable_security_settings_app_usp)
+#    
+#    tArcList.AddFiles('netx/debug/',
+#        bin_netx4000_dbg,
+#        bin_netx500_dbg,
+#        bin_netx90_mpw_dbg,
+#        bin_netx90_dbg,
+#        bin_netx56_dbg,
+#        bin_netx50_dbg,
+#        bin_netx10_dbg,
+#        bin_netiol_dbg)
+#
+#    tArcList.AddFiles('doc/',
+#        doc,
+#        tDocSpiFlashTypesHtml,
+#        tDocSpiFlashListTxt, 
+#        "doc/cli_flasher_changelog.txt")
+#
+#    tArcList.AddFiles('lua/',
+#        lua_flasher,
+#        'lua/flasher_test.lua',
+#        'lua/lua/helper_files.lua',
+#        'lua/lua/Version.lua',
+#        'lua/lua/wfp_control.lua', 
+#        'bootpins_netx90/bootpins.lua',
+#        'lua/lua/flasher_helper.lua', 
+#        'lua/lua/sipper.lua',
+#        'lua/lua/usip_generator.lua',
+#        'lua/lua/usip_player_conf.lua',
+#        'lua/lua/verify_signature.lua',
+#        )
+#
+#    tArcList.AddFiles('',
+#        'lua/cli_flash.lua',
+#        'lua/usip_player.lua',
+#        'lua/muhkuh_cli_init.lua',
+#        'lua/wfp.lua',
+#        'lua/wfp_verify.lua',
+#        lua_flasher_version)
 
-    # Split the group by dots.
-    aGroup = strGroup.split('.')
-    # Build the path for all artifacts.
-    strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
+#        'lua/demo_getBoardInfo.lua',
+#        'lua/erase_complete_flash.lua',
+#        'lua/erase_first_flash_sector.lua',
+#        'lua/erase_first_flash_sector_intflash0.lua',
+#        'lua/erase_first_flash_sector_intflash1.lua',
+#        'lua/erase_first_flash_sector_intflash2.lua',
+#        'lua/flash_intflash0.lua',
+#        'lua/flash_intflash1.lua',
+#        'lua/flash_intflash2.lua',
+#        'lua/flash_parflash.lua',
+#        'lua/flash_serflash.lua',
+#        'lua/get_erase_areas_parflash.lua',
+#        'lua/identify_intflash0.lua',
+#        'lua/identify_parflash.lua',
+#        'lua/identify_serflash.lua',
+#        'lua/is_erased_parflash.lua',
+#        'lua/netx90mpw_iflash.lua',
+#        'lua/read_bootimage.lua',
+#        'lua/read_bootimage_intflash0.lua',
+#        'lua/read_bootimage_intflash2.lua',
+#        'lua/read_complete_flash.lua',
+#        tDemoShowEraseAreas)
+
+    # # Split the group by dots.
+    # aGroup = strGroup.split('.')
+    # # Build the path for all artifacts.
+    # strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
 
 
-    strArtifact = 'lua5.4-flasher'
+    # strArtifact = 'lua5.4-flasher'
 
-    tArcList = atEnv.DEFAULT.ArchiveList('zip')
+    # tArcList = atEnv.DEFAULT.ArchiveList('zip')
 
-    tArcList.AddFiles('netx/',
-        bin_netx4000_nodbg,
-        bin_netx500_nodbg,
-        bin_netx90_mpw_nodbg,
-        bin_netx90_nodbg,
-        bin_netx90_nodbg_secure,
-        bin_netx56_nodbg,
-        bin_netx50_nodbg,
-        bin_netx10_nodbg,
-        bin_netiol_nodbg,
-        'bootpins_netx90/bootpins_netx90.bin')
+    # tArcList.AddFiles('netx/',
+    #     bin_netx4000_nodbg,
+    #     bin_netx500_nodbg,
+    #     bin_netx90_mpw_nodbg,
+    #     bin_netx90_nodbg,
+    #     bin_netx90_nodbg_secure,
+    #     bin_netx56_nodbg,
+    #     bin_netx50_nodbg,
+    #     bin_netx10_nodbg,
+    #     bin_netiol_nodbg,
+    #     'bootpins_netx90/bootpins_netx90.bin')
 
-    tArcList.AddFiles('netx/hboot/unsigned/netx90/',
-        hboot_netx90_flasher_bin,
-        'helper_binaries/netx90/bootswitch.bin',
-        'helper_binaries/netx90/read_sip_M2M.bin',
-        'helper_binaries/netx90/return_exec.bin',
-        'helper_binaries/netx90/set_kek.bin',
-        'helper_binaries/netx90/verify_sig.bin',
-        'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
+    # tArcList.AddFiles('netx/hboot/unsigned/netx90/',
+    #     hboot_netx90_flasher_bin,
+    #     'helper_binaries/netx90/bootswitch.bin',
+    #     'helper_binaries/netx90/read_sip_M2M.bin',
+    #     'helper_binaries/netx90/return_exec.bin',
+    #     'helper_binaries/netx90/set_kek.bin',
+    #     'helper_binaries/netx90/verify_sig.bin',
+    #     'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
         
-    tArcList.AddFiles('netx/helper/netx90/',
-        hboot_netx90_exec_bxlr_bin,
-        'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
-        'helper_binaries/netx90/app_sip_default_ff.bin',
-        'helper_binaries/netx90/com_sip_default_ff.bin',
-        'helper_binaries/netx90/set_kek.usp')
+    # tArcList.AddFiles('netx/helper/netx90/',
+    #     hboot_netx90_exec_bxlr_bin,
+    #     'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+    #     'helper_binaries/netx90/app_sip_default_ff.bin',
+    #     'helper_binaries/netx90/com_sip_default_ff.bin',
+    #     'helper_binaries/netx90/set_kek.usp')
         
-    tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
-        disable_security_settings_usp,
-        disable_security_settings_com_usp,
-        disable_security_settings_app_usp,
-        set_sip_protection_cookie_com_usp)
+    # tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
+    #     disable_security_settings_usp,
+    #     disable_security_settings_com_usp,
+    #     disable_security_settings_app_usp,
+    #     set_sip_protection_cookie_com_usp)
     
-    tArcList.AddFiles('netx/debug/',
-        bin_netx4000_dbg,
-        bin_netx500_dbg,
-        bin_netx90_mpw_dbg,
-        bin_netx90_dbg,
-        bin_netx56_dbg,
-        bin_netx50_dbg,
-        bin_netx10_dbg,
-        bin_netiol_dbg)
+    # tArcList.AddFiles('netx/debug/',
+    #     bin_netx4000_dbg,
+    #     bin_netx500_dbg,
+    #     bin_netx90_mpw_dbg,
+    #     bin_netx90_dbg,
+    #     bin_netx56_dbg,
+    #     bin_netx50_dbg,
+    #     bin_netx10_dbg,
+    #     bin_netiol_dbg)
 
-    tArcList.AddFiles('doc/',
-        doc,
-        tDocSpiFlashTypesHtml,
-        tDocSpiFlashListTxt, 
-        "doc/cli_flasher_changelog.txt")
+    # tArcList.AddFiles('doc/',
+    #     doc,
+    #     tDocSpiFlashTypesHtml,
+    #     tDocSpiFlashListTxt, 
+    #     "doc/cli_flasher_changelog.txt")
 
-    tArcList.AddFiles('lua/',
-        lua_flasher,
-        'lua/flasher_test.lua',
-        'lua/lua/muhkuh_cli_init.lua',
-        'lua/lua/wfp_verify.lua',
-        'lua/lua/helper_files.lua',
-        'lua/lua/Version.lua',
-        'lua/lua/wfp_control.lua', 
-        'bootpins_netx90/bootpins.lua',
-        'lua/lua/flasher_helper.lua', 
-        'lua/lua/sipper.lua',
-        'lua/lua/usip_generator.lua',
-        'lua/lua/usip_player_conf.lua',
-        'lua/lua/verify_signature.lua',
-        )
+    # tArcList.AddFiles('lua/',
+    #     lua_flasher,
+    #     'lua/flasher_test.lua',
+    #     'lua/lua/muhkuh_cli_init.lua',
+    #     'lua/lua/wfp_verify.lua',
+    #     'lua/lua/helper_files.lua',
+    #     'lua/lua/Version.lua',
+    #     'lua/lua/wfp_control.lua', 
+    #     'bootpins_netx90/bootpins.lua',
+    #     'lua/lua/flasher_helper.lua', 
+    #     'lua/lua/sipper.lua',
+    #     'lua/lua/usip_generator.lua',
+    #     'lua/lua/usip_player_conf.lua',
+    #     'lua/lua/verify_signature.lua',
+    #     )
 
-    tArcList.AddFiles('',
-        'lua/cli_flash.lua',
-        'lua/usip_player.lua',
-        'lua/demo_getBoardInfo.lua',
-        'lua/erase_complete_flash.lua',
-        'lua/erase_first_flash_sector.lua',
-        'lua/erase_first_flash_sector_intflash0.lua',
-        'lua/erase_first_flash_sector_intflash1.lua',
-        'lua/erase_first_flash_sector_intflash2.lua',
-        'lua/flash_intflash0.lua',
-        'lua/flash_intflash1.lua',
-        'lua/flash_intflash2.lua',
-        'lua/flash_parflash.lua',
-        'lua/flash_serflash.lua',
-        'lua/get_erase_areas_parflash.lua',
-        'lua/identify_intflash0.lua',
-        'lua/identify_parflash.lua',
-        'lua/identify_serflash.lua',
-        'lua/is_erased_parflash.lua',
-        'lua/netx90mpw_iflash.lua',
-        'lua/read_bootimage.lua',
-        'lua/read_bootimage_intflash0.lua',
-        'lua/read_bootimage_intflash2.lua',
-        'lua/read_complete_flash.lua',
-        'lua/wfp.lua',
-        lua_flasher_version,
-        tDemoShowEraseAreas)
+    # tArcList.AddFiles('',
+    #     'lua/cli_flash.lua',
+    #     'lua/usip_player.lua',
+    #     'lua/demo_getBoardInfo.lua',
+    #     'lua/erase_complete_flash.lua',
+    #     'lua/erase_first_flash_sector.lua',
+    #     'lua/erase_first_flash_sector_intflash0.lua',
+    #     'lua/erase_first_flash_sector_intflash1.lua',
+    #     'lua/erase_first_flash_sector_intflash2.lua',
+    #     'lua/flash_intflash0.lua',
+    #     'lua/flash_intflash1.lua',
+    #     'lua/flash_intflash2.lua',
+    #     'lua/flash_parflash.lua',
+    #     'lua/flash_serflash.lua',
+    #     'lua/get_erase_areas_parflash.lua',
+    #     'lua/identify_intflash0.lua',
+    #     'lua/identify_parflash.lua',
+    #     'lua/identify_serflash.lua',
+    #     'lua/is_erased_parflash.lua',
+    #     'lua/netx90mpw_iflash.lua',
+    #     'lua/read_bootimage.lua',
+    #     'lua/read_bootimage_intflash0.lua',
+    #     'lua/read_bootimage_intflash2.lua',
+    #     'lua/read_complete_flash.lua',
+    #     'lua/wfp.lua',
+    #     lua_flasher_version,
+    #     tDemoShowEraseAreas)
 
-    strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
-    tArtifact = atEnv.DEFAULT.Archive('%s.zip' % strBasePath, None, ARCHIVE_CONTENTS = tArcList)
+#    strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
+#    tArtifact = atEnv.DEFAULT.Archive('%s.zip' % strBasePath, None, ARCHIVE_CONTENTS = tArcList)
 
 
     #----------------------------------------------------------------------------
@@ -796,11 +906,11 @@ if fBuildIsFull==True:
         'targets/testbench/netx/helper/netx90/app_sip_default_ff.bin':                  'helper_binaries/netx90/app_sip_default_ff.bin',
         'targets/testbench/netx/helper/netx90/com_sip_default_ff.bin':                  'helper_binaries/netx90/com_sip_default_ff.bin',
         'targets/testbench/netx/helper/netx90/set_kek.usp':                             'helper_binaries/netx90/set_kek.usp',
+        'targets/testbench/netx/helper/netx90/set_sip_protection_cookie.usp':     set_sip_protection_cookie_com_usp,
 
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings.usp':     disable_security_settings_usp,
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings_com.usp': disable_security_settings_com_usp,
         'targets/testbench/netx/hboot/unsigned/netx90_usip/disable_security_settings_app.usp': disable_security_settings_app_usp,
-        'targets/testbench/netx/hboot/unsigned/netx90_usip/set_sip_protection_cookie.usp':     set_sip_protection_cookie_com_usp,
 
         'targets/testbench/doc/flasher.html':              doc,
         'targets/testbench/doc/spi_flash_types.html':      tDocSpiFlashTypesHtml,
@@ -859,6 +969,7 @@ if fBuildIsFull==True:
         'targets/flasher_lib/includes/spi_flash.h':                        'src/spi_flash.h',
         'targets/flasher_lib/includes/flasher_version.h':                  'targets/version/flasher_version.h',
         'targets/flasher_lib/includes/spi_flash_types.h':                  'targets/netx50_nodbg/spi_flash_types/spi_flash_types.h',
+        'targets/flasher_lib/includes/reset.h':                            'src/reset.h',
 
         'targets/flasher_lib/libflasher_netx4000.a':                       lib_netx4000_nodbg,
         'targets/flasher_lib/libflasher_netx500.a':                        lib_netx500_nodbg,

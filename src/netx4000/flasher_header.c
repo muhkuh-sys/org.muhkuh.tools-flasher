@@ -33,7 +33,7 @@ const FLASHER_VERSION_T flasher_version =
 	.ulVersionMajor = FLASHER_VERSION_MAJOR,
 	.ulVersionMinor = FLASHER_VERSION_MINOR,
 	.ulVersionMicro = FLASHER_VERSION_MICRO,
-	.acVersionVcs = FLASHER_VERSION_VCS,
+	.acVersionVcs = FLASHER_VERSION_GIT_ID,
 
 	.pulLoadAddress = __LOAD_ADDRESS__,
 	.pfnExecutionAddress = start,

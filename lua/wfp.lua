@@ -174,6 +174,8 @@ end
 
 local function printArgs(tArgs, tLog)
     print("")
+    print("Command line:" .. table.concat(arg, " ", -1, #arg))
+    print("")
     print("run wfp.lua with the following args:")
     print("------------------------------------")
     printTable(tArgs, 0)
@@ -735,28 +737,16 @@ tParserCommandFlash:flag('--disable_helper_signature_check')
                    :default(false)
 
 -- Add the "verify" command and all its options.
-local tParserCommandVerify = tParser:command('verify v', 'verify the contents of the WFP.')
-                                    :target('fCommandVerifySelected')
-tParserCommandVerify:argument('archive', 'The WFP file to process.')
-                    :target('strWfpArchiveFile')
-tParserCommandVerify:option('-c --condition')
-                    :description('Add a condition in the form KEY=VALUE.')
-                    :count('*')
-                    :target('astrConditions')
-tParserCommandVerify:option('-V --verbose')
-                    :description(string.format(
-                      'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                      table.concat(atLogLevels, ', ')
-                    ))
-                    :argname('<LEVEL>')
-                    :default('debug')
-                    :target('strLogLevel')
-tParserCommandVerify:option('-p --plugin_name')
-                    :description("plugin name")
-                    :target('strPluginName')
-tParserCommandVerify:option('-t --plugin_type')
-                    :description("plugin type")
-                    :target('strPluginType')
+local tParserCommandVerify = tParser:command('verify v', 'Verify the contents of the WFP.'):target(
+    'fCommandVerifySelected')
+tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
+tParserCommandVerify:option('-c --condition'):description(
+    'Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
+tParserCommandVerify:option('-V --verbose'):description(string.format(
+    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+     table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
 tParserCommandVerify:mutex(
     tParserCommandVerify:flag('--comp')
                         :description("use compatibility mode for netx90 M2M interfaces")
@@ -773,39 +763,27 @@ tParserCommandVerify:flag('--disable_helper_signature_check')
                     :default(false)
 
 -- Add the "Read" command and all its options.
-local tParserCommandRead = tParser:command("read r",
-                                           "read command based on XML control file.")
-                                  :target("fCommandReadSelected")
-tParserCommandRead:argument("xml", "The XML control file.")
-                  :target("strWfpControlFile")
-tParserCommandRead:argument("output_dir", "The destination path to create the backup.")
-                  :target("strBackupPath")
-tParserCommandRead:option("-a --archive", 'Create a WFP file from the output directory.')
-                  :default(nil)
-                  :target('strWfpArchiveFile')
-tParserCommandRead:flag('-s --simple')
-                  :description('Build a SWFP file without compression.')
-                  :default(false)
-                  :target('fBuildSWFP')
-tParserCommandRead:option("-V --verbose")
-                  :description(string.format(
-                    "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
-                    table.concat(atLogLevels, ", ")
-                  ))
-                  :argname("<LEVEL>")
-                  :default("debug")
-                  :target("strLogLevel")
-tParserCommandRead:option("-p --plugin_name")
-                  :description("plugin name")
-                  :target("strPluginName")
-tParserCommandRead:option('-t --plugin_type')
-                  :description("plugin type")
-                  :target('strPluginType')
-tParserCommandRead:flag("-o --overwrite")
-                  :description("Overwrite an existing folder. " ..
-                               "The default is to do nothing if the target folder already exists.")
-                  :default(false)
-                  :target("fOverwrite")
+local tParserCommandRead =
+    tParser:command("read r",
+     "Read command based on XML control file."):target("fCommandReadSelected")
+tParserCommandRead:argument("xml", "The XML control file."):target("strWfpControlFile")
+tParserCommandRead:argument("output_dir",
+ "The destination path to create the backup."):target("strBackupPath")
+tParserCommandRead:option("-a --archive",
+ 'Create a WFP file from the output directory.'):default(nil):target('strWfpArchiveFile')
+tParserCommandRead:flag('-s --simple'):description(
+    'Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
+tParserCommandRead:option("-V --verbose"):description(
+    string.format(
+        "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
+        table.concat(atLogLevels, ", ")
+    )
+):argname("<LEVEL>"):default("debug"):target("strLogLevel")
+tParserCommandRead:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
+tParserCommandRead:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+tParserCommandRead:flag("-o --overwrite"):description(
+    "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
+):default(false):target("fOverwrite")
 tParserCommandRead:mutex(
     tParserCommandRead:flag('--comp')
                       :description("use compatibility mode for netx90 M2M interfaces")
@@ -925,23 +903,6 @@ if tArgs.strSecureOption == nil then
 	tArgs.strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
 end
 
--- If a signed helper directory was specified (--sec)
--- and it is not the default (unsigned) directory,
--- and the flag --disable_helper_signature_check was not specified,
--- and the command is one that connects to the netx and uses the flasher,
--- set a list of helper files to be checked later after connecting.
-if tArgs.strSecureOption ~= nil
-and tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION
-and tArgs.fDisableHelperSignatureChecks ~= true then
-    if tArgs.fCommandFlashSelected               -- flash
-    or tArgs.fCommandReadSelected                -- read
-    or tArgs.fCommandVerifySelected              -- verify
-    or tArgs.fCommandExampleSelected             -- example
-    then
-        tArgs.aHelperKeysForSigCheck = {"start_mi", "flasher_netx90_hboot"}
-    end
-end
-
 -- moved requirements here to avoid prints before argparse
 require 'muhkuh_cli_init'
 --require 'flasher'
@@ -958,23 +919,71 @@ local strHelperFileStatus = tHelperFiles.getStatusString()
 print(strHelperFileStatus)
 print()
 
--- Register the CLI tester.
--- tester = require 'tester_cli'(tLog)
--- tester = require 'tester_cli'
--- Ask the user to select a plugin.
-_G.tester.fInteractivePluginSelection = true
+-- ===========================================================================================
 
-local strnetX90M2MImagePath = pl.path.join(tArgs.strSecureOption, "netx90")
 
-tLog.info("Trying to load netX 90 M2M image from %s", strnetX90M2MImagePath)
-
-local strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90M2MImagePath, "start_mi")
-if strnetX90M2MImageBin == nil then
-    tLog.info(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
-    -- tLog.info("Error: Failed to load netX 90 M2M image: %s", strMsg or "unknown error")
-    os.exit(1)
+local astrHelpersToCheck = {}
+    
+-- Define which helper fines are (potentially) required for the selected
+-- command and check presence and version.
+if tArgs.fCommandFlashSelected               -- flash
+or tArgs.fCommandReadSelected                -- read
+or tArgs.fCommandVerifySelected              -- verify
+or tArgs.fCommandExampleSelected             -- example
+or tArgs.fCommandCheckHelperSignatureSelected-- check_helper_signature
+then
+    astrHelpersToCheck = {"start_mi", "verify_sig", "flasher_netx90_hboot"}
 end
 
+local path = require 'pl.path'
+local strnetX90UnsignedHelperPath = pl.path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+local strnetX90HelperPath = path.join(tArgs.strSecureOption, "netx90")
+tLog.info("Helper path: %s", strnetX90HelperPath)
+local strnetX90M2MImageBin
+
+if #astrHelpersToCheck == 0 then
+    tLog.info ("No helper binaries required - Skipping version/signature tests.")
+else
+    tLog.info("Helpers to check:")
+    for _, v in ipairs (astrHelpersToCheck) do
+        tLog.info(v)
+    end
+
+    -- check the helper versions
+    local fHelpersOk = tHelperFiles.checkHelperFiles(
+        {strnetX90UnsignedHelperPath, strnetX90HelperPath},
+        astrHelpersToCheck)
+    if not fHelpersOk then
+        tLog.info("Error during file version checks.")
+        os.exit(1)
+    end
+
+    -- if any helpers are used at all, start_mi is always included.
+    strnetX90M2MImageBin, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "start_mi")
+    if strnetX90M2MImageBin == nil then
+        tLog.info(strMsg or "Error: Failed to load netX 90 M2M image (unknown error)")
+        os.exit(1)
+    end
+
+    -- if a signed helper directory is specified on the command line,
+    -- set aArgs.astrHelpersToSigCheck, unless --disable_helper_signature_check
+    -- is specified, too.
+    if tArgs.strSecureOption ~= nil 
+    and tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+        if tArgs.fDisableHelperSignatureChecks ~= true then
+            tArgs.aHelperKeysForSigCheck = astrHelpersToCheck
+        else
+            tLog.info("Skipping signature checks for helper files.")
+        end
+    end
+
+end
+
+
+
+-- ===========================================================================================
+
+-- construct the option list for DetectInterfaces
 local atPluginOptions = {
     romloader_jtag = {
         jtag_reset = "Attach", -- HardReset, SoftReset or Attach

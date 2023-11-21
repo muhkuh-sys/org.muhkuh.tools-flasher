@@ -1,4 +1,5 @@
-require("flasher")
+require("muhkuh_cli_init")
+flasher = require("flasher")
 
 if #arg~=1 then
 	error("Missing parameter: file to flash.")

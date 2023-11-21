@@ -188,7 +188,7 @@ end
 -- - Print the results
 
 function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions, strSecureOption)
-    tLog.info("Checking signatures of support files...**")
+    tLog.info("Checking signatures of helper files...**")
 
     local usipPlayerConf = require 'usip_player_conf'
     local strTmpFolderPath = usipPlayerConf.tempFolderConfPath
@@ -248,13 +248,13 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
   local atResults
   local strSecPathNx90 = path.join(strSecureOption, "netx90")
   local tHelperFiles = require 'helper_files'
-  local _, astrPaths, astrFileData = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+  local _, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
 
   if astrPaths == nil then
       fOk = false
       strMsg = "Bug: some helper files are unknown"
   else
-      tLog.info("Checking signatures of support files ...**")
+      tLog.info("Checking signatures of helper files ...**")
 
       local usipPlayerConf = require 'usip_player_conf'
       local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
@@ -267,7 +267,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
       else
           local strPluginType = tPlugin:GetTyp()
           fOk, atResults = M.verifySignature(
-              tPlugin, strPluginType, astrPaths, astrFileData, tempFolderConfPath, strVerifySigPath
+              tPlugin, strPluginType, astrFileData, astrPaths, tempFolderConfPath, strVerifySigPath
           )
 
           tHelperFiles.showFileCheckResults(atResults)
@@ -290,16 +290,30 @@ end
 
 
 function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    local fOk = true
+    local strMsg = nil
     local romloader = require 'romloader'
     local iChiptype = tPlugin:GetChiptyp()
+
     if (iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
         or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C
         or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D)
         and astrKeys ~= nil then
-        return verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeys)
-    else
-        return true
+
+        -- start_mi only needs to be checked when romloader_uart is used.
+        local strPluginType = tPlugin:GetTyp()
+        local astrKeysToCheck = {}
+        for i, strHelperKey in ipairs(astrKeys) do
+            if strHelperKey~="start_mi" or strPluginType == "romloader_uart" then
+                table.insert(astrKeysToCheck, strHelperKey)
+            end
+        end
+
+        fOk, strMsg = verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeysToCheck)
     end
+
+    return fOk, strMsg
 end
+
 
 return M

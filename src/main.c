@@ -33,6 +33,9 @@
 #include "spi_macro_player.h"
 #include "sha1.h"
 
+/* Reset functionality */
+#include "reset.h"
+
 #include "flasher_interface.h"
 #include "flasher_header.h"
 #include "units.h"
@@ -785,6 +788,15 @@ static NETX_CONSOLEAPP_RESULT_T opMode_identify(void)
 
 
 /* ------------------------------------- */
+static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
+{
+	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
+	uprintf("Activating watchdog\n");
+	retVal = resetNetX();
+	return retVal;
+}
+
+/* ------------------------------------- */
 
 #define FLAG_STARTADR 1
 #define FLAG_ENDADR 2
@@ -922,6 +934,12 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		ulPars = 0;
 		uprintf(". Mode: Visually identify hardware\n");
 		break;
+
+	case OPERATION_MODE_Reset:
+		ulPars = 0;
+		uprintf(". Mode: Reset netX from binary\n");
+		break;
+
 
 	default:
 		ulPars = 0;
@@ -1204,7 +1222,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 		if (tOpMode == OPERATION_MODE_Detect || tOpMode == OPERATION_MODE_GetBoardInfo) {
 		/* say hi if mode is Detect or GetBoardInfo*/
 			uprintf(
-			"\f\n\n\n\nFlasher v" FLASHER_VERSION_ALL " " FLASHER_VERSION_VCS "\n\n"
+			"\f\n\n\n\nFlasher v" FLASHER_VERSION_ALL " " FLASHER_VERSION_GIT_ID "\n\n"
 			"Copyright (C) 2005-2023 C.Thelen (cthelen@hilscher.com)\n"
 			"and M.Trensch.\n"
 			"There is NO warranty.  You may redistribute this software\n"
@@ -1274,6 +1292,10 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			
 			case OPERATION_MODE_Identify:
 				tResult = opMode_identify();
+				break;
+
+			case OPERATION_MODE_Reset:
+				tResult = opMode_reset();
 				break;
 			}
 		}

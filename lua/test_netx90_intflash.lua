@@ -1,5 +1,5 @@
 require("muhkuh_cli_init")
-require("flasher")
+flasher = require("flasher")
 
 function printf(...) print(string.format(...)) end
 

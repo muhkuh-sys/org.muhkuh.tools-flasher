@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2016 by Hilscher GmbH                                   *
+ *   Copyright (C) 2023 by Hilscher GmbH                                   *
  *   cthelen@hilscher.com                                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -18,48 +18,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifndef __RESET_H__
+#define __RESET_H__
 
-#include "flasher_header.h"
-
-#include "flasher_interface.h"
-#include "flasher_version.h"
 #include "netx_consoleapp.h"
 
+/**
+ * \brief Configures the watchdog and starts it.
+ * After 1 seconda watchdog reset will trigger.
+ * 
+ * \return NETX_CONSOLEAPP_RESULT_T NETX_CONSOLEAPP_RESULT_OK If the watchdog was activated
+ *                                  NETX_CONSOLEAPP_RESULT_ERROR If the chip type is not supported
+ */
+NETX_CONSOLEAPP_RESULT_T resetNetX(void);
 
-const FLASHER_VERSION_T flasher_version =
-{
-	.abMagic = { FLASHER_MAGIC0, FLASHER_MAGIC1, FLASHER_MAGIC2, FLASHER_MAGIC3 },
 
-	.ulVersionMajor = FLASHER_VERSION_MAJOR,
-	.ulVersionMinor = FLASHER_VERSION_MINOR,
-	.ulVersionMicro = FLASHER_VERSION_MICRO,
-	.acVersionVcs = FLASHER_VERSION_GIT_ID, // FLASHER_VERSION_VCS,
 
-	.pulLoadAddress = __LOAD_ADDRESS__,
-	.pfnExecutionAddress = start,
-
-	.pucBuffer_Parameter = __BUFFER_START__,
-	.pucBuffer_DeviceDescription = __BUFFER_START__ + sizeof(NETX_CONSOLEAPP_PARAMETER_T) + sizeof(tFlasherInputParameter),
-	.pucBuffer_Data = __BUFFER_START__ + sizeof(NETX_CONSOLEAPP_PARAMETER_T) + sizeof(tFlasherInputParameter) + sizeof(DEVICE_DESCRIPTION_T),
-	.pucBuffer_End = __BUFFER_END__,
-
-	.aulChiptyp =
-	{
-		FLASHER_CHIPTYP0_NETX90_MPW,
-
-		0
-	},
-	.aulIf =
-	{
-		FLASHER_IF0_NETX90_MPW_SPI,
-
-		0,
-
-		0,
-
-		0
-	}
-};
-
-/*-----------------------------------*/
+#endif	/* __RESET_H__ */
 

@@ -410,10 +410,10 @@ end
 
 
 if pcall(debug.getlocal, 4, 1) then
-    print("Sipper used as Library")
+    -- print("Sipper used as Library")
     -- do nothing
 else
-    print("Main file")
+    -- print("Main file")
     main()
 end
 
