@@ -12,10 +12,6 @@ local atLogLevels = {
     'fatal'
 }
 
-VERIFY_RESULT_OK = 0
-VERIFY_RESULT_ERROR = 1
-VERIFY_RESULT_FALSE = 2
-
 local tSignatures = {}
 tSignatures[1] = {}  --ECC
 tSignatures[1][1] = 64  -- 265
@@ -31,6 +27,10 @@ local Sipper = class()
 function Sipper:_init(tLog)
     print("initialize Sipper")
     self.tLog = tLog
+
+    self.VERIFY_RESULT_OK = 0
+    self.VERIFY_RESULT_ERROR = 1
+    self.VERIFY_RESULT_FALSE = 2
 end
 
 function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
@@ -41,7 +41,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
     --  2: (VERIFY_RESULT_FALSE) verification failed
 
 
-    local uResult = VERIFY_RESULT_OK
+    local uResult = self.VERIFY_RESULT_OK
     local strErrorMsg = ""
     local strCompareSipData
     local strCompSip
@@ -55,7 +55,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
             strCompareSipData = strAppSipData
             strCompSip = "APP"
         else
-            uResult = VERIFY_RESULT_ERROR
+            uResult = self.VERIFY_RESULT_ERROR
             strErrorMsg = string.format("Unknown Secure Info Page '%'",
                     tUsipChunk['page_type_int'])
             break
@@ -70,8 +70,12 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
             local strSipData = tSipDataHandle:read(tData['size_int'])
 
             if strSipData ~= tData['patched_data'] then
-                uResult = VERIFY_RESULT_FALSE
-                strErrorMsg = string.format("Data was not patched correctly to offset 0x%08x", tData['offset_int'])
+                uResult = self.VERIFY_RESULT_FALSE
+                strErrorMsg = string.format(
+                    "Data was not patched correctly on %s SIP to offset 0x%08x",
+                    strCompSip,
+                    tData['offset_int']
+                )
                 break
             end
         end
@@ -79,7 +83,7 @@ function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
     return uResult, strErrorMsg
 end
 
-function Sipper:compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize)
+function Sipper.compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize)
     local tResult = true
     local strErrorMsg = ""
     for idx=0, ulSize do
@@ -97,7 +101,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
 
     local tResult = true
     local strErrorMsg = ""
-    local strChunkID = nil
+    local strChunkID
     local strSkipSize
     local ulSkipSize
     local strChunkSize
@@ -131,10 +135,11 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
         strChunkID = tBinStringHandle:read(4)
 
         -- check the second expected offset for a secure chunk
-        --  - if the first chunk is a skip-chunk it could be possible that this chunk used for the FHV3-Header, skip that
-        -- chunk and check the next possible area for a secure chunk. The FHV3-Header-Skip chunk has always the same length!
-        --  - if the FHV3-Header is already set no skip chunk is found but also no secure chunk is found, check the next area
-        -- in this case.
+        --  - if the first chunk is a skip-chunk it could be possible that this chunk used for the FHV3-Header,
+        --    skip that chunk and check the next possible area for a secure chunk. The FHV3-Header-Skip chunk has
+        --    always the same length!
+        --  - if the FHV3-Header is already set no skip chunk is found but also no secure chunk is found, check the
+        --    next area in this case.
         if strChunkID == nil or strChunkID == "SKIP" then
             strSkipSize = tBinStringHandle:read(4)
             ulSkipSize = tFlasherHelper.bytes_to_uint32(strSkipSize) * 4
@@ -226,7 +231,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
                             "Unknown key strength extracted: %s (allowed are [1, 2, 3])", ulKeyStrength
                     )
                 end
-                local currentOffset = tBinStringHandle:seek()
+                tBinStringHandle:seek()
                 ulSignatureSize = tSignatures[ulKeyAlgorithm][ulKeyStrength]
                 strDataContent = tBinStringHandle:read(ulContentSize)
                 strSignature = tBinStringHandle:read(ulSignatureSize)
@@ -295,7 +300,8 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
             strChunkHash = tChunkHash:hash_end()
 
             print(tBinStringHandle:seek())
-            ulSignatureSize = ulChunkSize - ulReadSize + 8 -- chunk size does not include the chunk id and the chunk size itself
+            -- chunk size does not include the chunk id and the chunk size itself
+            ulSignatureSize = ulChunkSize - ulReadSize + 8
             strSignature = tBinStringHandle:read(ulSignatureSize)
         end
 
@@ -330,23 +336,19 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
                 print(string.len(strBindingData))
                 strBindingData = strBindingData .. strAnchorMask
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
                 print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 print(string.len(strBindingData))
             elseif ulPageSelect == 2 then
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-                strBindingData = strBindingData .. string.char(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
                 strBindingData = strBindingData .. strUUID
                 strBindingData = strBindingData .. strAnchor
                 strBindingData = strBindingData .. strUUIDMask
@@ -375,16 +377,22 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
 end
 
 
-function main()
+local function main()
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
-    local tUsipData
     local tParserCommandAnalyze = tParser:command('gen_data_block g', ''):target('fCommandAnalyzeSelected')
-    tParserCommandAnalyze:argument('input_file', 'input file'):target('strInputFilePath')
-    tParserCommandAnalyze:argument('output_file', 'output file'):target('strOutputFilePath'):default(nil)
-    tParserCommandAnalyze                    :option(
-            '-V --verbose'
-    )                                        :description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-            table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+    tParserCommandAnalyze:argument('input_file', 'input file')
+                         :target('strInputFilePath')
+    tParserCommandAnalyze:argument('output_file', 'output file')
+                         :target('strOutputFilePath')
+                         :default(nil)
+    tParserCommandAnalyze:option('-V --verbose')
+                         :description(string.format(
+                             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', ')
+                         ))
+                         :argname('<LEVEL>')
+                         :default('debug')
+                         :target('strLogLevel')
 
     local tArgs = tParser:parse()
 
@@ -395,7 +403,7 @@ function main()
 
     if tArgs.fCommandAnalyzeSelected == true then
         print("=== gen_data_block ===")
-        sipper = Sipper(tLog)
+        local sipper = Sipper(tLog)
         sipper:gen_data_block(tArgs.strInputFilePath, tArgs.strOutputFilePath)
     end
 end

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 1111
 #-------------------------------------------------------------------------#
 #   Copyright (C) 2011 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
@@ -147,6 +147,7 @@ flasher_sources_main_netx90 = """
 flasher_sources_lib_netx90 = """
 	src/netx90/board.c
 	src/netx90/cortexm_systick.c
+	src/netx90/sha384.c
 	src/drv_spi_hsoc_v2.c
 	src/drv_sqi.c
 	src/mmio.c
@@ -757,6 +758,110 @@ if fBuildIsFull==True:
 #        'lua/read_complete_flash.lua',
 #        tDemoShowEraseAreas)
 
+    # # Split the group by dots.
+    # aGroup = strGroup.split('.')
+    # # Build the path for all artifacts.
+    # strModulePath = 'targets/jonchki/repository/%s/%s/%s' % ('/'.join(aGroup), strModule, PROJECT_VERSION)
+
+
+    # strArtifact = 'lua5.4-flasher'
+
+    # tArcList = atEnv.DEFAULT.ArchiveList('zip')
+
+    # tArcList.AddFiles('netx/',
+    #     bin_netx4000_nodbg,
+    #     bin_netx500_nodbg,
+    #     bin_netx90_mpw_nodbg,
+    #     bin_netx90_nodbg,
+    #     bin_netx90_nodbg_secure,
+    #     bin_netx56_nodbg,
+    #     bin_netx50_nodbg,
+    #     bin_netx10_nodbg,
+    #     bin_netiol_nodbg,
+    #     'bootpins_netx90/bootpins_netx90.bin')
+
+    # tArcList.AddFiles('netx/hboot/unsigned/netx90/',
+    #     hboot_netx90_flasher_bin,
+    #     'helper_binaries/netx90/bootswitch.bin',
+    #     'helper_binaries/netx90/read_sip_M2M.bin',
+    #     'helper_binaries/netx90/return_exec.bin',
+    #     'helper_binaries/netx90/set_kek.bin',
+    #     'helper_binaries/netx90/verify_sig.bin',
+    #     'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin')
+        
+    # tArcList.AddFiles('netx/helper/netx90/',
+    #     hboot_netx90_exec_bxlr_bin,
+    #     'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+    #     'helper_binaries/netx90/app_sip_default_ff.bin',
+    #     'helper_binaries/netx90/com_sip_default_ff.bin',
+    #     'helper_binaries/netx90/set_kek.usp')
+        
+    # tArcList.AddFiles('netx/hboot/unsigned/netx90_usip/',
+    #     disable_security_settings_usp,
+    #     disable_security_settings_com_usp,
+    #     disable_security_settings_app_usp,
+    #     set_sip_protection_cookie_com_usp)
+    
+    # tArcList.AddFiles('netx/debug/',
+    #     bin_netx4000_dbg,
+    #     bin_netx500_dbg,
+    #     bin_netx90_mpw_dbg,
+    #     bin_netx90_dbg,
+    #     bin_netx56_dbg,
+    #     bin_netx50_dbg,
+    #     bin_netx10_dbg,
+    #     bin_netiol_dbg)
+
+    # tArcList.AddFiles('doc/',
+    #     doc,
+    #     tDocSpiFlashTypesHtml,
+    #     tDocSpiFlashListTxt, 
+    #     "doc/cli_flasher_changelog.txt")
+
+    # tArcList.AddFiles('lua/',
+    #     lua_flasher,
+    #     'lua/flasher_test.lua',
+    #     'lua/lua/muhkuh_cli_init.lua',
+    #     'lua/lua/wfp_verify.lua',
+    #     'lua/lua/helper_files.lua',
+    #     'lua/lua/Version.lua',
+    #     'lua/lua/wfp_control.lua', 
+    #     'bootpins_netx90/bootpins.lua',
+    #     'lua/lua/flasher_helper.lua', 
+    #     'lua/lua/sipper.lua',
+    #     'lua/lua/usip_generator.lua',
+    #     'lua/lua/usip_player_conf.lua',
+    #     'lua/lua/verify_signature.lua',
+    #     )
+
+    # tArcList.AddFiles('',
+    #     'lua/cli_flash.lua',
+    #     'lua/usip_player.lua',
+    #     'lua/demo_getBoardInfo.lua',
+    #     'lua/erase_complete_flash.lua',
+    #     'lua/erase_first_flash_sector.lua',
+    #     'lua/erase_first_flash_sector_intflash0.lua',
+    #     'lua/erase_first_flash_sector_intflash1.lua',
+    #     'lua/erase_first_flash_sector_intflash2.lua',
+    #     'lua/flash_intflash0.lua',
+    #     'lua/flash_intflash1.lua',
+    #     'lua/flash_intflash2.lua',
+    #     'lua/flash_parflash.lua',
+    #     'lua/flash_serflash.lua',
+    #     'lua/get_erase_areas_parflash.lua',
+    #     'lua/identify_intflash0.lua',
+    #     'lua/identify_parflash.lua',
+    #     'lua/identify_serflash.lua',
+    #     'lua/is_erased_parflash.lua',
+    #     'lua/netx90mpw_iflash.lua',
+    #     'lua/read_bootimage.lua',
+    #     'lua/read_bootimage_intflash0.lua',
+    #     'lua/read_bootimage_intflash2.lua',
+    #     'lua/read_complete_flash.lua',
+    #     'lua/wfp.lua',
+    #     lua_flasher_version,
+    #     tDemoShowEraseAreas)
+
 #    strBasePath = os.path.join(strModulePath, '%s-%s' % (strArtifact, PROJECT_VERSION))
 #    tArtifact = atEnv.DEFAULT.Archive('%s.zip' % strBasePath, None, ARCHIVE_CONTENTS = tArcList)
 
@@ -798,6 +903,8 @@ if fBuildIsFull==True:
 
         'targets/testbench/netx/helper/netx90/hboot_netx90_exec_bxlr.bin':              hboot_netx90_exec_bxlr_bin,
         'targets/testbench/netx/helper/netx90/com_default_rom_init_ff_netx90_rev2.bin': 'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
+        'targets/testbench/netx/helper/netx90/app_sip_default_ff.bin':                  'helper_binaries/netx90/app_sip_default_ff.bin',
+        'targets/testbench/netx/helper/netx90/com_sip_default_ff.bin':                  'helper_binaries/netx90/com_sip_default_ff.bin',
         'targets/testbench/netx/helper/netx90/set_kek.usp':                             'helper_binaries/netx90/set_kek.usp',
         'targets/testbench/netx/helper/netx90/set_sip_protection_cookie.usp':     set_sip_protection_cookie_com_usp,
 
@@ -818,7 +925,9 @@ if fBuildIsFull==True:
         'targets/testbench/lua/flasher_helper.lua':                        'lua/lua/flasher_helper.lua', 
         'targets/testbench/lua/flasher_test.lua':                          'lua/flasher_test.lua',
         'targets/testbench/lua/helper_files.lua':                          'lua/lua/helper_files.lua', 
+        'targets/testbench/lua/muhkuh_cli_init.lua':                       'lua/lua/muhkuh_cli_init.lua',
         'targets/testbench/lua/sipper.lua':                                'lua/lua/sipper.lua',
+        'targets/testbench/lua/wfp_verify.lua':                            'lua/lua/wfp_verify.lua',
         'targets/testbench/lua/verify_signature.lua':                      'lua/lua/verify_signature.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
@@ -826,33 +935,30 @@ if fBuildIsFull==True:
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,
         'targets/testbench/cli_flash.lua':                                 'lua/cli_flash.lua',
-        'targets/testbench/muhkuh_cli_init.lua':                           'lua/muhkuh_cli_init.lua',
+        'targets/testbench/demo_getBoardInfo.lua':                         'lua/demo_getBoardInfo.lua',
+        'targets/testbench/erase_complete_flash.lua':                      'lua/erase_complete_flash.lua',
+        'targets/testbench/erase_first_flash_sector.lua':                  'lua/erase_first_flash_sector.lua',
+        'targets/testbench/erase_first_flash_sector_intflash0.lua':        'lua/erase_first_flash_sector_intflash0.lua',
+        'targets/testbench/erase_first_flash_sector_intflash1.lua':        'lua/erase_first_flash_sector_intflash1.lua',
+        'targets/testbench/erase_first_flash_sector_intflash2.lua':        'lua/erase_first_flash_sector_intflash2.lua',
+        'targets/testbench/flash_intflash0.lua':                           'lua/flash_intflash0.lua',
+        'targets/testbench/flash_intflash1.lua':                           'lua/flash_intflash1.lua',
+        'targets/testbench/flash_intflash2.lua':                           'lua/flash_intflash2.lua',
+        'targets/testbench/flash_parflash.lua':                            'lua/flash_parflash.lua',
+        'targets/testbench/flash_serflash.lua':                            'lua/flash_serflash.lua',
+        'targets/testbench/get_erase_areas_parflash.lua':                  'lua/get_erase_areas_parflash.lua',
+        'targets/testbench/identify_intflash0.lua':                        'lua/identify_intflash0.lua',
+        'targets/testbench/identify_parflash.lua':                         'lua/identify_parflash.lua',
+        'targets/testbench/identify_serflash.lua':                         'lua/identify_serflash.lua',
+        'targets/testbench/is_erased_parflash.lua':                        'lua/is_erased_parflash.lua',
+        'targets/testbench/netx90mpw_iflash.lua':                          'lua/netx90mpw_iflash.lua',
+        'targets/testbench/read_bootimage.lua':                            'lua/read_bootimage.lua',
+        'targets/testbench/read_bootimage_intflash0.lua':                  'lua/read_bootimage_intflash0.lua',
+        'targets/testbench/read_bootimage_intflash2.lua':                  'lua/read_bootimage_intflash2.lua',
+        'targets/testbench/read_complete_flash.lua':                       'lua/read_complete_flash.lua',
         'targets/testbench/usip_player.lua':                               'lua/usip_player.lua',
         'targets/testbench/wfp.lua':                                       'lua/wfp.lua',
-        'targets/testbench/wfp_verify.lua':                                'lua/wfp_verify.lua',
-        
-#        'targets/testbench/demo_getBoardInfo.lua':                         'lua/demo_getBoardInfo.lua',
-#        'targets/testbench/erase_complete_flash.lua':                      'lua/erase_complete_flash.lua',
-#        'targets/testbench/erase_first_flash_sector.lua':                  'lua/erase_first_flash_sector.lua',
-#        'targets/testbench/erase_first_flash_sector_intflash0.lua':        'lua/erase_first_flash_sector_intflash0.lua',
-#        'targets/testbench/erase_first_flash_sector_intflash1.lua':        'lua/erase_first_flash_sector_intflash1.lua',
-#        'targets/testbench/erase_first_flash_sector_intflash2.lua':        'lua/erase_first_flash_sector_intflash2.lua',
-#        'targets/testbench/flash_intflash0.lua':                           'lua/flash_intflash0.lua',
-#        'targets/testbench/flash_intflash1.lua':                           'lua/flash_intflash1.lua',
-#        'targets/testbench/flash_intflash2.lua':                           'lua/flash_intflash2.lua',
-#        'targets/testbench/flash_parflash.lua':                            'lua/flash_parflash.lua',
-#        'targets/testbench/flash_serflash.lua':                            'lua/flash_serflash.lua',
-#        'targets/testbench/get_erase_areas_parflash.lua':                  'lua/get_erase_areas_parflash.lua',
-#        'targets/testbench/identify_intflash0.lua':                        'lua/identify_intflash0.lua',
-#        'targets/testbench/identify_parflash.lua':                         'lua/identify_parflash.lua',
-#        'targets/testbench/identify_serflash.lua':                         'lua/identify_serflash.lua',
-#        'targets/testbench/is_erased_parflash.lua':                        'lua/is_erased_parflash.lua',
-#        'targets/testbench/netx90mpw_iflash.lua':                          'lua/netx90mpw_iflash.lua',
-#        'targets/testbench/read_bootimage.lua':                            'lua/read_bootimage.lua',
-#        'targets/testbench/read_bootimage_intflash0.lua':                  'lua/read_bootimage_intflash0.lua',
-#        'targets/testbench/read_bootimage_intflash2.lua':                  'lua/read_bootimage_intflash2.lua',
-#        'targets/testbench/read_complete_flash.lua':                       'lua/read_complete_flash.lua',
-#        'targets/testbench/show_erase_areas.lua':                          tDemoShowEraseAreas,
+        'targets/testbench/show_erase_areas.lua':                          tDemoShowEraseAreas,
 
         # collect the lib files in a directory
         'targets/flasher_lib/includes/spi.h':                              'src/spi.h',

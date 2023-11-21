@@ -19,10 +19,10 @@ function WfpControl:_init(tLogWriter)
   self.lxp = require 'lxp'
 
   -- Get the logger object from the system configuration.
-  local tLogWriter = require 'log.writer.prefix'.new('[WfpControl] ', tLogWriter)
+  local tLogWriterWfp = require 'log.writer.prefix'.new('[WfpControl] ', tLogWriter)
   self.tLog = require 'log'.new(
     'trace',
-    tLogWriter,
+    tLogWriterWfp,
     require 'log.formatter.format'.new()
   )
 
@@ -44,6 +44,7 @@ function WfpControl:_init(tLogWriter)
   self.atConditions = nil
 
   -- Map chip type to the name.
+  local romloader = require 'romloader'
   self.atChiptyp2name = {
     [romloader.ROMLOADER_CHIPTYP_NETX500]          = "NETX500",
     [romloader.ROMLOADER_CHIPTYP_NETX100]          = "NETX500",
@@ -130,7 +131,7 @@ end
 
 
 
-function WfpControl:__get_file_contents(tEntry)
+function WfpControl:__get_file_contents()
   local tFileData = {}
   for strData in self.tArchive:iter_data(16384) do
     table.insert(tFileData, strData)
@@ -147,7 +148,7 @@ function WfpControl:getData(strFile)
   if tData==nil then
     tLog.error('Data file "%s" not found in the WFP archive "%s"!', strFile, self.strWfpArchiveFile)
   else
-    strData = self:__get_file_contents(tData)
+    strData = self:__get_file_contents()
   end
 
   return strData
@@ -164,11 +165,11 @@ local atStringToBool = {
   ["NO"]    = false,
   ["Y"]     = true,
   ["N"]     = false,
-  ["1"]     = true, 
+  ["1"]     = true,
   ["0"]     = false
 }
 
---- Map a string value to a boolean value. 
+--- Map a string value to a boolean value.
 -- Accepts a variety of inputs:
 -- true/false, t/f, yes/no, y/n, 1/0 independent of case.
 -- see hboot_image.py __string_to_bool
@@ -177,7 +178,7 @@ local atStringToBool = {
 local function stringToBool(strBool)
   strBool = string.upper(strBool)
   return atStringToBool[strBool]
-end 
+end
 
 --- Expat callback function for starting an element.
 -- This function is part of the callbacks for the expat parser.
@@ -186,7 +187,7 @@ end
 -- @param strName The name of the new element.
 function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
   local aLxpAttr = tParser:getcallbacks().userdata
-  local iPosLine, iPosColumn, iPosAbs = tParser:pos()
+  local iPosLine, iPosColumn = tParser:pos()
 
   table.insert(aLxpAttr.atCurrentPath, strName)
   local strCurrentPath = table.concat(aLxpAttr.atCurrentPath, "/")
@@ -210,24 +211,33 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       -- Reject the control file if the version is >= 1.4
       local tVersion_1_4 = aLxpAttr.Version()
       tVersion_1_4:set("1.4")
-      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then 
+      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: Control file version %s is not supported', iPosLine, iPosColumn, strVersion)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: Control file version %s is not supported',
+          iPosLine,
+          iPosColumn,
+          strVersion
+        )
       end
 
       -- Print a warning if the version is < 1.2 but the has_subdirs attribute is used
       local tVersion_1_2 = aLxpAttr.Version()
       tVersion_1_2:set("1.2")
-      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then 
-        aLxpAttr.tLog.warning('Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute', iPosLine, iPosColumn)
-      end 
-      
+      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then
+        aLxpAttr.tLog.warning(
+          'Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute',
+          iPosLine,
+          iPosColumn
+        )
+      end
+
       -- Evaluate the value of has_subdirs to a boolean value.
       -- Default is false if has_subdirs is not present.
-      local fHasSubdirs 
+      local fHasSubdirs
       if strHasSubdirs == nil then
-        fHasSubdirs = false 
-      else 
+        fHasSubdirs = false
+      else
         fHasSubdirs = stringToBool(strHasSubdirs)
         if fHasSubdirs==nil then
           aLxpAttr.tResult = nil
@@ -235,13 +245,13 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         end
       end
       aLxpAttr.fHasSubdirs = fHasSubdirs
-      
+
     end
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
     -- The attribute "name" is required.
-    local strName = atAttributes['name']
-    if strName==nil or strName=='' then
+    local strConditionName = atAttributes['name']
+    if strConditionName==nil or strConditionName=='' then
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: missing attribute "name".', iPosLine, iPosColumn)
     else
@@ -255,9 +265,13 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       end
       if strTest~='none' and strTest~='list' and strTest~='re' then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: invalid attribute "test", must be "none", "list" or "re".', iPosLine, iPosColumn)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: invalid attribute "test", must be "none", "list" or "re".',
+          iPosLine,
+          iPosColumn
+        )
       else
-        aLxpAttr.tCondition = { name=strName, default=strDefault, test=strTest }
+        aLxpAttr.tCondition = { name=strConditionName, default=strDefault, test=strTest }
       end
     end
 
@@ -289,7 +303,12 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       ulUnit = tonumber(strUnit)
       if ulUnit==nil then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "unit" is no number: "%s".', iPosLine, iPosColumn, strUnit)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: attribute "unit" is no number: "%s".',
+          iPosLine,
+          iPosColumn,
+          strUnit
+        )
       end
     end
 
@@ -302,7 +321,23 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       ulChipSelect = tonumber(strChipSelect)
       if ulChipSelect==nil then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "chip_select" is no number: "%s".', iPosLine, iPosColumn, strChipSelect)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: attribute "chip_select" is no number: "%s".',
+          iPosLine,
+          iPosColumn,
+          strChipSelect
+        )
+      -- Do not allow the internal chip select 3 for the info pages.
+      elseif strBus=='IFlash' and (ulUnit==1 or ulUnit==2) and ulChipSelect==3 then
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: invalid combination of bus, unit and chipselect: %s/%d/%d',
+          iPosLine,
+          iPosColumn,
+          strBus,
+          ulUnit,
+          ulChipSelect
+        )
       end
     end
 
@@ -320,14 +355,22 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: more than one "Requirements" node found. Only one is allowed.')
     else
+      local ulMinimumSize
+      local ulBlockSize
+
       local strMinimumSize = atAttributes['minimum_size']
       if strMinimumSize==nil or strMinimumSize=='' then
         -- No minimum size specified.
       else
-        local ulMinimumSize = tonumber(strMinimumSize)
+        ulMinimumSize = tonumber(strMinimumSize)
         if ulMinimumSize==nil then
           aLxpAttr.tResult = nil
-          aLxpAttr.tLog.error('Error in line %d, col %d: attribute "minimum_size" is no number: "%s".', iPosLine, iPosColumn, strMinimumSize)
+          aLxpAttr.tLog.error(
+            'Error in line %d, col %d: attribute "minimum_size" is no number: "%s".',
+            iPosLine,
+            iPosColumn,
+            strMinimumSize
+          )
         end
       end
 
@@ -335,10 +378,15 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       if strBlockSize==nil or strBlockSize=='' then
         -- No block size specified.
       else
-        local ulBlockSize = tonumber(strBlockSize)
+        ulBlockSize = tonumber(strBlockSize)
         if ulBlockSize==nil then
           aLxpAttr.tResult = nil
-          aLxpAttr.tLog.error('Error in line %d, col %d: attribute "block_size" is no number: "%s".', iPosLine, iPosColumn, strBlockSize)
+          aLxpAttr.tLog.error(
+            'Error in line %d, col %d: attribute "block_size" is no number: "%s".',
+            iPosLine,
+            iPosColumn,
+            strBlockSize
+          )
         end
       end
 
@@ -363,7 +411,12 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       local ulOffset = tonumber(strOffset)
       if ulOffset==nil then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: attribute "offset" is no number: "%s".',
+          iPosLine,
+          iPosColumn,
+          strOffset
+        )
       end
       local strSize = atAttributes["size"]
       local ulSize
@@ -373,7 +426,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           --aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is not set.', iPosLine, iPosColumn)
       else
           ulSize = tonumber(strSize)
-        
+
       end
       local strCondition = atAttributes['condition']
       if strCondition==nil then
@@ -400,7 +453,12 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
       local ulOffset = tonumber(strOffset)
       if ulOffset==nil then
         aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "offset" is no number: "%s".', iPosLine, iPosColumn, strOffset)
+        aLxpAttr.tLog.error(
+          'Error in line %d, col %d: attribute "offset" is no number: "%s".',
+          iPosLine,
+          iPosColumn,
+          strOffset
+        )
       else
         local strSize = atAttributes['size']
         if strSize==nil or strSize=='' then
@@ -411,7 +469,12 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           local ulSize = tonumber(strSize)
           if ulSize==nil then
             aLxpAttr.tResult = nil
-            aLxpAttr.tLog.error('Error in line %d, col %d: attribute "size" is no number: "%s".', iPosLine, iPosColumn, strSize)
+            aLxpAttr.tLog.error(
+              'Error in line %d, col %d: attribute "size" is no number: "%s".',
+              iPosLine,
+              iPosColumn,
+              strSize
+            )
           else
             local strCondition = atAttributes['condition']
             if strCondition==nil then
@@ -429,6 +492,103 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         end
       end
     end
+
+  elseif strCurrentPath=='/FlasherPackage/Target/Sip' then
+    -- Get the mandatory attribute "page". It can have the values "COM" or "APP" in any upper/lower case.
+    local strPage = atAttributes['page']
+    if strPage==nil or strPage=='' then
+      -- No page specified.
+      aLxpAttr.tResult = nil
+      aLxpAttr.tLog.error('Error in line %d, col %d: attribute "page" is not set.', iPosLine, iPosColumn)
+    else
+      strPage = string.upper(strPage)
+      if strPage~='COM' and strPage~='APP' then
+        -- Invalid "page" value.
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: attribute "page" must be "COM" or "APP".', iPosLine, iPosColumn)
+      else
+        -- Get the mandatory attribute "file".
+        local strFile = atAttributes['file']
+        if strFile==nil or strFile=='' then
+          -- No file specified.
+          aLxpAttr.tResult = nil
+          aLxpAttr.tLog.error('Error in line %d, col %d: attribute "file" is not set.', iPosLine, iPosColumn)
+        else
+          -- Get the optional attribute "setKEK". The default value is "false".
+          local fSetKEK = false
+          local strSetKEK = atAttributes['setKEK']
+          if strSetKEK~=nil and strSetKEK~='' then
+            fSetKEK = stringToBool(strSetKEK)
+          end
+          if fSetKEK==nil then
+            -- Invalid "setKEK".
+            aLxpAttr.tResult = nil
+            aLxpAttr.tLog.error(
+              'Error in line %d, col %d: attribute "setKEK" must evaluate to a boolean.',
+              iPosLine,
+              iPosColumn
+            )
+          else
+            -- Get the optional attribute "condition". The default value is the empty string.
+            local strCondition = atAttributes['condition']
+            if strCondition==nil then
+              strCondition = ''
+            end
+
+            -- Translate the "page" and "setKEK" attributes to unit and chipselect.
+            local ulUnit
+            local ulChipSelect
+            local fDouble = false
+            if strPage=='COM' then
+              -- Write the COM page. This is unit 1.
+              ulUnit = 1
+              -- If the KEK should be set, the page must be patched. This is achieved with CS 3.
+              -- If the KEK should not be set, the unmodified page should be written. This is achieved with CS 1.
+              --
+              -- The following expression results to 3 if "fSetKEK" is true, and 1 if it is false.
+              ulChipSelect = fSetKEK and 3 or 1
+
+              -- CS 3 handles the duplication of the SIP internally.
+              -- CS 1 needs 2 separate entries.
+              if ulChipSelect~=3 then
+                fDouble = true
+              end
+            else
+              -- Write the APP page. This is unit 2.
+              ulUnit = 2
+              -- The calibration is always set. This is achieved with CS 3.
+              ulChipSelect = 3
+            end
+
+            -- Create a new data entry.
+            local atData = {
+              {
+                strType = "Data",
+                strFile = strFile,
+                ulOffset = 0,
+                strCondition = strCondition
+              }
+            }
+            if fDouble then
+              table.insert(atData, {
+                strType = "Data",
+                strFile = strFile,
+                ulOffset = 4096,
+                strCondition = strCondition
+              })
+            end
+
+            -- Create a new flash entry in the current target.
+            table.insert(aLxpAttr.tCurrentTarget.atFlashes, {
+              strBus = 'IFlash',
+              ulUnit = ulUnit,
+              ulChipSelect = ulChipSelect,
+              atData = atData
+            })
+          end
+        end
+      end
+    end
   end
 
 end
@@ -440,9 +600,8 @@ end
 -- It is called when an element is closed.
 -- @param tParser The parser object.
 -- @param strName The name of the closed element.
-function WfpControl.__parseCfg_EndElement(tParser, strName)
+function WfpControl.__parseCfg_EndElement(tParser)
   local aLxpAttr = tParser:getcallbacks().userdata
-  local iPosLine, iPosColumn, iPosAbs = tParser:pos()
 
   local strCurrentPath = aLxpAttr.strCurrentPath
   if strCurrentPath=='/FlasherPackage/Conditions/Condition' then
@@ -537,7 +696,13 @@ function WfpControl:__parse_configuration(strConfiguration)
   end
 
   if tParseResult==nil then
-    self.tLog.error('Failed to parse the configuration: %s in line %d, column %d, position %d.', strMsg, uiLine, uiCol, uiPos)
+    self.tLog.error(
+      'Failed to parse the configuration: %s in line %d, column %d, position %d.',
+      strMsg,
+      uiLine,
+      uiCol,
+      uiPos
+    )
   elseif aLxpAttr.tResult~=true then
     self.tLog.error('Failed to parse the configuration.')
   else
@@ -634,7 +799,6 @@ end
 
 function WfpControl:__runInSandbox(atValues, strExpression)
   local tResult
-  local tLog = self.tLog
   local pl = self.pl
 
   -- Create a sandbox.
@@ -653,7 +817,6 @@ function WfpControl:__runInSandbox(atValues, strExpression)
     ['table']=table
   }
   for strKey, tValue in pairs(atValues) do
-    local strValue
     local strType = type(tValue)
     if strType~='number' and strType~='boolean' and strType~='string' then
       error(string.format('Invalid value type for key %s: %s', strKey, strType))
@@ -667,7 +830,7 @@ function WfpControl:__runInSandbox(atValues, strExpression)
   end
   local fRun, tFnResult = pcall(tFn)
   if fRun==false then
-    error(string.format('Failed to run the expression "%s": %s', strExpression, tostring(tResult)))
+    error(string.format('Failed to run the expression "%s": %s', strExpression, tostring(tFnResult)))
   end
   local strType = type(tFnResult)
   if strType~='boolean' then
@@ -708,7 +871,7 @@ end
 --- Get the value of tVersion.
 -- @return a version
 function WfpControl:getVersion()
-  
+
   return self.tConfigurationVersion
 end
 

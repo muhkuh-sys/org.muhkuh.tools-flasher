@@ -24,6 +24,10 @@ local tVerifySignature = require 'verify_signature'
 -- uncomment for debugging with LuaPanda
 -- require("LuaPanda").start("127.0.0.1",8818)
 
+local NETX90_DEFAULT_COM_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "com_sip_default_ff.bin")
+local NETX90_DEFAULT_APP_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "app_sip_default_ff.bin")
+
+
 -- global variables
 -- all supported log levels
 local atLogLevels = {
@@ -36,14 +40,11 @@ local atLogLevels = {
 
 
 
-local separator = package.config:sub(1,1)
-local fIsRev2
-
 --------------------------------------------------------------------------
 -- ArgParser
 --------------------------------------------------------------------------
 
-strUsipPlayerGeneralHelp = [[
+local strUsipPlayerGeneralHelp = [[
     The USIP-Player is a Flasher extension to modify, read-out and verify the Secure-Info-Pages on a netX90.
 
     The secure info pages (SIPs) are a part of the secure boot functionality of the netX90 and are not supposed
@@ -96,7 +97,7 @@ tParser:flag "--enable_temp_files":hidden(true)
     end)
 
 -- Add the "usip" command and all its options.
-strBootswitchHelp = [[
+local strBootswitchHelp = [[
     Control the boot process after the execution of the sip update.
 
     Options:
@@ -107,12 +108,12 @@ strBootswitchHelp = [[
 ]]
 
 -- todo change help string
-strHelpSecP2 = [[
+local strHelpSecP2 = [[
     Path to helper files that are used after the last usip was executed.
 ]]
 
 
-strUsipHelp = [[
+local strUsipHelp = [[
     Loads an usip file on the netX, reset the netX and process
     the usip file to update the SecureInfoPage and continue standard boot process.
 ]]
@@ -154,13 +155,83 @@ tParserCommandUsip:flag('--disable_helper_signature_check')
 -- todo add more help here
 tParserCommandUsip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCommandUsip:option('--sec_phase2 --sec_p2'):description(strHelpSecP2):target('strSecureOptionPhaseTwo')
+tParserCommandUsip:flag('--no_reset'
+):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
+):target('fDisableReset'):default(false)
 
+
+-- NXTFLASHER-565
+local strWriteSipsHelp = [[
+    write APP and COM secure info page (SIP) based on default values
+    the default values can be modified with the data from an USIP file
+    the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+]]
+local tParserWriteSips = tParser:command('write_sips ws', strWriteSipsHelp):target('fCommandWriteSips')
+tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+tParserWriteSips:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserWriteSips:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserWriteSips:option('--com_sip'):description("com SIP binary size 4kB"):target(
+    'strComSipBinPath'):default(NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
+tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
+    'strAppSipBinPath'):default(NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
+tParserWriteSips:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+-- maybe keep option '--_no_verify'
+tParserWriteSips:flag('--no_verify'):description(
+    "Do not verify the content of an usip image against a netX SIP content after writing the usip."
+):target('fVerifyContentDisabled')
+tParserWriteSips:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
+tParserWriteSips:flag('--set_sip_protection')
+    :description('Set the SIP protection cookie.')
+    :target('fSetSipProtectionCookie')
+    :default(false)
+tParserWriteSips:option('--com_sip_output')
+    :description('Write the generated COM SIP page to COM_OUTPUT_FILE. Do not flash it to the device.')
+    :argname('<COM_OUTPUT_FILE>')
+    :target('strComOutputFile')
+tParserWriteSips:option('--app_sip_output')
+    :description('Write the generated APP SIP page to APP_OUTPUT_FILE. Do not flash it to the device.')
+    :argname('<APP_OUTPUT_FILE>')
+    :target('strAppOutputFile')
+
+
+-- NXTFLASHER-692
+local strVerifyInitialModeHelp = [[
+    verify that the netX is in an initial state which means:
+    - SIP protection cookie is not set
+    - secure boot mode is not enabled
+    - SIPs are not hidden
+    - CAL SIP rom func mode cookie is set
+]]
+local tParserVerifyInitialMode = tParser:command('verify_inital_mode vim', strVerifyInitialModeHelp):target('fCommandVerifyInitialMode')
+tParserVerifyInitialMode:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+tParserVerifyInitialMode:option(
+    '-V --verbose'
+):description(
+    string.format(
+        'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+    )
+):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserVerifyInitialMode:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+tParserVerifyInitialMode:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+tParserVerifyInitialMode:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 
 -- NXTFLASHER-603
 -- NXTFLASHER-550
 
 -- Add the "disable_security" command and all its options.
-strDisableSecurityHelp = [[
+local strDisableSecurityHelp = [[
     Disable security settings at COM and APP SIPs.
 
     The following parameters will be set:
@@ -180,7 +251,8 @@ strDisableSecurityHelp = [[
 
 ]]
 
-local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target('fCommandDisableSecurity')
+local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target(
+    'fCommandDisableSecurity')
 tParserCommandDisableSecurity:option(
     '-V --verbose'
 ):description(
@@ -205,8 +277,10 @@ tParserCommandDisableSecurity:flag('--no_verify'):description(
 :default(false)
 
 -- todo add more help here
-tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
-tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target('strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
+tParserCommandDisableSecurity:option('--sec'):description("Path to signed helper image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandDisableSecurity:option('--signed_usip'):description("Path to the signed USIP file"):target(
+    'strUsipFilePath'):default(path.join("netx", "hboot", "unsigned", "netx90_usip", "disable_security_settings.usp"))
 
 tParserCommandDisableSecurity:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
@@ -216,7 +290,7 @@ tParserCommandDisableSecurity:flag('--disable_helper_signature_check')
 
 
 -- Add the "set_sip_protection" command and all its options.
-strSetSipProtectionHelp = [[
+local strSetSipProtectionHelp = [[
     Set the SipProtectionCookie, enable protection of SIPs.
 
     The default COM SIP page for netX 90 rev2 is written.
@@ -232,7 +306,8 @@ strSetSipProtectionHelp = [[
     - update counter will be reset to zero
 ]]
 
-local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target('fCommandSipSelected')
+local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target(
+    'fCommandSipSelected')
 tParserCommandSip:option(
     '-V --verbose'
 ):description(
@@ -245,7 +320,7 @@ tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('
 
 
 -- Add the "set_kek" command and all its options.
-strSetKekHelp = [[
+local strSetKekHelp = [[
     Set the KEK (Key exchange key).
     If the input parameter is set an usip file is afterwards loaded on the netX,
     reset the netX and process \n the usip file to update the SecureInfoPage and
@@ -286,7 +361,7 @@ tParserCommandKek:flag('--no_reset'
 ):target('fDisableReset'):default(false)
 
 -- Add the "verify_content" command and all its options.
-strVerifyHelp = [[
+local strVerifyHelp = [[
     Verify the content of a usip file against the content of a secure info page
 ]]
 local tParserVerifyContent = tParser:command('verify v', strVerifyHelp):target('fCommandVerifySelected')
@@ -304,16 +379,18 @@ tParserVerifyContent:option('-i --input'):count("1"):description("USIP binary fi
 -- tParserVerifyContent:flag('--extend_exec'):description(
 --     "Use an execute-chunk to activate JTAG."
 -- ):target('fExtendExec')
-tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserVerifyContent:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserVerifyContent:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
-strCheckCookieHelp = [[
+local strCheckCookieHelp = [[
     Check if the SIP protection cookie is set
 ]]
-local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target('fCommandCheckSIPCookie')
+local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target(
+    'fCommandCheckSIPCookie')
 tParserCheckSIPCookie:option(
     '-V --verbose'
 ):description(
@@ -323,14 +400,15 @@ tParserCheckSIPCookie:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserCheckSIPCookie:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
 -- Add the "read_sip" command and all its options.
-strReadHelp = [[
+local strReadHelp = [[
     Read out the sip content and save it into a temporary folder
 ]]
 local tParserReadSip = tParser:command('read r', strReadHelp):target('fCommandReadSelected')
@@ -346,7 +424,8 @@ tParserReadSip:argument('output'):description(
 ):target("strOutputFolder")
 tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserReadSip:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserReadSip:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserReadSip:flag('--read_cal'):description(
         "additional read out and store the cal secure info page"):target('fReadCal')
 tParserReadSip:flag('--disable_helper_signature_check')
@@ -381,14 +460,16 @@ tParserGetUid:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserGetUid:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserGetUid:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserGetUid:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserGetUid:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 tParserGetUid:flag('--disable_helper_signature_check')
     :description('Disable signature checks on helper files.')
     :target('fDisableHelperSignatureChecks')
     :default(false)
 
 -- Add command check_helper_signature chs
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target(
+    'fCommandCheckHelperSignatureSelected')
 tParserCommandVerifyHelperSig:option(
     '-V --verbose'
 ):description(
@@ -398,7 +479,8 @@ tParserCommandVerifyHelperSig:option(
 ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandVerifyHelperSig:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target('strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target(
+    'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 
 -- parse args
@@ -451,6 +533,9 @@ require("romloader_jtag")
 
 -- options for the UART plugin
 -- Pass a boot image that starts the machine interface if the netx is in the UART terminal console.
+local strMsg
+local strnetX90M2MImageBin
+local strnetX90HelperPath
 
 -- TODO: clean up - use strSecureOptionDir/strSecureOptionPhaseTwoDir
 local strnetX90HelperPath = path.join(tArgs.strSecureOption, "netx90")
@@ -474,6 +559,8 @@ local atPluginOptions = {
 local atResetPluginOptions
 
 if tArgs.strSecureOption ~= tArgs.strSecureOptionPhaseTwo then
+    local strNetX90ResetM2MImageBin
+    local strNetX90ResetM2MImagePath
 
 
     local strnetX90ResetHelperPath = path.join(tArgs.strSecureOptionPhaseTwo, "netx90")
@@ -520,7 +607,7 @@ local atPluginOptionsFirstConnect = {
 
 
 -- TODO: no longer used
-function check_file(strFilePath)
+local function check_file(strFilePath)
     tLog.info("Checking if file exists: %s", strFilePath)
     if not path.exists(strFilePath) then
         tLog.error( "Could not find file %s", strFilePath)
@@ -531,39 +618,10 @@ function check_file(strFilePath)
 end
 
 
--- TODO: no longer used
--- strData, strMsg fileExeExists(strFilePath)
--- check if a .exe file exists.
--- first a check of the path with the .exe ending is performed, as a second attempt the file path without
--- the .exe ending is checked.
--- returns
---   true if file exists
---   false otherwise
-function fileExeExists(strFilePath)
-    local strExePath = string.format("%s.exe", strFilePath)
-    -- try to open a file with an .exe ending
-    local f = io.open(strExePath, "rb")
-    -- if the file exists, close it and return true
-    if f then
-        f:close()
-        return true
-    end
-    -- try to oopen a file without an .exe ending
-    f = io.open(strFilePath, "rb")
-    -- if the file exists just close it and return true
-    if f then
-        f:close()
-        return true
-    end
-    -- return nil if the file can not be opend because it does not exists
-    return f ~= nil
-end
-
-
 -- exists(folder)
 -- check if a folder exists
 -- returns true if the folder exists, otherwise false and an error message
-function exists(folder)
+local function exists(folder)
     local ok, err, code = os.rename(folder, folder)
     if not ok then
        if code == 13 then
@@ -572,57 +630,6 @@ function exists(folder)
        end
     end
     return ok, err
- end
-
-
--- TODO: no longer used
--- strEncodedData uuencode(strFilePath)
--- UU-encode a binary file
--- returns
---   uuencoded data
-function uuencode(strFilePath)
-    local strData
-    strData = tFlasherHelper.loadBin(strFilePath)
-
-    -- Create a new archive.
-    local tArchive = archive.ArchiveWrite()
-    -- Output only the data from the filters.
-    tArchive:set_format_raw()
-    -- Filter the input data with uuencode.
-    tArchive:add_filter_uuencode()
-    -- NOTE: 2 * the size of the input data is way to much.
-    tArchive:open_memory(string.len(strData)*2)
-
-    -- Now create a new archive entry - even if we do not have a real archive here.
-    -- It is necessary to set the filetype of the entry to "regular file", or no
-    -- data will arrive on the output side.
-    local tEntry = archive.ArchiveEntry()
-    tEntry:set_filetype(archive.AE_IFREG)
-    -- First write the header, then the data, the finish the entry.
-    tArchive:write_header(tEntry)
-    tArchive:write_data(strData)
-    tArchive:finish_entry()
-    -- Write only one entry, as this is no real archive.
-    tArchive:close()
-
-    -- Get encoded data.
-    local strEncodedData = tArchive:get_memory()
-    return strEncodedData
-end
-
-
--- printArgs(tArguments)
--- Print all arguments in a table
--- returns
---   nothing
-function printArgs(tArguments)
-    tLog.info("")
-    tLog.info("Command line:" .. table.concat(arg, " ", -1, #arg))
-    tLog.info("")
-    tLog.info("run usip_player.lua with the following args:")
-    tLog.info("--------------------------------------------")
-    printTable(tArguments, 0)
-    tLog.info("")
 end
 
 
@@ -630,12 +637,12 @@ end
 -- Print all elements from a table
 -- returns
 --   nothing
-function printTable(tTable, ulIndent)
+local function printTable(tTable, ulIndent)
     local strIndentSpace = string.rep(" ", ulIndent)
     for key, value in pairs(tTable) do
         if type(value) == "table" then
             tLog.info( "%s%s",strIndentSpace, key )
-            printTable(value, ulIndent + 4, tLog)
+            printTable(value, ulIndent + 4)
         else
             tLog.info( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
         end
@@ -646,27 +653,28 @@ function printTable(tTable, ulIndent)
 end
 
 
--- TODO: no longer used
--- strSerialPort getSerialPort(strPluginName)
--- get the serial port string depending on the romloader plugin name
-function getSerialPort(strPluginName)
-    strSerialPort = string.match( strPluginName, "romloader.uart.(.*)" )
-    if strSerialPort:find "tty" then
-        strSerialPort = "/dev/" .. strSerialPort
-    end
-    return strSerialPort
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+local function printArgs(tArguments)
+    tLog.info("")
+    tLog.info("run usip_player.lua with the following args:")
+    tLog.info("--------------------------------------------")
+    printTable(tArguments, 0)
+    tLog.info("")
 end
+
 
 -- strNetxName chiptypeToName(iChiptype)
 -- transfer integer chiptype into a netx name
 -- returns netX name as a string otherwise nil
-function chiptypeToName(iChiptype)
+local function chiptypeToName(iChiptype)
+    local romloader = _G.romloader
     local strNetxName
     -- First catch the unlikely case that "iChiptype" is nil.
 	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
-	if iChiptype==nil then
-		strNetxName = nil
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
+	if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
 		strNetxName = 'netx500'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
 		strNetxName = 'netx50'
@@ -674,15 +682,21 @@ function chiptypeToName(iChiptype)
 		strNetxName = 'netx10'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
 		strNetxName = 'netx56'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
 		strNetxName = 'netx4000'
 	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
 		strNetxName = 'netx90_mpw'
     elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
 		strNetxName = 'netx90_rev_0'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
 		strNetxName = 'netx90'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
 		strNetxName = 'netiol'
     else
         strNetxName = nil
@@ -696,10 +710,18 @@ end
 --------------------------------------------------------------------------
 
 
+local function loadDataToIntram(tPlugin, strData, ulLoadAddress)
+    tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
+    -- write the image to the netX
+    tFlasher.write_image(tPlugin, ulLoadAddress, strData)
+    tLog.info("Writing image complete!")
+    return true
+end
+
 -- LoadImage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
 -- load an image to a dedicated address
 -- returns nothing, in case of a romlaoder error MUHKUH_PLUGIN_ERROR <- ??
-function loadImage(tPlugin, strPath, ulLoadAddress)
+local function loadImage(tPlugin, strPath, ulLoadAddress)
     local fResult = false
     if path.exists(strPath) then
         tLog.info( "Loading image path: '%s'", strPath )
@@ -724,19 +746,11 @@ function loadImage(tPlugin, strPath, ulLoadAddress)
     return fResult
 end
 
-function loadDataToIntram(tPlugin, strData, ulLoadAddress)
-    tLog.debug( "Loading image to 0x%08x", ulLoadAddress )
-    -- write the image to the netX
-    tFlasher.write_image(tPlugin, ulLoadAddress, strData)
-    tLog.info("Writing image complete!")
-    return true
-end
-
 
 -- fResult loadUsipImage(tPlugin, strPath, fnCallbackProgress)
 -- Load an USIP image to 0x000200C0
 -- return true if the image was loaded correctly otherwise false
-function loadUsipImage(tPlugin, strPath, fnCallbackProgress)
+local function loadUsipImage(tPlugin, strPath, fnCallbackProgress)
     local fResult
     -- this address is necessary for the new usip commands in the MI-Interfaces
     local ulLoadAddress = 0x000200C0
@@ -749,7 +763,7 @@ end
 -- Load an image in the intram to probe it after an reset
 -- intram3 address is 0x20080000
 -- return true if the image was loaded correctly otherwise false
-function loadIntramImage(tPlugin, strPath, ulIntramLoadAddress)
+local function loadIntramImage(tPlugin, strPath, ulIntramLoadAddress)
     local fResult
     local ulLoadAddress
     if ulIntramLoadAddress  then
@@ -769,7 +783,7 @@ end
 -- make a reset via the WatchDog of the netX90, the reset will be triggert after 1 second
 -- returns
 --   nothing
-function resetNetx90ViaWdg(tPlugin)
+local function resetNetx90ViaWdg(tPlugin)
     tLog.debug("Trigger reset via watchdog.")
     -- Reset netx 90 via watchdog
     -- watchdog addresses
@@ -802,7 +816,7 @@ end
 -- loads an image into the intram, flushes the data and reset via watchdog
 -- returns
 --    nothing
-function execBinViaIntram(tPlugin, strUsipData, ulIntramLoadAddress)
+local function execBinViaIntram(tPlugin, strUsipData, ulIntramLoadAddress)
     local fResult
     local ulLoadAddress
     if ulIntramLoadAddress == nil then
@@ -848,7 +862,7 @@ end
 -- The header is not relevant at this point, because the header of the usip file is just checked once if
 -- the hash is correct and is not relevant for the usip process
 -- returns a list of all generated usip file paths and the output of the command
-function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
+local function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     local tResult
     local aDataList
     local tUsipNames
@@ -865,30 +879,8 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
 end
 
 
--- TODO: no longer used
--- fResult, strMsg extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, strBootswitchParam)
--- extend the usip file with the bootswitch and the bootswitch parameter
--- the bootswitch supports three console interfaces, ETH, UART and MFW
--- more information about the bootswitch can be found in the KB: https://kb.hilscher.com/x/CcBwBw
--- more information about the bootswitch in combination with an usip can be found in the
--- KB: https://kb.hilscher.com/x/0s2gBw
--- returns true, nil if everything went right, else false and a error message
-function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchParam)
-    local fResult = false
 
-    -- read the usip content
-    -- print("Loading USIP content ... ")
-    strUsipData, strMsg = tFlasherHelper.loadBin(strUsipPath)
-    if strUsipData then
-        fResult, strUsipData, strMsg = extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
-    else
-        tLog.info(strMsg or "Error: Failed to load '%s'", strUsipPath)
-    end
-
-    return fResult, strUsipData, strMsg
-end
-
-function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
+local function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
     -- result variable, be pessimistic
     local fResult = false
     local strMsg
@@ -962,29 +954,30 @@ function extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
 end
 
 
--- TODO: no longer used
--- fOk, strSingleUsipPath, strMsg extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
--- extend the usip file with an exec chunk that return immediately and activated the debugging
--- returns true and the file path to the combined file in case no error occur, otherwith an false and nil
--- returns always a info message.
-function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
+-- fResult, strMsg extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchFilePath, strBootswitchParam)
+-- extend the usip file with the bootswitch and the bootswitch parameter
+-- the bootswitch supports three console interfaces, ETH, UART and MFW
+-- more information about the bootswitch can be found in the KB: https://kb.hilscher.com/x/CcBwBw
+-- more information about the bootswitch in combination with an usip can be found in the
+-- KB: https://kb.hilscher.com/x/0s2gBw
+-- returns true, nil if everything went right, else false and a error message
+local function extendBootswitch(strUsipPath, strTmpFolderPath, strBootswitchParam)
     local fResult = false
-    local strMsg
-    local strUsipData
-       -- read the usip content
-    strUsipData = tFlasherHelper.loadBin(strUsipPath)
+
+    -- read the usip content
+    -- print("Loading USIP content ... ")
+    local strUsipData, strMsg = tFlasherHelper.loadBin(strUsipPath)
     if strUsipData then
-        fResult, strUsipData, strMsg = extendExecReturnData(
-                strUsipPath, strTmpFolderPath,
-                strExecReturnFilePath, strOutputFileName)
+        fResult, strUsipData, strMsg = extendBootswitchData(strUsipData, strTmpFolderPath, strBootswitchParam)
     else
-        strMsg = "Can not read out the usip data."
+        tLog.info(strMsg or "Error: Failed to load '%s'", strUsipPath)
     end
 
     return fResult, strUsipData, strMsg
 end
 
-function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
+
+local function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
     local fResult = false
     local strMsg
     local strExecReturnData
@@ -1024,12 +1017,34 @@ function extendExecReturnData(strUsipData, strTmpFolderPath, strExecReturnFilePa
 end
 
 
+-- fOk, strSingleUsipPath, strMsg extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath)
+-- extend the usip file with an exec chunk that return immediately and activated the debugging
+-- returns true and the file path to the combined file in case no error occur, otherwith an false and nil
+-- returns always a info message.
+local function extendExecReturn(strUsipPath, strTmpFolderPath, strExecReturnFilePath, strOutputFileName)
+    local fResult = false
+    local strMsg
+    local strUsipData
+       -- read the usip content
+    strUsipData = tFlasherHelper.loadBin(strUsipPath)
+    if strUsipData then
+        fResult, strUsipData, strMsg = extendExecReturnData(
+                strUsipPath, strTmpFolderPath,
+                strExecReturnFilePath, strOutputFileName)
+    else
+        strMsg = "Can not read out the usip data."
+    end
+
+    return fResult, strUsipData, strMsg
+end
+
+
 -- tPlugin loadUsip(strFilePath, tPlugin, strPluginType)
 -- loading an usip file
 -- loads an usip file via a dedicated interface and checks if the chiptype is supported
 -- returns the plugin, in case of a uart connection the plugin must be updated and a new plugin is returned
 
-function loadUsip(strUsipData, tPlugin, strPluginType)
+local function loadUsip(strUsipData, tPlugin, strPluginType)
 
     local ulRetries = 5
     local strError
@@ -1090,7 +1105,7 @@ end
 
 
 
-function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
+local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     local fResult = true
     local strErrorMsg = ""
 
@@ -1130,6 +1145,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
     local strPluginName = tPlugin:GetName()
     local strReadSipData = tFlasherHelper.loadBin(strHbootPath)
 
+    local fOk
     if tArgs.strBootswitchParams ~= nil and tArgs.strBootswitchParams ~= "JTAG" then
         tLog.debug("Extending read sip binary with bootswitch.")
         fOk, strReadSipData, strMsg = extendBootswitchData(
@@ -1201,6 +1217,7 @@ function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strEx
             while uLRetries > 0 do
                 tLog.info("try to get the Plugin again after read sip reset")
                 -- tPlugin = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+                local fCallSuccess
                 fCallSuccess, tPlugin = pcall(
                         tFlasherHelper.getPlugin, strPluginName, strPluginType, atPluginOptions)
                 if fCallSuccess then
@@ -1263,7 +1280,7 @@ end
 -- fOk verifyContent(strPluginType, tPlugin, strTmpFolderPath, strSipperExePath, strUsipConfigPath)
 -- compare the content of a usip file with the data in a secure info page to verify the usip process
 -- returns true if the verification process was a success, otherwise false
-function verifyContent(
+local function verifyContent(
     strPluginType,
     tPlugin,
     strTmpFolderPath,
@@ -1272,13 +1289,7 @@ function verifyContent(
     atPluginOptions,
     strExecReturnPath
 )
-    local fOk
-    local uVerifyResult = VERIFY_RESULT_OK
-    local strErrorMsg
-    local strComSipData
-    local strAppSipData
-    local strComSipFilePath
-    local strAppSipFilePath
+    local uVerifyResult = tSipper.VERIFY_RESULT_OK
 
     tLog.info("Verify USIP content ... ")
     tLog.debug( "Reading out SecureInfoPages via %s", strPluginType )
@@ -1287,21 +1298,21 @@ function verifyContent(
     -- changes
 
     -- get the com sip data -- todo add bootswitch here?
-    fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(
+    local fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
-        uVerifyResult = VERIFY_RESULT_ERROR
+        uVerifyResult = tSipper.VERIFY_RESULT_ERROR
     else
 
         if tFlasherHelper.getStoreTempFiles() then
             tLog.debug("Saving content to files...")
             -- save the content to a file if the flag is set
             -- set the sip file path to save the sip data
-            strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
-            strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
-    
-    
+            local strComSipFilePath = path.join( strTmpFolderPath, "com_sip.bin")
+            local strAppSipFilePath = path.join( strTmpFolderPath, "app_sip.bin")
+
+
             -- write the com sip data to a file
             tLog.debug("Saving COM SIP to %s ", strComSipFilePath)
             local tFile = io.open(strComSipFilePath, "wb")
@@ -1324,7 +1335,7 @@ end
 -- strComSipData, strAppSipData readOutSipContent(iValidCom, iValidApp, tPlugin)
 -- read out the secure info page content via MI-Interface or the JTAG-interface
 -- the function needs a sip validation before it can be used.
-function readOutSipContent(iValidCom, iValidApp, tPlugin)
+local function readOutSipContent(iValidCom, iValidApp, tPlugin)
     local strComSipData = nil
     local strAppSipData = nil
     if not ( iValidCom == -1 or iValidApp == -1 ) then
@@ -1383,7 +1394,7 @@ end
 
 
 --function kekProcess(tPlugin, strCombinedHbootPath, strTempPath)
-function kekProcess(tPlugin, strCombinedImageData, strTempPath)
+local function kekProcess(tPlugin, strCombinedImageData, strTempPath)
 
     local ulHbootLoadAddress = 0x000200c0 -- boot address for start_hboot command
     local ulHbootDataLoadAddress = 0x00060000 -- address where the set_kek boot image is copied and executed
@@ -1434,6 +1445,7 @@ function kekProcess(tPlugin, strCombinedImageData, strTempPath)
     -- get the uart plugin again
     tPlugin = tFlasherHelper.getPlugin(tPlugin:GetName(), tPlugin:GetTyp(), atPluginOptions)
     if tPlugin then
+        local strError
         fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
         if fOk == false then
             tLog.error(strError)
@@ -1463,7 +1475,7 @@ end
 -----------------------------------------------------------------------------------------------------
 -- FUNCTIONS
 -----------------------------------------------------------------------------------------------------
-function usip(
+local function usip(
         tPlugin,
         tUsipDataList,
         tUsipPathList,
@@ -1558,6 +1570,7 @@ function usip(
         end
 
         -- connect to the netX
+        local strError
         fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
         if fOk == false then
             tLog.error(strError)
@@ -1608,9 +1621,10 @@ function usip(
         -- this is the case if the content should be verified without a reset at the end
 
         if tPlugin then
-            fOk, strError = tFlasherHelper.connect_retry(tPlugin, 5)
+            local strErrorMsg
+            fOk, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
             if fOk == false then
-                tLog.error(strError)
+                tLog.error(strErrorMsg)
             end
         else
             tLog.error("Failed to get plugin after executing USIP image")
@@ -1618,6 +1632,7 @@ function usip(
         end
 
         if fOk then
+            local strErrorMsg
             uVerifyResult, strErrorMsg = verifyContent(
                     strPluginType,
                     tPlugin,
@@ -1627,7 +1642,7 @@ function usip(
                     atResetPluginOptions,
                     strResetExecReturnPath
             )
-            if (uVerifyResult == VERIFY_RESULT_OK)then
+            if uVerifyResult == tSipper.VERIFY_RESULT_OK then
                 fOk = true
             else
                 fOk = false
@@ -1640,7 +1655,7 @@ function usip(
     return fOk
 end
 
-function set_sip_protection_cookie(tPlugin)
+local function set_sip_protection_cookie(tPlugin)
     local ulStartOffset = 0
     local iBus = 2
     local iUnit = 1
@@ -1648,15 +1663,14 @@ function set_sip_protection_cookie(tPlugin)
     local strData
     local strMsg
     local ulLen
-    local aAttr
     local ulDeviceSize
     local flasher_path = "netx/"
     -- be pessimistic
     local fOk = false
 
-    strFilePath = path.join("netx", "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
+    local strFilePath = path.join("netx", "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
     -- Download the flasher.
-    aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil, tArgs.strSecureOption)
+    local aAttr = tFlasher.download(tPlugin, flasher_path, nil, nil, tArgs.strSecureOption)
     -- if flasher returns with nil, flasher binary could not be downloaded
     if not aAttr then
         tLog.error("Error while downloading flasher binary")
@@ -1706,7 +1720,7 @@ function set_sip_protection_cookie(tPlugin)
     return fOk
 end
 
-function set_kek(
+local function set_kek(
     tPlugin,
     strTmpFolderPath,
     tUsipDataList,
@@ -1724,7 +1738,6 @@ function set_kek(
 
     -- be optimistic
     local fOk = true
-    local strPluginType
     local strKekHbootData
     local strCombinedImageData
     local strFillUpData
@@ -1733,11 +1746,12 @@ function set_kek(
     local fProcessUsip = false
     local strMsg
     local strFirstUsipData
+    local romloader = _G.romloader
 
     -- get the plugin type
-    strPluginType = tPlugin:GetTyp()
+    local strPluginType = tPlugin:GetTyp()
     -- get plugin name
-    strPluginName = tPlugin:GetName()
+    local strPluginName = tPlugin:GetName()
     -- the signature of the dummy USIP must not be verified because the data of the USIP
     -- are replaced by the new generated KEK and so the signature will change too
 
@@ -2014,7 +2028,7 @@ function set_kek(
 
 end
 
-function read_sip(
+local function read_sip(
     tPlugin,
     strTmpFolderPath,
     strReadSipPath,
@@ -2024,12 +2038,11 @@ function read_sip(
 )
 
     local fOk = false
-    local strPluginType
 
     -- get the plugin type
-    strPluginType = tPlugin:GetTyp()
+    local strPluginType = tPlugin:GetTyp()
     -- get plugin name
-    strPluginName = tPlugin:GetName()
+    local strPluginName = tPlugin:GetName()
 
     --------------------------------------------------------------------------
     -- PROCESS
@@ -2049,8 +2062,8 @@ function read_sip(
         end
 
 
-        strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
-        strAppSipFilePath = path.join( strOutputFolderPath, "app_sip.bin")
+        local strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
+        local strAppSipFilePath = path.join( strOutputFolderPath, "app_sip.bin")
         -- write the com sip data to a file
         tLog.info("Saving COM SIP to %s ", strComSipFilePath)
         local tFile = io.open(strComSipFilePath, "wb")
@@ -2064,7 +2077,7 @@ function read_sip(
         fOk = true
 
         if fReadCal then
-            strCalSipFilePath = path.join( strOutputFolderPath, "cal_sip.bin")
+            local strCalSipFilePath = path.join( strOutputFolderPath, "cal_sip.bin")
             -- write the com sip data to a file
             tLog.info("Saving CAL SIP to %s ", strCalSipFilePath)
             local tFile = io.open(strCalSipFilePath, "wb")
@@ -2079,7 +2092,7 @@ function read_sip(
 end
 
 
-function get_uid(
+local function get_uid(
     tPlugin,
     strTmpFolderPath,
     strReadSipPath,
@@ -2087,14 +2100,13 @@ function get_uid(
     strExecReturnPath)
 
     local fOk = false
-    local strPluginType
 
     --------------------------------------------------------------------------
     -- PROCESS
     --------------------------------------------------------------------------
 
     -- get the plugin type
-    strPluginType = tPlugin:GetTyp()
+    local strPluginType = tPlugin:GetTyp()
 
     tLog.debug( "Using %s interface", strPluginType )
     -- what am i doing here...
@@ -2107,7 +2119,7 @@ function get_uid(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
 
     if iReadSipResult then
-            strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
+            local strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
 
         -- print out the complete unique ID
         tLog.info( " [UNIQUE_ID] %s", strUidVal )
@@ -2119,18 +2131,17 @@ function get_uid(
     return fOk
 end
 
-function verify_content(
+local function verify_content(
     tPlugin,
     strTmpFolderPath,
     strUsipFilePath,
     strReadSipPath,
     strExecReturnPath
 )
-    local strPluginType
     local uVerifyResult
 
     -- get the plugin type
-    strPluginType = tPlugin:GetTyp()
+    local strPluginType = tPlugin:GetTyp()
 
     --------------------------------------------------------------------------
     -- analyze the usip file
@@ -2155,15 +2166,412 @@ function verify_content(
         )
 
     else
-        uVerifyResult = VERIFY_RESULT_ERROR
+        uVerifyResult = tSipper.VERIFY_RESULT_ERROR
         tLog.error(strErrorMsg)
     end
 
     return uVerifyResult, strErrorMsg
 end
 
+local SIP_ATTRIBUTES = {
+    CAL={iBus=2, iUnit=0,iChipSelect=1},
+    COM={iBus=2, iUnit=1,iChipSelect=1},
+    APP={iBus=2, iUnit=2,iChipSelect=1}
+}
+
+-- read out a selected secure info page
+-- APP and COM SIP: verify the hash of the read out data
+-- returns strReadData, strMsg -> strReadData is nil if read was not successful
+local function readSIPviaFLash(tPlugin, strSipPage, aAttr)
+    local ulOffset = 0x0
+    local ulSize = 0x1000
+    local strReadData
+    local strMsg
+
+    -- check if the selected flash is present
+    local fDetectResult = tFlasher.detect(
+        tPlugin, aAttr,
+        SIP_ATTRIBUTES[strSipPage].iBus,
+        SIP_ATTRIBUTES[strSipPage].iUnit,
+        SIP_ATTRIBUTES[strSipPage].iChipSelect)
+
+    if not fDetectResult then
+        strMsg = "No Flash connected!"
+    else
+        strReadData, strMsg = tFlasher.readArea(tPlugin, aAttr, ulOffset, ulSize)
+
+        if strReadData ~= nil and strSipPage ~= "CAL" then
+            local strNewHash
+            local sipStringHandle = tFlasherHelper.StringHandle(strReadData)
+            local strHashableData = sipStringHandle:read(0xFD0)
+            local strReferenceHash = sipStringHandle:read(0x30)
+            local tChunkHash = mhash.mhash_state()
+            tChunkHash:init(mhash.MHASH_SHA384)
+            tChunkHash:hash(strHashableData)
+            strNewHash = tChunkHash:hash_end()
+            if strNewHash ~= strReferenceHash then
+                strReadData = nil
+                strMsg = string.format("hash verification failed for %s SIP", strSipPage)
+            end
+        end
+    end
+    return strReadData, strMsg
+end
+
+-- write SIP data (4kB) into sekected SIP
+-- create a new hash for the data
+local function writeSIPviaFLash(tPlugin, strSipPage, strSipData, aAttr)
+    local strMsg
+    local strWriteData
+    local strNewHash
+    local fResult
+    local fDetectResult
+
+    -- check if the selected flash is present
+    fDetectResult = tFlasher.detect(
+        tPlugin, aAttr,
+        SIP_ATTRIBUTES[strSipPage].iBus,
+        SIP_ATTRIBUTES[strSipPage].iUnit,
+        SIP_ATTRIBUTES[strSipPage].iChipSelect)
+
+    if not fDetectResult then
+        strMsg = "No Flash connected!"
+    else
+        -- get the write data from the handover parameter
+        local sipStringHandle = tFlasherHelper.StringHandle(strSipData)
+        strWriteData = sipStringHandle:read(0xFD0)
+        -- create a new hash
+        local tChunkHash = mhash.mhash_state()
+        tChunkHash:init(mhash.MHASH_SHA384)
+        tChunkHash:hash(strWriteData)
+        strNewHash = tChunkHash:hash_end()
+        -- apend the hash to the new data
+        strWriteData = strWriteData .. strNewHash
+
+        -- duplicate the data and write both mirrors at once
+        strWriteData = strWriteData .. strWriteData
+
+        -- erase flash before Writing
+        fResult, strMsg = tFlasher.eraseArea(tPlugin, aAttr, 0x0, 0x2000)
+        if fResult then
+            -- write first mirror of SIP
+            fResult, strMsg = tFlasher.flashArea(tPlugin, aAttr, 0x0, strWriteData)
+        end
+    end
+
+    return fResult, strMsg
+end
+
+-- take the data of the COM and APP SIP and check if the secure boot flags are set
+-- returns flags for each secure boot flag fSecureFlagComSet, fSecureFlagAppSet (true is set; False if not set)
+local function check_secure_boot_flag(strComSipData, strAppSipData)
+    local COM_SIP_SECURE_BOOT_ENABLED = 0x0004
+    local APP_SIP_SECURE_BOOT_ENABLED = 0x0004
+    local fSecureFlagComSet
+    local fSecureFlagAppSet
+    -- sip protection cookie
+    local fComSipStringHandle
+    local fAppSipStringHandle
+    local strComProtectionOptionFLags
+    local strAppProtectionOptionFLags
+    local ulProtectionOptionFLags
+
+
+    if strComSipData then
+        fComSipStringHandle = tFlasherHelper.StringHandle(strComSipData)
+        fComSipStringHandle:seek("set", 0x22C)
+        strComProtectionOptionFLags = fComSipStringHandle:read(0x2)
+        ulProtectionOptionFLags = tFlasherHelper.bytes_to_uint32(strComProtectionOptionFLags)
+        if (ulProtectionOptionFLags & COM_SIP_SECURE_BOOT_ENABLED) ~= 0 then
+            fSecureFlagComSet = true
+        else
+            fSecureFlagComSet = false
+        end
+    end
+    if strAppSipData then
+        fAppSipStringHandle = tFlasherHelper.StringHandle(strAppSipData)
+        fAppSipStringHandle:seek("set", 0x228)
+        strAppProtectionOptionFLags = fAppSipStringHandle:read(0x2)
+        ulProtectionOptionFLags = tFlasherHelper.bytes_to_uint32(strAppProtectionOptionFLags)
+        if (ulProtectionOptionFLags & APP_SIP_SECURE_BOOT_ENABLED) ~= 0 then
+            fSecureFlagAppSet = true
+        else
+            fSecureFlagAppSet = false
+        end
+    end
+
+    return fSecureFlagComSet, fSecureFlagAppSet
+
+end
+
+-- takes the data of the COM SIP and checks if the SIP protection flag is set
+-- returns fCookieSet (true is set; False if not set)
+local function check_sip_protection_cookie_via_flash(strComSipData)
+
+    local fCookieSet
+    local strSipProtectionCookie
+    -- sip protection cookie
+    local strSipProtectionCookieLocked = string.char(0x8b, 0x42, 0x3b, 0x75, 0xe2, 0x63, 0x25, 0x62,
+     0x8a, 0x1e, 0x31, 0x6b, 0x28, 0xb4, 0xd7, 0x03)
+    local fComSipStringHandle
+
+    fComSipStringHandle = tFlasherHelper.StringHandle(strComSipData)
+    strSipProtectionCookie = fComSipStringHandle:read(0x10)
+    -- first check if the SIP protection cookie is set
+
+    if strSipProtectionCookie == strSipProtectionCookieLocked then
+        fCookieSet = true
+    else
+        fCookieSet = false
+    end
+    return fCookieSet
+end
+
+-- take the data of the CAL SIP and check if the rom func mode cookie is set
+-- returns fCookieSet (true is set; False if not set)
+local function checkRomFuncModeCookie(strCalSipData)
+
+    local fCookieSet
+    local strExpectedRomFuncModeCookie = string.char(0x43, 0xC4, 0xF2, 0xB2, 0x45, 0x40, 0x02, 0xC8, 0x78, 0x79, 0xDD, 0x94, 0xF7, 0x13, 0xB5, 0x4A)
+    local fComSipStringHandle
+    local strRomFuncModeCookie
+
+    fComSipStringHandle = tFlasherHelper.StringHandle(strCalSipData)
+    strRomFuncModeCookie = fComSipStringHandle:read(0x10)
+    -- first check if the SIP protection cookie is set
+
+    if strRomFuncModeCookie == strExpectedRomFuncModeCookie then
+        fCookieSet = true
+    else
+        fCookieSet = false
+    end
+    return fCookieSet
+end
+
+
+-- read out register iflash_special_cfg0|1|2 to determine if any of the secure info pages are hidden
+-- if the register can't be accessed we assume the netX is in secure boot mode (M2M mode access denied)
+-- returns fHideSet, strErrorMsg, fSecureBootEnabled
+local function checkHideSipRegister(tPlugin)
+    local IFLASH_SPECIAL_CFG_CAL = 0xff001c48
+    local IFLASH_SPECIAL_CFG_COM = 0xff001cc8
+    local IFLASH_SPECIAL_CFG_APP = 0xff401448
+    local ulValCal
+    local ulValCom
+    local ulValApp
+    local fHideSet = false
+    local strErrorMsg
+    local fSecureBootEnabled = false
+
+    ulValCal, strErrorMsg = pcall(tPlugin.read_data32, tPlugin, IFLASH_SPECIAL_CFG_CAL)
+    if ulValCal == false then
+        fSecureBootEnabled = true
+    else
+        ulValCom, strErrorMsg = pcall(tPlugin.read_data32, tPlugin, IFLASH_SPECIAL_CFG_COM)
+        ulValApp, strErrorMsg = pcall(tPlugin.read_data32, tPlugin, IFLASH_SPECIAL_CFG_APP)
+
+        ulValCal = tPlugin:read_data32(IFLASH_SPECIAL_CFG_CAL)
+        ulValCom = tPlugin:read_data32(IFLASH_SPECIAL_CFG_COM)
+        ulValApp = tPlugin:read_data32(IFLASH_SPECIAL_CFG_APP)
+        if (ulValCal & 0xF) ~= 0 then
+            fHideSet = true
+            strErrorMsg = "CAL page hide flag is set"
+        elseif (ulValCom & 0xF) ~= 0 then
+            fHideSet = true
+            strErrorMsg = "COM page hide flag is set"
+        elseif (ulValApp & 0xF) ~= 0 then
+            fHideSet = true
+            strErrorMsg = "APP page hide flag is set"
+        end
+    end
+
+    return fHideSet, strErrorMsg, fSecureBootEnabled
+end
+
+local WS_RESULT_OK = 0
+local WS_RESULT_ERROR_UNSPECIFIED = 1
+local WS_RESULT_ERROR_SIP_PROTECTION_SET = 2
+local WS_RESULT_ERROR_SECURE_BOOT_ENABLED = 3
+local WS_RESULT_ERROR_SIP_HIDDEN = 4
+local WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET = 5
+-- veriify that the netX is in an initial state
+-- the netX is not in an initial state if:
+-- * one or mode secure info pages are hidden
+-- * the netX is in secure boot mode
+-- * the SIP protection cookie is set
+-- * the rom func mode cookie is not set
+-- returns iResult, strMsg, strCalSipData
+local function verifyInitialMode(tPlugin, aAttr)
+    local iResult = WS_RESULT_OK
+    local strComSipData
+    local strAppSipData
+    local strCalSipData
+    local fComSecureBootEnabled
+    local fAppSecureBootEnabled
+    local fSipHidden
+    local strMsg
+    local fSipCookieSet
+    local fRomFuncCookieSet
+
+    -- check if any of the secure info pages are hidden
+    fSipHidden, strMsg, fComSecureBootEnabled = checkHideSipRegister(tPlugin)
+    if fComSecureBootEnabled then
+        iResult = WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+        tLog.info("ERROR: Secure boot is enabled. End command.")
+    elseif fSipHidden then
+        iResult = WS_RESULT_ERROR_SIP_HIDDEN
+        tLog.info("ERROR: one or more secure info page is hidden.")
+    end
+
+
+    -- read out CAL secure info pages
+    if iResult == WS_RESULT_OK then
+        strCalSipData, strMsg = readSIPviaFLash(tPlugin, "CAL", aAttr)
+        if strCalSipData == nil then
+            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    -- read out COM secure info pages
+    if iResult == WS_RESULT_OK then
+        strComSipData, strMsg = readSIPviaFLash(tPlugin, "COM", aAttr)
+        if strComSipData == nil then
+            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    -- read out APP secure info pages
+    if iResult == WS_RESULT_OK then
+        strAppSipData, strMsg = readSIPviaFLash(tPlugin, "APP", aAttr)
+        if strAppSipData == nil then
+            iResult = WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    if iResult == WS_RESULT_OK then
+        -- check for secure boot flags
+        fComSecureBootEnabled, fAppSecureBootEnabled = check_secure_boot_flag(strComSipData, strAppSipData)
+        -- check for sip protection cookie
+        fSipCookieSet = check_sip_protection_cookie_via_flash(strComSipData)
+        -- check if the fum func mode cookie is set
+        fRomFuncCookieSet = checkRomFuncModeCookie(strCalSipData)
+
+        if fComSecureBootEnabled or fAppSecureBootEnabled then
+            iResult = WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+            tLog.info("ERROR: Secure boot is enabled. End command.")
+        elseif fSipCookieSet then
+            iResult = WS_RESULT_ERROR_SIP_PROTECTION_SET
+            tLog.info("ERROR: SIP protection cookie is set. End command.")
+        elseif not fRomFuncCookieSet then
+            iResult = WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET
+            tLog.info("ERROR: rom func mode cookie not set")
+        end
+    end
+    return iResult, strMsg, strCalSipData
+end
+
+-- upate the calibration values 'atTempDiode' inside the APP SIP with the values from the CAL SIP
+-- * copied from: CAL SIP offset 2192 (0x890) size: 48 (0x30)
+-- * copied to:   APP SIP offset 2048 (0x800) size: 48 (0x30)
+local function apply_temp_diode_data(strAppSipData, strCalSipData)
+    -- apply temp diode parameter from cal page to app page
+    local strTempDiodeData = string.sub(strCalSipData, 0x890+1, 0x890 + 0x30)
+    local strNewAppSipData = string.format(
+        "%s%s%s",
+        string.sub(strAppSipData, 1, 0x800),
+        strTempDiodeData,
+        string.sub(strAppSipData, 0x800 + 1)
+    )
+    print(string.len(strNewAppSipData))
+    return strNewAppSipData
+end
+
+
+-- write APP and COM secure info page (SIP) based on default values
+-- update temp diode calibratino values from CAL SIP to APP SIP
+-- the default values can be modified with the data from an USIP file
+local function writeAllSips(tPlugin, strBaseComSipData, strBaseAppSipData, tUsipConfigDict, strSecureOption,
+                            fSetSipProtectionCookie, strComOutputFile, strAppOutputFile)
+    local iResult
+    local strMsg
+    local fResult
+    local aAttr
+    local flasher_path = "netx/"
+    local strCalSipData
+    local strComSipData = strBaseComSipData
+    local strAppSipData = strBaseAppSipData
+
+    if strSecureOption == nil then
+        strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+    end
+
+    local fConnected
+    fConnected, strMsg = tFlasherHelper.connect_retry(tPlugin)
+    if fConnected then
+        aAttr = tFlasher.download(tPlugin, flasher_path, nil, true, strSecureOption)
+    end
+
+    -- check if any of the secure info pages are hidden
+    iResult, strMsg, strCalSipData = verifyInitialMode(tPlugin, aAttr)
+
+    if iResult == WS_RESULT_OK then
+        -- Set the SIP protection cookie if requested.
+        if fSetSipProtectionCookie then
+            strComSipData = tUsipGen:setSipProtectionCookie(strComSipData)
+        end
+
+        strAppSipData = apply_temp_diode_data(strAppSipData, strCalSipData)
+        if tUsipConfigDict ~= nil then
+            strComSipData, strAppSipData = tUsipGen.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+        end
+    end
+
+    if iResult == WS_RESULT_OK then
+        -- write the SIPs
+        if strComOutputFile~=nil then
+            local utils = require 'pl.utils'
+            local fWriteResult, strWriteMessage = utils.writefile(strComOutputFile, strComSipData, true)
+            if fWriteResult~=true then
+                strMsg = string.format(
+                    'Failed to write the generated COM page to the output file "%s": %s',
+                    strComOutputFile,
+                    strWriteMessage
+                )
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        else
+            fResult, strMsg = writeSIPviaFLash(tPlugin, "COM", strComSipData, aAttr)
+            if not fResult then
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        end
+    end
+
+    if iResult == WS_RESULT_OK then
+        -- write the SIPs
+        if strAppOutputFile~=nil then
+            local utils = require 'pl.utils'
+            local fWriteResult, strWriteMessage = utils.writefile(strAppOutputFile, strAppSipData, true)
+            if fWriteResult~=true then
+                strMsg = string.format(
+                    'Failed to write the generated APP page to the output file "%s": %s',
+                    strComOutputFile,
+                    strWriteMessage
+                )
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        else
+            fResult, strMsg = writeSIPviaFLash(tPlugin, "APP", strAppSipData, aAttr)
+            if not fResult then
+                iResult = WS_RESULT_ERROR_UNSPECIFIED
+            end
+        end
+    end
+    return iResult, strMsg
+end
+
 -- print args
-printArgs(tArgs, tLog)
+printArgs(tArgs)
 local strHelperFileStatus = tHelperFiles.getStatusString()
 tLog.info(strHelperFileStatus)
 tLog.info("")
@@ -2195,10 +2603,12 @@ local tResult
 local strErrorMsg
 local tUsipConfigDict
 local strFileData
+local strData
 
 -- set fFinalResult to false, be pessimistic
 local fFinalResult = false
-local uResultCode = VERIFY_RESULT_ERROR
+local iWriteSipResult
+local uResultCode = tSipper.VERIFY_RESULT_ERROR
 --------------------------------------------------------------------------
 -- INITIAL VALUES
 --------------------------------------------------------------------------
@@ -2231,6 +2641,7 @@ end
 
 -- check for a Plugin
 -- get the plugin
+local fCallSuccess
 fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
 if fCallSuccess then
     if not tPlugin then
@@ -2241,21 +2652,18 @@ if fCallSuccess then
         -- get the plugin type
         strPluginType = tPlugin:GetTyp()
         -- get plugin name
-        strPluginName = tPlugin:GetName()
+        local strPluginName = tPlugin:GetName()
 
-        if strPluginType == "romloader_eth" then
-            tArgs.strBootswitchParams = "ETH"
-        elseif strPluginType == "romloader_uart" then
-            tArgs.strBootswitchParams = "UART"
-        elseif strPluginType == "romloader_jtag" then
-            tArgs.strBootswitchParams = "JTAG"
-        end
+        tArgs.strPluginType = strPluginType
+        tArgs.strPluginName = strPluginName
+
 
         if not tArgs.fCommandDetectSelected then
             -- catch the romloader error to handle it correctly
             fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
             if fFinalResult == false then
                 tLog.error(strErrorMsg)
+                os.exit(1)
             else
                 iChiptype = tPlugin:GetChiptyp()
                 tLog.debug( "Found Chip type: %d", iChiptype )
@@ -2288,6 +2696,7 @@ if iChiptype then
         os.exit(1)
     end
     -- check if the netX is supported
+    local romloader = _G.romloader
     if strNetxName ~= "netx90" then
         tLog.error("The connected netX (%s) is not supported.", strNetxName)
         tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
@@ -2295,10 +2704,8 @@ if iChiptype then
     elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
             iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
         tLog.debug("Detected netX90 rev1")
-        fIsRev2 = false
     elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
         tLog.debug("Detected netX90 rev2")
-        fIsRev2 = true
     end
 else
     -- (!) TODO: FIX THIS TO A SOLUTION WHERE NOT JUST THE NETX90 IS SUPPORTED! (!)
@@ -2532,6 +2939,105 @@ if tArgs.fCommandUsipSelected then
         strResetBootswitchPath,
         strResetReadSipPath
     )
+--------------------------------------------------------------------------
+-- VERIFY INITIAL MODE
+--------------------------------------------------------------------------
+elseif tArgs.fCommandVerifyInitialMode then
+    tLog.info("#######################################")
+    tLog.info("# RUNNING VERIFY INITIAL MODE COMMAND #")
+    tLog.info("#######################################")
+
+    local aAttr
+    local flasher_path = "netx/"
+    local iVerifyInitialModeResult
+
+    if strSecureOption == nil then
+        strSecureOption = tFlasher.DEFAULT_HBOOT_OPTION
+    end
+
+    local fConnected
+    fConnected, strErrorMsg = tFlasherHelper.connect_retry(tPlugin)
+    if fConnected then
+        aAttr = tFlasher.download(tPlugin, flasher_path, nil, true, strSecureOption)
+    end
+    iVerifyInitialModeResult, strErrorMsg = verifyInitialMode(tPlugin, aAttr)
+
+    if iVerifyInitialModeResult == WS_RESULT_OK then
+        fFinalResult = true
+    else
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        if iVerifyInitialModeResult == WS_RESULT_ERROR_SECURE_BOOT_ENABLED then
+            tLog.error('RESULT: secure boot enabled')
+        elseif iVerifyInitialModeResult == WS_RESULT_ERROR_SIP_PROTECTION_SET then
+            tLog.error('RESULT: SIP protection cookie is set')
+        elseif iVerifyInitialModeResult == WS_RESULT_ERROR_UNSPECIFIED then
+            tLog.error('RESULT:unspecified error occured')
+        elseif iVerifyInitialModeResult == WS_RESULT_ERROR_SIP_HIDDEN then
+            tLog.error('RESULT: one or more secure info page is hidden')
+        end
+        tLog.error(strErrorMsg)
+        tLog.info('RETURN: '.. iVerifyInitialModeResult)
+        os.exit(iVerifyInitialModeResult)
+    end
+--------------------------------------------------------------------------
+-- WRITE SIP COMMAND
+--------------------------------------------------------------------------
+elseif tArgs.fCommandWriteSips then
+    tLog.info("######################################")
+    tLog.info("# RUNNING WRITE SIP COMMAND          #")
+    tLog.info("######################################")
+    local strComSipBaseData
+    strComSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strComSipBinPath)
+    if strComSipBaseData == nil then
+        tLog.error(strErrorMsg)
+    end
+    local strAppSipBaseData, strErrorMsg = tFlasherHelper.loadBin(tArgs.strAppSipBinPath)
+    if strAppSipBaseData == nil then
+        tLog.error(strErrorMsg)
+    end
+    iWriteSipResult, strErrorMsg = writeAllSips(
+        tPlugin,
+        strComSipBaseData,
+        strAppSipBaseData,
+        tUsipConfigDict,
+        nil,
+        tArgs.fSetSipProtectionCookie,
+        tArgs.strComOutputFile,
+        tArgs.strAppOutputFile
+    )
+    if iWriteSipResult == WS_RESULT_OK then
+        fFinalResult = true
+    else
+        tLog.error("")
+        tLog.error("######## #######  #######   ######  ####### ")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+        tLog.error("#######  #######  #######  ##    ## ####### ")
+        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+        tLog.error("")
+        if iWriteSipResult == WS_RESULT_ERROR_SECURE_BOOT_ENABLED then
+            tLog.error('RESULT: secure boot enabled')
+        elseif iWriteSipResult == WS_RESULT_ERROR_SIP_PROTECTION_SET then
+            tLog.error('RESULT: SIP protection cookie is set')
+        elseif iWriteSipResult == WS_RESULT_ERROR_UNSPECIFIED then
+            tLog.error('RESULT:unspecified error occured')
+        elseif iWriteSipResult == WS_RESULT_ERROR_SIP_HIDDEN then
+            tLog.error('RESULT: one or more secure info page is hidden')
+        end
+        tLog.error(strErrorMsg)
+        tLog.info('RETURN: '.. iWriteSipResult)
+        os.exit(iWriteSipResult)
+    end
 
 --------------------------------------------------------------------------
 -- Disable Security COMMAND
@@ -2633,7 +3139,6 @@ elseif tArgs.fCommandGetUidSelected then
         strExecReturnPath
     )
 
-
 --------------------------------------------------------------------------
 -- VERIFY CONTENT
 --------------------------------------------------------------------------
@@ -2649,68 +3154,11 @@ elseif tArgs.fCommandVerifySelected then
         strReadSipPath,
         strExecReturnPath
     )
---    if uResultCode == VERIFY_RESULT_OK then
---        tLog.info("The data in the info page(s) is equal to the data in the USIP file.")
---        if strErrorMsg then 
---            tLog.info(strErrorMsg)
---        end
---        fFinalResult = true
---    elseif uResultCode == VERIFY_RESULT_FALSE then 
---        tLog.error("The data in the info page(s) differs from the data in the USIP file:")
---        tLog.error(strErrorMsg or "Unknown error")
---        fFinalResult = false
---    else
---        tLog.info("The data in the info page(s) could not compared to the data in the USIP file as an error occurred:")
---        tLog.error(strErrorMsg or "Unknown error")
---        fFinalResult = false
---    end
-    
-    if uResultCode == VERIFY_RESULT_OK then
-        tLog.info('')
-        tLog.error("")
-        tLog.error("########  ######   ##    ##  ######  ##      ")
-        tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
-        tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
-        tLog.error("#######  ##    ##  ##    ## ######## ##      ")
-        tLog.error("##       ##  ####  ##    ## ##    ## ##      ")
-        tLog.error("##       ##   ###  ##    ## ##    ## ##      ")
-        tLog.error("########  ##### ##  ######  ##    ## ########")
-        tLog.info('')
-        tLog.info('RESULT: The data in the info page(s) is equal to the data in the USIP file.')
-        if strErrorMsg then 
-            tLog.info(strErrorMsg)
-        end
-        
-    elseif uResultCode == VERIFY_RESULT_FALSE then
-        tLog.error("")
-        tLog.error("##    ##  #######  ########     ########  ######   ##    ##  ######  ##      ")
-        tLog.error("###   ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
-        tLog.error("####  ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
-        tLog.error("## ## ## ##     ##    ##        #######  ##    ##  ##    ## ######## ##      ")
-        tLog.error("##  #### ##     ##    ##        ##       ##  ####  ##    ## ##    ## ##      ")
-        tLog.error("##   ### ##     ##    ##        ##       ##   ###  ##    ## ##    ## ##      ")
-        tLog.error("##    ##  #######     ##        ########  ##### ##  ######  ##    ## ########")
-        tLog.error("")
-        tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
-        tLog.error(strErrorMsg or "Unknown error")
-
+    if uResultCode == tSipper.VERIFY_RESULT_OK then
+        fFinalResult = true
     else
-        tLog.error("")
-        tLog.error("######## #######  #######   ######  ####### ")
-        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
-        tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
-        tLog.error("#######  #######  #######  ##    ## ####### ")
-        tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
-        tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
-        tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
-        tLog.error("")
-        tLog.info("RESULT: The data in the info page(s) could not be checked as an error has occurred:")
-        tLog.error(strErrorMsg or "Unknown error")
-        
+        fFinalResult = false
     end
-    tLog.info('RETURN: '.. uResultCode)
-    os.exit(uResultCode)
-    
 
 elseif tArgs.fCommandCheckSIPCookie then
 
@@ -2725,7 +3173,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         strReadSipPath,
         strExecReturnPath
     )
-    if uResultCode == VERIFY_RESULT_OK then
+    if uResultCode == tSipper.VERIFY_RESULT_OK then
         tLog.info('')
         tLog.info('####  ######      ######  ######## ######## ')
         tLog.info(' ##  ##    ##    ##    ## ##          ##    ')
@@ -2736,7 +3184,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         tLog.info('####  ######      ######  ########    ##    ')
         tLog.info('')
         tLog.info('RESULT: SIP protection cookie is set')
-    elseif uResultCode == VERIFY_RESULT_ERROR then
+    elseif uResultCode == tSipper.VERIFY_RESULT_ERROR then
         -- print ERROR if an error occurred
         tLog.error("")
         tLog.error("######## #######  #######   ######  ####### ")
@@ -2748,7 +3196,7 @@ elseif tArgs.fCommandCheckSIPCookie then
         tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
         tLog.error("")
         tLog.error('RESULT: ERROR')
-    elseif uResultCode == VERIFY_RESULT_FALSE then
+    elseif uResultCode == tSipper.VERIFY_RESULT_FALSE then
         -- print NOT SET if verify_content came back negative
         tLog.error("")
         tLog.error("##    ##  #######  ########     ######  ######## ######## ")

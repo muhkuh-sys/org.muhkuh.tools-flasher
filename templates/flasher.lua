@@ -96,7 +96,8 @@ local OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagi
 -- If this Flag is set to True we use the hboot mode for netx90 M2M connections
 local bHbootFlash = false
 local path = require "pl.path"
-local FLASHER_DIR = path.currentdir()
+local strCurrentModulePath = path.dirname(debug.getinfo(1, "S").source:sub(2))
+local FLASHER_DIR = path.normpath(path.join(strCurrentModulePath, '..'))
 M.DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 M.HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
 

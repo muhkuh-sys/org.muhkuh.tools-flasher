@@ -226,6 +226,7 @@ end
 function M.connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
+    local ulConsoleMode
     print("connect to plugin")
 
     if tPlugin == nil then
@@ -243,6 +244,8 @@ function M.connect_retry(tPlugin, uLRetries)
             print("connect successful")
             break
         end
+        ulConsoleMode = tPlugin:get_console_mode()
+
         print("connect not successful")
         uLRetries = uLRetries - 1
         M.sleep_s(1)
@@ -600,7 +603,7 @@ function M.detect_secure_boot_mode(aArgs)
 		strMsg = strMsg or "Could not connect to device."
 
 	elseif tPlugin:GetTyp() == "romloader_uart" then
-		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+		fConnected, strMsg = connect_retry(tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -710,14 +713,14 @@ function M.detect_secure_boot_mode(aArgs)
       "unsigned",
       "netx90",
       "read_sip_M2M.bin"
-    )  --tFlasher.HELPER_FILES_PATH,
+    )  --tFlasher.HELPER_FILES_PATH
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
     local strReadSipBin
 		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
 		else
-			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+			fConnected, strMsg = connect_retry(tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
 
 			if not fConnected then
@@ -774,7 +777,7 @@ function M.detect_secure_boot_mode(aArgs)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
 							else
-								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+								fConnected, strMsg = connect_retry(tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
 
 								if not fConnected then
@@ -1080,6 +1083,8 @@ end
 function StringHandle:__getStringPosInBytes()
     return (self.ulCurrentPointer - 1)
 end
+
+
 
 function StringHandle:seek(strWhence, ulOffset)
 
