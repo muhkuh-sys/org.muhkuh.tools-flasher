@@ -857,35 +857,35 @@ static const UNIT_CS_TO_ATTR_T atUnitCsToAttr[] =
 		.ulSizeInBytes = 2 * IFLASH_NETX90_MAIN_ARRAY_SIZE_BYTES,
 		.tArea = INTERNAL_FLASH_AREA_Flash01_Main
 	},
-	{
+	{   /* CAL SIP */
 		.uiUnit = 0,
 		.uiChipSelect = 1,
 		.iMain0_Info1_InfoK2_InfoS3 = 1,
 		.ulSizeInBytes = IFLASH_NETX90_INFO_ARRAY_SIZE_BYTES,
 		.tArea = INTERNAL_FLASH_AREA_Flash0_Info
 	},
-	{
+	{   /* COM SIP */
 		.uiUnit = 1,
 		.uiChipSelect = 1,
 		.iMain0_Info1_InfoK2_InfoS3 = 1,
 		.ulSizeInBytes = IFLASH_NETX90_INFO_ARRAY_SIZE_BYTES,
 		.tArea = INTERNAL_FLASH_AREA_Flash1_Info
 	},
-	{
+	{   /* APP SIP */
 		.uiUnit = 2,
 		.uiChipSelect = 1,
 		.iMain0_Info1_InfoK2_InfoS3 = 1,
 		.ulSizeInBytes = IFLASH_NETX90_INFO_ARRAY_SIZE_BYTES,
 		.tArea = INTERNAL_FLASH_AREA_Flash2_Info
 	},
-	{
+	{   /* COM SIP with set kek option */
 		.uiUnit = 1,
 		.uiChipSelect = 3,
 		.iMain0_Info1_InfoK2_InfoS3 = 3,
 		.ulSizeInBytes = IFLASH_NETX90_INFO_ARRAY_SIZE_BYTES / 2,
 		.tArea = INTERNAL_FLASH_AREA_Flash1_InfoS
 	},
-	{
+	{   /* APP SIP with copy temp diode calibrations */
 		.uiUnit = 2,
 		.uiChipSelect = 3,
 		.iMain0_Info1_InfoK2_InfoS3 = 3,
