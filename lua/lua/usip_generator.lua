@@ -13,6 +13,10 @@ local atLogLevels = {
     'fatal'
 }
 
+local tBootCookies = {}
+
+tBootCookies["NETX90"] = {}
+tBootCookies["NETX90"]["cookie"] = string.char(0x00, 0xAF, 0xBE, 0xF3)
 
 
 local UsipGenerator = class()
@@ -157,6 +161,8 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     -- set initial values for the usip config
     self.tUsipConfigDict = {}
     self.tUsipConfigDict["num_of_chunks"] = 0
+    self.tUsipConfigDict["boot_cookie"] = "unknown"
+    self.tUsipConfigDict["netx_type"] = "unknown"
     -- key settings
     self.tUsipConfigDict["master_key"] = "not used"
     self.tUsipConfigDict["firmware_key"] = "not used"
@@ -183,7 +189,16 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     local path = require 'pl.path'
     if path.exists(strUsipFilePath) then
         local tUsipFileHandle = io.open(strUsipFilePath, 'rb')
+        local strCookieBytes = tUsipFileHandle:read(4)
+        self.tUsipConfigDict["boot_cookie"] = strCookieBytes
+        local strImageCookie = tFlasherHelper.bytes_to_uint32(strCookieBytes)
 
+        for tNetX in pairs(tBootCookies) do
+            if strCookieBytes == tBootCookies[tNetX]["cookie"] then
+                self.tUsipConfigDict["netx_type"] = tNetX
+                break
+            end
+        end
         -- read 4 bytes at offset 16 for the header checksum
         tUsipFileHandle:seek("set", 16)
         local strHeaderImgSize = tUsipFileHandle:read(4)
@@ -553,6 +568,42 @@ function UsipGenerator.apply_usip_data(strComSipData, strAppSipData, tUsipConfig
     end
 
     return strNewComSipData, strNewAppSipData
+end
+
+
+-- convert an input USIP binary to SIP binaries of the COM and APP SIP
+-- if no USIP is provided, the default SIP data will be returned
+function UsipGenerator:convertUsipToBin(strComSipBinPath, strAppSipBinPath, tUsipConfigDict, fSetSipProtectionCookie)
+
+    local fResult = true
+    local strErrorMsg
+    local strComSipData
+    local strAppSipData
+
+    strComSipData, strErrorMsg = tFlasherHelper.loadBin(strComSipBinPath)
+    if strComSipData == nil then
+        self = false
+    else
+        strAppSipData, strErrorMsg = tFlasherHelper.loadBin(strAppSipBinPath)
+        if strAppSipData == nil then
+            fResult = false
+        end
+    end
+
+    if fResult == true then
+        if tUsipConfigDict ~= nil then
+            -- Set the SIP protection cookie if requested.
+            if fSetSipProtectionCookie then
+                strComSipData = self:setSipProtectionCookie(strComSipData)
+            end
+            strComSipData, strAppSipData = self.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+
+            strComSipData = self.updateSipHash(strComSipData)
+            strAppSipData = self.updateSipHash(strAppSipData)
+        end
+    end
+
+    return fResult, strErrorMsg, strComSipData, strAppSipData
 end
 
 
