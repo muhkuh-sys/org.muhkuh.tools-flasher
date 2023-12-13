@@ -1118,7 +1118,7 @@ end
 
 
 
-local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
+local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath, fGetUidOnly)
     local fResult = true
     local strErrorMsg = ""
 
@@ -1139,6 +1139,9 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
     local APP_SIP_CPY_VALID_MSK = 0x0100
     local APP_SIP_VALID_MSK = 0x0200
     local APP_SIP_INVALID_MSK = 0x1000
+    local UID_CPY_MSK    =      0x0004
+
+    local GET_UUID_ONLY = 0x00020000  -- write this value to the ulReadSipResultAddress to only copy uuid to intram and end
 
     local ulReadUUIDAddress = 0x00061ff0
 
@@ -1179,22 +1182,30 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
 
     -- get verify sig program data only
 
-    if strReadSipData then
+    if strReadSipData and fOk then
         tLog.info("download read_sip hboot image to 0x%08x", ulHbootLoadAddress)
         tFlasher.write_image(tPlugin, ulHbootLoadAddress, strReadSipData)
 
 
         -- reset the value of the read sip result address
         tLog.info("reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
-        tPlugin:write_data32(ulReadSipResultAddress, 0x00000000)
+
         tPlugin:write_data32(ulReadSipMagicAddress, 0x00000000)
+        if fGetUidOnly then
+            -- tell the read_sip.binary to only read the uid and end without a reset
+            tPlugin:write_data32(ulReadSipResultAddress, GET_UUID_ONLY)
+        else
+            tPlugin:write_data32(ulReadSipResultAddress, 0x00000000)
+        end
+
 
         if strPluginType == 'romloader_jtag' or strPluginType == 'romloader_uart' or strPluginType == 'romloader_eth' then
             if ulM2MMajor == 3 and ulM2MMinor >= 1 then
                 -- M2M protocol for rev2
                 tLog.info("Start read sip hboot image inside intram")
-                tFlasher.call_hboot(tPlugin, nil, true)
-            elseif strPluginType ~= 'romloader_jtag' then
+                local fSkipAnswer = not fGetUidOnly
+                tFlasher.call_hboot(tPlugin, nil, fSkipAnswer)
+            elseif strPluginType ~= 'romloader_jtag' and not fGetUidOnly then
                 -- M2M protocol for rev1
                 tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
                 local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
@@ -1220,6 +1231,7 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
                         ulReadSipResultAddress
                 )
             end
+
 
             tLog.info("Disconnect from Plugin and reconnect again")
             -- can there be timing issues with different OS
@@ -1247,8 +1259,9 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
                 strErrorMsg = "Could not reach plugin after reset"
                 fResult = false
             end
-            local ulMagicResult
+
             if fResult then
+                local ulMagicResult
                 ulMagicResult = tPlugin:read_data32(ulReadSipMagicAddress)
                 if ulMagicResult == MAGIC_COOKIE_END then
                     fResult = true
@@ -1262,23 +1275,37 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
                     fResult = false
                 end
             end
-            if fResult then
-                ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
-                if ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
-                        ((ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0) then
-                    strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
-                    strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
-                    strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 
-                    aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
-                    aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
-                    aStrUUIDs[3] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 8))
-                elseif (ulReadSipResult & COM_SIP_INVALID_MSK) ~= 0 then
-                    strErrorMsg = "Could not get a valid copy of the COM SIP"
-                    fResult = false
-                elseif (ulReadSipResult & APP_SIP_INVALID_MSK) ~= 0 then
-                    strErrorMsg = "Could not get a valid copy of the APP SIP"
-                    fResult = false
+            if fResult then
+
+                ulReadSipResult = tPlugin:read_data32(ulReadSipResultAddress)
+                if not fGetUidOnly then
+
+                    if ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
+                            ((ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0) then
+                        strCalSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress, 0x1000)
+                        strComSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
+                        strAppSipData = tFlasher.read_image(tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
+
+                        aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
+                        aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
+                        aStrUUIDs[3] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 8))
+                    elseif (ulReadSipResult & COM_SIP_INVALID_MSK) ~= 0 then
+                        strErrorMsg = "Could not get a valid copy of the COM SIP"
+                        fResult = false
+                    elseif (ulReadSipResult & APP_SIP_INVALID_MSK) ~= 0 then
+                        strErrorMsg = "Could not get a valid copy of the APP SIP"
+                        fResult = false
+                    end
+                else
+                    if ulReadSipResult & UID_CPY_MSK ~= 0 then
+                        aStrUUIDs[1] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress))
+                        aStrUUIDs[2] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 4))
+                        aStrUUIDs[3] = tFlasherHelper.switch_endian(tPlugin:read_data32(ulReadUUIDAddress + 8))
+                    else
+                        strErrorMsg = "Could not receive uuid"
+                        fResult = false
+                    end
                 end
             end
         else
@@ -1286,7 +1313,13 @@ local function readSip(strHbootPath, tPlugin, strTmpFolderPath, atPluginOptions,
             fResult = false
         end
     end
-    return fResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData, aStrUUIDs
+
+    if fGetUidOnly then
+        return fResult, strErrorMsg, aStrUUIDs
+    else
+        return fResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData
+    end
+
 end
 
 
@@ -1311,7 +1344,7 @@ local function verifyContent(
     -- changes
 
     -- get the com sip data -- todo add bootswitch here?
-    local fOk, strErrorMsg, _, strComSipData, strAppSipData, _ = readSip(
+    local fOk, strErrorMsg, _, strComSipData, strAppSipData = readSip(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
     -- check if for both sides a valid sip was found
     if fOk~= true or strComSipData == nil or strAppSipData == nil then
@@ -2061,7 +2094,7 @@ local function read_sip(
     -- PROCESS
     --------------------------------------------------------------------------
 
-    local iReadSipResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData, _ =  readSip(
+    local iReadSipResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData =  readSip(
         strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
 
 
@@ -2128,8 +2161,8 @@ local function get_uid(
     -- PROCESS
     --------------------------------------------------------------------------
 
-    local iReadSipResult, strErrorMsg, _, _, _, aStrUUIDs = readSip(
-        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath)
+    local iReadSipResult, strErrorMsg, aStrUUIDs = readSip(
+        strReadSipPath, tPlugin, strTmpFolderPath, atPluginOptions, strExecReturnPath, true)
 
     if iReadSipResult then
             local strUidVal = string.format("%08x%08x%08x", aStrUUIDs[1], aStrUUIDs[2], aStrUUIDs[3])
