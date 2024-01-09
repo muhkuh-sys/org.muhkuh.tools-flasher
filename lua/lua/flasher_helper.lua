@@ -9,6 +9,7 @@ local M = {}
 -----------------------------------------------------------------------------
 
 local class = require 'pl.class'
+local path = require 'pl.path'
 
 -- exit code for detect_netx
 local STATUS_OK = 0
@@ -22,6 +23,10 @@ local SECURE_BOOT_ONLY_APP_ENABLED = 50
 local SECURE_BOOT_UNKNOWN = 2
 local SECURE_BOOT_ERROR = 1
 
+local tFlasher = require 'flasher'
+
+M.NETX90_DEFAULT_COM_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "com_sip_default_ff.bin")
+M.NETX90_DEFAULT_APP_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "app_sip_default_ff.bin")
 --------------------------------------------------------------------------
 -- helpers
 --------------------------------------------------------------------------
@@ -579,7 +584,7 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function M.detect_secure_boot_mode(aArgs)
-  local tFlasher = require 'flasher'
+  
   local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
@@ -596,7 +601,7 @@ function M.detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
-  local path = require 'pl.path'
+
 
 	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then

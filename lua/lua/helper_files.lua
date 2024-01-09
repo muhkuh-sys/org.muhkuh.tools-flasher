@@ -74,8 +74,8 @@ local atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-0-g2886822befb2:reV",
-        version_offset = 0x1044
+        version = "Ver:GITv1.0.0-dev7-0-g8627085f00cd:reV",
+        version_offset = 0x104C
     },
 
     {
@@ -95,7 +95,7 @@ local atHelperFileVersions = {
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.2-0-g",
+        version = "GITv2.1.0",
         version_offset = 0x0410
     },
 

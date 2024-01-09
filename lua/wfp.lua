@@ -15,7 +15,7 @@ local tVerifySignature = require 'verify_signature'
 
 
 
-local atName2Bus = {
+atName2Bus = {
     ['Parflash'] = tFlasher.BUS_Parflash,
     ['Spi'] = tFlasher.BUS_Spi,
     ['IFlash'] = tFlasher.BUS_IFlash,
@@ -30,47 +30,100 @@ local atBus2Name = {
 
 
 
-local xml = require 'pl.xml'
 local WFPXml = require 'pl.class'()
-function WFPXml:_init(version, tLog)
+function WFPXml:_init(tLog)
     -- more information about pl.xml here: https://stevedonovan.github.io/Penlight/api/libraries/pl.xml.html
-    version = version or "1.3.0"
+    self.xml = require 'pl.xml'
+    self.nodeFlasherPack = nil
+    self.tTargets = {}
     self.tLog = tLog
-    self.nodeFlasherPack = xml.new("FlasherPackage")
+end
+
+function WFPXml:parse(strWfpXmlData)
+    self.nodeFlasherPack = self.xml.parse(strWfpXmlData, true, true)
+    -- self.tTarget = ???
+    self.tTargets = self.nodeFlasherPack:get_elements_with_name("Target")
+    -- local strXmlData = self.xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
+    -- print(strXmlData)
+end
+
+function WFPXml:get_target(strNetX)
+    for _, tTarget in ipairs(self.tTargets) do
+
+        if strNetX == tTarget["attr"]['netx'] then
+            return tTarget
+        end
+    end
+    return nil
+end
+
+function WFPXml:new(version)
+    version = version or "1.3.0"
+    self.nodeFlasherPack = self.xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
     self.nodeFlasherPack:set_attrib("has_subdirs", "True")
 end
 
 function WFPXml:addTarget(strTargetName)
-	self.tTarget = xml.new("Target")
-	self.tTarget:set_attrib("netx", strTargetName)
-	self.nodeFlasherPack:add_child(self.tTarget)
+	local tTarget = self.xml.new("Target")
+	tTarget:set_attrib("netx", strTargetName)
+	self.nodeFlasherPack:add_child(tTarget)
+    table.insert(self.tTargets, tTarget)
+    return tTarget
 
 end
 
-function WFPXml:addFlash(strBus, ucChipSelect, ucUnit)
-	local tFlash = xml.new("Flash")
+function WFPXml:addComment(tNode, strComment)
+    local tComment = self.xml.new("!-- "..strComment.." --")
+
+    if tNode.last_add == nil then
+        tNode.last_add = {}
+    end
+    tNode:add_child(tComment)
+end
+
+function WFPXml:addSip(tTarget, strSipPage, strSipPath, fSetKek)
+	local tSip = self.xml.new("Sip")
+	tSip:set_attrib("page", strSipPage)
+	tSip:set_attrib("file", strSipPath)
+    if fSetKek then
+        tSip:set_attrib("setKEK", "true")
+    end
+    if tTarget.last_add == nil then
+        tTarget.last_add = {}
+    end
+	tTarget:add_child(tSip)
+end
+
+function WFPXml:addFlash(tTarget, strBus, ucChipSelect, ucUnit)
+	local tFlash = self.xml.new("Flash")
 	tFlash:set_attrib("bus", strBus)
 	tFlash:set_attrib("chip_select", ucChipSelect)
 	tFlash:set_attrib("unit", ucUnit)
-	self.tTarget:add_child(tFlash)
+	tTarget:add_child(tFlash)
 
-	local tData = xml.new("Data")
+	local tData = self.xml.new("Data")
 	tData:set_attrib("file", "test_data.bin")
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
 
-	local tErase = xml.new("Erase")
+	local tErase = self.xml.new("Erase")
 	tErase:set_attrib("size", "0x1000")
 	tErase:set_attrib("offset", "0x0")
 	tFlash:add_child(tErase)
-
+    return tFlash
+end
+function WFPXml:toString()
+    local strXmlData = self.xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
+    -- workaround to fix comment lines (somehow pl.xml does not provide a proper way to add comments)
+    strXmlData = strXmlData:gsub("--/>", "-->")
+    return strXmlData
 end
 
 function WFPXml:exportXml(outputDir)
     self.tLog.info("export example XML ", outputDir)
-    local strXmlData = xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
+    local strXmlData = self.xml.toString()
     pl.utils.writefile(outputDir, strXmlData)
 end
 
@@ -216,7 +269,9 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     end
 
     if fResult==true then
-        local exampleXml = WFPXml(nil, tLog)
+        local exampleXml = WFPXml(tLog)
+        local tCurrentTarget
+        exampleXml.new()
 
         iChiptype = tPlugin:GetChiptyp()
         local strTargetName = tWfpControl.atChiptyp2name[iChiptype]
@@ -224,7 +279,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
         aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
         -- get the board info
         aBoardInfo = tFlasher.getBoardInfo(tPlugin, aAttr)
-        exampleXml:addTarget(strTargetName)
+        tCurrentTarget = exampleXml:addTarget(strTargetName)
         for _,tBusInfo in ipairs(aBoardInfo) do
             local ucBus = tBusInfo.iIdx
             local strBus = atBus2Name[ucBus]
@@ -234,11 +289,11 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
                 -- add only unit 2 and 3 for IFlash of netx90
                 if strTargetName == "NETX90" and ucBus == 2 then
                     if ucUnit == 2 or ucUnit == 3 then
-                        exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
+                        exampleXml:addFlash(tCurrentTarget, strBus, ucChipSelect, ucUnit)
                     end
                 -- only add Unit 0 Flashes to example
                 elseif ucUnit == 0 then
-                    exampleXml:addFlash(strBus, ucChipSelect, ucUnit)
+                    exampleXml:addFlash(tCurrentTarget, strBus, ucChipSelect, ucUnit)
                 end
             end
         end
@@ -249,11 +304,50 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     return fResult
 end
 
+local function add_sip_data_to_wfp_xml(strWfpPath, strComSipBin, strAppSipBin, strNetX, strUsipFilePath, fSetKek)
+    local tparsedTarget
+    local wfp_xml = WFPXml()
+    local strWfpData
+    local strUsipBaseName
 
-local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP)
+    -- parse input wfp xml 
+    wfp_xml:parse(strWfpPath)
+    tparsedTarget = wfp_xml:get_target(strNetX)
+
+    -- add comments to the xml
+    wfp_xml:addComment(
+        tparsedTarget,
+         "The following binaries are automaticlly generated and are based on the default values for COM and APP SIP"
+        )
+
+    if strUsipFilePath ~= nil then
+        strUsipBaseName = pl.path.basename(strUsipFilePath)
+        wfp_xml:addComment(
+            tparsedTarget,
+             string.format("The binaries are modified based on the values from USIP file: %s", strUsipBaseName)
+            )
+    end
+
+    -- add SIP chunk for each SIP to the xml
+    wfp_xml:addSip(tparsedTarget, "COM", strComSipBin, fSetKek)
+    wfp_xml:addSip(tparsedTarget, "APP", strAppSipBin)
+
+    -- create new xml file content
+    strWfpData = wfp_xml:toString()
+
+    return strWfpData
+end
+
+local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP,
+     fAddSips, strUsipFilePath, fSetSipProtectionCookie, fSetKek)
 
     local archive = require 'archive'
     local fOk=true
+    local strComSipData
+    local strComSipBin = "COM_SIP.bin"
+    local strAppSipData
+    local strAppSipBin = "APP_SIP.bin"
+    local tUsipConfigDict
 
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
@@ -267,6 +361,32 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
             local tFsResult, strError = pl.file.delete(strWfpArchiveFile)
             if tFsResult == nil then
                 tLog.error('Failed to delete the old archive "%s": %s', strWfpArchiveFile, strError)
+                fOk = false
+            end
+        end
+    end
+
+    if fAddSips then
+        tLog.info("Add Secure Info Page (SIP) data to wfp archive")
+        local usip_generator = require 'usip_generator'
+        local tUsipGen = usip_generator(tLog)
+        local fResult
+        local strErrorMsg
+
+        fResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
+        if not fResult then
+            tLog.error('Failed to analyze usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
+            fOk = false
+        else
+            fResult, strErrorMsg, strComSipData, strAppSipData = tUsipGen:convertUsipToBin(
+                tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN,
+                tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN,
+                tUsipConfigDict,
+                fSetSipProtectionCookie
+            )
+            
+            if not fResult then
+                tLog.error('Failed to convert usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
                 fOk = false
             end
         end
@@ -287,7 +407,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
             for _, tTarget in pairs(tWfpControl.atConfigurationTargets) do
                 for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                     local strBusName = tTargetFlash.strBus
-                    local tBus = atName2Bus[strBusName]
+					local tBus = atName2Bus[strBusName]
                     if tBus == nil then
                         tLog.error('Unknown bus "%s" found in WFP control file.', strBusName)
                         fOk = false
@@ -378,6 +498,11 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             local ulModTime = pl.file.modified_time(strWfpControlFile)
                             local tEntryCtrl = archive.ArchiveEntry()
 
+                            if fAddSips then
+                                -- modify the input xml to add COM and APP SIP binaries
+                                strData = add_sip_data_to_wfp_xml(strWfpControlFile, strComSipBin, strAppSipBin,
+                                 tUsipConfigDict['netx_type'], strUsipFilePath, fSetKek)
+                            end
                             tEntryCtrl:set_pathname('wfp.xml')
                             tEntryCtrl:set_size(string.len(strData))
                             tEntryCtrl:set_filetype(archive.AE_IFREG)
@@ -389,6 +514,41 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             tArchive:write_header(tEntryCtrl)
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
+
+                            if fAddSips then
+                                local tEntry
+                                local ulCreationTime = os.time()
+                                local ulModTime = os.time()
+                                -- add COM SIP
+                                tEntry = archive.ArchiveEntry()
+                                tEntry:set_pathname(strComSipBin)
+
+                                tEntry:set_size(string.len(strComSipData))
+                                tEntry:set_filetype(archive.AE_IFREG)
+                                tEntry:set_perm(420)
+                                tEntry:set_gname('wfp')
+                                tEntry:set_ctime(ulCreationTime, 0)
+                                tEntry:set_mtime(ulModTime, 0)
+                                
+                                tArchive:write_header(tEntry)
+                                tArchive:write_data(strComSipData)
+                                tArchive:finish_entry()
+
+                                -- add APP SIP
+                                tEntry = archive.ArchiveEntry()
+                                tEntry:set_pathname(strAppSipBin)
+                                tEntry:set_size(string.len(strAppSipData))
+                                tEntry:set_filetype(archive.AE_IFREG)
+                                tEntry:set_perm(420)
+                                tEntry:set_gname('wfp')
+                                tEntry:set_ctime(ulCreationTime, 0)
+                                tEntry:set_mtime(ulModTime, 0)
+
+                                tArchive:write_header(tEntry)
+                                tArchive:write_data(strComSipData)
+                                tArchive:finish_entry()
+
+                            end
 
                             for _, tAttr in ipairs(atSortedFiles) do
                                 local tEntry = archive.ArchiveEntry()
@@ -839,6 +999,48 @@ tParserCommandPack:option('-V --verbose')
                   :argname('<LEVEL>')
                   :default('debug')
                   :target('strLogLevel')
+
+
+-- Add the "pack" command and all its options.
+local tParserCommandPackSip = tParser:command(
+    'pack_sip ps', 'Pack a WFP based on an XML with Default values for COM and APP secure info pages')
+    :target('fCommandPackSipSelected')
+tParserCommandPackSip:argument('xml', 'The XML control file.')
+                  :target('strWfpControlFile')
+tParserCommandPackSip:argument('archive', 'The WFP file to create.')
+                  :target('strWfpArchiveFile')
+tParserCommandPackSip:flag('-o --overwrite')
+                  :description('Overwrite an existing WFP archive. ' ..
+                               'The default is to do nothing if the target archive already exists.')
+                  :default(false)
+                  :target('fOverwrite')
+tParserCommandPackSip:flag('-s --simple')
+                  :description('Build a SWFP file without compression.')
+                  :default(false)
+                  :target('fBuildSWFP')
+tParserCommandPackSip:option('-V --verbose')
+                  :description(string.format(
+                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                    table.concat(atLogLevels, ', ')
+                  ))
+                  :argname('<LEVEL>')
+                  :default('debug')
+                  :target('strLogLevel')
+tParserCommandPackSip:option('-i --usip')
+                  :description(string.format(
+                    'Add data from usip file to be loaded to the secure info pages.',
+                    table.concat(atLogLevels, ', ')
+                  ))
+                  :argname('<USIP_FILE_PATH>')
+                  :target('strUsipFilePath')
+tParserCommandPackSip:flag('--set_sip_protection')
+                   :description('Set the SIP protection cookie.')
+                   :target('fSetSipProtectionCookie')
+                   :default(false)
+tParserCommandPackSip:flag('--set_kek')
+                   :description('Set the KEK (Key exchange key).')
+                   :target('fSetKek')
+                   :default(false)
 
 -- Add the "example" command and all its options.
 local tParserCommandExample = tParser:command('example e',
@@ -1339,8 +1541,20 @@ elseif tArgs.fCommandListSelected == true then
         end
     end
 
-elseif tArgs.fCommandPackSelected == true then
-    fOk=pack(tArgs.strWfpArchiveFile,tArgs.strWfpControlFile,tWfpControl,tLog,tArgs.fOverwrite,tArgs.fBuildSWFP)
+elseif tArgs.fCommandPackSelected == true or tArgs.fCommandPackSipSelected == true then
+    print("")
+    local fAddSips = tArgs.fCommandPackSipSelected
+    fOk=pack(
+        tArgs.strWfpArchiveFile,
+        tArgs.strWfpControlFile,
+        tWfpControl,
+        tLog,tArgs.fOverwrite,
+        tArgs.fBuildSWFP,
+        fAddSips,
+        tArgs.strUsipFilePath,
+        tArgs.fSetSipProtectionCookie,
+        tArgs.fSetKek
+    )
 
 elseif tArgs.fCommandCheckHelperSignatureSelected then
     tArgs.atPluginOptions = atPluginOptions
