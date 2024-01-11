@@ -198,8 +198,10 @@ tParserWriteSips:flag('--set_kek')
     :default(false)
 
 
-
-local tParserConvertUsip = tParser:command('convert_usip cu', strWriteSipsHelp):target('fCommandConvertUsipSelected')
+local strConvertUsipHelp = [[
+	apply data of an usip file to the default values of the secure info pages and export these as binary files
+]]
+local tParserConvertUsip = tParser:command('convert_usip cu', strConvertUsipHelp):target('fCommandConvertUsipSelected')
 tParserConvertUsip:argument('input_file'):description("USIP image file path"):target('strUsipFilePath')
 tParserConvertUsip:option(
     '-V --verbose'
@@ -2709,48 +2711,50 @@ if tArgs.strUsipFilePath then
     end
 end
 
--- check for a Plugin
--- get the plugin
-local fCallSuccess
-fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
-if fCallSuccess then
-    if not tPlugin then
-        tLog.error('No plugin selected, nothing to do!')
-        -- return here because of initial error
-        os.exit(1)
-    else
-        -- get the plugin type
-        strPluginType = tPlugin:GetTyp()
-        -- get plugin name
-        local strPluginName = tPlugin:GetName()
+if not tArgs.fCommandConvertUsipSelected then
+	-- check for a Plugin
+	-- get the plugin
+	local fCallSuccess
+	fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
+	if fCallSuccess then
+		if not tPlugin then
+			tLog.error('No plugin selected, nothing to do!')
+			-- return here because of initial error
+			os.exit(1)
+		else
+			-- get the plugin type
+			strPluginType = tPlugin:GetTyp()
+			-- get plugin name
+			local strPluginName = tPlugin:GetName()
 
-        tArgs.strPluginType = strPluginType
-        tArgs.strPluginName = strPluginName
+			tArgs.strPluginType = strPluginType
+			tArgs.strPluginName = strPluginName
 
 
-        if not tArgs.fCommandDetectSelected then
-            -- catch the romloader error to handle it correctly
-            fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
-            if fFinalResult == false then
-                tLog.error(strErrorMsg)
-                os.exit(1)
-            else
-                iChiptype = tPlugin:GetChiptyp()
-                tLog.debug( "Found Chip type: %d", iChiptype )
-            end
-        end
-    end
-else
-    if tArgs.strPluginName then
-        tLog.error( "Could not get selected interface -> %s.", tArgs.strPluginName )
-    else
-        tLog.error( "Could not get the interactive selected interface" )
-    end
-    -- this is a bit missleading, but in case of an error the pcall function returns as second paramater
-    -- the error message. But because the first return parameter of the getPlugin function is the tPlugin
-    -- the parameter name convention is a bit off ...
-    tLog.error(tPlugin)
-    os.exit(1)
+			if not tArgs.fCommandDetectSelected then
+				-- catch the romloader error to handle it correctly
+				fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+				if fFinalResult == false then
+					tLog.error(strErrorMsg)
+					os.exit(1)
+				else
+					iChiptype = tPlugin:GetChiptyp()
+					tLog.debug( "Found Chip type: %d", iChiptype )
+				end
+			end
+		end
+	else
+		if tArgs.strPluginName then
+			tLog.error( "Could not get selected interface -> %s.", tArgs.strPluginName )
+		else
+			tLog.error( "Could not get the interactive selected interface" )
+		end
+		-- this is a bit missleading, but in case of an error the pcall function returns as second paramater
+		-- the error message. But because the first return parameter of the getPlugin function is the tPlugin
+		-- the parameter name convention is a bit off ...
+		tLog.error(tPlugin)
+		os.exit(1)
+	end
 end
 
 -- assumption at this point:
@@ -3070,8 +3074,8 @@ elseif tArgs.fCommandConvertUsipSelected then
     local strAppSipData
 
     fFinalResult, strMsg, strComSipData, strAppSipData = tUsipGen:convertUsipToBin(
-        NETX90_DEFAULT_COM_SIP_BIN,
-        NETX90_DEFAULT_APP_SIP_BIN,
+        tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN,
+        tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN,
         tUsipConfigDict,
         tArgs.fSetSipProtectionCookie
     )
@@ -3426,8 +3430,10 @@ else
     fFinalResult = false
 end
 
-tPlugin:Disconnect()
-tPlugin = nil
+if not tArgs.fCommandConvertUsipSelected then
+	tPlugin:Disconnect()
+	tPlugin = nil
+end
 -- print OK if everything works
 
 if fFinalResult then
