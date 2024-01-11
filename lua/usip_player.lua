@@ -211,7 +211,7 @@ tParserConvertUsip:option(
 tParserConvertUsip:argument('output')
     :description('Write the generated SIP pages to output directory.')
     :target('strOutputDir')
-tParserConvertUsip:argument('--set_sip_protection')
+tParserConvertUsip:option('--set_sip_protection')
     :description('Set the SIP protection cookie.')
     :target('fSetSipProtectionCookie')
     :default(false)
