@@ -345,7 +345,7 @@ addSkipSfdpErase(tParserCommandSmartErase)
 
 
 -- verify
-local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed')
+local tParserCommandVerify = tParser:command('verify v', 'Verify file data inside flash using raw content. Return 0 if matching else 1')
   :target('fCommandVerifySelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerify)
@@ -361,7 +361,7 @@ addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums')
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Verify file data inside flash using hash value only. Return 0 if matching else 1')
   :target('fCommandVerifyHashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
@@ -822,24 +822,24 @@ local function exec(aArgs)
 
 		-- verify_hash: compute the hash of the input file and compare
 		if fOk and aArgs.fCommandVerifyHashSelected then
-      local mhash = require 'mhash'
-      local mh = mhash.mhash_state()
-			mh:init(mhash.MHASH_SHA1)
-			mh:hash(strData)
-			strFileHashBin = mh:hash_end()
-			strFileHash = tFlasherHelper.getHexString(strFileHashBin)
-			print("File SHA1: " .. strFileHash)
+			local mhash = require 'mhash'
+			local mh = mhash.mhash_state()
+					mh:init(mhash.MHASH_SHA1)
+					mh:hash(strData)
+					strFileHashBin = mh:hash_end()
+					strFileHash = tFlasherHelper.getHexString(strFileHashBin)
+					print("File SHA1: " .. strFileHash)
 
-			if strFileHashBin == strFlashHashBin then
-				print("Checksums are equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file have the same checksum"
-			else
-				print("Checksums are not equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file do not have the same checksum"
-			end
-		end
+					if strFileHashBin == strFlashHashBin then
+						print("Checksums are equal!")
+						fOk = true
+						strMsg = "The data in the flash and the file have the same checksum"
+					else
+						print("Checksums are not equal!")
+						fOk = false
+						strMsg = "The data in the flash and the file do not have the same checksum"
+					end
+				end
 
 		-- save output file   strData --> strDataFileName
 		if fOk and aArgs.fCommandReadSelected then
