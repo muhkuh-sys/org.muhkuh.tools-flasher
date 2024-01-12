@@ -822,24 +822,24 @@ local function exec(aArgs)
 
 		-- verify_hash: compute the hash of the input file and compare
 		if fOk and aArgs.fCommandVerifyHashSelected then
-      local mhash = require 'mhash'
-      local mh = mhash.mhash_state()
-			mh:init(mhash.MHASH_SHA1)
-			mh:hash(strData)
-			strFileHashBin = mh:hash_end()
-			strFileHash = tFlasherHelper.getHexString(strFileHashBin)
-			print("File SHA1: " .. strFileHash)
+			local mhash = require 'mhash'
+			local mh = mhash.mhash_state()
+					mh:init(mhash.MHASH_SHA1)
+					mh:hash(strData)
+					strFileHashBin = mh:hash_end()
+					strFileHash = tFlasherHelper.getHexString(strFileHashBin)
+					print("File SHA1: " .. strFileHash)
 
-			if strFileHashBin == strFlashHashBin then
-				print("Checksums are equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file have the same checksum"
-			else
-				print("Checksums are not equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file do not have the same checksum"
-			end
-		end
+					if strFileHashBin == strFlashHashBin then
+						print("Checksums are equal!")
+						fOk = true
+						strMsg = "The data in the flash and the file have the same checksum"
+					else
+						print("Checksums are not equal!")
+						fOk = false
+						strMsg = "The data in the flash and the file do not have the same checksum"
+					end
+				end
 
 		-- save output file   strData --> strDataFileName
 		if fOk and aArgs.fCommandReadSelected then
