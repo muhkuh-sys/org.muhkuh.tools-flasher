@@ -220,11 +220,21 @@ tParserConvertUsip:option('--set_sip_protection')
 
 -- NXTFLASHER-692
 local strVerifyInitialModeHelp = [[
-    verify that the netX is in an initial state which means:
+    Verify that the netX is in an initial state which means:
     - SIP protection cookie is not set
     - secure boot mode is not enabled
     - SIPs are not hidden
-    - CAL SIP rom func mode cookie is set
+    - rom func mode cookie is set
+	all of the criterias have to be fulfilled.
+	
+	return values:
+		0: netX is in initial mode
+		1: unspecified error occured
+		2: SIP protection cookie is set
+		3: secure boot is enabled
+		4: SIP is hidden
+		5: rom func mode cookie is not set
+		
 ]]
 local tParserVerifyInitialMode = tParser:command('verify_inital_mode vim', strVerifyInitialModeHelp):target(
         'fCommandVerifyInitialModeSelected')
@@ -3058,6 +3068,8 @@ elseif tArgs.fCommandVerifyInitialModeSelected then
             tLog.error('RESULT:unspecified error occured')
         elseif iVerifyInitialModeResult == WS_RESULT_ERROR_SIP_HIDDEN then
             tLog.error('RESULT: one or more secure info page is hidden')
+		elseif iVerifyInitialModeResult == WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET then
+            tLog.error('RESULT: rom func mode cookie is not set')	
         end
         tLog.error(strErrorMsg)
         tLog.info('RETURN: '.. iVerifyInitialModeResult)
