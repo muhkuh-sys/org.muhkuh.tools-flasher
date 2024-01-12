@@ -345,7 +345,7 @@ addSkipSfdpErase(tParserCommandSmartErase)
 
 
 -- verify
-local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed')
+local tParserCommandVerify = tParser:command('verify v', 'Verify file data inside flash using raw content. Return 0 if matching else 1')
   :target('fCommandVerifySelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerify)
@@ -361,7 +361,7 @@ addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums')
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Verify file data inside flash using hash value only. Return 0 if matching else 1')
   :target('fCommandVerifyHashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
