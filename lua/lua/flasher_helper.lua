@@ -585,7 +585,7 @@ end
 
 function M.detect_secure_boot_mode(aArgs)
   
-  local romloader = require 'romloader'
+	local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -607,8 +607,8 @@ function M.detect_secure_boot_mode(aArgs)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
 
-	elseif tPlugin:GetTyp() == "romloader_uart" then
-		fConnected, strMsg = connect_retry(tPlugin)
+	elseif tPlugin:GetTyp() == "romloader_uart" or tPlugin:GetTyp() == "romloader_eth" then
+		fConnected, strMsg = M.connect_retry(tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -720,12 +720,12 @@ function M.detect_secure_boot_mode(aArgs)
       "read_sip_M2M.bin"
     )  --tFlasher.HELPER_FILES_PATH
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
-    local strReadSipBin
+		local strReadSipBin
 		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
 		else
-			fConnected, strMsg = connect_retry(tPlugin)
+			fConnected, strMsg = M.connect_retry(tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
 
 			if not fConnected then
@@ -782,14 +782,14 @@ function M.detect_secure_boot_mode(aArgs)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
 							else
-								fConnected, strMsg = connect_retry(tPlugin)
+								fConnected, strMsg = M.connect_retry(tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
 
 								if not fConnected then
 									print("Failed to reconnect.")
 								else
 									-- read the SIP pages
-                  local tRes
+									local tRes
 									tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
 
 									if tRes == nil then
@@ -842,7 +842,7 @@ function M.detect_secure_boot_mode(aArgs)
 		end -- readSipM2M image
 
 	else
-		strMsg = "Only romloader_uart and romloader_jtag are supported."
+		strMsg = "Only romloader_uart, romloader_eth and romloader_jtag are supported."
 	end -- if tPlugin
 
 	if iSecureBootStatus==SECURE_BOOT_DISABLED then
