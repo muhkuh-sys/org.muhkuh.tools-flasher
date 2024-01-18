@@ -64,6 +64,11 @@ jobs:
           distribution-id: ubuntu
           distribution-version: "20.04"
           cpu-architecture: arm64
+        - name: Ubuntu 20.04 armhf
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: armhf
         - name: Ubuntu 22.04 x86_64
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
           distribution-id: ubuntu
