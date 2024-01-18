@@ -88,8 +88,8 @@ local atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-0-g427ff28e7e1a:reV",
-        version_offset = 0x93c
+        version = "Ver:GITv1.0.0-dev5-0",
+        version_offset = 0x9B8
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
