@@ -2842,7 +2842,7 @@ local strSecureOptionDir = path.join(strSecureOption, strNetxName)
 local strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
 
 -- If no helpers are required, skip the checks.
-if #astrHelpersToCheck == 0 then
+if astrHelpersToCheck == 0 then
     tLog.info("Skipping version/signature tests for helper files.")
 else     
     -- Print the list.

@@ -121,6 +121,7 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
     local ulSignatureSize
     local strPaddedKey
     local strChunkHash
+    local fPlaceSignatureAtEnd = false
 
     local tChunkHash = mhash.mhash_state()
     tChunkHash:init(mhash.MHASH_SHA384)
@@ -299,30 +300,61 @@ function Sipper:gen_data_block(strFileData, strOutputBinPath)
 
             strChunkHash = tChunkHash:hash_end()
 
-            print(tBinStringHandle:seek())
+            -- print(tBinStringHandle:seek())
             -- chunk size does not include the chunk id and the chunk size itself
             ulSignatureSize = ulChunkSize - ulReadSize + 8
             strSignature = tBinStringHandle:read(ulSignatureSize)
+            -- write whole 512 bytes as signature for verify_sig.bin to determine the actual signature size
+            -- to get the the signature from the end of buffer
+            if ulSignatureSize > 512 then
+                -- strip signature string to be exact 512 bytes
+                strSignature = string.sub(strSignature, -512)
+            else
+                -- fill up signature string to be exact 512 bytes
+                local ulFillupSize = 512 - ulSignatureSize
+
+                strSignature = string.rep(string.char(0x0), ulFillupSize) .. strSignature
+            end
+            fPlaceSignatureAtEnd = true
         end
 
         if tResult == true then
             -- create the data block with the collected data
+            local usOption  = 0x0100
+            local usUsedKeys = 0x0000
+
             if ulPageSelect == 1 and ulKeyIdx == 16 then
-                strDataBlock = strDataBlock .. string.char(0x03, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x04, 0x00)
+                usOption = usOption | 0x0003
+                usUsedKeys = usOption | 0x0004
+                -- strDataBlock = strDataBlock .. string.char(0x03, 0x01)
+                -- strDataBlock = strDataBlock .. string.char(0x04, 0x00)
             elseif ulPageSelect == 1 and ulKeyIdx == 17 then
-                strDataBlock = strDataBlock .. string.char(0x02, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x01, 0x00)
+                usOption = usOption | 0x0002
+                usUsedKeys =usOption | 0x0001
+                -- strDataBlock = strDataBlock .. string.char(0x02, 0x01)
+                -- strDataBlock = strDataBlock .. string.char(0x01, 0x00)
             elseif ulPageSelect == 2 and ulKeyIdx == 16 then
-                strDataBlock = strDataBlock .. string.char(0x04, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x08, 0x00)
+                usOption = usOption | 0x0004
+                usUsedKeys = usOption | 0x0008
+                -- strDataBlock = strDataBlock .. string.char(0x04, 0x01)
+                -- strDataBlock = strDataBlock .. string.char(0x08, 0x00)
             elseif ulPageSelect == 2 and ulKeyIdx == 17 then
-                strDataBlock = strDataBlock .. string.char(0x00, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x02, 0x00)
-            else
-                strDataBlock = strDataBlock .. string.char(0x00, 0x01)
-                strDataBlock = strDataBlock .. string.char(0x00, 0x00)
+                usOption = usOption | 0x0004
+                usUsedKeys = usOption | 0x0008
+                -- strDataBlock = strDataBlock .. string.char(0x00, 0x01)
+                -- strDataBlock = strDataBlock .. string.char(0x02, 0x00)
             end
+            if fPlaceSignatureAtEnd then
+                usOption = usOption | 0x1000  -- set flag UNKNOWN_SIGNATURE_SIZE
+            end
+
+            local usOptionL = (usOption >> 8) & 0xff;
+            local usOptionH = (usOption) & 0xff;
+            local usUsedKeysL = (usUsedKeys >> 8) & 0xff;
+            local usUsedKeysH = (usUsedKeys) & 0xff;
+
+            strDataBlock = strDataBlock .. string.char(usOptionH, usOptionL)
+            strDataBlock = strDataBlock .. string.char(usUsedKeysH, usUsedKeysL)
 
             strDataBlock = strDataBlock .. strChunkHash
 

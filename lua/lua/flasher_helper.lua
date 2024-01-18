@@ -238,9 +238,9 @@ function M.connect_retry(tPlugin, uLRetries)
         strError = "No plugin selected for connect"
     end
 
-    -- default retries are 5
+    -- default retries are 3
     if uLRetries == nil then
-        uLRetries = 5
+        uLRetries = 3
     end
 
     while uLRetries > 0 do
