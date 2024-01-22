@@ -201,11 +201,12 @@ local function __generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tL
 end
 
 
-local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
+local function __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
   -- run verify command for flash data chunks with in wfp.xml
   -- run iserased command for erase commands in wfp.xml
   local fVerified = true  -- be optimistic
   local fOk
+  local tDataChunks = atFlashData['atChunkList']
   tLog.info('verify chunks from chunk list')
 
   -- verify the created chunks
@@ -213,7 +214,13 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
 
       if tChunk['strType'] == "erase" then
           -- run isErased function for areas that are expected to be erased after using the wfp archive
-          tLog.info('verify erase command at offset 0x%08x to 0x%08x.', tChunk['ulOffset'], tChunk['ulEndOffset'])
+          tLog.info('(Flash Bus: %s Unit: %s ChipSelect: %s): verify erase command at offset [0x%08x, 0x%08x[.',
+            atFlashData['tBus'],
+            atFlashData['ulUnit'],
+            atFlashData['ulChipSelect'],
+            tChunk['ulOffset'],
+            tChunk['ulEndOffset']
+        )
 
           fOk = tFlasher.isErased(tPlugin, aAttr, tChunk['ulOffset'], tChunk['ulEndOffset'])
           if fOk == true then
@@ -233,7 +240,10 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
           -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp
           -- archive
           tLog.info(
-            'verify flash command at offset [0x%08x, 0x%08x[. file %s',
+            '(Flash Bus: %s Unit: %s ChipSelect: %s): verify flash command at offset [0x%08x, 0x%08x[. file %s',
+            atFlashData['tBus'],
+            atFlashData['ulUnit'],
+            atFlashData['ulChipSelect'],
             tChunk['ulOffset'],
             tChunk['ulEndOffset'],
             tChunk['tFile']['strFilePath']
@@ -246,7 +256,13 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
               tLog.info(strMessage or "")
               tChunk['verified'] = true
           else
-              tLog.info('ERROR: verify failed for area 0x%08x to 0x%08x!', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('ERROR: (Flash Bus: %s Unit: %s ChipSelect: %s): verify failed for area 0x%08x to 0x%08x!', 
+               atFlashData['tBus'],
+              atFlashData['ulUnit'],
+              atFlashData['ulChipSelect'],
+               tChunk['ulOffset'],
+                tChunk['ulEndOffset']
+            )
               tLog.info(strMessage or "")
               fVerified = false
               tChunk['verified'] = false
@@ -479,7 +495,7 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
         atFlashData['atChunkList'] = tCleanChunkList
 
         -- pass the chunk list of current flash to __verifyWFPData
-        fOk = __verifyWFPData(atFlashData['atChunkList'], tPlugin, tFlasher, aAttr, tLog)
+        fOk = __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
         if fOk == false then
             fVerified = false
         end
