@@ -393,24 +393,17 @@ if 'NETX90' in atPickNetxForBuild:
     strHbootDefinitionTemplateTmp = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_template.xml" )
     strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_nodbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
-    
-    env_netx90_nodbg_secure = env_netx90_default.Clone()
-    env_netx90_nodbg_secure.Append(CPPDEFINES = [['CFG_DEBUGMSG', '0'], ['SECURE', '1']])
-    elf_netx90_nodbg_secure, bin_netx90_nodbg_secure, lib_netx90_nodbg_secure = flasher_build('flasher_netx90_secure', env_netx90_nodbg_secure, output_path, src_lib_netx90, src_main_netx90)
 
-    netx90_bin_file_path = str(bin_netx90_nodbg_secure[0])
- 
-    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
 
     atEnv.DEFAULT.Version(strHbootDefinition, strHbootDefinitionTemplateTmp)
-    
 
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_nodbg_secure.HBootImage(
             hboot_netx90_flasher_bin,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
-            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_nodbg_secure}),
+            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_nodbg}),
             HBOOTIMAGE_DEFINES=dict(),
             ASIC_TYP='NETX90B')
     else:
@@ -516,19 +509,15 @@ if 'NETX90' in atPickNetxForBuild:
     strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
     strHbootDefinition = os.path.join(cwd,"targets", "netx90_dbg_secure", "hboot_netx90_flasher_dbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
-    
-    env_netx90_dbg_secure = env_netx90_default.Clone()
-    env_netx90_dbg_secure.Append(CPPDEFINES = [['CFG_DEBUGMSG', '1'], ['SECURE', '1']])
-    elf_netx90_dbg_secure,bin_netx90_dbg_secure, lib_netx90_dbg_secure = flasher_build('flasher_netx90_secure', env_netx90_dbg_secure, output_path, src_lib_netx90, src_main_netx90)
 
     netx90_bin_file_path = str(bin_netx90_dbg_secure[0])
     
-    env_netx90_dbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_dbg_secure, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_dbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_dbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
     if(os.path.exists(tPublicOptionPatchTable)):
         tImg = env_netx90_dbg_secure.HBootImage(strOutputImg,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
-            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg_secure}),
+            HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg}),
             HBOOTIMAGE_DEFINES=dict(),
             ASIC_TYP='NETX90B')
     else:
@@ -877,7 +866,6 @@ if fBuildIsFull==True:
         'targets/testbench/netx/flasher_netx500.bin':                      bin_netx500_nodbg,
         'targets/testbench/netx/flasher_netx90_mpw.bin':                   bin_netx90_mpw_nodbg,
         'targets/testbench/netx/flasher_netx90.bin':                       bin_netx90_nodbg,
-        'targets/testbench/netx/flasher_netx90_secure.bin':                bin_netx90_nodbg_secure,
         'targets/testbench/netx/flasher_netx56.bin':                       bin_netx56_nodbg,
         'targets/testbench/netx/flasher_netx50.bin':                       bin_netx50_nodbg,
         'targets/testbench/netx/flasher_netx10.bin':                       bin_netx10_nodbg,
