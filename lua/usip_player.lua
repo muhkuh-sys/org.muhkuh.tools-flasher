@@ -2730,7 +2730,14 @@ if not tArgs.fCommandConvertUsipSelected then
 			tArgs.strPluginType = strPluginType
 			tArgs.strPluginName = strPluginName
 
-
+            if strPluginType == "romloader_eth" then
+                tArgs.strBootswitchParams = "ETH"
+            elseif strPluginType == "romloader_uart" then
+                tArgs.strBootswitchParams = "UART"
+            elseif strPluginType == "romloader_jtag" then
+                tArgs.strBootswitchParams = "JTAG"
+            end
+            
 			if not tArgs.fCommandDetectSelected then
 				-- catch the romloader error to handle it correctly
 				fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
