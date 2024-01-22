@@ -386,20 +386,20 @@ if 'NETX90' in atPickNetxForBuild:
     elf_netx90_nodbg,bin_netx90_nodbg, lib_netx90_nodbg = flasher_build('flasher_netx90', env_netx90_nodbg, 'targets/netx90_nodbg', src_lib_netx90, src_main_netx90)
     
     cwd = os.getcwd()
-    output_dir_name = "netx90_nodbg_secure"
+    output_dir_name = "netx90_nodbg"
     output_path = os.path.join('targets', output_dir_name)
     hboot_netx90_flasher_bin =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
     strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
-    strHbootDefinitionTemplateTmp = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_template.xml" )
-    strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg_secure", "hboot_netx90_flasher_nodbg.xml" )
+    strHbootDefinitionTemplateTmp = os.path.join(cwd,"targets", "netx90_nodbg", "hboot_netx90_flasher_template.xml" )
+    strHbootDefinition = os.path.join(cwd,"targets", "netx90_nodbg", "hboot_netx90_flasher_nodbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
 
-    env_netx90_nodbg_secure.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_nodbg.GccSymbolTemplate(strHbootDefinitionTemplateTmp, elf_netx90_nodbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
 
     atEnv.DEFAULT.Version(strHbootDefinition, strHbootDefinitionTemplateTmp)
 
     if(os.path.exists(tPublicOptionPatchTable)):
-        tImg = env_netx90_nodbg_secure.HBootImage(
+        tImg = env_netx90_nodbg.HBootImage(
             hboot_netx90_flasher_bin,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -413,7 +413,7 @@ if 'NETX90' in atPickNetxForBuild:
     
     
     # build hboot_netx90_exec_bxlr.bin
-    hboot_netx90_exec_bxlr_bin = env_netx90_nodbg_secure.HBootImage(
+    hboot_netx90_exec_bxlr_bin = env_netx90_nodbg.HBootImage(
         os.path.join('targets', 'hboot_netx90_exec_bxlr', 'hboot_netx90_exec_bxlr.bin'),
         os.path.join('src', 'netx90', 'hboot_netx90_exec_bxlr.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -422,7 +422,7 @@ if 'NETX90' in atPickNetxForBuild:
         ASIC_TYP='NETX90B')
  
     # build disable_security_settings.usp
-    disable_security_settings_usp = env_netx90_nodbg_secure.HBootImage(
+    disable_security_settings_usp = env_netx90_nodbg.HBootImage(
         os.path.join('targets', 'disable_security_settings', 'disable_security_settings.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -430,7 +430,7 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
  
-    disable_security_settings_app_usp = env_netx90_nodbg_secure.HBootImage(
+    disable_security_settings_app_usp = env_netx90_nodbg.HBootImage(
         os.path.join('targets', 'disable_security_settings', 'disable_security_settings_app.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_app.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -438,7 +438,7 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
  
-    disable_security_settings_com_usp = env_netx90_nodbg_secure.HBootImage(
+    disable_security_settings_com_usp = env_netx90_nodbg.HBootImage(
         os.path.join('targets', 'disable_security_settings', 'disable_security_settings_com.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'disable_security_settings_com.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -446,7 +446,7 @@ if 'NETX90' in atPickNetxForBuild:
         HBOOTIMAGE_DEFINES=dict(),
         ASIC_TYP='NETX90B')
 
-    set_sip_protection_cookie_com_usp = env_netx90_nodbg_secure.HBootImage(
+    set_sip_protection_cookie_com_usp = env_netx90_nodbg.HBootImage(
         os.path.join('targets', 'detect_sip_protection', 'set_sip_protection_cookie.usp'),
         os.path.join('helper_binaries', 'netx90_usip', 'set_sip_protection_cookie.xml'),
         HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
@@ -503,18 +503,16 @@ if 'NETX90' in atPickNetxForBuild:
     
     cwd = os.getcwd()
     # strKeyRomPath = "keys/keys.xml" # must be copied to repo
-    output_dir_name = "netx90_dbg_secure"
+    output_dir_name = "netx90_dbg"
     output_path = os.path.join('targets', output_dir_name)
     strOutputImg =  os.path.join(cwd, output_path, "flasher_netx90_hboot.bin" )
     strHbootDefinitionTemplate = os.path.join(cwd,"src", "netx90", "hboot_netx90_flasher_template.xml" )
-    strHbootDefinition = os.path.join(cwd,"targets", "netx90_dbg_secure", "hboot_netx90_flasher_dbg.xml" )
+    strHbootDefinition = os.path.join(cwd,"targets", "netx90_dbg", "hboot_netx90_flasher_dbg.xml" )
     tPublicOptionPatchTable = os.path.join(cwd,"mbs", "site_scons", "hboot_netx90b_patch_table.xml" )
 
-    netx90_bin_file_path = str(bin_netx90_dbg_secure[0])
-    
-    env_netx90_dbg_secure.GccSymbolTemplate(strHbootDefinition, elf_netx90_dbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
+    env_netx90_dbg.GccSymbolTemplate(strHbootDefinition, elf_netx90_dbg, GCCSYMBOLTEMPLATE_TEMPLATE=strHbootDefinitionTemplate)
     if(os.path.exists(tPublicOptionPatchTable)):
-        tImg = env_netx90_dbg_secure.HBootImage(strOutputImg,
+        tImg = env_netx90_dbg.HBootImage(strOutputImg,
             strHbootDefinition,
             HBOOTIMAGE_PATCH_DEFINITION=tPublicOptionPatchTable,
             HBOOTIMAGE_KNOWN_FILES=dict({"tElf0": elf_netx90_dbg}),
