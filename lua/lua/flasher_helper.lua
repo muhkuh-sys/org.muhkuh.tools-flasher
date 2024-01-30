@@ -576,8 +576,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function M.detect_secure_boot_mode(aArgs)
-  local tFlasher = require 'flasher'
-  local romloader = require 'romloader'
+	local tFlasher = require 'flasher'
+	local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -593,13 +593,13 @@ function M.detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
-  local path = require 'pl.path'
+	local path = require 'pl.path'
 
 	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
 
-	elseif tPlugin:GetTyp() == "romloader_uart" then
+	elseif tPlugin:GetTyp() == "romloader_uart" or tPlugin:GetTyp() == "romloader_eth" then
 		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
@@ -834,7 +834,7 @@ function M.detect_secure_boot_mode(aArgs)
 		end -- readSipM2M image
 
 	else
-		strMsg = "Only romloader_uart and romloader_jtag are supported."
+		strMsg = "Only romloader_uart, romloader_eth and romloader_jtag are supported."
 	end -- if tPlugin
 
 	if iSecureBootStatus==SECURE_BOOT_DISABLED then
