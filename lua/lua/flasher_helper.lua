@@ -600,7 +600,7 @@ function M.detect_secure_boot_mode(aArgs)
 		strMsg = strMsg or "Could not connect to device."
 
 	elseif tPlugin:GetTyp() == "romloader_uart" or tPlugin:GetTyp() == "romloader_eth" then
-		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+		fConnected, strMsg = M.connect_retry(tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -717,7 +717,7 @@ function M.detect_secure_boot_mode(aArgs)
 		if strReadSipBin == nil then
 			print(strMsg)
 		else
-			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+			fConnected, strMsg = M.connect_retry(tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
 
 			if not fConnected then
@@ -774,14 +774,14 @@ function M.detect_secure_boot_mode(aArgs)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
 							else
-								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+								fConnected, strMsg = M.connect_retry(tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
 
 								if not fConnected then
 									print("Failed to reconnect.")
 								else
 									-- read the SIP pages
-                  local tRes
+									local tRes
 									tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
 
 									if tRes == nil then
