@@ -4,6 +4,8 @@ local tLogWriterConsole = require 'log.writer.console'.new()
 local tLogWriterFilter = require 'log.writer.filter'.new('info', tLogWriterConsole)
 local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
 local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
+local sipper = require 'sipper'
+local tSipper = sipper(tLog)
 
 local path = require 'pl.path'
 
@@ -32,8 +34,6 @@ function M.verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTemp
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
 
     -- be optimistic
-    local sipper = require 'sipper'
-    local tSipper = sipper(tLog)
     local tFlasher = require 'flasher'
     local tFlasherHelper = require 'flasher_helper'
     local fOk = true
@@ -288,8 +288,86 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
   return fOk, strMsg
 end
 
+function M.detectRev2Signatures(strHelperDirUnsigned, aStrHelperDirSigned, astrHelpersToCheck)
+    local tHelperFiles = require 'helper_files'
+    -- TODO add check HTBL chunk here
+    local aStrHelperDataSigned
+    local aStrHelperDataUnigned
+    local astrPaths
+    local strErrorMsg
+    local strDetectedHTBLType
+    local fResult = true
 
-function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    tLog.info("Verify signature type of helper images")
+    for idx, strHelperDirSigned in pairs(aStrHelperDirSigned) do
+
+        fResult, aStrHelperDataSigned, astrPaths = tHelperFiles.getHelperDataAndPaths(
+            {strHelperDirSigned}, astrHelpersToCheck)
+        if fResult then
+            fResult, aStrHelperDataUnigned = tHelperFiles.getHelperDataAndPaths(
+                {strHelperDirUnsigned}, astrHelpersToCheck)
+            if fResult then
+                for ulIdx = 1, #aStrHelperDataSigned do
+                    strDetectedHTBLType, fResult, strErrorMsg = M.analyzeNetx90SignatureType(aStrHelperDataUnigned[ulIdx], aStrHelperDataSigned[ulIdx])
+
+                    if not fResult then
+                        break -- end loop here and use error message of analyzeNetx90SignatureType call
+                    elseif strDetectedHTBLType == "netx90_rev1" then
+                        -- do nothing all ok
+                    elseif strDetectedHTBLType == "netx90_rev2"  then
+                        fResult = false
+                        tLog.error("found HTBL chunk signed for netx90_rev2 in file '%s'", astrPaths[ulIdx])
+                        strErrorMsg = string.format(
+                            "Helper images contain HTBL chunk for netX90_rev2 which is not supported yet. Please sign the helper images with the option netx_type='netx90_rev1.'")
+                            break
+                    else
+                        fResult = false
+                        strErrorMsg = string.format("unknown ERROR: unknown HTBL type detected in file '%s'",  astrPaths[ulIdx])
+                        break
+                    end
+                end
+            end
+        end
+    end
+    if fResult then
+        tLog.info("signature type of helper images is OK")
+    end
+    return fResult, strErrorMsg
+end
+
+function M.analyzeNetx90SignatureType(strImageUnsignedData, strImageSignedData)
+    local tParsedHbootImageUnsigned
+    local tParsedHbootImageSigned
+    local fResult
+    local strErrorMsg
+
+    local tFirstChunkUnsigned
+    local tFirstChunkSigned
+    local strDetectedHTBLType
+
+    tParsedHbootImageUnsigned, fResult, strErrorMsg = tSipper:analyze_hboot_image(strImageUnsignedData)
+    if fResult then
+        tParsedHbootImageSigned, fResult, strErrorMsg = tSipper:analyze_hboot_image(strImageSignedData)
+
+        if fResult then
+            -- get first chunks of each analyzed image
+            -- check if the SKIP chunk of the unsigned image is the same size as the HTBL chunk of the stigned image
+            tFirstChunkUnsigned = tParsedHbootImageUnsigned["atChunks"][0] or tParsedHbootImageUnsigned["atChunks"][1]
+            tFirstChunkSigned = tParsedHbootImageSigned["atChunks"][0] or tParsedHbootImageSigned["atChunks"][1]
+            if tFirstChunkUnsigned["ulChunkSize"] == tFirstChunkSigned["ulChunkSize"] then
+                strDetectedHTBLType = "netx90_rev2"
+            elseif tFirstChunkUnsigned["ulChunkSize"] > tFirstChunkSigned["ulChunkSize"] then
+                strDetectedHTBLType = "netx90_rev1"
+            else
+                fResult = false
+                strErrorMsg = "Could not compare unsigned image with signed image."
+            end
+        end
+    end
+    return strDetectedHTBLType, fResult, strErrorMsg
+end
+
+function M.verifyHelperSignatures_wrap(tPlugin, strSecureOption, astrKeys)
     local fOk = true
     local strMsg = nil
     local romloader = require 'romloader'
@@ -309,11 +387,46 @@ function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
             end
         end
 
-        fOk, strMsg = verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeysToCheck)
+        fOk, strMsg = verifyHelperSignatures1(tPlugin, strSecureOption, astrKeysToCheck)
     end
 
     return fOk, strMsg
 end
 
+
+local function main()
+    --require("LuaPanda").start("127.0.0.1",8818)
+    local argparse = require 'argparse'
+    local tParser = argparse('verify_signature', ''):command_target("strSubcommand")
+    local tParserCommandAnalyze = tParser:command('analyze_htbl_type aht', ''):target('fCommandAnalyzeSelected')
+    tParserCommandAnalyze:argument('unsigned_file', 'input file')
+                         :target('strUnsignedFilePath')
+    tParserCommandAnalyze:argument('signed_file', 'output file')
+                         :target('strSignedFilePath')
+
+
+    local tArgs = tParser:parse()
+
+    local tFlasherHelper = require 'flasher_helper'
+    local tLogWriterConsole = require 'log.writer.console'.new()
+
+     local strDetectedHTBLTypeRev1, strDetectedHTBLTypeRev2, fResult, strErrorMsg
+    local strDataUnsigned, strMsg = tFlasherHelper.loadBin(tArgs.strUnsignedFilePath)
+    local strDataSigned, strMsg = tFlasherHelper.loadBin(tArgs.strSignedFilePath)
+
+    strDetectedHTBLTypeRev1, fResult, strErrorMsg = M.analyzeNetx90SignatureType(strDataUnsigned, strDataSigned)
+
+    tLog.info("Found HTBL type '%s'", strDetectedHTBLTypeRev1)
+
+end
+
+
+if pcall(debug.getlocal, 4, 1) then
+    -- print("Sipper used as Library")
+    -- do nothing
+else
+    -- print("Main file")
+    main()
+end
 
 return M

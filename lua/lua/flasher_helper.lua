@@ -647,7 +647,7 @@ function M.detect_secure_boot_mode(aArgs)
 				-- Console mode: open => secure boot is disabled.
 				iSecureBootStatus = SECURE_BOOT_DISABLED
 			elseif tConsoleMode == romloader.CONSOLE_MODE_Secure then
-				if usMiVersionMaj == 0 and usMiVersionMin == 0  and fStartMiFailed then
+				if usMiVersionMaj == 0 and usMiVersionMin == 0 then
 					-- MI not active, boot image failed => COM CPU is in secure boot mode.
 					iSecureBootStatus = SECURE_BOOT_ENABLED
 				elseif usMiVersionMaj == 3 and usMiVersionMin == 0 then
@@ -712,7 +712,7 @@ function M.detect_secure_boot_mode(aArgs)
       "read_sip_M2M.bin"
     )  --tFlasher.HELPER_FILES_PATH,
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
-    local strReadSipBin
+    	local strReadSipBin
 		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
@@ -1104,6 +1104,40 @@ end
 
 function StringHandle.close()
     -- dummy function that does nothing
+end
+
+-- strNetxName chiptypeToName(iChiptype)
+-- transfer integer chiptype into a netx name
+-- returns netX name as a string otherwise nil
+function M.chiptypeToName(iChiptype)
+	local romloader = require 'romloader'
+    local strNetxName
+    -- First catch the unlikely case that "iChiptype" is nil.
+	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
+	if iChiptype==nil then
+		strNetxName = nil
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
+		strNetxName = 'netx500'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
+		strNetxName = 'netx50'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX10 then
+		strNetxName = 'netx10'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
+		strNetxName = 'netx56'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+		strNetxName = 'netx4000'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
+		strNetxName = 'netx90_mpw'
+    elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
+		strNetxName = 'netx90_rev_0'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
+		strNetxName = 'netx90'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
+		strNetxName = 'netiol'
+    else
+        strNetxName = nil
+	end
+    return strNetxName
 end
 
 M.StringHandle = StringHandle
