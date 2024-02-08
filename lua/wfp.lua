@@ -818,7 +818,14 @@ else
 
 end
 
-
+-- before trying to connect we have to check if the HTBL chunk of a signed image is acceptable
+if tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+    fOk, strMsg = tVerifySignature.detectRev2Signatures(strnetX90UnsignedHelperPath, {strnetX90HelperPath}, astrHelpersToCheck)
+    if not fOk then
+        print(string.format("ERROR: %s", strMsg))
+        os.exit(1)
+    end
+end
 
 -- ===========================================================================================
 

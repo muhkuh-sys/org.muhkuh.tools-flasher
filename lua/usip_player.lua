@@ -657,39 +657,6 @@ function getSerialPort(strPluginName)
     return strSerialPort
 end
 
--- strNetxName chiptypeToName(iChiptype)
--- transfer integer chiptype into a netx name
--- returns netX name as a string otherwise nil
-function chiptypeToName(iChiptype)
-    local strNetxName
-    -- First catch the unlikely case that "iChiptype" is nil.
-	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
-	if iChiptype==nil then
-		strNetxName = nil
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
-		strNetxName = 'netx500'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
-		strNetxName = 'netx50'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX10 then
-		strNetxName = 'netx10'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
-		strNetxName = 'netx56'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
-		strNetxName = 'netx4000'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
-		strNetxName = 'netx90_mpw'
-    elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
-		strNetxName = 'netx90_rev_0'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
-		strNetxName = 'netx90'
-	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
-		strNetxName = 'netiol'
-    else
-        strNetxName = nil
-	end
-    return strNetxName
-end
-
 
 --------------------------------------------------------------------------
 -- loading images
@@ -2195,7 +2162,9 @@ local tResult
 local strErrorMsg
 local tUsipConfigDict
 local strFileData
-
+local fOk
+local astrFileData
+local astrPaths
 -- set fFinalResult to false, be pessimistic
 local fFinalResult = false
 local uResultCode = VERIFY_RESULT_ERROR
@@ -2229,84 +2198,6 @@ if tArgs.strUsipFilePath then
     end
 end
 
--- check for a Plugin
--- get the plugin
-fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
-if fCallSuccess then
-    if not tPlugin then
-        tLog.error('No plugin selected, nothing to do!')
-        -- return here because of initial error
-        os.exit(1)
-    else
-        -- get the plugin type
-        strPluginType = tPlugin:GetTyp()
-        -- get plugin name
-        strPluginName = tPlugin:GetName()
-
-        if strPluginType == "romloader_eth" then
-            tArgs.strBootswitchParams = "ETH"
-        elseif strPluginType == "romloader_uart" then
-            tArgs.strBootswitchParams = "UART"
-        elseif strPluginType == "romloader_jtag" then
-            tArgs.strBootswitchParams = "JTAG"
-        end
-
-        if not tArgs.fCommandDetectSelected then
-            -- catch the romloader error to handle it correctly
-            fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
-            if fFinalResult == false then
-                tLog.error(strErrorMsg)
-            else
-                iChiptype = tPlugin:GetChiptyp()
-                tLog.debug( "Found Chip type: %d", iChiptype )
-            end
-        end
-    end
-else
-    if tArgs.strPluginName then
-        tLog.error( "Could not get selected interface -> %s.", tArgs.strPluginName )
-    else
-        tLog.error( "Could not get the interactive selected interface" )
-    end
-    -- this is a bit missleading, but in case of an error the pcall function returns as second paramater
-    -- the error message. But because the first return parameter of the getPlugin function is the tPlugin
-    -- the parameter name convention is a bit off ...
-    tLog.error(tPlugin)
-    os.exit(1)
-end
-
--- assumption at this point:
--- * working M2M-Interface
--- * working JTAG
--- * working uart serial connection
-
--- these checks can only be made in non secure mode or via jtag in secure mode
-if iChiptype then
-    strNetxName = chiptypeToName(iChiptype)
-    if not strNetxName then
-        tLog.error("Can not associate the chiptype with a netx name!")
-        os.exit(1)
-    end
-    -- check if the netX is supported
-    if strNetxName ~= "netx90" then
-        tLog.error("The connected netX (%s) is not supported.", strNetxName)
-        tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
-        os.exit(1)
-    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
-            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
-        tLog.debug("Detected netX90 rev1")
-        fIsRev2 = false
-    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
-        tLog.debug("Detected netX90 rev2")
-        fIsRev2 = true
-    end
-else
-    -- (!) TODO: FIX THIS TO A SOLUTION WHERE NOT JUST THE NETX90 IS SUPPORTED! (!)
-    -- (!) TODO: provide a function to detect a netX via uart terminal mode     (!)
-    strNetxName = "netx90"
-    tLog.warning("Behavior is undefined if connected to a different netX then netX90!")
-end
-
 --------------------------------------------------------------------------
 -- check helper binaries (version/signature)
 --------------------------------------------------------------------------
@@ -2334,32 +2225,122 @@ else
 end
 
 -- Filter by interface.
-for _, v in ipairs(astrHelpersTmp) do
-    if v == "start_mi" then 
+for _, strHelperImageKey in ipairs(astrHelpersTmp) do
+    if strHelperImageKey == "start_mi" then 
         if tArgs.strBootswitchParams == "UART" then
-            table.insert(astrHelpersToCheck, v)
+            table.insert(astrHelpersToCheck, strHelperImageKey)
         end
 
-    elseif v == "return_exec" then 
+    elseif strHelperImageKey == "return_exec" then 
         if tArgs.strBootswitchParams == "JTAG" then
-            table.insert(astrHelpersToCheck, v)
+            table.insert(astrHelpersToCheck, strHelperImageKey)
         end
 
-    elseif v == "bootswitch" then 
+    elseif strHelperImageKey == "bootswitch" then 
         if tArgs.strBootswitchParams ~= "JTAG" then
-            table.insert(astrHelpersToCheck, v)
+            table.insert(astrHelpersToCheck, strHelperImageKey)
         end
 
     else 
-        table.insert(astrHelpersToCheck, v)
+        table.insert(astrHelpersToCheck, strHelperImageKey)
     end
 end 
+
+local strUnsignedHelperDir = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+local strCheckSecureOptionDir = path.join(strSecureOption, "netx90")
+local strCheckSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, "netx90")
+local aStrHelperFileDirs = {strCheckSecureOptionDir}
+if strCheckSecureOptionDir ~= strCheckSecureOptionPhaseTwoDir then
+    table.insert(aStrHelperFileDirs, strCheckSecureOptionPhaseTwoDir)
+end
+fOk, strErrorMsg = tVerifySignature.detectRev2Signatures(strUnsignedHelperDir, aStrHelperFileDirs, astrHelpersToCheck)
+if not fOk then
+    tLog.error(strErrorMsg)
+    os.exit(1)
+end
+
+-- check for a Plugin
+-- get the plugin
+fCallSuccess, tPlugin = pcall(tFlasherHelper.getPlugin, tArgs.strPluginName, tArgs.strPluginType, atPluginOptionsFirstConnect)
+if fCallSuccess then
+    if not tPlugin then
+        tLog.error('No plugin selected, nothing to do!')
+        -- return here because of initial error
+        os.exit(1)
+    else
+        -- get the plugin type
+        strPluginType = tPlugin:GetTyp()
+        -- get plugin name
+        strPluginName = tPlugin:GetName()
+
+        if strPluginType == "romloader_eth" then
+            tArgs.strBootswitchParams = "ETH"
+        elseif strPluginType == "romloader_uart" then
+            tArgs.strBootswitchParams = "UART"
+        elseif strPluginType == "romloader_jtag" then
+            tArgs.strBootswitchParams = "JTAG"
+        end
+
+        -- catch the romloader error to handle it correctly
+        fFinalResult, strErrorMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+        if fFinalResult == false then
+            tLog.error(strErrorMsg)
+        else
+            iChiptype = tPlugin:GetChiptyp()
+            tLog.debug( "Found Chip type: %d", iChiptype )
+        end
+        
+    end
+else
+    if tArgs.strPluginName then
+        tLog.error( "Could not get selected interface -> %s.", tArgs.strPluginName )
+    else
+        tLog.error( "Could not get the interactive selected interface" )
+    end
+    -- this is a bit missleading, but in case of an error the pcall function returns as second paramater
+    -- the error message. But because the first return parameter of the getPlugin function is the tPlugin
+    -- the parameter name convention is a bit off ...
+    tLog.error(tPlugin)
+    os.exit(1)
+end
+
+-- assumption at this point:
+-- * working M2M-Interface
+-- * working JTAG
+-- * working uart serial connection
+
+-- these checks can only be made in non secure mode or via jtag in secure mode
+if iChiptype then
+    strNetxName = tFlasherHelper.chiptypeToName(iChiptype)
+    if not strNetxName then
+        tLog.error("Can not associate the chiptype with a netx name!")
+        os.exit(1)
+    end
+    -- check if the netX is supported
+    if strNetxName ~= "netx90" then
+        tLog.error("The connected netX (%s) is not supported.", strNetxName)
+        tLog.error("Only netX90_rev1 and newer netX90 Chips are supported.")
+        os.exit(1)
+    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+        tLog.debug("Detected netX90 rev1")
+        fIsRev2 = false
+    elseif iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D then
+        tLog.debug("Detected netX90 rev2")
+        fIsRev2 = true
+    end
+else
+    -- (!) TODO: FIX THIS TO A SOLUTION WHERE NOT JUST THE NETX90 IS SUPPORTED! (!)
+    -- (!) TODO: provide a function to detect a netX via uart terminal mode     (!)
+    strNetxName = "netx90"
+    tLog.warning("Behavior is undefined if connected to a different netX then netX90!")
+end
 
 local strSecureOptionDir = path.join(strSecureOption, strNetxName)
 local strSecureOptionPhaseTwoDir = path.join(tArgs.strSecureOptionPhaseTwo, strNetxName)
 
 -- If no helpers are required, skip the checks.
-if astrHelpersToCheck == 0 then
+if #astrHelpersToCheck == 0 then
     tLog.info("Skipping version/signature tests for helper files.")
 else     
     -- Print the list.
@@ -2401,11 +2382,13 @@ else
     -- - signature checks are not disabled 
     -- - the command is not check_helper_signature 
     if fIsSecure and not tArgs.fCommandCheckHelperSignatureSelected then
+
+
         if tArgs.fDisableHelperSignatureChecks==true then
             tLog.info("Skipping signature checks for helper files.")
         else
             tLog.info("Checking signatures of helper files...")
-            local fOk, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecureOptionDir}, astrHelpersToCheck)
+            fOk, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecureOptionDir}, astrHelpersToCheck)
             if not fOk then
                 -- This error should not occur, as all files have previously been checked.
                 tLog.error("Error during file checks: could not read all helper binaries.")

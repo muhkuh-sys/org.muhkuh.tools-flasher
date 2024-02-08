@@ -627,7 +627,9 @@ local function exec(aArgs)
 	-- open the plugin
 	tPlugin, strMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin then
+
 		fOk, strMsg = tFlasherHelper.connect_retry(tPlugin, 5)
+
 		if not fOk then
 			strMsg = strMsg or "Failed to open connection"
 		end
@@ -1086,6 +1088,15 @@ local function main()
 			else
 				print("Skipping signature checks for helper files.")
 			end
+		end
+	end
+
+	-- before trying to connect we have to check if the HTBL chunk of a signed image is acceptable
+	if aArgs.strSecureOption ~= flasher.DEFAULT_HBOOT_OPTION then
+		fOk, strMsg = tVerifySignature.detectRev2Signatures(strnetX90UnsignedHelperPath, {strnetX90HelperPath}, astrHelpersToCheck)
+		if not fOk then
+			print(string.format("ERROR: %s", strMsg))
+			os.exit(1)
 		end
 	end
 
