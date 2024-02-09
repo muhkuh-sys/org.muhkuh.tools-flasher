@@ -312,6 +312,8 @@ function M.detectRev2Signatures(strHelperDirUnsigned, aStrHelperDirSigned, astrH
 
                     if not fResult then
                         break -- end loop here and use error message of analyzeNetx90SignatureType call
+                    elseif strDetectedHTBLType == "unsigned" then
+                        -- nothing todo if both images are unsigned
                     elseif strDetectedHTBLType == "netx90_rev1" then
                         -- do nothing all ok
                     elseif strDetectedHTBLType == "netx90_rev2"  then
@@ -354,7 +356,9 @@ function M.analyzeNetx90SignatureType(strImageUnsignedData, strImageSignedData)
             -- check if the SKIP chunk of the unsigned image is the same size as the HTBL chunk of the stigned image
             tFirstChunkUnsigned = tParsedHbootImageUnsigned["atChunks"][0] or tParsedHbootImageUnsigned["atChunks"][1]
             tFirstChunkSigned = tParsedHbootImageSigned["atChunks"][0] or tParsedHbootImageSigned["atChunks"][1]
-            if tFirstChunkUnsigned["ulChunkSize"] == tFirstChunkSigned["ulChunkSize"] then
+            if tFirstChunkSigned["strChunkId"] ~= "HTBL" then
+                strDetectedHTBLType = "unsigned"
+            elseif tFirstChunkUnsigned["ulChunkSize"] == tFirstChunkSigned["ulChunkSize"] then
                 strDetectedHTBLType = "netx90_rev2"
             elseif tFirstChunkUnsigned["ulChunkSize"] > tFirstChunkSigned["ulChunkSize"] then
                 strDetectedHTBLType = "netx90_rev1"

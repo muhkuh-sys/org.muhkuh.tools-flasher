@@ -2253,10 +2253,12 @@ local aStrHelperFileDirs = {strCheckSecureOptionDir}
 if strCheckSecureOptionDir ~= strCheckSecureOptionPhaseTwoDir then
     table.insert(aStrHelperFileDirs, strCheckSecureOptionPhaseTwoDir)
 end
-fOk, strErrorMsg = tVerifySignature.detectRev2Signatures(strUnsignedHelperDir, aStrHelperFileDirs, astrHelpersToCheck)
-if not fOk then
-    tLog.error(strErrorMsg)
-    os.exit(1)
+if tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then -- only check the helper file HTBL if secure option is set
+    fOk, strErrorMsg = tVerifySignature.detectRev2Signatures(strUnsignedHelperDir, aStrHelperFileDirs, astrHelpersToCheck)
+    if not fOk then
+        tLog.error(strErrorMsg)
+        os.exit(1)
+    end
 end
 
 -- check for a Plugin
