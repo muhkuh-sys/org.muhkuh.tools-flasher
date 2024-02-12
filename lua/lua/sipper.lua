@@ -134,7 +134,7 @@ function Sipper:analyze_hboot_image(strFileData)
 
             -- check if we reached the end of the image
             if tNewChunk["strChunkId"] == nil or tNewChunk["strChunkId"] == '' then
-                self.tLog.error("found invalid chunk id or end of image '%s'", tNewChunk["strChunkId"])
+                self.tLog.error("found invalid chunk id or end of image '%s' at offset 0x%x", tNewChunk["strChunkId"], (tBinStringHandle["ulCurrentPointer"]-4))
                 tResult = false
                 strErrorMsg = string.format(
                     "found invalid chunk id or end of image '%s'", tNewChunk["strChunkId"])
@@ -158,7 +158,7 @@ function Sipper:analyze_hboot_image(strFileData)
                 tBinStringHandle:seek("set", newOffset)
 
             elseif tNewChunk["strChunkId"] == "USIP" then
-
+                local ulUsipStartOffset = tBinStringHandle:seek()
                 tChunkHash:init(mhash.MHASH_SHA384)
                 tChunkHash:hash(tNewChunk["strChunkId"])
                 tChunkHash:hash(tNewChunk["strChunkSize"])
@@ -235,7 +235,7 @@ function Sipper:analyze_hboot_image(strFileData)
                 end
 
                 -- skip rest of USIP chunk as it is not interesting now
-                local newOffset = tBinStringHandle:seek() + tNewChunk["ulChunkSize"]
+                local newOffset = ulUsipStartOffset + tNewChunk["ulChunkSize"]
 
                 -- ignore data until end of chunk
                 tBinStringHandle:seek("set", newOffset)

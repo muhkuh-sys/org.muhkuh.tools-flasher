@@ -821,7 +821,7 @@ function genMultiUsips(strTmpFolderPath, tUsipConfigDict)
     local tUsipNames
     -- list of all generated usip file paths
     if tFlasherHelper.getStoreTempFiles() then
-        tResult, aDataList, tUsipNames = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
+        tResult, tUsipNames, aDataList = tUsipGen:gen_multi_usip_hboot(tUsipConfigDict, strTmpFolderPath)
     else
         aDataList, tUsipNames = tUsipGen:gen_multi_usip(tUsipConfigDict)
         tResult = true

@@ -123,7 +123,7 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     local aDataList = self:gen_multi_usip(tUsipConfigDict)
     local strUsipData
 
-    for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
+    for iIdx = 1, tUsipConfigDict["num_of_chunks"] do
         local strOutputFilePath = pl.path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
         table.insert(aOutputList, strOutputFilePath)
 
