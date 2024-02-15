@@ -42,7 +42,7 @@ function M.enableStoreTempFiles()
 end
 
 function M.getStoreTempFiles()
-  return fStoreTempFiles
+  	return fStoreTempFiles
 end
 
 

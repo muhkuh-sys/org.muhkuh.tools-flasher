@@ -28,7 +28,7 @@ VERIFY_RESULT_OK = 0
 VERIFY_RESULT_ERROR = 1
 VERIFY_RESULT_FALSE = 2
 function Sipper:_init(tLog)
-    print("initialize Sipper")
+    -- print("initialize Sipper")
     self.tLog = tLog
 
 end
