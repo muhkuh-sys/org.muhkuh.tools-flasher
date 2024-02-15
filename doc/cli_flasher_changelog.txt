@@ -1,3 +1,9 @@
+Updates in CLI Flasher v2.0.3
+==============================
+
+General:
+* only accept helper images that are signed with HTBL type for netX 90 rev2 (compatibility mode)
+
 
 Updates in CLI Flasher v2.0.2
 ==============================
