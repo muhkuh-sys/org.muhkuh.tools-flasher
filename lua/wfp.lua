@@ -123,7 +123,7 @@ end
 
 function WFPXml:exportXml(outputDir)
     self.tLog.info("export example XML ", outputDir)
-    local strXmlData = self.xml.toString()
+    local strXmlData = self:toString()
     pl.utils.writefile(outputDir, strXmlData)
 end
 
@@ -271,7 +271,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     if fResult==true then
         local exampleXml = WFPXml(tLog)
         local tCurrentTarget
-        exampleXml.new()
+        exampleXml:new()
 
         iChiptype = tPlugin:GetChiptyp()
         local strTargetName = tWfpControl.atChiptyp2name[iChiptype]
