@@ -128,7 +128,8 @@ function WFPXml:exportXml(outputDir)
     local fResult
     self.tLog.info("export example XML to: " .. outputDir)
     local strXmlData = self:toString()
-    pl.utils.writefile(outputDir, strXmlData)
+    fResult, strErrorMsg = pl.utils.writefile(outputDir, strXmlData)
+    return fResult, strErrorMsg
 end
 
 local function __writeU32(tFile, ulData)
@@ -249,6 +250,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     local aBoardInfo
     local fResult
     local strMsg
+    local strErrorMsg =""
 
     local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
@@ -302,10 +304,10 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
             end
         end
 
-        exampleXml:exportXml(tArgs.strWfpControlFile)
+        fResult, strErrorMsg = exampleXml:exportXml(tArgs.strWfpControlFile)
     end
 
-    return fResult
+    return fResult, strErrorMsg
 end
 
 local function add_sip_data_to_wfp_xml(strWfpPath, strComSipBin, strAppSipBin, strNetX, strUsipFilePath, fSetKek)
@@ -1204,6 +1206,8 @@ local atPluginOptions = {
 local tWfpControl = wfp_control(tLogWriterFilter)
 
 local fOk = true
+local strErrorMsg
+
 if tArgs.fCommandReadSelected == true then
     local strReadXml
     fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
@@ -1212,7 +1216,7 @@ if tArgs.fCommandReadSelected == true then
     end
 elseif tArgs.fCommandExampleSelected == true then
     print("EXAMPLE")
-    fOk = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
+    fOk, strErrorMsg = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
 elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
@@ -1581,5 +1585,8 @@ if fOk == true then
     os.exit(0)
 else
     tLog.info('RESULT: ERROR')
+    if strErrorMsg ~= nil then
+        tLog.error(strErrorMsg)
+    end
     os.exit(1)
 end
