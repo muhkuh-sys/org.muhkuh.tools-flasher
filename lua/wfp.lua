@@ -37,6 +37,7 @@ function WFPXml:_init(tLog)
     self.nodeFlasherPack = nil
     self.tTargets = {}
     self.tLog = tLog
+    self.ulTestFileIdx = 0
 end
 
 function WFPXml:parse(strWfpXmlData)
@@ -103,7 +104,8 @@ function WFPXml:addFlash(tTarget, strBus, ucChipSelect, ucUnit)
 	tTarget:add_child(tFlash)
 
 	local tData = self.xml.new("Data")
-	tData:set_attrib("file", "test_data.bin")
+	tData:set_attrib("file", "test_data"..self.ulTestFileIdx..".bin")
+    self.ulTestFileIdx = self.ulTestFileIdx + 1
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
@@ -122,7 +124,9 @@ function WFPXml:toString()
 end
 
 function WFPXml:exportXml(outputDir)
-    self.tLog.info("export example XML ", outputDir)
+    local strErrorMsg
+    local fResult
+    self.tLog.info("export example XML to: " .. outputDir)
     local strXmlData = self:toString()
     pl.utils.writefile(outputDir, strXmlData)
 end
