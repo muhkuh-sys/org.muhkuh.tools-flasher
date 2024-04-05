@@ -624,6 +624,12 @@ NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescr
 	
 	/* Nr of valid entries */
 	unsigned int nrEraseOps = ptFlashDescription->usNrEraseOperations;
+	if(nrEraseOps == 0){
+		// This should only happen if there is no valid entry for this chip in the XML table of flashes
+		// and SFDP is disable by the user (--no_sfdp) or not supported by the chip.
+		uprintf("! No valid erase operations found for this memory.");
+		return NETX_CONSOLEAPP_RESULT_ERROR;
+	}
 
 	/* Get sector size, set a cap if it exceeds the read buffer size */
 	unsigned long sectorSizeBytes = attributes.ulSectorPages * attributes.ulPageSize;
