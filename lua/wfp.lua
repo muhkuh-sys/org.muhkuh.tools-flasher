@@ -126,6 +126,9 @@ end
 function WFPXml:exportXml(outputDir)
     local strErrorMsg
     local fResult
+    if not pl.path.exists(outputDir) then
+        pl.dir.makepath(outputDir)
+    end
     self.tLog.info("export example XML to: " .. outputDir)
     local strXmlData = self:toString()
     fResult, strErrorMsg = pl.utils.writefile(outputDir, strXmlData)
@@ -277,6 +280,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     if fResult==true then
         local exampleXml = WFPXml(tLog)
         local tCurrentTarget
+
         exampleXml:new()
 
         iChiptype = tPlugin:GetChiptyp()
@@ -658,7 +662,9 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
         end
     end
     if fOk == true then
-        pl.dir.makepath(DestinationFolder)
+        if not pl.path.exists(DestinationFolder) then
+            pl.dir.makepath(DestinationFolder)
+        end
         tLog.info('Folder created "%s":', DestinationFolder)
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
