@@ -715,7 +715,7 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                     -- Does the WFP have an entry for the chip?
                     local tTarget = tWfpControl:getTarget(iChiptype)
                     local tConditions = tWfpControl:getConditions()
-                    if tConditions then
+                    if #tConditions > 0 then
                         tLog.error("Conditions not supported for command 'read'", tostring(iChiptype))
                         fOk = false
                     elseif tTarget == nil then
