@@ -714,7 +714,11 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                     print("found chip type: ", iChiptype)
                     -- Does the WFP have an entry for the chip?
                     local tTarget = tWfpControl:getTarget(iChiptype)
-                    if tTarget == nil then
+                    local tConditions = tWfpControl:getConditions()
+                    if tConditions then
+                        tLog.error("Conditions not supported for command 'read'", tostring(iChiptype))
+                        fOk = false
+                    elseif tTarget == nil then
                         tLog.error("The chip type %s is not supported.", tostring(iChiptype))
                         fOk = false
                     else
