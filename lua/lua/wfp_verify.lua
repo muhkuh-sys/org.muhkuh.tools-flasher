@@ -29,10 +29,10 @@ local function __print_verify_summary(atFlashDataTable, tLog)
       end
       for _, tChunk in ipairs(atFlashData['atChunkList']) do
           if tChunk.verified == true then
-              tLog.info("    %s Chunk 0x%08x - 0x%08x: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              tLog.info("    %s Chunk [0x%08x - 0x%08x[: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
               ulSuccessCount = ulSuccessCount +1
           else
-              tLog.info("    %s Chunk 0x%08x - 0x%08x: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              tLog.info("    %s Chunk [0x%08x - 0x%08x[: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
               ulFailCount = ulFailCount +1
           end
       end
@@ -60,7 +60,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
               -- alter the start of the chunk
               tLog.info('alter the start of the chunk')
-              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('alter chunk area from : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
               local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
 
@@ -71,7 +71,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               end
               -- modify strData inside tChunk
 
-              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                   to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
 
 
           -- check if the whole chunk is overwritten by file
@@ -79,7 +79,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] then
 
               -- mark index to be removed
-              tLog.info('delete chunk          : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('delete chunk          : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               tChunk['delete'] = true
 
           -- check if file overlaps end of chunk
@@ -89,7 +89,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
               -- alter the end of the chunk
               tLog.info('alter the end of the chunk')
-              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('alter chunk area from : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
               local ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
 
@@ -100,7 +100,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
                   tChunk['strData'] = strNewChunkData
               end
               tChunk['ulEndOffset'] = tNewChunk['ulOffset']
-              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                   to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
 
 
           -- check if file is inside of chunk
@@ -135,8 +135,8 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               tChunk['ulEndOffset'] = tNewChunk['ulOffset']
               tChunk['strData'] = strNewChunkData
 
-              tLog.info('split chunk area to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-              tLog.info('                and : 0x%08x - 0x%08x', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
+              tLog.info('split chunk area to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                and : [0x%08x - 0x%08x[', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
           end
       end
   end
@@ -227,7 +227,7 @@ local function __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
               tLog.info('ok')
               tChunk['verified'] = true
           else
-              tLog.info("ERROR: area 0x%08x to 0x%08x not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info("ERROR: area [0x%08x to 0x%08x[ not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
               fVerified = false
               tChunk['verified'] = false
               print("verified result: " .. tostring(fVerified))
@@ -256,7 +256,7 @@ local function __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
               tLog.info(strMessage or "")
               tChunk['verified'] = true
           else
-              tLog.info('ERROR: (Flash Bus: %s Unit: %s ChipSelect: %s): verify failed for area 0x%08x to 0x%08x!', 
+              tLog.info('ERROR: (Flash Bus: %s Unit: %s ChipSelect: %s): verify failed for area [0x%08x - 0x%08x[!',
                atFlashData['tBus'],
               atFlashData['ulUnit'],
               atFlashData['ulChipSelect'],
