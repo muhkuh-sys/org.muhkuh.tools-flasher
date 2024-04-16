@@ -193,7 +193,7 @@ end
 local function addSecureArgs(tParserCommand)
   tParserCommand:mutex(
     tParserCommand:flag('--comp')
-      :description("use compatibility mode for netx90 M2M interfaces")
+      :description("Use compatibility mode for netX 90 M2M interfaces.")
       :target('bCompMode')
       :default(false),
     tParserCommand:option('--sec')
