@@ -63,6 +63,8 @@ function WFPXml:new(version)
     self.nodeFlasherPack = self.xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
     self.nodeFlasherPack:set_attrib("has_subdirs", "True")
+    self:addComment(
+        self.nodeFlasherPack, "Automatically generated WFP control file. Not suitable for usage before modifying.")
 end
 
 function WFPXml:addTarget(strTargetName)
@@ -119,16 +121,14 @@ end
 function WFPXml:toString()
     local strXmlData = self.xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
     -- workaround to fix comment lines (somehow pl.xml does not provide a proper way to add comments)
-    strXmlData = strXmlData:gsub("--/>", "-->")
+    strXmlData = strXmlData:gsub("%-%-/>", "-->")
     return strXmlData
 end
 
 function WFPXml:exportXml(outputDir)
     local strErrorMsg
     local fResult
-    if not pl.path.exists(outputDir) then
-        pl.dir.makepath(outputDir)
-    end
+
     self.tLog.info("export example XML to: " .. outputDir)
     local strXmlData = self:toString()
     fResult, strErrorMsg = pl.utils.writefile(outputDir, strXmlData)
