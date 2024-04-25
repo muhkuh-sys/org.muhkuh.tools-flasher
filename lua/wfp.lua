@@ -911,6 +911,10 @@ tParserCommandFlash:flag('--disable_helper_signature_check')
                    :description('Disable signature checks on helper files.')
                    :target('fDisableHelperSignatureChecks')
                    :default(false)
+tParserCommandFlash:flag('--allow_future_version')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :target('fAllowFutureVersion')
+                   :default(false)
 
 -- Add the "verify" command and all its options.
 local tParserCommandVerify = tParser:command('verify v', 'Verify the contents of the WFP.'):target(
@@ -936,6 +940,10 @@ tParserCommandVerify:mutex(
 tParserCommandVerify:flag('--disable_helper_signature_check')
                     :description('Disable signature checks on helper files.')
                     :target('fDisableHelperSignatureChecks')
+                    :default(false)
+tParserCommandVerify:flag('--allow_future_version')
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :target('fAllowFutureVersion')
                     :default(false)
 
 -- Add the "Read" command and all its options.
@@ -973,6 +981,10 @@ tParserCommandRead:mutex(
 tParserCommandRead:flag('--disable_helper_signature_check')
                   :description('Disable signature checks on helper files.')
                   :target('fDisableHelperSignatureChecks')
+                  :default(false)
+tParserCommandRead:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :target('fAllowFutureVersion')
                   :default(false)
 
 -- Add the "list" command and all its options.
@@ -1015,6 +1027,10 @@ tParserCommandPack:option('-V --verbose')
                   :argname('<LEVEL>')
                   :default('debug')
                   :target('strLogLevel')
+tParserCommandPack:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :target('fAllowFutureVersion')
+                  :default(false)
 
 
 -- Add the "pack" command and all its options.
@@ -1056,6 +1072,10 @@ tParserCommandPackSip:flag('--set_sip_protection')
 tParserCommandPackSip:flag('--set_kek')
                    :description('Set the KEK (Key exchange key).')
                    :target('fSetKek')
+                   :default(false)
+tParserCommandPackSip:flag('--allow_future_version')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :target('fAllowFutureVersion')
                    :default(false)
 
 -- Add the "example" command and all its options.
@@ -1115,6 +1135,41 @@ tParserCommandVerifyHelperSig:option('--sec')
                              :target('strSecureOption')
                              :default(tFlasher.DEFAULT_HBOOT_OPTION)
 
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandSupportedXmlVersion = tParser:command('supported_xml_version sxv',
+                                                      'Show supported XML control file version.')
+                                             :target('fCommandSupportedXmlVersion')
+tParserCommandSupportedXmlVersion:option('-V --verbose')
+                            :description(string.format(
+                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandSupportedXmlVersion = tParser:command('show_supported_version',
+                                                      'Show supported XML control file version.')
+                                             :target('fCommandSupportedXmlVersion')
+tParserCommandSupportedXmlVersion:option('-V --verbose')
+                            :description(string.format(
+                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandSupportedXmlVersion:flag('--allow_future_version')
+                             :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                             :target('fAllowFutureVersion')
+                             :default(true):hidden(true)
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandXmlVersion = tParser:command('show_wfp_version',
+                                                      'Show version of XML control file or WFP archive.')
+                                             :target('fCommandXmlVersion')
+tParserCommandXmlVersion:option('-V --verbose')
+                            :description(string.format(
+                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandXmlVersion:argument('wfp', 'The XML control file or WFP archive to check.')
+                             :target('strWfpPath')
+tParserCommandXmlVersion:flag('--allow_future_version')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :target('fAllowFutureVersion')
+                   :default(true):hidden(true)
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -1213,19 +1268,39 @@ local atPluginOptions = {
 }
 
 -- Create the WFP controller.
-local tWfpControl = wfp_control(tLogWriterFilter)
+local tWfpControl = wfp_control(tLogWriterFilter, tArgs.fAllowFutureVersion)
 
 local fOk = true
 local strErrorMsg
+if tArgs.fCommandSupportedXmlVersion then
+    local strSupportedVersion = tWfpControl.getSupportedVersionStr()
+    tLog.info("This CLI Flasher version supports WFP control XML files up to version %s", strSupportedVersion)
+elseif tArgs.fCommandXmlVersion then
 
-if tArgs.fCommandReadSelected == true then
+    local strSuffix = tArgs.strWfpPath:sub(-4):lower()
+    if strSuffix == ".xml" then
+        fOk = tWfpControl:openXml(tArgs.strWfpPath)
+    elseif strSuffix == ".wfp" or strSuffix == ".zip" then
+        fOk = tWfpControl:open(tArgs.strWfpPath)
+    else
+        fOk = false
+        tLog.error("Unknown suffix '%s' in input file '%s'", strSuffix, tArgs.strWfpPath)
+    end
+    if fOk then
+        local strVersion = tWfpControl:getVersionStr()
+        tLog.info("The input file has the version %s", strVersion)
+    else
+        tLog.error("Could not open input file '%s'", tArgs.strWfpPath)
+    end
+
+
+elseif tArgs.fCommandReadSelected == true then
     local strReadXml
     fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
     end
 elseif tArgs.fCommandExampleSelected == true then
-    print("EXAMPLE")
     fOk, strErrorMsg = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
 elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
