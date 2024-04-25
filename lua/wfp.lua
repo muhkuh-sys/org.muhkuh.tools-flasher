@@ -765,10 +765,9 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                                     fOk = false
                                     break
                                 end
-
                                 for _, tData in ipairs(tTargetFlash.atData) do
                                     -- Is this a data area?
-                                    if tData.strType == "Data" then
+                                    if tData.strType == "Data" or tData.strType == "Erase" then
                                         if (tData.ulSize) == nil then
                                             tLog.error("Size attribute is missing")
                                             fOk = false
@@ -776,13 +775,24 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                                         end
 
                                         local strFile
-                                        if tWfpControl:getHasSubdirs() == true then
-                                            tLog.info("WFP archive uses subdirs.")
-                                            strFile = tData.strFile
-                                        else
-                                            tLog.info("WFP archive does not use subdirs.")
-                                            strFile = pl.path.basename(tData.strFile)
+                                        if tData.strType == "Erase" then
+                                            strFile = string.format("erase-%s-%i-%i-0x%08x-0x%08x.bin",
+                                            strBusName,
+                                            ulUnit,
+                                            ulChipSelect,
+                                            tData.ulOffset,
+                                            tData.ulSize
+                                        )
+                                        elseif tData.strType == "Data" then
+                                            if tWfpControl:getHasSubdirs() == true then
+                                                tLog.info("WFP archive uses subdirs.")
+                                                strFile = tData.strFile
+                                            else
+                                                tLog.info("WFP archive does not use subdirs.")
+                                                strFile = pl.path.basename(tData.strFile)
+                                            end
                                         end
+
                                         ulOffset = tData.ulOffset
                                         ulSize = tData.ulSize
 
@@ -812,8 +822,6 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
 
                                             pl.utils.writefile(fileName, strData, true)
                                         end
-                                    elseif tData.strType == "Erase" then
-                                        tLog.info("ignore Erase areas with Read function")
                                     end
                                 end
                             end
