@@ -1234,10 +1234,12 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 				tFlashArea = ptAttr->tArea;
 				if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS )
 				{
+				    /* mask out KEK */
 					infoS_clear_IF1(pucBuffer);
 				}
 				else
 				{
+				    /* mask out temp diode values */
 					infoS_clear_IF2(pucBuffer);
 				}
 			}
@@ -1719,6 +1721,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 		{
 			if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS )
 			{
+			    /* only implemented for APP and COM SIP with chip_select 3 */
 				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData);
 			}
 			else

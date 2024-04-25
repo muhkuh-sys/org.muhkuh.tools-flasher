@@ -43,15 +43,15 @@ typedef enum INTERNAL_FLASH_AREA_ENUM
 	INTERNAL_FLASH_AREA_Unknown       =  0,
 	INTERNAL_FLASH_AREA_Flash0_Main   =  1,
 	INTERNAL_FLASH_AREA_Flash0_Info   =  2, /* CAL SIP */
-	INTERNAL_FLASH_AREA_Flash0_InfoK  =  3,
+	INTERNAL_FLASH_AREA_Flash0_InfoK  =  3, /* CAL Krasse SIP */
 	INTERNAL_FLASH_AREA_Flash1_Main   =  4,
 	INTERNAL_FLASH_AREA_Flash1_Info   =  5, /* COM SIP */
 	INTERNAL_FLASH_AREA_Flash1_InfoS  =  6, /* COM SIP with set kek option */
-	INTERNAL_FLASH_AREA_Flash1_InfoK  =  7,
+	INTERNAL_FLASH_AREA_Flash1_InfoK  =  7, /* COM Krasse SIP */
 	INTERNAL_FLASH_AREA_Flash2_Main   =  8,
 	INTERNAL_FLASH_AREA_Flash2_Info   =  9, /* APP SIP */
 	INTERNAL_FLASH_AREA_Flash2_InfoS  = 10, /* APP SIP with copy temp diode calibrations */
-	INTERNAL_FLASH_AREA_Flash2_InfoK  = 11,
+	INTERNAL_FLASH_AREA_Flash2_InfoK  = 11, /* APP Krasse SIP */
 	INTERNAL_FLASH_AREA_Flash01_Main  = 12
 } INTERNAL_FLASH_AREA_T;
 
