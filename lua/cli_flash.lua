@@ -897,7 +897,6 @@ function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, at
 		}
 end
 
--- TODO GERO löschen
 function printAllFlags(aArgs)
 	print("Alle Flags:")
 	printf("aArgs.fCommandFlashSelected              = %s", tostring(aArgs.fCommandFlashSelected))
@@ -925,7 +924,7 @@ function flasher_interface.clearArgs(aArgs)
 	aArgs.ulStartOffset = nil
 	aArgs.ulLen = nil
 
-	-- Clear iMode TODO iMode
+	-- Clear iMode
 	aArgs.iMode = nil
 
 	-- Clear all command flags
@@ -955,7 +954,7 @@ end
 function flasher_interface:getDeviceSize()
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO okay?
+	flasher_interface.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
@@ -996,7 +995,7 @@ function flasher_interface:flash(ulOffset, strData)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO
+	flasher_interface.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
@@ -1012,7 +1011,7 @@ function flasher_interface:verify(ulOffset, strData)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO
+	flasher_interface.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
@@ -1022,7 +1021,7 @@ function flasher_interface:read(ulOffset, ulSize)
 	self.aArgs.ulLen = ulSize
 
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO
+	flasher_interface.clearArgs(self.aArgs)
 
     local strData
 	if not fOk then
@@ -1040,7 +1039,7 @@ function flasher_interface:erase(ulOffset, ulSize)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO
+	flasher_interface.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
@@ -1050,7 +1049,7 @@ function flasher_interface:isErased(ulOffset, ulSize)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs) -- GERO
+	flasher_interface.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
@@ -1251,7 +1250,6 @@ local function main()
     else
         local tDevInfo
         fOk, strMsg, tDevInfo = exec(aArgs)
-		flasher_interface.clearArgs(self.aArgs) -- GERO
 
         if tDevInfo.strDevName then
             printf("Flash device name: %s", tDevInfo.strDevName)
