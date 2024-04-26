@@ -270,6 +270,10 @@ local function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
 		offset2 = offset2 - (offset2 % iWordSize) + (iWordSize-1)
 
 		local size1 = offset2 - offset1 + 1
+
+		-- Only add segments that are bigger than the minimum size
+		if size1 < iWordSize then return false end
+
 		printf("0x%08x+0x%08x --> 0x%08x+0x%08x", offset, size, offset1, size1)
 		local tSegment = {offset = offset1, size = size1}
 
@@ -300,6 +304,22 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 
 	local bEmptyByte = tFlasherInterface:getEmptyByte()
 
+	-- Detect if a NetX90 is connected and the internal flash is targeted (iBus = 2)
+	-- Will use different segment adresses to avoid problems with CRC generation
+	local tFlasherHelper = require 'flasher_helper'
+    local tPlugin, strMsg = tFlasherHelper.getPlugin(tFlasherInterface.aArgs["strPluginName"],
+		nil, tFlasherInterface.aArgs["atPluginOptions"])
+    tPlugin:Connect()
+    local iChiptype = tPlugin:GetChiptyp()
+    tPlugin:Disconnect()
+	local netX90iFlashDetected =
+		(iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90_MPW)
+		and tFlasherInterface.aArgs.iBus == 2
 
 	-- for serial flash
 	local atSegments_1={
@@ -363,10 +383,32 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 		{offset = ulDeviceSize - 12348, size = 12348},
 	}
 
+	-- for NetX90 iFlash
+	-- offset/size must be multiples of 8 because of 8Byte-CRC
+	local atSegments_8={
+		{offset = 0, size = 12344},
+		{offset = 0x10000, size = 0x10000},
+		{offset = 0x30000, size = 0x10000},
+		{offset = 0x50008, size = 0x10000},
+		{offset = 0x60008, size = 0x10000},
+
+		{offset = 0x20000, size = 8},
+		{offset = 0x21008, size = 8},
+		{offset = 0x22008, size = 16},
+
+		{offset = 0x23000, size = 8},
+		{offset = 0x23210, size = 8},
+
+		{offset = ulDeviceSize - 12344, size = 12344},
+	}
+
 	-- select the segments list according to the flash type
-  local atSegments
+	local atSegments
 	local iBusWidth = tFlasherInterface:getBusWidth()
-	if iBusWidth==1 then
+	if netX90iFlashDetected then
+		atSegments = atSegments_8
+		iBusWidth = 8
+	elseif iBusWidth==1 then
 		atSegments = atSegments_1
 	elseif iBusWidth==2 then
 		atSegments = atSegments_2
@@ -456,6 +498,19 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 		else
 			log_printf("Segment %d differs!", iSegment)
 			fOk = false
+
+			-- prints mismatching data for manual comparison
+			local function printContentsInHex(str)
+				local text = ""
+				for i=1, #str do
+					text = text .. string.format("%02x ", string.byte(str,i,i))
+				end
+				log_printf(text)
+			end
+			log_printf("Read (Hex):")
+			printContentsInHex(strData)
+			log_printf("Expected (Hex):")
+			printContentsInHex(tSegment.data)
 		end
 
 	end
