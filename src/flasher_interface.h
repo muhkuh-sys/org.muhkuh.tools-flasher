@@ -60,6 +60,7 @@ typedef enum OPERATION_MODE_ENUM
 	OPERATION_MODE_Identify         = 11,    /* Blink the status LED for 5 seconds to visualy identify the hardware */
 	OPERATION_MODE_SmartErase       = 12,    /* Erase an area using variable erase block sizes */
 	OPERATION_MODE_Reset            = 13,    /* Reset the netX chip using a watchdog reset */
+	OPERATION_MODE_GetFlashSize		= 14	 /* Get the supported and the actual sizes in byte */
 } OPERATION_MODE_T;
 
 
@@ -174,6 +175,14 @@ typedef struct CMD_PARAMETER_GETBOARDINFO_STRUCT
 	size_t sizBuffer;
 } CMD_PARAMETER_GETBOARDINFO_T;
 
+typedef struct CMD_PARAMETER_GETFLASHSIZE_STRUCT
+{
+	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
+	unsigned long long ullActualFlashSize;
+	unsigned long ulSupportedFlashSize;
+} CMD_PARAMETER_GETFLASHSIZE_T;
+
+
 
 typedef struct tFlasherInputParameter_STRUCT
 {
@@ -192,6 +201,7 @@ typedef struct tFlasherInputParameter_STRUCT
 		CMD_PARAMETER_GETERASEAREA_T tGetEraseArea;
 		CMD_PARAMETER_GETBOARDINFO_T tGetBoardInfo;
 		CMD_PARAMETER_SPIMACROPLAYER_T tSpiMacroPlayer;
+		CMD_PARAMETER_GETFLASHSIZE_T tGetFlashSize;
 	} uParameter;
 } tFlasherInputParameter;
 

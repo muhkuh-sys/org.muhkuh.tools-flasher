@@ -612,15 +612,13 @@ static NETX_CONSOLEAPP_RESULT_T opMode_isErased(tFlasherInputParameter *ptAppPar
 
 /* ------------------------------------- */
 
-/* Flash size in bytes, except for SD cards, where it is KB */
-static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription)
-{
+/* Actual Flash size in bytes */
+static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription){
 	BUS_T tSrcType;
-	unsigned long ulFlashSize;
+	unsigned long long ullFlashSize;
 
-	
 	/* This is the default value for the error case. */
-	ulFlashSize = 0;
+	ullFlashSize = 0;
 
 	/* Get the source type. */
 	tSrcType = ptDeviceDescription->tSourceTyp;
@@ -628,12 +626,12 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	{
 #ifdef CFG_INCLUDE_PARFLASH
 	case BUS_ParFlash:
-		ulFlashSize = ptDeviceDescription->uInfo.tParFlash.ulFlashSize;
+		ullFlashSize = ptDeviceDescription->uInfo.tParFlash.ulFlashSize;
 		break;
 #endif
 
 	case BUS_SPI:
-		ulFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
+		ullFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
 		break;
 
 #ifdef CFG_INCLUDE_INTFLASH
@@ -644,28 +642,18 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 			break;
 
 		case INTERNAL_FLASH_TYPE_MAZ_V0:
-			ulFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
+			ullFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
 			break;
 		}
 		break;
 #endif
 		
 	/* 
-		The stored size is in KB. 
-		If the number fits into a DWord, convert it to bytes.
-		If not, set the maximum value.
+		The stored size is in KB, "<< 10" converts it to bytes.
 	*/
 #ifdef CFG_INCLUDE_SDIO
 	case BUS_SDIO:
-		ulFlashSize = ptDeviceDescription->uInfo.tSdioHandle.ulSizeKB;
-		if (ulFlashSize < 0x00400000U) 
-		{
-			ulFlashSize <<= 10; 
-		}
-		else
-		{
-			ulFlashSize = 0xffffffffU;
-		}
+		ullFlashSize = (unsigned long long) ptDeviceDescription->uInfo.tSdioHandle.ulSizeKB << 10;
 		break;
 #endif
 
@@ -675,11 +663,38 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 		break;
 	}
 
-	return ulFlashSize;
+	return ullFlashSize;
 }
 
-/* Todo: check for flash devices with sizes >= 4 GB, as we cannot
-   represent a device size of 4 GB or larger. */
+
+/* Supported flash size in bytes (Limited to 2^32) */
+static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription)
+{
+	unsigned long long ulFlashSize = getActualFlashSize(ptDeviceDescription);
+
+	// Detect SD-cards larger than 4 GiB and treat them as 4 GiB SD-cards
+#ifdef CFG_INCLUDE_SDIO
+	if (ptDeviceDescription->tSourceTyp == BUS_SDIO && ulFlashSize > 0xffffffffU)
+	{
+		ulFlashSize = 0xffffffffU;
+	}
+#endif
+
+	return (unsigned long)ulFlashSize;
+}
+
+/* Actual flash size in bytes */
+static NETX_CONSOLEAPP_RESULT_T opMode_getActualFlashSize(tFlasherInputParameter *ptAppParams){
+	CMD_PARAMETER_GETFLASHSIZE_T *ptParameter;
+
+	/* Get a shortcut to the parameters and save them. */
+	ptParameter = &(ptAppParams->uParameter.tGetFlashSize);
+	ptParameter->ullActualFlashSize = getActualFlashSize(ptParameter->ptDeviceDescription);
+	ptParameter->ulSupportedFlashSize = getFlashSize(ptParameter->ptDeviceDescription);
+
+	return NETX_CONSOLEAPP_RESULT_OK;
+}
+
 static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -875,8 +890,8 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 	unsigned long ulParamVersion;
 	OPERATION_MODE_T tOpMode;
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
-	unsigned long ulStartAdr;
-	unsigned long ulEndAdr       = 0; /* avoid 'uninitialized' warning */
+	unsigned long ulStartAdr	 = 0; /* avoid 'uninitialized' warning */
+	unsigned long ulEndAdr       = 0; /* dito */
 	unsigned long ulDataByteSize = 0; /* dito */
 	unsigned char *pucData;
 	unsigned long ulFlashSize;
@@ -1014,6 +1029,12 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
 		break;
 #endif
+
+	case OPERATION_MODE_GetFlashSize:
+		ulPars = FLAG_DEVICE;
+		ptDeviceDescription = ptAppParams->uParameter.tGetFlashSize.ptDeviceDescription;
+		uprintf(". Mode: Get Flash Size\n");
+		break;
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -1034,6 +1055,12 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
+			if(ulFlashSize == 0xFFFFFFFF){
+				uprintf(". Warning: Only first 2^32 of actual 0x%08x%08x bytes are supported\n",
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
+			}
+
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1204,6 +1231,11 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
+			if(ulFlashSize == 0xFFFFFFFF){
+				uprintf(". Warning: Only first 2^32 of actual 0x%08x%08x bytes are supported\n",
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
+			}
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1380,6 +1412,9 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				tResult = opMode_erase(ptAppParams);
 				break;
 #endif
+			case OPERATION_MODE_GetFlashSize:
+				tResult = opMode_getActualFlashSize(ptAppParams);
+				break;
 			}
 		}
 	}
@@ -1399,4 +1434,3 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 	return tResult;
 }
-

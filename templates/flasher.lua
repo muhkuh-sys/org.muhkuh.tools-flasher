@@ -44,16 +44,17 @@ local OPERATION_MODE_Flash             = ${OPERATION_MODE_Flash}
 local OPERATION_MODE_Erase             = ${OPERATION_MODE_Erase}
 local OPERATION_MODE_Read              = ${OPERATION_MODE_Read}
 local OPERATION_MODE_Verify            = ${OPERATION_MODE_Verify}
-local OPERATION_MODE_Checksum          = ${OPERATION_MODE_Checksum}     -- Build a checksum over the contents of a specified area of a device.
-local OPERATION_MODE_Detect            = ${OPERATION_MODE_Detect}     -- Detect a device.
-local OPERATION_MODE_IsErased          = ${OPERATION_MODE_IsErased}     -- Check if the specified area of a device is erased.
+local OPERATION_MODE_Checksum          = ${OPERATION_MODE_Checksum}			-- Build a checksum over the contents of a specified area of a device.
+local OPERATION_MODE_Detect            = ${OPERATION_MODE_Detect}			-- Detect a device.
+local OPERATION_MODE_IsErased          = ${OPERATION_MODE_IsErased}			-- Check if the specified area of a device is erased.
 local OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- Expand an area to the erase block borders.
 local OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
-local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
-local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
-local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}    -- Blink the status LED for 5 seconds to visualy identify the hardware
-local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}    -- Reset the netX by triggering a watchdog reset
-local OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}     -- Erases with variable erase block sizes
+local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}		-- A combination of GetEraseArea, IsErased and Erase.
+local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}	-- A debug mode to send commands to a SPI flash.
+local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}			-- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}			-- Reset the netX by triggering a watchdog reset
+local OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}		-- Erases with variable erase block sizes
+local OPERATION_MODE_GetFlashSize	   = ${OPERATION_MODE_GetFlashSize}		-- Gets the actual and the supported flash size
 
 
 M.MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -92,6 +93,13 @@ local OFFS_FLASH_ATTR_aucIdSend  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdSend
 local OFFS_FLASH_ATTR_aucIdMask  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMask}
 local OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagic}
 
+-- Offsets for getActualFlashSize memory access
+local OFFS_FLASH_ATTR_ullActualFlashSize	= ${OFFSETOF_CMD_PARAMETER_GETFLASHSIZE_STRUCT_ullActualFlashSize}
+											+ ${OFFSETOF_tFlasherInputParameter_STRUCT_uParameter}
+											+ 0x0c
+local OFFS_FLASH_ATTR_ulSupportedFlashSize	= ${OFFSETOF_CMD_PARAMETER_GETFLASHSIZE_STRUCT_ulSupportedFlashSize}
+											+ ${OFFSETOF_tFlasherInputParameter_STRUCT_uParameter}
+											+ 0x0c
 
 -- global variable for usage of hboot mode.
 -- If this Flag is set to True we use the hboot mode for netx90 M2M connections
@@ -602,26 +610,26 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 end
 
 
--- Detect the device and check if the size is in 32 bit range.
+-- Detect the device and print a warning if the usable size is limited to 2^32 Bytes
 function M.detectAndCheckSizeLimit(tPlugin, aAttr, ...)
 	local fOk = M.detect(tPlugin, aAttr, ...)
 	local strMsg
-	local ulDeviceSize
+	local ulDeviceSize, ulActualDeviceSize
 
 	if fOk ~= true then
 		fOk = false
-		--strMsg = "Failed to get a device description!"
 		strMsg = "Failed to detect the device!"
 	else
-		ulDeviceSize = M.getFlashSize(tPlugin, aAttr)
+		ulActualDeviceSize, ulDeviceSize = M.getActualFlashSize(tPlugin, aAttr)
 		if ulDeviceSize == nil then
 			fOk = false
 			strMsg = "Failed to get the device size!"
 
 		-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
 		elseif ulDeviceSize == 0xffffffff then
-			fOk = false
-			strMsg = "Devices with a size of 2^32 bytes or more are not supported!"
+			fOk = true
+			print("Warning: Device with size > 2^32 Bytes detected. Will be treated as 4 GiB device!")
+			print(string.format("Size of Device: %u Bytes, will use first %u Bytes", ulActualDeviceSize, ulDeviceSize))
 		end
 	end
 
@@ -919,6 +927,29 @@ end
 function M.getFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 	local _, ulEraseEnd = M.getEraseArea(tPlugin, aAttr, 0, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
 	return ulEraseEnd
+end
+
+function M.getActualFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
+	local ulValue
+	local aulParameter
+	local ullActualFlashSize
+	local ulSupportedFlashSize
+
+	aulParameter =
+	{
+		OPERATION_MODE_GetFlashSize,           -- operation mode: get erase area
+		aAttr.ulDeviceDesc,                    -- data block for the device description
+	}
+
+	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	if ulValue==0 then
+		local ullActualFlashSizeLow = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ullActualFlashSize)
+		local ullActualFlashSizeHigh = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ullActualFlashSize+4)
+		ullActualFlashSize = ullActualFlashSizeHigh << 32 | ullActualFlashSizeLow
+		ulSupportedFlashSize = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ulSupportedFlashSize)
+
+	return ullActualFlashSize, ulSupportedFlashSize
+	end
 end
 
 
