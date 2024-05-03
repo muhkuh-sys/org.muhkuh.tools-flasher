@@ -82,12 +82,12 @@ function flasher_interface:init()
 
 	print("Downloading flasher binary")
 	self.aAttr = tFlasher.download(
-    self.tPlugin,
-    self.strFlasherPath,
-    self.fnCallbackProgress,
-    self.bCompMode,
-    self.strSecureOption
-  )
+	self.tPlugin,
+	self.strFlasherPath,
+	self.fnCallbackProgress,
+	self.bCompMode,
+	self.strSecureOption
+	)
 	if not self.aAttr then
 		return false, "Error while downloading flasher binary"
 	end
@@ -307,11 +307,11 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	-- Detect if a NetX90 is connected and the internal flash is targeted (iBus = 2)
 	-- Will use different segment adresses to avoid problems with CRC generation
 	local tFlasherHelper = require 'flasher_helper'
-    local tPlugin, strMsg = tFlasherHelper.getPlugin(tFlasherInterface.aArgs["strPluginName"],
+	local tPlugin, strMsg = tFlasherHelper.getPlugin(tFlasherInterface.aArgs["strPluginName"],
 		nil, tFlasherInterface.aArgs["atPluginOptions"])
-    tPlugin:Connect()
-    local iChiptype = tPlugin:GetChiptyp()
-    tPlugin:Disconnect()
+	tPlugin:Connect()
+	local iChiptype = tPlugin:GetChiptyp()
+	tPlugin:Disconnect()
 	local netX90iFlashDetected =
 		(iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90
 		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A
