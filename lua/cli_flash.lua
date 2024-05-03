@@ -897,18 +897,49 @@ function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, at
 		}
 end
 
+function printAllFlags(aArgs)
+	print("Alle Flags:")
+	printf("aArgs.fCommandFlashSelected              = %s", tostring(aArgs.fCommandFlashSelected))
+	printf("aArgs.fCommandReadSelected               = %s", tostring(aArgs.fCommandReadSelected))
+	printf("aArgs.fCommandEraseSelected              = %s", tostring(aArgs.fCommandEraseSelected))
+	printf("aArgs.fCommandVerifySelected             = %s", tostring(aArgs.fCommandVerifySelected))
+	printf("aArgs.fCommandVerifyHashSelected         = %s", tostring(aArgs.fCommandVerifyHashSelected))
+	printf("aArgs.fCommandHashSelected               = %s", tostring(aArgs.fCommandHashSelected))
+	printf("aArgs.fCommandDetectSelected             = %s", tostring(aArgs.fCommandDetectSelected))
+	printf("aArgs.fCommandTestSelected               = %s", tostring(aArgs.fCommandTestSelected))
+	printf("aArgs.fCommandTestCliSelected            = %s", tostring(aArgs.fCommandTestCliSelected))
+	printf("aArgs.fCommandInfoSelected               = %s", tostring(aArgs.fCommandInfoSelected))
+	printf("aArgs.fParserCommandIdentifyNetxSelected = %s", tostring(aArgs.fParserCommandIdentifyNetxSelected))
+	printf("aArgs.fCommandResetSelected              = %s", tostring(aArgs.fCommandResetSelected))
+	printf("iMode: %d", aArgs.iMode or -1)
+end
+
 -- Since we're using a static argument list and iMode has been largely
 -- replaced with individual flags for each operation, we need to clear
 -- these flags after use or before re-using the argument list.
 -- Note: This function must be updated when the argument list changes
 function flasher_interface.clearArgs(aArgs)
-	aArgs.iMode = nil
-	aArgs.fCommandFlashSelected = nil
-	aArgs.fCommandVerifySelected = nil
-	aArgs.fCommandReadSelected = nil
-	aArgs.fCommandEraseSelected = nil
+
+	-- Clear memory segment pos/size
 	aArgs.ulStartOffset = nil
 	aArgs.ulLen = nil
+
+	-- Clear iMode
+	aArgs.iMode = nil
+
+	-- Clear all command flags
+	aArgs.fCommandFlashSelected = nil
+	aArgs.fCommandReadSelected = nil
+	aArgs.fCommandEraseSelected = nil
+	aArgs.fCommandVerifySelected = nil
+	aArgs.fCommandVerifyHashSelected = nil
+	aArgs.fCommandHashSelected = nil
+	aArgs.fCommandDetectSelected = nil
+	aArgs.fCommandTestSelected = nil
+	aArgs.fCommandTestCliSelected = nil
+	aArgs.fCommandInfoSelected = nil
+	aArgs.fParserCommandIdentifyNetxSelected = nil
+	aArgs.fCommandResetSelected = nil
 end
 
 function flasher_interface.init()
@@ -921,9 +952,10 @@ end
 
 
 function flasher_interface:getDeviceSize()
-	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
-	return exec(self.aArgs)
+	local fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
@@ -962,7 +994,9 @@ function flasher_interface:flash(ulOffset, strData)
     self.aArgs.fCommandFlashSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
-	return exec(self.aArgs)
+	fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
@@ -976,18 +1010,20 @@ function flasher_interface:verify(ulOffset, strData)
     self.aArgs.fCommandVerifySelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
-	return exec(self.aArgs)
+	fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 function flasher_interface:read(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 
 	local fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
 
-  local strData
+    local strData
 	if not fOk then
 		return nil, strMsg
 	else
@@ -999,20 +1035,22 @@ end
 
 
 function flasher_interface:erase(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
-	return exec(self.aArgs)
+	local fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
 function flasher_interface:isErased(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
-	return exec(self.aArgs)
+	local fOk, strMsg = exec(self.aArgs)
+	flasher_interface.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
