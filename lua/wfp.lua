@@ -37,6 +37,7 @@ function WFPXml:_init(tLog)
     self.nodeFlasherPack = nil
     self.tTargets = {}
     self.tLog = tLog
+    self.ulTestFileIdx = 0
 end
 
 function WFPXml:parse(strWfpXmlData)
@@ -62,6 +63,8 @@ function WFPXml:new(version)
     self.nodeFlasherPack = self.xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
     self.nodeFlasherPack:set_attrib("has_subdirs", "True")
+    self:addComment(
+        self.nodeFlasherPack, "Automatically generated WFP control file. Not suitable for usage before modifying.")
 end
 
 function WFPXml:addTarget(strTargetName)
@@ -103,7 +106,8 @@ function WFPXml:addFlash(tTarget, strBus, ucChipSelect, ucUnit)
 	tTarget:add_child(tFlash)
 
 	local tData = self.xml.new("Data")
-	tData:set_attrib("file", "test_data.bin")
+	tData:set_attrib("file", "test_data"..self.ulTestFileIdx..".bin")
+    self.ulTestFileIdx = self.ulTestFileIdx + 1
 	tData:set_attrib("size", "0x1000")
 	tData:set_attrib("offset", "0x0")
 	tFlash:add_child(tData)
@@ -117,14 +121,18 @@ end
 function WFPXml:toString()
     local strXmlData = self.xml.tostring(self.nodeFlasherPack, "", "    ", nil, true)
     -- workaround to fix comment lines (somehow pl.xml does not provide a proper way to add comments)
-    strXmlData = strXmlData:gsub("--/>", "-->")
+    strXmlData = strXmlData:gsub("%-%-/>", "-->")
     return strXmlData
 end
 
 function WFPXml:exportXml(outputDir)
-    self.tLog.info("export example XML ", outputDir)
+    local strErrorMsg
+    local fResult
+
+    self.tLog.info("export example XML to: " .. outputDir)
     local strXmlData = self:toString()
-    pl.utils.writefile(outputDir, strXmlData)
+    fResult, strErrorMsg = pl.utils.writefile(outputDir, strXmlData)
+    return fResult, strErrorMsg
 end
 
 local function __writeU32(tFile, ulData)
@@ -245,6 +253,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     local aBoardInfo
     local fResult
     local strMsg
+    local strErrorMsg =""
 
     local tPlugin, strError = tFlasherHelper.getPlugin(tArgs.strPluginName, tArgs.strPluginType, atPluginOptions)
 
@@ -271,6 +280,7 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
     if fResult==true then
         local exampleXml = WFPXml(tLog)
         local tCurrentTarget
+
         exampleXml:new()
 
         iChiptype = tPlugin:GetChiptyp()
@@ -298,10 +308,10 @@ local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption,
             end
         end
 
-        exampleXml:exportXml(tArgs.strWfpControlFile)
+        fResult, strErrorMsg = exampleXml:exportXml(tArgs.strWfpControlFile)
     end
 
-    return fResult
+    return fResult, strErrorMsg
 end
 
 local function add_sip_data_to_wfp_xml(strWfpPath, strComSipBin, strAppSipBin, strNetX, strUsipFilePath, fSetKek)
@@ -652,7 +662,9 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
         end
     end
     if fOk == true then
-        pl.dir.makepath(DestinationFolder)
+        if not pl.path.exists(DestinationFolder) then
+            pl.dir.makepath(DestinationFolder)
+        end
         tLog.info('Folder created "%s":', DestinationFolder)
         local txmlResult = tWfpControl:openXml(tArgs.strWfpControlFile)
 
@@ -708,7 +720,11 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                     print("found chip type: ", iChiptype)
                     -- Does the WFP have an entry for the chip?
                     local tTarget = tWfpControl:getTarget(iChiptype)
-                    if tTarget == nil then
+                    local tConditions = tWfpControl:getConditions()
+                    if #tConditions > 0 then
+                        tLog.error("Conditions not supported for command 'read'", tostring(iChiptype))
+                        fOk = false
+                    elseif tTarget == nil then
                         tLog.error("The chip type %s is not supported.", tostring(iChiptype))
                         fOk = false
                     else
@@ -749,10 +765,9 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                                     fOk = false
                                     break
                                 end
-
                                 for _, tData in ipairs(tTargetFlash.atData) do
                                     -- Is this a data area?
-                                    if tData.strType == "Data" then
+                                    if tData.strType == "Data" or tData.strType == "Erase" then
                                         if (tData.ulSize) == nil then
                                             tLog.error("Size attribute is missing")
                                             fOk = false
@@ -760,13 +775,24 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                                         end
 
                                         local strFile
-                                        if tWfpControl:getHasSubdirs() == true then
-                                            tLog.info("WFP archive uses subdirs.")
-                                            strFile = tData.strFile
-                                        else
-                                            tLog.info("WFP archive does not use subdirs.")
-                                            strFile = pl.path.basename(tData.strFile)
+                                        if tData.strType == "Erase" then
+                                            strFile = string.format("erase-%s-u%i-c%i-s0x%08x-l0x%08x.bin",
+                                            strBusName,
+                                            ulUnit,
+                                            ulChipSelect,
+                                            tData.ulOffset,
+                                            tData.ulSize
+                                        )
+                                        elseif tData.strType == "Data" then
+                                            if tWfpControl:getHasSubdirs() == true then
+                                                tLog.info("WFP archive uses subdirs.")
+                                                strFile = tData.strFile
+                                            else
+                                                tLog.info("WFP archive does not use subdirs.")
+                                                strFile = pl.path.basename(tData.strFile)
+                                            end
                                         end
+
                                         ulOffset = tData.ulOffset
                                         ulSize = tData.ulSize
 
@@ -796,8 +822,6 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
 
                                             pl.utils.writefile(fileName, strData, true)
                                         end
-                                    elseif tData.strType == "Erase" then
-                                        tLog.info("ignore Erase areas with Read function")
                                     end
                                 end
                             end
@@ -895,6 +919,10 @@ tParserCommandFlash:flag('--disable_helper_signature_check')
                    :description('Disable signature checks on helper files.')
                    :target('fDisableHelperSignatureChecks')
                    :default(false)
+tParserCommandFlash:flag('--allow_future_version')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :target('fAllowFutureVersion')
+                   :default(false)
 
 -- Add the "verify" command and all its options.
 local tParserCommandVerify = tParser:command('verify v', 'Verify the contents of the WFP.'):target(
@@ -920,6 +948,10 @@ tParserCommandVerify:mutex(
 tParserCommandVerify:flag('--disable_helper_signature_check')
                     :description('Disable signature checks on helper files.')
                     :target('fDisableHelperSignatureChecks')
+                    :default(false)
+tParserCommandVerify:flag('--allow_future_version')
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :target('fAllowFutureVersion')
                     :default(false)
 
 -- Add the "Read" command and all its options.
@@ -957,6 +989,10 @@ tParserCommandRead:mutex(
 tParserCommandRead:flag('--disable_helper_signature_check')
                   :description('Disable signature checks on helper files.')
                   :target('fDisableHelperSignatureChecks')
+                  :default(false)
+tParserCommandRead:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :target('fAllowFutureVersion')
                   :default(false)
 
 -- Add the "list" command and all its options.
@@ -999,6 +1035,10 @@ tParserCommandPack:option('-V --verbose')
                   :argname('<LEVEL>')
                   :default('debug')
                   :target('strLogLevel')
+tParserCommandPack:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :target('fAllowFutureVersion')
+                  :default(false)
 
 
 -- Add the "pack" command and all its options.
@@ -1040,6 +1080,10 @@ tParserCommandPackSip:flag('--set_sip_protection')
 tParserCommandPackSip:flag('--set_kek')
                    :description('Set the KEK (Key exchange key).')
                    :target('fSetKek')
+                   :default(false)
+tParserCommandPackSip:flag('--allow_future_version')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :target('fAllowFutureVersion')
                    :default(false)
 
 -- Add the "example" command and all its options.
@@ -1099,6 +1143,36 @@ tParserCommandVerifyHelperSig:option('--sec')
                              :target('strSecureOption')
                              :default(tFlasher.DEFAULT_HBOOT_OPTION)
 
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandSupportedXmlVersion = tParser:command('show_supported_version ssv',
+                                                      'Show supported XML control file version.')
+                                             :target('fCommandSupportedXmlVersion')
+tParserCommandSupportedXmlVersion:option('-V --verbose')
+                            :description(string.format(
+                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandSupportedXmlVersion:flag('--allow_future_version')
+                             :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                             :target('fAllowFutureVersion')
+                             :default(true):hidden(true)
+-- Add the "check_helper_signature" command and all its options.
+local tParserCommandXmlVersion = tParser:command('show_wfp_version swv',
+                                                      'Show version of XML control file or WFP archive.')
+                                             :target('fCommandXmlVersion')
+tParserCommandXmlVersion:option('-V --verbose')
+                            :description(string.format(
+                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+tParserCommandXmlVersion:argument('wfp', 'The XML control file or WFP archive to check.')
+                             :target('strWfpPath')
+tParserCommandXmlVersion:flag('--allow_future_version')
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :target('fAllowFutureVersion')
+                    :default(true):hidden(true)
+tParserCommandXmlVersion:flag('--allow_future_major')
+                    :description('Only used for this command')
+                    :target('fAllowFutureMajor')
+                    :default(true):hidden(true)
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -1197,18 +1271,40 @@ local atPluginOptions = {
 }
 
 -- Create the WFP controller.
-local tWfpControl = wfp_control(tLogWriterFilter)
+local tWfpControl = wfp_control(tLogWriterFilter, tArgs.fAllowFutureVersion, tArgs.fAllowFutureMajor)
 
 local fOk = true
-if tArgs.fCommandReadSelected == true then
+local strErrorMsg
+if tArgs.fCommandSupportedXmlVersion then
+    local strSupportedVersion = tWfpControl.getSupportedVersionStr()
+    tLog.info("This CLI Flasher version supports WFP control XML files up to version %s", strSupportedVersion)
+elseif tArgs.fCommandXmlVersion then
+
+    local strSuffix = tArgs.strWfpPath:sub(-4):lower()
+    if strSuffix == ".xml" then
+        fOk = tWfpControl:openXml(tArgs.strWfpPath)
+    elseif strSuffix == ".wfp" or strSuffix == ".zip" then
+        fOk = tWfpControl:open(tArgs.strWfpPath)
+    else
+        fOk = false
+        tLog.error("Unknown suffix '%s' in input file '%s'", strSuffix, tArgs.strWfpPath)
+    end
+    if fOk then
+        local strVersion = tWfpControl:getVersionStr()
+        tLog.info("The input file has the version %s", strVersion)
+    else
+        tLog.error("Could not open input file '%s'", tArgs.strWfpPath)
+    end
+
+
+elseif tArgs.fCommandReadSelected == true then
     local strReadXml
     fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
     end
 elseif tArgs.fCommandExampleSelected == true then
-    print("EXAMPLE")
-    fOk = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
+    fOk, strErrorMsg = example_xml(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
 elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
     -- Read the control file from the WFP archive.
     tLog.debug('Using WFP archive "%s".', tArgs.strWfpArchiveFile)
@@ -1577,5 +1673,8 @@ if fOk == true then
     os.exit(0)
 else
     tLog.info('RESULT: ERROR')
+    if strErrorMsg ~= nil then
+        tLog.error(strErrorMsg)
+    end
     os.exit(1)
 end

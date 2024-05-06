@@ -2,12 +2,27 @@
 local class = require 'pl.class'
 local WfpControl = class()
 
+local VERSION_MAJOR_POS = 1
+local VERSION_MINOR_POS = 2
 
-function WfpControl:_init(tLogWriter)
+local SUPPORTED_VERSION = "1.3"
+
+
+function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor)
   -- Get the LUA version number in the form major * 100 + minor .
   local strMaj, strMin = string.match(_VERSION, '^Lua (%d+)%.(%d+)$')
   if strMaj~=nil then
     self.LUA_VER_NUM = tonumber(strMaj) * 100 + tonumber(strMin)
+  end
+  if fAllowNewerMinor == nil then
+    self.fAllowNewerMinor = false
+  else
+    self.fAllowNewerMinor = fAllowNewerMinor
+  end
+  if fAllowNewerMajor == nil then
+    self.fAllowNewerMajor = false
+  else
+    self.fAllowNewerMajor = fAllowNewerMajor
   end
 
   -- The "penlight" module is used to parse the configuration file.
@@ -180,6 +195,60 @@ local function stringToBool(strBool)
   return atStringToBool[strBool]
 end
 
+function WfpControl.getSupportedVersionStr()
+  return SUPPORTED_VERSION
+end
+
+function  verifyVersion(aLxpAttr, strHasSubdirs, fAllowNewerMinor, fAllowNewerMajor)
+  local tSupportedVersion = aLxpAttr.Version()
+  if fAllowNewerMinor == nil then
+    fAllowNewerMinor = false
+  end
+  if fAllowNewerMajor == nil then
+    fAllowNewerMajor = false
+  end
+
+  tSupportedVersion:set(SUPPORTED_VERSION)  -- we support wfp control file versions up to this
+
+  if aLxpAttr.tVersion.atVersion[VERSION_MAJOR_POS] > tSupportedVersion.atVersion[VERSION_MAJOR_POS] and fAllowNewerMajor and
+   fAllowNewerMajor then
+    aLxpAttr.tLog.warning(
+      "Warning: WFP control file contains features that were introduced after version %d.%d.X! These can not be supported by this tool's version.",
+      tSupportedVersion.atVersion[VERSION_MAJOR_POS],
+      tSupportedVersion.atVersion[VERSION_MINOR_POS]
+    )
+  elseif aLxpAttr.tVersion.atVersion[VERSION_MAJOR_POS] > tSupportedVersion.atVersion[VERSION_MAJOR_POS] then
+    aLxpAttr.tResult = nil
+    aLxpAttr.tLog.error(
+      'Error: Control file version %s is not supported.',
+      aLxpAttr.strVersion
+    )
+  end
+
+  if aLxpAttr.tVersion.atVersion[VERSION_MINOR_POS] > tSupportedVersion.atVersion[VERSION_MINOR_POS] and fAllowNewerMinor then
+    aLxpAttr.tLog.warning(
+      "Warning: WFP control file may contain features that were introduced after version %d.%d.X! These can not be supported by this tool's version.",
+      tSupportedVersion.atVersion[VERSION_MAJOR_POS],
+      tSupportedVersion.atVersion[VERSION_MINOR_POS]
+    )
+  elseif  aLxpAttr.tVersion.atVersion[VERSION_MINOR_POS] > tSupportedVersion.atVersion[VERSION_MINOR_POS] then
+    aLxpAttr.tResult = nil
+    aLxpAttr.tLog.error(
+      'Error: Control file version %s is not supported.',
+      aLxpAttr.strVersion
+    )
+  end
+
+  -- Print a warning if the version is < 1.2 but the   attribute is used
+  local tVersion_1_2 = aLxpAttr.Version()
+  tVersion_1_2:set("1.2")
+  if strHasSubdirs ~= nil and aLxpAttr.Version.compare(aLxpAttr.tVersion, tVersion_1_2) < 0 then
+    aLxpAttr.tLog.warning(
+      'Control file has version < 1.2 but contains has_subdirs attribute'
+    )
+  end
+end
+
 --- Expat callback function for starting an element.
 -- This function is part of the callbacks for the expat parser.
 -- It is called when a new element is opened.
@@ -196,56 +265,27 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
   if strCurrentPath=='/FlasherPackage' then
     local strVersion = atAttributes['version']
     local strHasSubdirs = atAttributes['has_subdirs']
+    local tControlFileVersion = aLxpAttr.Version()
+
+    local fHasSubdirs
+    if strHasSubdirs == nil then
+      fHasSubdirs = false
+    else
+      fHasSubdirs = stringToBool(strHasSubdirs)
+      if fHasSubdirs==nil then
+        aLxpAttr.tResult = nil
+        aLxpAttr.tLog.error('Error in line %d, col %d: Attribute has_subdirs has illegal value', iPosLine, iPosColumn)
+      end
+    end
+    aLxpAttr.fHasSubdirs = fHasSubdirs
+    aLxpAttr.strHasSubdirs = strHasSubdirs
     if strVersion==nil or strVersion=='' then
       aLxpAttr.tResult = nil
       aLxpAttr.tLog.error('Error in line %d, col %d: missing attribute "version".', iPosLine, iPosColumn)
     else
-      local tVersion = aLxpAttr.Version()
-      local tResult, strError = tVersion:set(strVersion)
-      if tResult~=true then
-        aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error('Error in line %d, col %d: invalid "version": %s', iPosLine, iPosColumn, strError)
-      end
-      aLxpAttr.tVersion = tVersion
-
-      -- Reject the control file if the version is >= 1.4
-      local tVersion_1_4 = aLxpAttr.Version()
-      tVersion_1_4:set("1.4")
-      if aLxpAttr.Version.compare(tVersion_1_4, tVersion) <= 0 then
-        aLxpAttr.tResult = nil
-        aLxpAttr.tLog.error(
-          'Error in line %d, col %d: Control file version %s is not supported',
-          iPosLine,
-          iPosColumn,
-          strVersion
-        )
-      end
-
-      -- Print a warning if the version is < 1.2 but the has_subdirs attribute is used
-      local tVersion_1_2 = aLxpAttr.Version()
-      tVersion_1_2:set("1.2")
-      if strHasSubdirs~=nil and aLxpAttr.Version.compare(tVersion, tVersion_1_2) < 0 then
-        aLxpAttr.tLog.warning(
-          'Warning (line %d, col %d): Control file has version < 1.2 but contains has_subdirs attribute',
-          iPosLine,
-          iPosColumn
-        )
-      end
-
-      -- Evaluate the value of has_subdirs to a boolean value.
-      -- Default is false if has_subdirs is not present.
-      local fHasSubdirs
-      if strHasSubdirs == nil then
-        fHasSubdirs = false
-      else
-        fHasSubdirs = stringToBool(strHasSubdirs)
-        if fHasSubdirs==nil then
-          aLxpAttr.tResult = nil
-          aLxpAttr.tLog.error('Error in line %d, col %d: Attribute has_subdirs has illegal value', iPosLine, iPosColumn)
-        end
-      end
-      aLxpAttr.fHasSubdirs = fHasSubdirs
-
+      tResult, strError = tControlFileVersion:set(strVersion)
+      aLxpAttr.tVersion = tControlFileVersion
+      aLxpAttr.strVersion = strVersion
     end
 
   elseif strCurrentPath=='/FlasherPackage/Conditions/Condition' then
@@ -688,6 +728,9 @@ function WfpControl:__parse_configuration(strConfiguration)
   local tParser = self.lxp.new(aLxpCallbacks)
 
   local tParseResult, strMsg, uiLine, uiCol, uiPos = tParser:parse(strConfiguration)
+
+  verifyVersion(aLxpAttr, aLxpCallbacks.userdata.strHasSubdirs, self.fAllowNewerMinor, self.fAllowNewerMajor)
+
   if tParseResult~=nil then
     tParseResult, strMsg, uiLine, uiCol, uiPos = tParser:parse()
     if tParseResult~=nil then
@@ -710,6 +753,7 @@ function WfpControl:__parse_configuration(strConfiguration)
     self.atConfigurationTargets = aLxpCallbacks.userdata.atTargets
     self.atConditions = aLxpCallbacks.userdata.atConditions
     self.fHasSubdirs = aLxpCallbacks.userdata.fHasSubdirs
+    self.strHasSubdirs = aLxpCallbacks.userdata.strHasSubdirs
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.
@@ -873,6 +917,10 @@ end
 function WfpControl:getVersion()
 
   return self.tConfigurationVersion
+end
+
+function WfpControl:getVersionStr()
+  return table.concat(self.tConfigurationVersion.atVersion, '.')
 end
 
 function WfpControl:validateCondition(strKey, strValue)
