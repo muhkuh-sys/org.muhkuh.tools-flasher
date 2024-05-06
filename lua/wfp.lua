@@ -1144,16 +1144,7 @@ tParserCommandVerifyHelperSig:option('--sec')
                              :default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandSupportedXmlVersion = tParser:command('supported_xml_version sxv',
-                                                      'Show supported XML control file version.')
-                                             :target('fCommandSupportedXmlVersion')
-tParserCommandSupportedXmlVersion:option('-V --verbose')
-                            :description(string.format(
-                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-
--- Add the "check_helper_signature" command and all its options.
-local tParserCommandSupportedXmlVersion = tParser:command('show_supported_version',
+local tParserCommandSupportedXmlVersion = tParser:command('show_supported_version ssv',
                                                       'Show supported XML control file version.')
                                              :target('fCommandSupportedXmlVersion')
 tParserCommandSupportedXmlVersion:option('-V --verbose')
