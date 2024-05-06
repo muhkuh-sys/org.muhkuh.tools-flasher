@@ -8,7 +8,7 @@ local VERSION_MINOR_POS = 2
 local SUPPORTED_VERSION = "1.3"
 
 
-function WfpControl:_init(tLogWriter, fAllowNewerMinor)
+function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor)
   -- Get the LUA version number in the form major * 100 + minor .
   local strMaj, strMin = string.match(_VERSION, '^Lua (%d+)%.(%d+)$')
   if strMaj~=nil then
@@ -18,6 +18,11 @@ function WfpControl:_init(tLogWriter, fAllowNewerMinor)
     self.fAllowNewerMinor = false
   else
     self.fAllowNewerMinor = fAllowNewerMinor
+  end
+  if fAllowNewerMajor == nil then
+    self.fAllowNewerMajor = false
+  else
+    self.fAllowNewerMajor = fAllowNewerMajor
   end
 
   -- The "penlight" module is used to parse the configuration file.
@@ -194,15 +199,25 @@ function WfpControl.getSupportedVersionStr()
   return SUPPORTED_VERSION
 end
 
-function  verifyVersion(aLxpAttr, strHasSubdirs, fAllowNewerMinor)
+function  verifyVersion(aLxpAttr, strHasSubdirs, fAllowNewerMinor, fAllowNewerMajor)
   local tSupportedVersion = aLxpAttr.Version()
   if fAllowNewerMinor == nil then
     fAllowNewerMinor = false
   end
+  if fAllowNewerMajor == nil then
+    fAllowNewerMajor = false
+  end
 
   tSupportedVersion:set(SUPPORTED_VERSION)  -- we support wfp control file versions up to this
 
-  if aLxpAttr.tVersion.atVersion[VERSION_MAJOR_POS] > tSupportedVersion.atVersion[VERSION_MAJOR_POS] then
+  if aLxpAttr.tVersion.atVersion[VERSION_MAJOR_POS] > tSupportedVersion.atVersion[VERSION_MAJOR_POS] and fAllowNewerMajor and
+   fAllowNewerMajor then
+    aLxpAttr.tLog.warning(
+      "Warning: WFP control file contains features that were introduced after version %d.%d.X! These can not be supported by this tool's version.",
+      tSupportedVersion.atVersion[VERSION_MAJOR_POS],
+      tSupportedVersion.atVersion[VERSION_MINOR_POS]
+    )
+  elseif aLxpAttr.tVersion.atVersion[VERSION_MAJOR_POS] > tSupportedVersion.atVersion[VERSION_MAJOR_POS] then
     aLxpAttr.tResult = nil
     aLxpAttr.tLog.error(
       'Error: Control file version %s is not supported.',
@@ -714,7 +729,7 @@ function WfpControl:__parse_configuration(strConfiguration)
 
   local tParseResult, strMsg, uiLine, uiCol, uiPos = tParser:parse(strConfiguration)
 
-  verifyVersion(aLxpAttr, aLxpCallbacks.userdata.strHasSubdirs, self.fAllowNewerMinor)
+  verifyVersion(aLxpAttr, aLxpCallbacks.userdata.strHasSubdirs, self.fAllowNewerMinor, self.fAllowNewerMajor)
 
   if tParseResult~=nil then
     tParseResult, strMsg, uiLine, uiCol, uiPos = tParser:parse()

@@ -776,7 +776,7 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
 
                                         local strFile
                                         if tData.strType == "Erase" then
-                                            strFile = string.format("erase-%s-%i-%i-0x%08x-0x%08x.bin",
+                                            strFile = string.format("erase-%s-u%i-c%i-s0x%08x-l0x%08x.bin",
                                             strBusName,
                                             ulUnit,
                                             ulChipSelect,
@@ -1165,7 +1165,7 @@ tParserCommandSupportedXmlVersion:flag('--allow_future_version')
                              :target('fAllowFutureVersion')
                              :default(true):hidden(true)
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandXmlVersion = tParser:command('show_wfp_version',
+local tParserCommandXmlVersion = tParser:command('show_wfp_version swv',
                                                       'Show version of XML control file or WFP archive.')
                                              :target('fCommandXmlVersion')
 tParserCommandXmlVersion:option('-V --verbose')
@@ -1175,9 +1175,13 @@ tParserCommandXmlVersion:option('-V --verbose')
 tParserCommandXmlVersion:argument('wfp', 'The XML control file or WFP archive to check.')
                              :target('strWfpPath')
 tParserCommandXmlVersion:flag('--allow_future_version')
-                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
-                   :target('fAllowFutureVersion')
-                   :default(true):hidden(true)
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :target('fAllowFutureVersion')
+                    :default(true):hidden(true)
+tParserCommandXmlVersion:flag('--allow_future_major')
+                    :description('Only used for this command')
+                    :target('fAllowFutureMajor')
+                    :default(true):hidden(true)
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -1276,7 +1280,7 @@ local atPluginOptions = {
 }
 
 -- Create the WFP controller.
-local tWfpControl = wfp_control(tLogWriterFilter, tArgs.fAllowFutureVersion)
+local tWfpControl = wfp_control(tLogWriterFilter, tArgs.fAllowFutureVersion, tArgs.fAllowFutureMajor)
 
 local fOk = true
 local strErrorMsg
