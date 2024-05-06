@@ -272,7 +272,13 @@ local function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
 		local size1 = offset2 - offset1 + 1
 
 		-- Only add segments that are bigger than the minimum size
-		if size1 < iWordSize then return false end
+		if size1 < iWordSize then
+			return false
+
+		-- Limit segment size to 1MiB (0x100000) to avoid performance issues
+		elseif size1 > 0x100000 then
+			size1 = size1 % 0x100000
+		end
 
 		printf("0x%08x+0x%08x --> 0x%08x+0x%08x", offset, size, offset1, size1)
 		local tSegment = {offset = offset1, size = size1}
