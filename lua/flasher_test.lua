@@ -28,9 +28,6 @@ end
 -- Number of random data segments to add
 local iNumAddSegments = 100
 
--- Limit the reported device size (size of the test area) to 128 MB.
-local ulDeviceSizeMax = 0x8000000
-
 --========================================================================
 --                      interface to flasher.lua
 --========================================================================
@@ -63,6 +60,10 @@ local flasher_interface = {
 	iBus = nil,
 	iUnit = nil,
 	iChipSelect =nil,
+
+	-- Limit the reported device size (size of the test area) to 128 MiByte
+	-- This test is supposed to focus on if the flasher itself works as intended
+	ulDeviceSizeMax = 0x8000000
 }
 
 function flasher_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
@@ -115,8 +116,8 @@ function flasher_interface:getDeviceSize()
 		self.fnCallbackMessage, self.fnCallbackProgress)
 
 	if ulSize then
-		if ulSize > ulDeviceSizeMax then
-			ulSize = ulDeviceSizeMax
+		if ulSize > self.ulDeviceSizeMax then
+			ulSize = self.ulDeviceSizeMax
 		end
 		return ulSize
 	else
