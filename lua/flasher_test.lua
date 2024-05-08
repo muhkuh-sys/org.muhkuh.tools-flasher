@@ -313,12 +313,18 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 
 	-- Detect if a NetX90 is connected and the internal flash is targeted (iBus = 2)
 	-- Will use different segment adresses to avoid problems with CRC generation
-	local tFlasherHelper = require 'flasher_helper'
-	local tPlugin, strMsg = tFlasherHelper.getPlugin(tFlasherInterface.aArgs["strPluginName"],
-		nil, tFlasherInterface.aArgs["atPluginOptions"])
-	tPlugin:Connect()
-	local iChiptype = tPlugin:GetChiptyp()
-	tPlugin:Disconnect()
+	-- "test" will use the existing connection, "testcli" needs to get (and free) a plugin
+	local iChiptype
+	if(tFlasherInterface.tPlugin) then
+		iChiptype = tFlasherInterface.tPlugin:GetChiptyp()
+	else
+		local tFlasherHelper = require 'flasher_helper'
+		local tPlugin = tFlasherHelper.getPlugin(tFlasherInterface.aArgs["strPluginName"],
+			nil, tFlasherInterface.aArgs["atPluginOptions"])
+		tPlugin:Connect()
+		iChiptype = tPlugin:GetChiptyp()
+		tPlugin:Disconnect()
+	end
 	local netX90iFlashDetected =
 		(iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90
 		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A
