@@ -855,7 +855,13 @@ end
 --                    test interface
 --========================================================================
 
-local flasher_interface = {}
+local flasher_interface = {
+	-- Limit the reported device size (size of the test area) to 1 MiByte
+	-- This test is supposed to focus on connecting and disconnecting
+	-- Since the device size does not affect this, its smaller for shorter test runtime
+	ulDeviceSizeMax = 0x100000
+}
+
 
 function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
@@ -867,23 +873,6 @@ function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, at
 
 		atPluginOptions = atPluginOptions
 		}
-end
-
-function printAllFlags(aArgs)
-	print("Alle Flags:")
-	printf("aArgs.fCommandFlashSelected              = %s", tostring(aArgs.fCommandFlashSelected))
-	printf("aArgs.fCommandReadSelected               = %s", tostring(aArgs.fCommandReadSelected))
-	printf("aArgs.fCommandEraseSelected              = %s", tostring(aArgs.fCommandEraseSelected))
-	printf("aArgs.fCommandVerifySelected             = %s", tostring(aArgs.fCommandVerifySelected))
-	printf("aArgs.fCommandVerifyHashSelected         = %s", tostring(aArgs.fCommandVerifyHashSelected))
-	printf("aArgs.fCommandHashSelected               = %s", tostring(aArgs.fCommandHashSelected))
-	printf("aArgs.fCommandDetectSelected             = %s", tostring(aArgs.fCommandDetectSelected))
-	printf("aArgs.fCommandTestSelected               = %s", tostring(aArgs.fCommandTestSelected))
-	printf("aArgs.fCommandTestCliSelected            = %s", tostring(aArgs.fCommandTestCliSelected))
-	printf("aArgs.fCommandInfoSelected               = %s", tostring(aArgs.fCommandInfoSelected))
-	printf("aArgs.fParserCommandIdentifyNetxSelected = %s", tostring(aArgs.fParserCommandIdentifyNetxSelected))
-	printf("aArgs.fCommandResetSelected              = %s", tostring(aArgs.fCommandResetSelected))
-	printf("iMode: %d", aArgs.iMode or -1)
 end
 
 -- Since we're using a static argument list and iMode has been largely
@@ -925,9 +914,18 @@ end
 
 function flasher_interface:getDeviceSize()
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
-	local fOk, strMsg = exec(self.aArgs)
+	local ulSize, strMsg = exec(self.aArgs)
 	flasher_interface.clearArgs(self.aArgs)
-	return fOk, strMsg
+
+	if ulSize then
+		-- Limit the device size so the test will not take too long
+		if ulSize > self.ulDeviceSizeMax then
+			ulSize = self.ulDeviceSizeMax
+		end
+		return ulSize, strMsg
+	else
+		return nil, "Failed to get device size"
+	end
 end
 
 
