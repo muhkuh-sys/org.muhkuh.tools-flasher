@@ -855,7 +855,7 @@ end
 --                    test interface
 --========================================================================
 
-local flasher_interface = {
+local flasher_test_interface_cli = {
 	-- Limit the reported device size (size of the test area) to 1 MiByte
 	-- This test is supposed to focus on connecting and disconnecting
 	-- Since the device size does not affect this, its smaller for shorter test runtime
@@ -863,7 +863,7 @@ local flasher_interface = {
 }
 
 
-function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
+function flasher_test_interface_cli:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
 		strPluginName = strPluginName,
 		iBus = iBus,
@@ -879,7 +879,7 @@ end
 -- replaced with individual flags for each operation, we need to clear
 -- these flags after use or before re-using the argument list.
 -- Note: This function must be updated when the argument list changes
-function flasher_interface.clearArgs(aArgs)
+function flasher_test_interface_cli.clearArgs(aArgs)
 
 	-- Clear memory segment pos/size
 	aArgs.ulStartOffset = nil
@@ -903,19 +903,19 @@ function flasher_interface.clearArgs(aArgs)
 	aArgs.fCommandResetSelected = nil
 end
 
-function flasher_interface.init()
+function flasher_test_interface_cli.init()
 	return true
 end
 
 
-function flasher_interface.finish()
+function flasher_test_interface_cli.finish()
 end
 
 
-function flasher_interface:getDeviceSize()
+function flasher_test_interface_cli:getLimitedDeviceSize()
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
 	local ulSize, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 
 	if ulSize then
 		-- Limit the device size so the test will not take too long
@@ -930,7 +930,7 @@ end
 
 
 -- bus 0: parallel, bus 1: serial
-function flasher_interface:getBusWidth()
+function flasher_test_interface_cli:getBusWidth()
 	if self.aArgs.iBus==flasher.BUS_Parflash then
 		return 2 -- may be 1, 2 or 4
 	elseif self.aArgs.iBus==flasher.BUS_Spi then
@@ -942,7 +942,7 @@ function flasher_interface:getBusWidth()
 	end
 end
 
-function flasher_interface:getEmptyByte()
+function flasher_test_interface_cli:getEmptyByte()
 	if self.aArgs.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.aArgs.iBus == flasher.BUS_Spi then
@@ -954,7 +954,7 @@ function flasher_interface:getEmptyByte()
 	end
 end
 
-function flasher_interface:flash(ulOffset, strData)
+function flasher_test_interface_cli:flash(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -965,12 +965,12 @@ function flasher_interface:flash(ulOffset, strData)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
 
-function flasher_interface:verify(ulOffset, strData)
+function flasher_test_interface_cli:verify(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -981,17 +981,17 @@ function flasher_interface:verify(ulOffset, strData)
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
 	fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
-function flasher_interface:read(ulOffset, ulSize)
+function flasher_test_interface_cli:read(ulOffset, ulSize)
 	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 
     local strData
 	if not fOk then
@@ -1004,38 +1004,38 @@ function flasher_interface:read(ulOffset, ulSize)
 end
 
 
-function flasher_interface:erase(ulOffset, ulSize)
+function flasher_test_interface_cli:erase(ulOffset, ulSize)
 	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
 
-function flasher_interface:isErased(ulOffset, ulSize)
+function flasher_test_interface_cli:isErased(ulOffset, ulSize)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 	local fOk, strMsg = exec(self.aArgs)
-	flasher_interface.clearArgs(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 	return fOk, strMsg
 end
 
 
-function flasher_interface:eraseChip()
-	return self:erase(0, self:getDeviceSize())
+function flasher_test_interface_cli:eraseChip()
+	return self:erase(0, self:getLimitedDeviceSize())
 end
 
 
-function flasher_interface:readChip()
-	return self:read(0, self:getDeviceSize())
+function flasher_test_interface_cli:readChip()
+	return self:read(0, self:getLimitedDeviceSize())
 end
 
 
-function flasher_interface:isChipErased()
-	return self:isErased(0, self:getDeviceSize())
+function flasher_test_interface_cli:isChipErased()
+	return self:isErased(0, self:getLimitedDeviceSize())
 end
 
 --------------------------------------------------------------------------
@@ -1197,14 +1197,14 @@ local function main()
         os.exit(fOk and 0 or 1)
 
     elseif aArgs.fCommandTestCliSelected then
-        flasher_interface:configure(
+        flasher_test_interface_cli:configure(
           aArgs.strPluginName,
           aArgs.iBus,
           aArgs.iUnit,
           aArgs.iChipSelect,
           aArgs.atPluginOptions
         )
-        fOk, strMsg = flasher_test.testFlasher(flasher_interface)
+        fOk, strMsg = flasher_test.testFlasher(flasher_test_interface_cli)
         if fOk then
             if strMsg then
                 print(strMsg)
