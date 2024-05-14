@@ -39,8 +39,8 @@ local iNumAddSegments = 100
 --
 -- fOk, strMsg      init()            -- open plugin, download flasher, detect chip etc.
 --
--- ulSize           getDeviceSize()   -- returns chip size in bytes
--- ulBusWidth       getBusWidth()     -- returns 1, 2 or 4
+-- ulSize           getLimitedDeviceSize()   -- returns chip size in bytes
+-- ulBusWidth       getBusWidth()            -- returns 1, 2 or 4
 --
 -- fOk, strMsg      flash(ulOffset, strData)
 -- fOk, strMsg      verify(ulOffset, strData)
@@ -307,7 +307,7 @@ function M.testFlasher(tFlasherTestInterfaceCli, fnLogPrintf)
 	local fOk, strMsg = tFlasherTestInterface:init()
 	assert(fOk, strMsg)
 
-	local ulDeviceSize = tFlasherTestInterface:getDeviceSize()
+	local ulDeviceSize = tFlasherTestInterface:getLimitedDeviceSize()
 
 	local bEmptyByte = tFlasherTestInterface:getEmptyByte()
 
