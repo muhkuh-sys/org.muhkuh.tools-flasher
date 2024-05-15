@@ -532,6 +532,37 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
         end
       end
     end
+  elseif strCurrentPath=='/FlasherPackage/Target/usip' then
+    aLxpAttr.tUsip = {}
+
+    -- get usip file path
+    local strFile = atAttributes['file']
+    if strFile==nil or strFile=='' then
+      -- No file specified.
+      aLxpAttr.tResult = nil
+      aLxpAttr.tLog.error('Error in line %d, col %d: attribute "file" is not set.', iPosLine, iPosColumn)
+    else
+      aLxpAttr.tUsip['file'] = strFile
+    end
+
+    -- get set_kek flag
+    local strSetKEK = atAttributes['set_kek']
+    if strSetKEK~=nil and strSetKEK~='' then
+      aLxpAttr.tUsip['set_kek'] = stringToBool(strSetKEK)
+    end
+
+    -- get set sip proteciton flag
+    local strSetSipProtection = atAttributes['set_kek']
+    if strSetSipProtection~=nil and strSetSipProtection~='' then
+      aLxpAttr.tUsip['set_sip_protection'] = stringToBool(strSetSipProtection)
+    end
+
+     -- get read_cal flag
+    local strReadCal = atAttributes['read_cal']
+    if strReadCal~=nil and strReadCal~='' then
+      aLxpAttr.tUsip['read_cal'] = stringToBool(strReadCal)
+    end
+
 
   elseif strCurrentPath=='/FlasherPackage/Target/Sip' then
     -- Get the mandatory attribute "page". It can have the values "COM" or "APP" in any upper/lower case.
@@ -554,9 +585,9 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
           aLxpAttr.tResult = nil
           aLxpAttr.tLog.error('Error in line %d, col %d: attribute "file" is not set.', iPosLine, iPosColumn)
         else
-          -- Get the optional attribute "setKEK". The default value is "false".
+          -- Get the optional attribute "set_kek". The default value is "false".
           local fSetKEK = false
-          local strSetKEK = atAttributes['setKEK']
+          local strSetKEK = atAttributes['set_kek']
           if strSetKEK~=nil and strSetKEK~='' then
             fSetKEK = stringToBool(strSetKEK)
           end
@@ -564,7 +595,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
             -- Invalid "setKEK".
             aLxpAttr.tResult = nil
             aLxpAttr.tLog.error(
-              'Error in line %d, col %d: attribute "setKEK" must evaluate to a boolean.',
+              'Error in line %d, col %d: attribute "set_kek" must evaluate to a boolean.',
               iPosLine,
               iPosColumn
             )
@@ -575,7 +606,7 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
               strCondition = ''
             end
 
-            -- Translate the "page" and "setKEK" attributes to unit and chipselect.
+            -- Translate the "page" and "set_kek" attributes to unit and chipselect.
             local ulUnit
             local ulChipSelect
             local fDouble = false
@@ -754,6 +785,7 @@ function WfpControl:__parse_configuration(strConfiguration)
     self.atConditions = aLxpCallbacks.userdata.atConditions
     self.fHasSubdirs = aLxpCallbacks.userdata.fHasSubdirs
     self.strHasSubdirs = aLxpCallbacks.userdata.strHasSubdirs
+    self.tUsip = aLxpCallbacks.userdata.tUsip
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.

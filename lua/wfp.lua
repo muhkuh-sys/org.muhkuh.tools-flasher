@@ -86,16 +86,27 @@ function WFPXml:addComment(tNode, strComment)
     tNode:add_child(tComment)
 end
 
+function WFPXml:removeChild(tParentNode, tChildToRemove)
+    for idx, tCurrentChild in pairs(tParentNode) do
+        if tCurrentChild == tChildToRemove then
+            print("removing child node " .. tChildToRemove.tag)
+            table.remove(tParentNode, idx)
+        end
+    end
+end
+
 function WFPXml:addSip(tTarget, strSipPage, strSipPath, fSetKek)
 	local tSip = self.xml.new("Sip")
 	tSip:set_attrib("page", strSipPage)
 	tSip:set_attrib("file", strSipPath)
     if fSetKek then
-        tSip:set_attrib("setKEK", "true")
+        tSip:set_attrib("set_kek", "true")
     end
     if tTarget.last_add == nil then
         tTarget.last_add = {}
     end
+    local tUsipTag = tTarget:child_with_name("usip")
+    self:removeChild(tTarget, tUsipTag)
 	tTarget:add_child(tSip)
 end
 
@@ -349,6 +360,37 @@ local function add_sip_data_to_wfp_xml(strWfpPath, strComSipBin, strAppSipBin, s
     return strWfpData
 end
 
+local function prepare_usip(tLog, strUsipFilePath, fSetSipProtectionCookie)
+    tLog.info("Add Secure Info Page (SIP) data to wfp archive")
+    local usip_generator = require 'usip_generator'
+    local tUsipGen = usip_generator(tLog)
+    local fResult
+    local strErrorMsg
+    local tUsipConfigDict
+    local strComSipData
+    local strAppSipData
+    local fOk = true
+
+    fResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
+    if not fResult then
+        tLog.error('Failed to analyze usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
+        fOk = false
+    else
+        fResult, strErrorMsg, strComSipData, strAppSipData = tUsipGen:convertUsipToBin(
+            tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN,
+            tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN,
+            tUsipConfigDict,
+            fSetSipProtectionCookie
+        )
+
+        if not fResult then
+            tLog.error('Failed to convert usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
+            fOk = false
+        end
+    end
+    return fOk, strErrorMsg, strComSipData, strAppSipData, tUsipConfigDict
+end
+
 local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP,
      fAddSips, strUsipFilePath, fSetSipProtectionCookie, fSetKek)
 
@@ -359,6 +401,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
     local strAppSipData
     local strAppSipBin = "APP_SIP.bin"
     local tUsipConfigDict
+    local strErrorMsg
 
     -- Does the archive already exist?
     if pl.path.exists(strWfpArchiveFile) == strWfpArchiveFile then
@@ -377,40 +420,31 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
         end
     end
 
-    if fAddSips then
-        tLog.info("Add Secure Info Page (SIP) data to wfp archive")
-        local usip_generator = require 'usip_generator'
-        local tUsipGen = usip_generator(tLog)
-        local fResult
-        local strErrorMsg
-
-        fResult, strErrorMsg, tUsipConfigDict = tUsipGen:analyze_usip(strUsipFilePath)
-        if not fResult then
-            tLog.error('Failed to analyze usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
-            fOk = false
-        else
-            fResult, strErrorMsg, strComSipData, strAppSipData = tUsipGen:convertUsipToBin(
-                tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN,
-                tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN,
-                tUsipConfigDict,
-                fSetSipProtectionCookie
-            )
-            
-            if not fResult then
-                tLog.error('Failed to convert usip file "%s: %s"!', strUsipFilePath, strErrorMsg)
-                fOk = false
-            end
-        end
-    end
-
     if fOk == true then
         local tResult = tWfpControl:openXml(strWfpControlFile)
+        local strWorkingPath = pl.path.dirname(pl.path.abspath(strWfpControlFile))
+
         if tResult == nil then
             tLog.error('Failed to read the control file "%s"!', strWfpControlFile)
             fOk = false
         else
+            if tWfpControl.tUsip ~= nil then
+                local strFileBase = pl.path.basename(tWfpControl.tUsip.file)
+                local strUsipPath
+                if tWfpControl:getHasSubdirs() == true then
+                    print("Wfp uses subdirs so we use the complete path as reference")
+                    strUsipPath = tWfpControl.tUsip.file
+                else
+                    print("Wfp does not use subdirs so we use file name as reference")
+                    strUsipPath = strFileBase
+                end
+                strUsipPath = pl.path.join(strWorkingPath, strUsipPath)
+                -- prepare USIP data if usip element was found
+                fOk, strErrorMsg, strComSipData, strAppSipData, tUsipConfigDict = prepare_usip(tLog, strUsipPath, tWfpControl.tUsip.set_sip_protection)
+            end
+
             -- Get the absolute directory of the control file.
-            local strWorkingPath = pl.path.dirname(pl.path.abspath(strWfpControlFile))
+
 
             -- Collect all file references from the control file.
             local atFiles = {}
@@ -426,7 +460,6 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                     else
                         for _, tData in ipairs(tTargetFlash.atData) do
                             local strFile = tData.strFile
-                            -- Skip erase entries.
                             if strFile ~= nil then
                                 local strFileAbs = strFile
                                 if pl.path.isabs(strFileAbs) ~= true then
@@ -509,10 +542,10 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             local ulModTime = pl.file.modified_time(strWfpControlFile)
                             local tEntryCtrl = archive.ArchiveEntry()
 
-                            if fAddSips then
+                            if tWfpControl.tUsip ~= nil then
                                 -- modify the input xml to add COM and APP SIP binaries
                                 strData = add_sip_data_to_wfp_xml(strWfpControlFile, strComSipBin, strAppSipBin,
-                                 tUsipConfigDict['netx_type'], strUsipFilePath, fSetKek)
+                                tUsipConfigDict['netx_type'], strUsipFilePath, tWfpControl.tUsip.set_kek)
                             end
                             tEntryCtrl:set_pathname('wfp.xml')
                             tEntryCtrl:set_size(string.len(strData))
@@ -526,7 +559,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                             tArchive:write_data(strData)
                             tArchive:finish_entry()
 
-                            if fAddSips then
+                            if tWfpControl.tUsip ~= nil then
                                 local tEntry
                                 local ulCreationTime = os.time()
                                 local ulModTime = os.time()
@@ -540,7 +573,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                                 tEntry:set_gname('wfp')
                                 tEntry:set_ctime(ulCreationTime, 0)
                                 tEntry:set_mtime(ulModTime, 0)
-                                
+
                                 tArchive:write_header(tEntry)
                                 tArchive:write_data(strComSipData)
                                 tArchive:finish_entry()
@@ -1056,7 +1089,7 @@ tParserCommandFlash:flag('--disable_helper_signature_check')
                    :target('fDisableHelperSignatureChecks')
                    :default(false)
 tParserCommandFlash:flag('--allow_future_version')
-                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                    :target('fAllowFutureVersion')
                    :default(false)
 
@@ -1086,7 +1119,7 @@ tParserCommandVerify:flag('--disable_helper_signature_check')
                     :target('fDisableHelperSignatureChecks')
                     :default(false)
 tParserCommandVerify:flag('--allow_future_version')
-                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                     :target('fAllowFutureVersion')
                     :default(false)
 
@@ -1127,7 +1160,7 @@ tParserCommandRead:flag('--disable_helper_signature_check')
                   :target('fDisableHelperSignatureChecks')
                   :default(false)
 tParserCommandRead:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                   :target('fAllowFutureVersion')
                   :default(false)
 
@@ -1145,6 +1178,10 @@ tParserCommandList:option('-V --verbose')
                   :argname('<LEVEL>')
                   :default('debug')
                   :target('strLogLevel')
+tParserCommandList:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
+                  :target('fAllowFutureVersion')
+                  :default(false)
 
 -- Add the "pack" command and all its options.
 local tParserCommandPack = tParser:command('pack p',
@@ -1172,7 +1209,7 @@ tParserCommandPack:option('-V --verbose')
                   :default('debug')
                   :target('strLogLevel')
 tParserCommandPack:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                   :target('fAllowFutureVersion')
                   :default(false)
 
@@ -1218,7 +1255,7 @@ tParserCommandPackSip:flag('--set_kek')
                    :target('fSetKek')
                    :default(false)
 tParserCommandPackSip:flag('--allow_future_version')
-                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                    :target('fAllowFutureVersion')
                    :default(false)
 
@@ -1288,7 +1325,7 @@ tParserCommandSupportedXmlVersion:option('-V --verbose')
                                 'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
                              table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
 tParserCommandSupportedXmlVersion:flag('--allow_future_version')
-                             :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                             :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                              :target('fAllowFutureVersion')
                              :default(true):hidden(true)
 -- Add the "check_helper_signature" command and all its options.
@@ -1302,7 +1339,7 @@ tParserCommandXmlVersion:option('-V --verbose')
 tParserCommandXmlVersion:argument('wfp', 'The XML control file or WFP archive to check.')
                              :target('strWfpPath')
 tParserCommandXmlVersion:flag('--allow_future_version')
-                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning).')
+                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                     :target('fAllowFutureVersion')
                     :default(true):hidden(true)
 tParserCommandXmlVersion:flag('--allow_future_major')
@@ -1446,7 +1483,8 @@ local fOk = true
 local strErrorMsg
 if tArgs.fCommandSupportedXmlVersion then
     local strSupportedVersion = tWfpControl.getSupportedVersionStr()
-    tLog.info("This CLI Flasher version supports WFP control XML files up to version %s", strSupportedVersion)
+    tLog.info("Supported WFP version: %s", strSupportedVersion)
+    tLog.info("This CLI Flasher version supports WFP control XML files up to version %s.x", strSupportedVersion)
 elseif tArgs.fCommandXmlVersion then
 
     local strSuffix = tArgs.strWfpPath:sub(-4):lower()
@@ -1460,7 +1498,7 @@ elseif tArgs.fCommandXmlVersion then
     end
     if fOk then
         local strVersion = tWfpControl:getVersionStr()
-        tLog.info("The input file has the version %s", strVersion)
+        tLog.info("The input file has the WFP version %s", strVersion)
     else
         tLog.error("Could not open input file '%s'", tArgs.strWfpPath)
     end
