@@ -20,11 +20,11 @@ ulEraseStart, ulEraseEnd = flasher.getEraseArea(tPlugin, aAttr, 0, 1)
 if not ulEraseStart then
 	error("Failed to get erase areas!")
 end
-print(string.format("The first erase area is: 0x%08x-0x%08x", ulEraseStart, ulEraseEnd))
+print(string.format("The first erase area is: [0x%08x-0x%08x[", ulEraseStart, ulEraseEnd))
 
 -- Check if the erase area is already clear.
 local fIsErased
-print(string.format("Is area 0x%08x-0x%08x already erased?", ulEraseStart, ulEraseEnd))
+print(string.format("Is area [0x%08x-0x%08x[ already erased?", ulEraseStart, ulEraseEnd))
 fIsErased = flasher.isErased(tPlugin, aAttr, ulEraseStart, ulEraseEnd)
 if fIsErased==nil then
 	error("failed to check the area!")

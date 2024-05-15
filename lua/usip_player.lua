@@ -112,8 +112,7 @@ local strHelpSecP2 = [[
 
 
 local strUsipHelp = [[
-    Loads an usip file on the netX, reset the netX and process
-    the usip file to update the SecureInfoPage and continue standard boot process.
+    Load an USIP file to a netX 90, reset the netX , update SecureInfoPage, and continue boot process.
 ]]
 
 
@@ -130,7 +129,7 @@ tParserCommandUsip:option(
 tParserCommandUsip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
 tParserCommandUsip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 tParserCommandUsip:flag('--verify_sig'):description(
-    "Verify the signature of an usip image against a netX, stop if the signature is invalid. \n" .. 
+    "Verify the signature of an usip image against a netX, stop if the signature is invalid. \n" ..
     "The netX will ignore USIP images with an invalid signature."
 ):target('fVerifySigEnable')
 :default(false)

@@ -673,7 +673,7 @@ local function exec(aArgs)
 		-- Therefore we clear the start of the intram boot image.
 		if fOk then
 			local iChiptype = tPlugin:GetChiptyp()
-      local romloader = require 'romloader'
+      		local romloader = require 'romloader'
 			if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
