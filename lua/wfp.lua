@@ -1,4 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
+--require("LuaPanda").start("127.0.0.1",8818)
 
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
@@ -854,6 +855,141 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
     return fOk, DestinationXml
 end
 
+local function isOperator(strValue)
+    for _, operator in ipairs({"not", "and", "or", ">", "<", "==", "<=", ">=", "~=", "+" , "-",
+                                "*", "/", "%", "^"}) do
+        if  strValue == operator then return true end
+    end
+    return false
+end
+
+local function isOperand(atOperands, strValue)
+    for operand, _  in pairs(atOperands) do
+        if  strValue == operand then return true end
+    end
+    return false
+end
+
+-- Validates an expression and evaluates it with the operands
+--
+-- Usage:
+-- strExpression - contains the expression in Lua syntax as a string
+--   All operators must be separated by spaces.
+--   Parantheses are supported but do not eliminate the need for spaces.
+--   Constants are allowed: integers, floats (use dot), hex (use 0x), strings (use \"...\")
+--   Quotation marks inside of strings are not supported.
+--   Examples:
+--     "(A == true or B == false) and C == false"
+--     "(A or not B) and not C"
+--     "Text == \"(Hello World)\""
+--     "Var == 0x08"
+--     "Value == 1.4"
+--     "A < 5 * (B - 3)"
+-- astrOperands - contains the corresponding definitions of variables used in the expression
+--   Syntax: "<Operand>=<Constant>"
+--   No spaces are allowed (except in strings)
+--   Allowed Constants: integers, floats (use dot), hex (use 0x), strings (use \"...\")
+--   Numerical constants (any type) can be negative (use -).
+--   The value must be a simple constant, no calculations are supported.
+--   Examples:
+--     "A=true"
+--     "Text=\"Hello World\""
+--     "A=-1"
+-- return:
+--   0: expression returns false
+--   1: expression is invalid
+--   2: expression returns true
+local function validateAndCalculate(tLog, tWfpControl, strExpression, astrOperands)
+    -- Create a list of the known operands and their values
+    local atOperands = {}
+    for _, strOperand in ipairs(astrOperands) do
+        for strName, strValue in string.gmatch(strOperand, "(.*)=(.*)") do
+            -- Operand is a string: remove quotation marks and save it
+            if string.sub(strValue, 1, 1) == "\"" and string.sub(strValue, -1) == "\"" then
+                atOperands[strName] = string.sub(strValue, 2, -2)
+                -- Abort if there are other quotation marks in the string (including \\\")
+                -- The sandbox is somehow not able to properly evaluate strings containing
+                -- quotation mark-characters (\\\") (always returns sucess-false)
+                if(string.find(atOperands[strName], "\"")) then
+                    return 1
+                end
+            -- Operand is a bool-keyword
+            elseif strValue == "true" or strValue == "false" then
+                atOperands[strName] = strValue == "true"
+            -- Operand must be a number; Parse the value and save it
+            else
+                atOperands[strName] = tonumber(strValue)
+            end
+        end
+    end
+
+    -- Prepare a copy of the expression for validity check
+    -- Remove all "("" and ")" that are not part of strings
+    -- Remove all spaces inside of strings in expression
+    local inString = false
+    local strExprForCheck = ""
+    local previousCharacter = nil
+    for i = 1, #strExpression do
+        local character = string.sub(strExpression, i,i)
+
+        -- \" --> string delimiter,   \\\" --> quotation mark in string
+        if character == "\"" and previousCharacter ~= "\\" then
+            inString = not inString
+        end
+
+        -- Only copy characters that do not match the filter
+        if (inString == false and character ~= "(" and character ~= ")") or
+            (inString == true and character ~= " ") then
+                strExprForCheck = strExprForCheck .. character
+        end
+        previousCharacter = character
+    end
+
+    -- Split the expression at remaining spaces and check that every part is valid
+    for partOfExpr in string.gmatch(strExprForCheck, "[^" .. " " .. "]+") do
+        -- Compare the part to a list of valid operators
+        if isOperator(partOfExpr) then
+            tLog.debug("%s is an operator", partOfExpr)
+        -- If in quotation marks, it must be a string
+        elseif string.sub(partOfExpr, 1, 1) == "\"" and string.sub(partOfExpr, -1) == "\"" then
+            tLog.debug("%s is a string", partOfExpr)
+            -- Abort if there are other quotation marks in the string (including \\\")
+            -- The sandbox is somehow not able to properly evaluate strings containing
+            -- quotation mark-characters (\\\") (always returns sucess-false)
+            if(string.find(string.sub(partOfExpr, 2, -2), "\"")) then
+                return 1
+            end
+        -- If one of the regex is matched, it must be a number
+        elseif string.match(partOfExpr, "^-?%d+$") or       -- int
+        string.match(partOfExpr, "^-?%d+.?") or             -- float
+        string.match(partOfExpr, "^-?0[xX][0-9a-fA-F]+") then  -- hex
+            tLog.debug("%s is a number", partOfExpr)
+        elseif partOfExpr == "true" or partOfExpr == "false" then
+            tLog.debug("%s is a boolean value", partOfExpr)
+        -- Compare to the list of known operands
+        elseif isOperand(atOperands, partOfExpr) then
+            tLog.debug("%s is an operand", partOfExpr)
+        -- Nothing of the above? --> Invalid expression
+        else
+            tLog.error("%s is invalid", partOfExpr)
+            return 1
+        end
+    end
+
+    -- Try to run the original expression in a sandbox. If it fails, the arguments are invalid (syntax etc).
+    local isValid, result = pcall(wfp_control.matchCondition, tWfpControl, atOperands, strExpression)
+    if isValid == false then
+        tLog.error("Error: Sandbox failed")
+        return 1
+    end
+    tLog.info("Result: %s", tostring(result))
+    if result then
+        return 2
+    else
+        return 0
+    end
+end
+
 
 local strEpilog = [==[
 Note: the command 'check_helper_signature' and the optional arguments
@@ -1173,6 +1309,39 @@ tParserCommandXmlVersion:flag('--allow_future_major')
                     :description('Only used for this command')
                     :target('fAllowFutureMajor')
                     :default(true):hidden(true)
+
+-- Add the "calc" command and all its options.
+local tParserCommandCalculate = tParser:command('calc calculate',
+                                'Verify and calculate an expression.')
+                       :target('fCommandCalculateSelected')
+                       :usage('Provide an expression and at least one variable definition.\n'..
+                        'Example:\n'..
+                        "lua5.4.exe wfp.lua calculate \"Var == 1\" \"Var=1\"\n\n"..
+                        "In expression: operators must be sourrounded by spaces.\n"..
+                        "In operands: Do not use spaces (except in strings).\n"..
+                        "Do not use spaces in string constants.\n\n"..
+                        "The expression will checked and evaluated.\n"..
+                        "Exit codes:\n"..
+                        "0 = false\n"..
+                        "1 = error\n"..
+                        "2 = true")
+
+tParserCommandCalculate:option('-V --verbose')
+                       :description(string.format(
+                         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                         table.concat(atLogLevels, ', ')
+                       ))
+                       :argname('<LEVEL>')
+                       :default('debug')
+                       :target('strLogLevel')
+
+tParserCommandCalculate:argument('expression', 'Expression in Lua Syntax.')
+                       :target('strExpression')
+
+tParserCommandCalculate:argument('operand', 'Value of operand')
+                       :target('astrOperands')
+                       :args("+") -- at least one operand
+
 local tArgs = tParser:parse()
 
 if tArgs.strSecureOption == nil then
@@ -1656,6 +1825,17 @@ elseif tArgs.fCommandCheckHelperSignatureSelected then
     tArgs.atPluginOptions = atPluginOptions
     fOk = tVerifySignature.verifyHelperSignatures(
         tArgs.strPluginName, tArgs.strPluginType, tArgs.atPluginOptions, tArgs.strSecureOption)
+
+elseif tArgs.fCommandCalculateSelected == true then
+    tLog.debug("Expression: %s", tArgs.strExpression)
+    for _, arg in ipairs(tArgs.astrOperands) do
+        tLog.debug("Operands: %s", arg)
+    end
+    local result = validateAndCalculate(tLog, tWfpControl, tArgs.strExpression, tArgs.astrOperands)
+    if(result == 1) then
+        tLog.error("invalid expression or operands")
+    end
+    os.exit(result)
 end
 
 
