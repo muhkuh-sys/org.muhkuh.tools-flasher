@@ -31,7 +31,7 @@ local tLog = require 'log'.new('trace',
 
 local FLASHER_PATH = "netx/"
 
-local ALLOW_INTERNAL_CHIPSELECTS = true
+local ALLOW_INTERNAL_CHIPSELECTS = false
 
 --------------------------------------------------------------------------
 -- Usage
