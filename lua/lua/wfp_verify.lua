@@ -20,12 +20,18 @@ local function __print_verify_summary(atFlashDataTable, tLog)
   tLog.info("===========================================")
   for _, atFlashData in pairs(atFlashDataTable) do
       if atFlashData['atChunkList'] ~= nil then
+        if atFlashData['tBus'] == 2 and atFlashData['ulUnit'] == 1 and (atFlashData['ulChipSelect'] == 1 or atFlashData['ulChipSelect'] ==3) then
+            tLog.info("COM SIP")
+        elseif atFlashData['tBus'] == 2 and atFlashData['ulUnit'] == 2 and (atFlashData['ulChipSelect'] == 1 or atFlashData['ulChipSelect'] ==3) then
+            tLog.info("APP SIP")
+        else
           tLog.info(
             "Flash Bus: " .. atFlashData['tBus'] ..
             " Unit: " .. atFlashData['ulUnit'] ..
             " ChipSelect: " .. atFlashData['ulChipSelect']
           )
-          tLog.info("-------------------------------------------")
+        end
+        tLog.info("-------------------------------------------")
       end
       for _, tChunk in ipairs(atFlashData['atChunkList']) do
           if tChunk.verified == true then
@@ -275,7 +281,7 @@ local function __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
 end
 
 
-function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
+function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog, fUseProductionMode)
 
 	-- loop over each target flash
 	---- get all files (write or erase commands) for current target flash
@@ -500,6 +506,7 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
             fVerified = false
         end
     end
+
     -- print final verify result and return
     __print_verify_summary(atFlashDataTable, tLog)
 

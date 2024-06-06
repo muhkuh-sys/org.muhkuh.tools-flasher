@@ -8,7 +8,7 @@ local VERSION_MINOR_POS = 2
 local SUPPORTED_VERSION = "1.3"
 
 
-function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor)
+function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor, fUseProductionMode)
   -- Get the LUA version number in the form major * 100 + minor .
   local strMaj, strMin = string.match(_VERSION, '^Lua (%d+)%.(%d+)$')
   if strMaj~=nil then
@@ -23,6 +23,11 @@ function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor)
     self.fAllowNewerMajor = false
   else
     self.fAllowNewerMajor = fAllowNewerMajor
+  end
+  if fUseProductionMode == nil then
+    self.fUseProductionMode = false
+  else
+    self.fUseProductionMode = fUseProductionMode
   end
 
   -- The "penlight" module is used to parse the configuration file.
@@ -606,62 +611,20 @@ function WfpControl.__parseCfg_StartElement(tParser, strName, atAttributes)
               strCondition = ''
             end
 
-            -- Translate the "page" and "set_kek" attributes to unit and chipselect.
-            local ulUnit
-            local ulChipSelect
-            local fDouble = false
-            if strPage=='COM' then
-              -- Write the COM page. This is unit 1.
-              ulUnit = 1
-              -- If the KEK should be set, the page must be patched. This is achieved with CS 3.
-              -- If the KEK should not be set, the unmodified page should be written. This is achieved with CS 1.
-              --
-              -- The following expression results to 3 if "fSetKEK" is true, and 1 if it is false.
-              ulChipSelect = fSetKEK and 3 or 1
-
-              -- CS 3 handles the duplication of the SIP internally.
-              -- CS 1 needs 2 separate entries.
-              if ulChipSelect~=3 then
-                fDouble = true
-              end
-            else
-              -- Write the APP page. This is unit 2.
-              ulUnit = 2
-              -- The calibration is always set. This is achieved with CS 3.
-              ulChipSelect = 3
+            local tSip = {}
+            tSip['set_kek'] = fSetKEK
+            tSip['page'] = strPage
+            tSip['file'] = strFile
+            tSip['condition'] = strCondition
+            if aLxpAttr.tCurrentTarget.tSips == nil then
+              aLxpAttr.tCurrentTarget.tSips = {}
             end
-
-            -- Create a new data entry.
-            local atData = {
-              {
-                strType = "Data",
-                strFile = strFile,
-                ulOffset = 0,
-                strCondition = strCondition
-              }
-            }
-            if fDouble then
-              table.insert(atData, {
-                strType = "Data",
-                strFile = strFile,
-                ulOffset = 4096,
-                strCondition = strCondition
-              })
-            end
-
-            -- Create a new flash entry in the current target.
-            table.insert(aLxpAttr.tCurrentTarget.atFlashes, {
-              strBus = 'IFlash',
-              ulUnit = ulUnit,
-              ulChipSelect = ulChipSelect,
-              atData = atData
-            })
+            table.insert(aLxpAttr.tCurrentTarget.tSips, tSip)
           end
         end
       end
     end
   end
-
 end
 
 
@@ -786,6 +749,7 @@ function WfpControl:__parse_configuration(strConfiguration)
     self.fHasSubdirs = aLxpCallbacks.userdata.fHasSubdirs
     self.strHasSubdirs = aLxpCallbacks.userdata.strHasSubdirs
     self.tUsip = aLxpCallbacks.userdata.tUsip
+    self.tSip = aLxpCallbacks.userdata.tSip
 
     -- Check if all required components are present.
     -- NOTE: the dependency block is optional.

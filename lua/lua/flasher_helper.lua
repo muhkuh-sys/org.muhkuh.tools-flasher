@@ -1066,6 +1066,111 @@ function M.dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 end
 
 
+-- strNetxName chiptypeToName(iChiptype)
+-- transfer integer chiptype into a netx name
+-- returns netX name as a string otherwise nil
+function M.chiptypeToName(iChiptype)
+    local romloader = _G.romloader
+    local strNetxName
+    -- First catch the unlikely case that "iChiptype" is nil.
+	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
+	if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
+		strNetxName = 'netx500'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
+		strNetxName = 'netx50'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX10 then
+		strNetxName = 'netx10'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
+		strNetxName = 'netx56'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+		strNetxName = 'netx4000'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
+		strNetxName = 'netx90_mpw'
+    elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
+		strNetxName = 'netx90_rev_0'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
+		strNetxName = 'netx90'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
+		strNetxName = 'netiol'
+    else
+        strNetxName = nil
+	end
+    return strNetxName
+end
+
+
+-- printTable(tTable, ulIndent)
+-- Print all elements from a table
+-- returns
+--   nothing
+function M:printTable(tTable, ulIndent, tLog)
+    local strIndentSpace = string.rep(" ", ulIndent)
+    for key, value in pairs(tTable) do
+        if type(value) == "table" then
+            tLog.info( "%s%s",strIndentSpace, key )
+            self:printTable(value, ulIndent + 4, tLog)
+        else
+            tLog.info( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
+        end
+    end
+    if next(tTable) == nil then
+        tLog.info( "%s%s",strIndentSpace, " -- empty --" )
+    end
+end
+
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+function M:printArgs(tArguments, strLuaScript, tLog)
+    tLog.info("")
+    tLog.info("Command line:" .. table.concat(arg, " ", -1, #arg))
+    tLog.info("")
+    tLog.info("run %s with the following args:", strLuaScript)
+    tLog.info("--------------------------------------------")
+    self:printTable(tArguments, 0, tLog)
+    tLog.info("")
+end
+
+function M.create_directory_path(strDirectoryPath)
+	local tFoldersToCreate = {}
+	local strCurrentPath = strDirectoryPath
+	local strFolderName
+	local strCurrentPathNew
+	local strCreateFolderPath
+	local fResult
+	local strErrorMsg = ""
+
+	while not path.exists(strCurrentPath) do
+		strCurrentPathNew = path.dirname(strCurrentPath)
+		strFolderName = string.sub(strCurrentPath, string.len(strCurrentPathNew)+2)
+		table.insert(tFoldersToCreate, strFolderName)
+		strCurrentPath = strCurrentPathNew
+	end
+
+	for idx = #tFoldersToCreate, 1, -1 do
+		strFolderName = tFoldersToCreate[idx]
+		strCreateFolderPath = path.join(strCurrentPath, strFolderName)
+		path.mkdir(strCreateFolderPath)
+		strCurrentPath = strCreateFolderPath
+	end
+
+	if path.exists(strDirectoryPath) then
+		fResult = true
+		strErrorMsg = "created directory: " .. strDirectoryPath
+	else
+		fResult = false
+		strErrorMsg = "could not create directory: " .. strDirectoryPath
+	end
+	return fResult, strErrorMsg
+end
+
 -- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
 -- !! this class does not provide every functionality of a file handle !!
 
