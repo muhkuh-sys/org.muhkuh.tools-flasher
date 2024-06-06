@@ -22,10 +22,16 @@ local tFlasherHelper = require 'flasher_helper'
 local flasher_test = require 'flasher_test'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
+local tLogWriterConsole = require 'log.writer.console'.new()
+local tLogWriterFilter = require 'log.writer.filter'.new('debug', tLogWriterConsole)
+local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
+local tLog = require 'log'.new('trace',
+    tLogWriter,
+    require 'log.formatter.format'.new())
 
 local FLASHER_PATH = "netx/"
 
-local ALLOW_INTERNAL_CHIPSELECTS = false
+local ALLOW_INTERNAL_CHIPSELECTS = true
 
 --------------------------------------------------------------------------
 -- Usage
@@ -522,40 +528,6 @@ addPluginTypeArg(tParserCommandCheckHelperSignature)
 addPluginNameArg(tParserCommandCheckHelperSignature)
 addSecureArgs(tParserCommandCheckHelperSignature)
 
--- printTable(tTable, ulIndent)
--- Print all elements from a table
--- returns
---   nothing
-local function printTable(tTable, ulIndent)
-    local strIndentSpace = string.rep(" ", ulIndent)
-    for key, value in pairs(tTable) do
-        if type(value) == "table" then
-            printf( "%s%s",strIndentSpace, key )
-            printTable(value, ulIndent + 4)
-        else
-            printf( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
-        end
-    end
-    if next(tTable) == nil then
-        printf( "%s%s",strIndentSpace, " -- empty --" )
-    end
-end
-
-
--- printArgs(tArguments)
--- Print all arguments in a table
--- returns
---   nothing
-local function printArgs(tArguments)
-  print("")
-  print("Command line:" .. table.concat(arg, " ", -1, #arg))
-  print("")
-  print("Running CLI flasher with the following args:")
-  print("--------------------------------------------")
-  
-  printTable(tArguments, 0)
-  print("")
-end
 
 
 
@@ -1127,7 +1099,7 @@ local function main()
 
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
-    printArgs(aArgs)
+	tFlasherHelper:printArgs(aArgs, "cli_flash.lua", tLog)
 
 	local path = require 'pl.path'
 	local strnetX90UnsignedHelperPath = path.join(flasher.DEFAULT_HBOOT_OPTION, "netx90")

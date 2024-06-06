@@ -230,31 +230,6 @@ local function loadBin(strFilePath)
 end
 --]]
 
-local function printTable(tTable, ulIndent)
-    local strIndentSpace = string.rep(" ", ulIndent)
-    for key, value in pairs(tTable) do
-        if type(value) == "table" then
-            print(strIndentSpace, key)
-            printTable(value, ulIndent + 4)
-        else
-            print(strIndentSpace, key, " = ", value)
-        end
-    end
-    if next(tTable) == nil then
-        print(strIndentSpace, " -- empty --")
-    end
-end
-
-local function printArgs(tArgs, tLog)
-    print("")
-    print("Command line:" .. table.concat(arg, " ", -1, #arg))
-    print("")
-    print("run wfp.lua with the following args:")
-    print("------------------------------------")
-    printTable(tArgs, 0)
-    print("")
-end
-
 
 local function example_xml(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPluginOptions)
 	-- create an example xml based on the selected plugin (NXTFLASHER-264)
@@ -392,7 +367,7 @@ local function prepare_usip(tLog, strUsipFilePath, fSetSipProtectionCookie)
 end
 
 local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwrite,fBuildSWFP,
-     fAddSips, strUsipFilePath, fSetSipProtectionCookie, fSetKek)
+      strUsipFilePath, fSetSipProtectionCookie, fSetKek)
 
     local archive = require 'archive'
     local fOk=true
@@ -660,7 +635,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
     return fOk
 end
 
-local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPluginOptions)
+local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPluginOptions, fUseProductionMode)
 	-- create a backup for all flash areas in netX
 	-- read the flash areas and save the images to reinstall them later
 	-- Steps:
@@ -675,6 +650,7 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
     local DestinationFolder = tArgs.strBackupPath
     local DestinationXml = DestinationFolder .. "/wfp.xml"
     local strMsg
+    local strWorkingPath = pl.path.dirname(pl.path.abspath(tArgs.strWfpControlFile))
 
     local fOk = true --be optimistic
 	-- overwrite :
@@ -746,6 +722,9 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                     tArgs.aHelperKeysForSigCheck
                 )
 
+                -- Download the binary. (load the flasher binary into intram)
+                local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
+
                 if fOk ~= true then
                     tLog.error(strMsg or "Failed to verify the signatures of the helper files")
                     fOk = false
@@ -762,8 +741,67 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                         tLog.error("The chip type %s is not supported.", tostring(iChiptype))
                         fOk = false
                     else
-                        -- Download the binary. (load the flasher binary into intram)
-                        local aAttr = tFlasher.download(tPlugin, strFlasherPrefix, nil, bCompMode, strSecureOption)
+                        if tWfpControl.tUsip ~= nil and fUseProductionMode then
+                            -- if control file contains an 'USIP' chunk and we use production mode, we add read commands for SIPs
+
+                            local tFlash = {}
+                            local tData
+
+                            -- read command for COM SIP
+                            tFlash.strBus = "IFlash"
+                            tFlash.ulUnit = 1
+                            tFlash.ulChipSelect = 3
+                            tFlash.tRequirements = nil
+                            tFlash.atData = {}
+
+                            tData = {}
+                            tData.strType = "Data"
+                            tData.strFile = "com_sip.bin"
+                            tData.ulSize = 0x1000
+                            tData.ulOffset = 0x0
+                            tData.strCondition = nil
+
+                            table.insert(tFlash.atData, tData)
+                            table.insert(tTarget.atFlashes, tFlash)
+
+                            -- read command for APP SIP
+                            tFlash = {}
+                            tFlash.strBus = "IFlash"
+                            tFlash.ulUnit = 2
+                            tFlash.ulChipSelect = 3
+                            tFlash.tRequirements = nil
+                            tFlash.atData = {}
+
+                            tData = {}
+                            tData.strType = "Data"
+                            tData.strFile = "app_sip.bin"
+                            tData.ulSize = 0x1000
+                            tData.ulOffset = 0x0
+                            tData.strCondition = nil
+
+                            table.insert(tFlash.atData, tData)
+                            table.insert(tTarget.atFlashes, tFlash)
+
+                            if tWfpControl.tUsip.read_cal then
+                                -- read command for CAL SIP
+                                tFlash = {}
+                                tFlash.strBus = "IFlash"
+                                tFlash.ulUnit = 0
+                                tFlash.ulChipSelect = 1
+                                tFlash.tRequirements = nil
+                                tFlash.atData = {}
+
+                                tData = {}
+                                tData.strType = "Data"
+                                tData.strFile = "cal_sip.bin"
+                                tData.ulSize = 0x1000
+                                tData.ulOffset = 0x0
+                                tData.strCondition = nil
+
+                                table.insert(tFlash.atData, tData)
+                                table.insert(tTarget.atFlashes, tFlash)
+                            end
+                        end
 
                         -- Loop over all flashes. (inside xml)
                         for _, tTargetFlash in ipairs(tTarget.atFlashes) do
@@ -860,10 +898,28 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
                                 end
                             end
                         end
+
+                        -- check if usip element is inside the WFP Control file
+                        if tWfpControl.tUsip ~= nil and not fUseProductionMode then
+                            local fResult
+                            local strErrorMsg
+                            local usip_player = require 'lua.usip_player_class'
+
+                            -- if we don't use production mode, we use function read_sip of usip_player
+
+                            local tUsipPlayer = usip_player(
+                                tLog,
+                                tArgs.strSecureOption,
+                                tArgs.strSecureOptionPhaseTwo,
+                                tArgs.strPluginName,
+                                tArgs.strPluginType
+                            )
+                            fResult, strErrorMsg = tUsipPlayer:commandReadSip(
+                                tArgs.strBackupPath, tWfpControl.tUsip.read_cal, tPlugin
+                            )
+                        end
                     end
                 end
-
-
             end
         end
         if fOk==true then
@@ -1122,6 +1178,10 @@ tParserCommandVerify:flag('--allow_future_version')
                     :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                     :target('fAllowFutureVersion')
                     :default(false)
+tParserCommandVerify:flag('--production-mode -m')
+                    :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
+                    :target('fUseProductionMode')
+                    :default(false)
 
 -- Add the "Read" command and all its options.
 local tParserCommandRead =
@@ -1155,9 +1215,13 @@ tParserCommandRead:mutex(
                       :target('strSecureOption')
                       :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandRead:flag('--disable_helper_signature_check')
-                  :description('Disable signature checks on helper files.')
-                  :target('fDisableHelperSignatureChecks')
+tParserCommandRead:flag('-m --production-mode')
+                  :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
+                  :target('fUseProductionMode')
+                  :default(false)
+tParserCommandRead:flag('--allow_future_version')
+                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
+                  :target('fAllowFutureVersion')
                   :default(false)
 tParserCommandRead:flag('--allow_future_version')
                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
@@ -1213,51 +1277,6 @@ tParserCommandPack:flag('--allow_future_version')
                   :target('fAllowFutureVersion')
                   :default(false)
 
-
--- Add the "pack" command and all its options.
-local tParserCommandPackSip = tParser:command(
-    'pack_sip ps', 'Pack a WFP based on an XML with Default values for COM and APP secure info pages')
-    :target('fCommandPackSipSelected')
-tParserCommandPackSip:argument('xml', 'The XML control file.')
-                  :target('strWfpControlFile')
-tParserCommandPackSip:argument('archive', 'The WFP file to create.')
-                  :target('strWfpArchiveFile')
-tParserCommandPackSip:flag('-o --overwrite')
-                  :description('Overwrite an existing WFP archive. ' ..
-                               'The default is to do nothing if the target archive already exists.')
-                  :default(false)
-                  :target('fOverwrite')
-tParserCommandPackSip:flag('-s --simple')
-                  :description('Build a SWFP file without compression.')
-                  :default(false)
-                  :target('fBuildSWFP')
-tParserCommandPackSip:option('-V --verbose')
-                  :description(string.format(
-                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                    table.concat(atLogLevels, ', ')
-                  ))
-                  :argname('<LEVEL>')
-                  :default('debug')
-                  :target('strLogLevel')
-tParserCommandPackSip:option('-i --usip')
-                  :description(string.format(
-                    'Add data from usip file to be loaded to the secure info pages.',
-                    table.concat(atLogLevels, ', ')
-                  ))
-                  :argname('<USIP_FILE_PATH>')
-                  :target('strUsipFilePath')
-tParserCommandPackSip:flag('--set_sip_protection')
-                   :description('Set the SIP protection cookie.')
-                   :target('fSetSipProtectionCookie')
-                   :default(false)
-tParserCommandPackSip:flag('--set_kek')
-                   :description('Set the KEK (Key exchange key).')
-                   :target('fSetKek')
-                   :default(false)
-tParserCommandPackSip:flag('--allow_future_version')
-                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                   :target('fAllowFutureVersion')
-                   :default(false)
 
 -- Add the "example" command and all its options.
 local tParserCommandExample = tParser:command('example e',
@@ -1396,7 +1415,7 @@ local tLog = require 'log'.new('trace',
     tLogWriter,
     require 'log.formatter.format'.new())
 
-printArgs(tArgs, tLog)
+tFlasherHelper:printArgs(tArgs, "cli_flash.lua", tLog)
 local strHelperFileStatus = tHelperFiles.getStatusString()
 print(strHelperFileStatus)
 print()
@@ -1506,7 +1525,7 @@ elseif tArgs.fCommandXmlVersion then
 
 elseif tArgs.fCommandReadSelected == true then
     local strReadXml
-    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions)
+    fOk, strReadXml =  backup(tArgs, tLog, tWfpControl, tArgs.bCompMode, tArgs.strSecureOption, atPluginOptions, tArgs.fUseProductionMode)
     if tArgs.strWfpArchiveFile and fOk == true then
         fOk = pack(tArgs.strWfpArchiveFile, strReadXml, tWfpControl, tLog, tArgs.fOverwrite, tArgs.fBuildSWFP)
     end
@@ -1617,6 +1636,41 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                         -- Verify command now moved above Target Flash Loop to collect data for each flash before
                         -- running verification
                         if tArgs.fCommandVerifySelected == true then
+                            if tTarget.tSips ~= nil then
+                                for _, tSip in ipairs(tTarget.tSips) do
+                                    if  tArgs.fUseProductionMode then
+                                        local ulUnit
+                                        local ulChipSelect
+                                        if tSip['page']=='COM' then
+                                            -- Write the COM page. This is unit 1.
+                                            ulUnit = 1
+                                        else
+                                            -- Write the APP page. This is unit 2.
+                                            ulUnit = 2
+                                            -- The calibration is always set. This is achieved with CS 3.
+                                        end
+                                        ulChipSelect = 3
+
+                                        -- Create a new data entry.
+                                        local atData = {
+                                            {
+                                            strType = "Data",
+                                            strFile = tSip['file'],
+                                            ulOffset = 0,
+                                            strCondition = tSip['condition']
+                                            }
+                                        }
+
+                                        -- Create a new flash entry in the current target.
+                                        table.insert(tTarget.atFlashes, {
+                                        strBus = 'IFlash',
+                                        ulUnit = ulUnit,
+                                        ulChipSelect = ulChipSelect,
+                                        atData = atData
+                                        })
+                                    end
+                                end
+                            end
                             -- new verify function here
                             fOk = wfp_verify.verifyWFP(
                                 tTarget,
@@ -1628,9 +1682,104 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                 aAttr,
                                 tLog
                             )
+                            if  tArgs.fUseProductionMode == false and tTarget.tSips ~= nil then
+                                local strComSipBinData
+                                local strAppSipBinData
+                                local strCalSipData
+                                local strComSipData
+                                local strAppSipData
+                                for _, tSip in ipairs(tTarget.tSips) do
+                                    if tSip.page == "COM" then
+                                        strComSipBinData = tWfpControl:getData(tSip.file)
+                                    elseif tSip.page == "APP" then
+                                        strAppSipBinData = tWfpControl:getData(tSip.file)
+                                    end
+                                end
+                                local usip_player = require 'lua.usip_player_class'
+                                local tUsipPlayer = usip_player(
+                                    tLog,
+                                    tArgs.strSecureOption,
+                                    nil,
+                                    tArgs.strPluginName,
+                                    tArgs.strPluginType
+                                )
+
+                                tResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData = tUsipPlayer:commandReadSip(
+                                    nil, false, tPlugin, false)
+                                if tResult then
+                                    local sipper = require 'sipper'
+                                    local tSipper = sipper(tLog)
+
+                                    tResult, strErrorMsg = tSipper.compare_sip_content(
+                                        strComSipBinData, strComSipData, "COM")
+                                    if tResult then
+                                        tResult, strErrorMsg = tSipper.compare_sip_content(
+                                            strAppSipBinData, strAppSipData, "APP")
+                                    end
+                                end
+                                if not tResult then
+                                    tLog.error(strErrorMsg)
+                                    fOk = false
+                                end
+
+                            end
                             tLog.info('verification result: %s', tostring(fOk))
                         else
+                            if tTarget.tSips ~= nil then
+                                for _, tSip in ipairs(tTarget.tSips) do
+                                    local ulUnit
+                                    local ulChipSelect
+                                    local fDouble = false
+                                    if tSip['page']=='COM' then
+                                        -- Write the COM page. This is unit 1.
+                                        ulUnit = 1
+                                        -- If the KEK should be set, the page must be patched. This is achieved with CS 3.
+                                        -- If the KEK should not be set, the unmodified page should be written. This is achieved with CS 1.
+                                        --
+                                        -- The following expression results to 3 if "fSetKEK" is true, and 1 if it is false.
+                                        ulChipSelect = tSip['set_kek'] and 3 or 1
 
+                                        -- CS 3 handles the duplication of the SIP internally.
+                                        -- CS 1 needs 2 separate entries.
+                                        if ulChipSelect~=3 then
+                                        fDouble = true
+                                        end
+                                    else
+                                        -- Write the APP page. This is unit 2.
+                                        ulUnit = 2
+                                        -- The calibration is always set. This is achieved with CS 3.
+                                        ulChipSelect = 3
+                                    end
+
+                                                -- Create a new data entry.
+                                    local atData = {
+                                        {
+                                        strType = "Data",
+                                        strFile = tSip['file'],
+                                        ulOffset = 0,
+                                        strCondition = tSip['condition']
+                                        }
+                                    }
+
+                                    if fDouble then
+                                    table.insert(atData, {
+                                        strType = "Data",
+                                        strFile = tSip['file'],
+                                        ulOffset = 4096,
+                                        strCondition = tSip['condition']
+                                    })
+                                    end
+
+                                    -- Create a new flash entry in the current target.
+                                    table.insert(tTarget.atFlashes, {
+                                    strBus = 'IFlash',
+                                    ulUnit = ulUnit,
+                                    ulChipSelect = ulChipSelect,
+                                    atData = atData
+                                    })
+
+                                end
+                            end
                             -- Loop over all flashes. (inside xml)
                             for _, tTargetFlash in ipairs(tTarget.atFlashes) do
                                 local strBusName = tTargetFlash.strBus
@@ -1844,16 +1993,14 @@ elseif tArgs.fCommandListSelected == true then
         end
     end
 
-elseif tArgs.fCommandPackSelected == true or tArgs.fCommandPackSipSelected == true then
+elseif tArgs.fCommandPackSelected == true  then
     print("")
-    local fAddSips = tArgs.fCommandPackSipSelected
     fOk=pack(
         tArgs.strWfpArchiveFile,
         tArgs.strWfpControlFile,
         tWfpControl,
         tLog,tArgs.fOverwrite,
         tArgs.fBuildSWFP,
-        fAddSips,
         tArgs.strUsipFilePath,
         tArgs.fSetSipProtectionCookie,
         tArgs.fSetKek
