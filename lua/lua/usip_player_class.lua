@@ -112,16 +112,8 @@ function UsipPlayer:commandReadSip(
         strOutputFolderPath = self.tempFolderConfPath
     end
 
-    tResult, strErrorMsg = self:prepareInterface(true, tPlugin)
 
-    if self.strPluginType == "romloader_eth" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-    elseif self.strPluginType == "romloader_uart" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-        table.insert(astrHelpersTmp,  "start_mi")
-    elseif self.strPluginType == "romloader_jtag" then
-        table.insert(astrHelpersTmp,  "return_exec")
-    end
+    tResult, strErrorMsg = self:prepareInterface(true, tPlugin)
 
     if tResult then
         tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
@@ -168,6 +160,7 @@ function UsipPlayer:commandReadSip(
         elseif iReadSipResult and fStoreFile == false then
             self.tLog.info("do not save output files")
         else
+            tResult = false
             self.tLog.error(strErrorMsg)
         end
     end
@@ -221,16 +214,6 @@ function UsipPlayer:commandVerify(strUsipFilePath)
 
     tResult, strErrorMsg = self:prepareInterface(true)
 
-
-    if self.strPluginType == "romloader_eth" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-    elseif self.strPluginType == "romloader_uart" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-        table.insert(astrHelpersTmp,  "start_mi")
-    elseif self.strPluginType == "romloader_jtag" then
-        table.insert(astrHelpersTmp,  "return_exec")
-    end
-
     if tResult then
         tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
     end
@@ -275,15 +258,6 @@ function UsipPlayer:commandUsip(
 
     tResult, strErrorMsg = self:prepareInterface(true)
 
-    if self.strPluginType == "romloader_eth" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-    elseif self.strPluginType == "romloader_uart" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-        table.insert(astrHelpersTmp,  "start_mi")
-    elseif self.strPluginType == "romloader_jtag" then
-        table.insert(astrHelpersTmp,  "return_exec")
-    end
-
     if tResult then
         tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
     end
@@ -325,15 +299,6 @@ function UsipPlayer:commandSetKek(
     end
 
     tResult, strErrorMsg = self:prepareInterface(true)
-
-    if self.strPluginType == "romloader_eth" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-    elseif self.strPluginType == "romloader_uart" then
-        table.insert(astrHelpersTmp,  "bootswitch")
-        table.insert(astrHelpersTmp,  "start_mi")
-    elseif self.strPluginType == "romloader_jtag" then
-        table.insert(astrHelpersTmp,  "return_exec")
-    end
 
     if tResult then
         tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
@@ -400,8 +365,6 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
         if  self.strPluginType == nil then
             self.strPluginType = tPlugin:GetTyp()
         end
-
-
 
         if self.strPluginType == "romloader_eth" then
             self.strBootswitchParams = "ETH"
@@ -586,17 +549,15 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
     local astrVersionCheckDirs
 
     if fCheckInterfaceImages then
-        if self.strBootswitchParams == "UART" then
-            table.insert(astrHelpersToCheck, "start_mi")
-        end
-        if self.strBootswitchParams == "JTAG" then
-            table.insert(astrHelpersToCheck, "return_exec")
-        end
-        if self.strBootswitchParams ~= "JTAG" then
-            table.insert(astrHelpersToCheck, "bootswitch")
+        if self.strPluginType == "romloader_eth" then
+            table.insert(astrHelpersToCheck,  "bootswitch")
+        elseif self.strPluginType == "romloader_uart" then
+            table.insert(astrHelpersToCheck,  "bootswitch")
+            table.insert(astrHelpersToCheck,  "start_mi")
+        elseif self.strPluginType == "romloader_jtag" then
+            table.insert(astrHelpersToCheck,  "return_exec")
         end
     end
-
 
     if self.strSecureOptionPhaseTwoDir == self.strSecureOptionDir then
         astrVersionCheckDirs = {self.strSecureOptionDir}
@@ -1094,6 +1055,12 @@ function UsipPlayer:readSip(strReadSipPath, atPluginOptions, strExecReturnPath, 
         self.tLog.info("reset the value of the read sip result address 0x%08x", ulReadSipResultAddress)
 
         self.tPlugin:write_data32(ulReadSipMagicAddress, 0x00000000)
+
+        self.tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
+        local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
+        -- reset the value of the read sip result address
+        self.tFlasher.write_image(self.tPlugin, ulDataLoadAddress, strReadSipDataSplit)
+
         if fGetUidOnly then
             -- tell the read_sip.binary to only read the uid and end without a reset
             self.tPlugin:write_data32(ulReadSipResultAddress, GET_UUID_ONLY)
@@ -1110,10 +1077,6 @@ function UsipPlayer:readSip(strReadSipPath, atPluginOptions, strExecReturnPath, 
                 self.tFlasher.call_hboot(self.tPlugin, nil, fSkipAnswer)
             elseif self.strPluginType ~= 'romloader_jtag' and not fGetUidOnly then
                 -- M2M protocol for rev1
-                self.tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
-                local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
-                -- reset the value of the read sip result address
-                self.tFlasher.write_image(self.tPlugin, ulDataLoadAddress, strReadSipDataSplit)
 
                 self.tLog.info("Start read sip binary via call no answer")
                 self.tFlasher.call_no_answer(
@@ -1122,11 +1085,6 @@ function UsipPlayer:readSip(strReadSipPath, atPluginOptions, strExecReturnPath, 
                         ulReadSipResultAddress
                 )
             else
-                -- jtag interface for all versions
-                self.tLog.info("download the split data to 0x%08x", ulDataLoadAddress)
-                local strReadSipDataSplit = string.sub(strReadSipData, 0x40D)
-                -- reset the value of the read sip result address
-                self.tFlasher.write_image(self.tPlugin, ulDataLoadAddress, strReadSipDataSplit)
                 self.tLog.info("Start read sip binary via call")
                 self.tFlasher.call(
                     self.tPlugin,
@@ -1182,16 +1140,15 @@ function UsipPlayer:readSip(strReadSipPath, atPluginOptions, strExecReturnPath, 
 
                 ulReadSipResult = self.tPlugin:read_data32(ulReadSipResultAddress)
                 if not fGetUidOnly then
-
-                    if ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
+                    if ulReadSipResult == 0xFFFFFFFF then
+                            strErrorMsg = "Could not get proper result"
+                            fResult = false
+                    elseif ((ulReadSipResult & COM_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & COM_SIP_VALID_MSK) ~= 0) and
                             ((ulReadSipResult & APP_SIP_CPY_VALID_MSK) ~= 0 or (ulReadSipResult & APP_SIP_VALID_MSK) ~= 0) then
                         strCalSipData = self.tFlasher.read_image(self.tPlugin, ulReadSipDataAddress, 0x1000)
                         strComSipData = self.tFlasher.read_image(self.tPlugin, ulReadSipDataAddress + 0x1000, 0x1000)
                         strAppSipData = self.tFlasher.read_image(self.tPlugin, ulReadSipDataAddress + 0x2000, 0x1000)
 
-                        aStrUUIDs[1] = self.tFlasherHelper.switch_endian(self.tPlugin:read_data32(ulReadUUIDAddress))
-                        aStrUUIDs[2] = self.tFlasherHelper.switch_endian(self.tPlugin:read_data32(ulReadUUIDAddress + 4))
-                        aStrUUIDs[3] = self.tFlasherHelper.switch_endian(self.tPlugin:read_data32(ulReadUUIDAddress + 8))
                     elseif (ulReadSipResult & COM_SIP_INVALID_MSK) ~= 0 then
                         strErrorMsg = "Could not get a valid copy of the COM SIP"
                         fResult = false
@@ -1935,15 +1892,6 @@ function UsipPlayer:getUidCommand()
 
     if fResult then
         fResult, strErrorMsg = self:prepareInterface(true)
-
-        if self.strPluginType == "romloader_eth" then
-            table.insert(astrHelpersTmp,  "bootswitch")
-        elseif self.strPluginType == "romloader_uart" then
-            table.insert(astrHelpersTmp,  "bootswitch")
-            table.insert(astrHelpersTmp,  "start_mi")
-        elseif self.strPluginType == "romloader_jtag" then
-            table.insert(astrHelpersTmp,  "return_exec")
-        end
 
         if fResult then
             fResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
