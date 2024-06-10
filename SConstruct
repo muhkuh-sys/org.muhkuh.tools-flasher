@@ -921,7 +921,7 @@ if fBuildIsFull==True:
 
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,
-        'targets/testbench/cli_flash.lua':                                 lua/cli_flash.lua',
+        'targets/testbench/cli_flash.lua':                                 'lua/cli_flash.lua',
         'targets/testbench/demo_getBoardInfo.lua':                         'lua/demo_getBoardInfo.lua',
         'targets/testbench/erase_complete_flash.lua':                      'lua/erase_complete_flash.lua',
         'targets/testbench/erase_first_flash_sector.lua':                  'lua/erase_first_flash_sector.lua',
