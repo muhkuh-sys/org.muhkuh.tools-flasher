@@ -231,6 +231,7 @@ end
 local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     local fAllOk = true
     local atCheckedDirs = {}
+    local strErrorMsg
 
     for iDir = 1, #astrHelperDirs do
         local strDir = astrHelperDirs[iDir]
@@ -240,9 +241,10 @@ local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
 
             for _, strName in ipairs(astrHelperNames) do
                 print()
-                local strBin = checkHelperFileIntern(strDir, strName, true)
+                local strBin, strErrorMsg = checkHelperFileIntern(strDir, strName, true)
                 if strBin == nil then
                     fAllOk = false
+                    print(strErrorMsg)
                 end
             end
 
