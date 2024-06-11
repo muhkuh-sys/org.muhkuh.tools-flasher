@@ -917,6 +917,7 @@ if fBuildIsFull==True:
         'targets/testbench/lua/verify_signature.lua':                      'lua/lua/verify_signature.lua',
         'targets/testbench/lua/usip_generator.lua':                        'lua/lua/usip_generator.lua',
         'targets/testbench/lua/usip_player_conf.lua':                      'lua/lua/usip_player_conf.lua',
+        'targets/testbench/lua/usip_player_class.lua':                      'lua/lua/usip_player_class.lua',
 
         # Copy all LUA scripts.
         'targets/testbench/flasher_version.lua':                           lua_flasher_version,

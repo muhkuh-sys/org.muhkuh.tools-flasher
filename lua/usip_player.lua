@@ -215,7 +215,7 @@ local function setup_argparser()
         - SIPs are not hidden
         - CAL SIP rom func mode cookie is set
     ]]
-    local tParserVerifyInitialMode = tParser:command('verify_inital_mode vim', strVerifyInitialModeHelp):target(
+    local tParserVerifyInitialMode = tParser:command('verify_initial_mode vim', strVerifyInitialModeHelp):target(
             'fCommandVerifyInitialModeSelected')
     tParserVerifyInitialMode:option(
         '-V --verbose'
@@ -525,7 +525,6 @@ local function main()
     local fFinalResult = false
     local strErrorMsg
   
-    local tPlugin
     local iChiptype = nil
 
     -- set fFinalResult to false, be pessimistic
@@ -540,7 +539,8 @@ local function main()
         tArgs.strSecureOption,
         tArgs.strSecureOptionPhaseTwo,
         tArgs.strPluginName,
-        tArgs.strPluginType
+        tArgs.strPluginType,
+        tArgs.fDisableHelperSignatureChecks
     )
 
     -- set the path for set_sip_protection_cookie.usp
@@ -689,9 +689,7 @@ local function main()
         tLog.info("######################################")
         tLog.info("# RUNNING SET SIP PROTECTION COMMAND #")
         tLog.info("######################################")
-        fFinalResult = set_sip_protection_cookie(
-            tPlugin
-        )
+        fFinalResult, strErrorMsg = tUsipPlayer:set_sip_protection_cookie()
     --------------------------------------------------------------------------
     -- Set Key Exchange Key
     --------------------------------------------------------------------------
@@ -867,26 +865,14 @@ local function main()
 
         tLog.info("Checking signatures of helper files...**")
 
-        local usipPlayerConf = require 'usip_player_conf'
-        local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
-        local strTmpFolderPath = tempFolderConfPath
+        fFinalResult, strErrorMsg = tUsipPlayer:verifyHelperSignatures()
 
-        local strVerifySigPath = path.join(strSecureOption, "netx90", "verify_sig.bin")
 
-        local strPath = path.join(strSecureOption, "netx90")
-        local tSigCheckDataList, tPathList = tHelperFiles.getAllHelperFilesData({strPath})
-        local atResults
-        local strPluginType = tPlugin:GetTyp()
-
-        fFinalResult, atResults = tVerifySignature.verifySignature(
-            tPlugin, strPluginType, tSigCheckDataList, tPathList, strTmpFolderPath, strVerifySigPath
-        )
-
-        tHelperFiles.showFileCheckResults(atResults)
 
         if fFinalResult then
             tLog.info("The signatures of the helper files have been successfully verified.")
         else
+            tLog.error(strErrorMsg)
             tLog.error( "The signatures of the helper files could not be verified." )
             tLog.error( "Please check if the helper files are signed correctly." )
         end
