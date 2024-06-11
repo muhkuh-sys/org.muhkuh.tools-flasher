@@ -15,7 +15,7 @@ local SIP_ATTRIBUTES = {
 local UsipPlayer = class()
 
 
-function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPluginName, strPluginType)
+function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPluginName, strPluginType, fDisableHelperSignatureChecks)
     --tLog.info("initialize UsipPlayer")
     self.tLog = tLog
 
@@ -41,6 +41,7 @@ function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPlu
     self.tPlugin = nil
     self.strPluginName = nil
     self.strPluginType = nil
+    self.fDisableHelperSignatureChecks = fDisableHelperSignatureChecks
 
     if strPluginName then
         self.strPluginName = strPluginName
@@ -199,7 +200,7 @@ function UsipPlayer:commandVerifyInitialMode()
 
     if tResult == self.WS_RESULT_OK then
         -- check if any of the secure info pages are hidden
-        tResult, strErrorMsg = self:verifyInitialMode(tPlugin, aAttr)
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
     end
     return tResult, strErrorMsg
 end
@@ -539,6 +540,48 @@ function UsipPlayer:setHelperPaths()
 
 
 end
+function UsipPlayer:verifyHelperSignatures()
+    local tResult
+    local astrFileData
+    local astrPaths
+    local atResults
+    local strErrorMsg
+    local strPath = path.join(self.strSecureOption, "netx90")
+    tResult, strErrorMsg = self:prepareInterface(true)
+    astrFileData, astrPaths = self.tHelperFiles.getAllHelperFilesData(
+        {strPath}
+    )
+    if not astrFileData then
+        -- This error should not occur, as all files have previously been checked.
+        self.tLog.error("Error during file checks: could not read all helper binaries.")
+        strErrorMsg = "Error during file checks: could not read all helper binaries."
+    elseif not tResult then
+        self.tLog.error(strErrorMsg)
+    else
+        -- TODO: how to be sure that the verify sig will work correct?
+        -- NOTE: If the verify_sig file is not signed correctly the process will fail
+        -- is there a way to verify the signature of the verify_sig itself?
+        tResult, atResults = self.tVerifySignature.verifySignature(
+            self.tPlugin,
+            self.strPluginType,
+            astrFileData,
+            astrPaths,
+            self.tempFolderConfPath,
+            self.strVerifySigPath
+        )
+
+        self.tHelperFiles.showFileCheckResults(atResults)
+
+        -- TODO: kann die Fehlermeldung geändert werden?
+        if not tResult then
+            self.tLog.error( "The signatures of the helper binaries could not be verified." )
+            self.tLog.error( "Please check if the helper binaries are signed correctly" )
+            strErrorMsg = "Error during file checks: could not read all helper binaries." ..
+            " Please check if the helper binaries are signed correctly."
+        end
+    end
+    return tResult, strErrorMsg
+end
 
 function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImages)
     local atResults
@@ -570,7 +613,9 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
         self.tLog.error("Error during file version checks.")
         strErrorMsg = "Error during file version checks."
     else
-        if self.fIsSecure then
+        if self.fDisableHelperSignatureChecks then
+            self.tLog.info("Skipping signature checks for helper files.")
+        elseif self.fIsSecure then
             self.tLog.info("Checking signatures of helper files...")
 
             tResult, astrFileData, astrPaths = self.tHelperFiles.getHelperDataAndPaths(
@@ -1510,7 +1555,7 @@ function UsipPlayer:usip(
     return tResult, strErrorMsg
 end
 
-function UsipPlayer:set_sip_protection_cookie(tPlugin)
+function UsipPlayer:set_sip_protection_cookie()
     local ulStartOffset = 0
     local iBus = 2
     local iUnit = 1
@@ -1521,21 +1566,30 @@ function UsipPlayer:set_sip_protection_cookie(tPlugin)
     local ulDeviceSize
     local flasher_path = "netx/"
     -- be pessimistic
+    local strErrorMsg
     local fOk = false
 
+    local astrHelpersTmp = {"read_sip_m2m", "verify_sig"}
+
+
+    fOk, strErrorMsg = self:prepareInterface(true)
+
+    if fOk then
+        fOk, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
+    end
     local strFilePath = path.join("netx", "helper", "netx90", "com_default_rom_init_ff_netx90_rev2.bin")
     -- Download the flasher.
-    local aAttr = self.tFlasher.download(tPlugin, flasher_path, nil, nil, self.strSecureOption)
+    local aAttr = self.tFlasher.download(self.tPlugin, flasher_path, nil, nil, self.strSecureOption)
     -- if flasher returns with nil, flasher binary could not be downloaded
     if not aAttr then
         self.tLog.error("Error while downloading flasher binary")
     else
         -- check if the selected flash is present
-        fOk = self.tFlasher.detect(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+        fOk = self.tFlasher.detect(self.tPlugin, aAttr, iBus, iUnit, iChipSelect)
         if not fOk then
             self.tLog.error("No Flash connected!")
         else
-            ulDeviceSize = self.tFlasher.getFlashSize(tPlugin, aAttr)
+            ulDeviceSize = self.tFlasher.getFlashSize(self.tPlugin, aAttr)
             if not ulDeviceSize then
                 self.tLog.error( "Failed to get the device size!" )
                 fOk = false
@@ -1559,21 +1613,21 @@ function UsipPlayer:set_sip_protection_cookie(tPlugin)
             end
         end
         if fOk then
-            fOk, strMsg = self.tFlasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
+            fOk, strErrorMsg = self.tFlasher.eraseArea(self.tPlugin, aAttr, ulStartOffset, ulLen)
         end
         if fOk then
-            fOk, strMsg = self.tFlasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
+            fOk, strErrorMsg = self.tFlasher.flashArea(self.tPlugin, aAttr, ulStartOffset, strData)
             if not fOk then
-                self.tLog.error(strMsg)
+                self.tLog.error(strErrorMsg)
             else
                 fOk = true
             end
         else
-            self.tLog.error(strMsg)
+            self.tLog.error(strErrorMsg)
         end
     end
 
-    return fOk
+    return fOk, strErrorMsg
 end
 
 function UsipPlayer:setKek(
