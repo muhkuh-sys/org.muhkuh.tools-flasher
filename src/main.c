@@ -631,6 +631,7 @@ static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDevic
 #endif
 
 	case BUS_SPI:
+		uprintf("erase block size: 0x%08x\n", ptDeviceDescription->uInfo.tSpiInfo.ulSectorSize);
 		ullFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
 		break;
 
@@ -642,6 +643,7 @@ static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDevic
 			break;
 
 		case INTERNAL_FLASH_TYPE_MAZ_V0:
+			uprintf("erase block size: 0x%08x\n", 0x1000);
 			ullFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
 			break;
 		}
