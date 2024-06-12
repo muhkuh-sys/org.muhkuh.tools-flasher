@@ -631,6 +631,7 @@ static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDevic
 #endif
 
 	case BUS_SPI:
+		uprintf("erase block size: 0x%08x\n", ptDeviceDescription->uInfo.tSpiInfo.ulSectorSize);
 		ullFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
 		break;
 
@@ -642,6 +643,7 @@ static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDevic
 			break;
 
 		case INTERNAL_FLASH_TYPE_MAZ_V0:
+			uprintf("erase block size: 0x%08x\n", 0x1000);
 			ullFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
 			break;
 		}
@@ -673,6 +675,8 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	unsigned long long ulFlashSize = getActualFlashSize(ptDeviceDescription);
 
 	// Detect SD-cards larger than 4 GiB and treat them as 4 GiB SD-cards
+	// Assumption: No SD Card has exactly 0xffffffff bytes, there are always some defects
+	// Therefore 0xffffffff can be used for limitation detection
 #ifdef CFG_INCLUDE_SDIO
 	if (ptDeviceDescription->tSourceTyp == BUS_SDIO && ulFlashSize > 0xffffffffU)
 	{
@@ -687,7 +691,7 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 static NETX_CONSOLEAPP_RESULT_T opMode_getActualFlashSize(tFlasherInputParameter *ptAppParams){
 	CMD_PARAMETER_GETFLASHSIZE_T *ptParameter;
 
-	/* Get a shortcut to the parameters and save them. */
+	// Get a shortcut to the parameters
 	ptParameter = &(ptAppParams->uParameter.tGetFlashSize);
 	ptParameter->ullActualFlashSize = getActualFlashSize(ptParameter->ptDeviceDescription);
 	ptParameter->ulSupportedFlashSize = getFlashSize(ptParameter->ptDeviceDescription);

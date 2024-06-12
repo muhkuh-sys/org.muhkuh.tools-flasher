@@ -614,22 +614,22 @@ end
 function M.detectAndCheckSizeLimit(tPlugin, aAttr, ...)
 	local fOk = M.detect(tPlugin, aAttr, ...)
 	local strMsg
-	local ulDeviceSize, ulActualDeviceSize
+	local ulDeviceSize, ullActualDeviceSize
 
 	if fOk ~= true then
 		fOk = false
 		strMsg = "Failed to detect the device!"
 	else
-		ulActualDeviceSize, ulDeviceSize = M.getActualFlashSize(tPlugin, aAttr)
+		ullActualDeviceSize, ulDeviceSize = M.getActualFlashSize(tPlugin, aAttr)
 		if ulDeviceSize == nil then
 			fOk = false
 			strMsg = "Failed to get the device size!"
 
 		-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
 		elseif ulDeviceSize == 0xffffffff then
-			fOk = true
-			print("Warning: Device with size > 2^32 Bytes detected. Will be treated as 4 GiB device!")
-			print(string.format("Size of Device: %u Bytes, will use first %u Bytes", ulActualDeviceSize, ulDeviceSize))
+				fOk = true
+				print("Warning: Device with size > 2^32 Bytes detected. Will be treated as 4 GiB device!")
+				print(string.format("Size of Device: %u Bytes, will use first %u Bytes", ullActualDeviceSize, ulDeviceSize))
 		end
 	end
 
