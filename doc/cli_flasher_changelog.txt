@@ -1,3 +1,17 @@
+Updated in CLI Flasher v2.1.0
+=============================
+
+CLI Flasher:
+* 'detect_secure_boot_mode' command now also works via ethernet intrerface
+
+Usip Player:
+* 'write_sips' command for production flow to programm SIPs 
+
+
+WFP:
+* integration of 'write_sips' functionality into wfp commands
+* new command 'calculate' for evaluating condition operations
+
 
 Updates in CLI Flasher v2.0.2
 ==============================

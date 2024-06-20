@@ -6,8 +6,8 @@ local archive = require 'archive'
 
 local SIP_ATTRIBUTES = {
     CAL={iBus=2, iUnit=0,iChipSelect=1},
-    COM={iBus=2, iUnit=1,iChipSelect=1},
-    APP={iBus=2, iUnit=2,iChipSelect=1},
+    COM={iBus=2, iUnit=1,iChipSelect=3},
+    APP={iBus=2, iUnit=2,iChipSelect=3},
 }
 
 
@@ -133,7 +133,7 @@ function UsipPlayer:commandReadSip(
                 strOutputFolderPath = self.tempFolderConfPath
             end
             if not path.exists(strOutputFolderPath) then
-                path.mkdir(strOutputFolderPath)
+                self.tFlasherHelper.create_directory_path(strOutputFolderPath)
             end
 
             local strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
@@ -176,26 +176,30 @@ function UsipPlayer:commandVerifyInitialMode()
     local flasher_path = "netx/"
     local fConnected
     local astrHelpersTmp = {"flasher_netx90_hboot"}
+    local ulConsoleMode
 
 
-    tResult, strErrorMsg = self:prepareInterface(true)
+    tResult, strErrorMsg, ulConsoleMode = self:prepareInterface(true)
 
     if self.strPluginType == "romloader_uart" then
         table.insert(astrHelpersTmp,  "start_mi")
-
     end
+
     if tResult then
         tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
+        if tResult then
+            tResult = self.WS_RESULT_OK
+        end
+    elseif tResult == false and ulConsoleMode == 1 then
+        tResult = self.WS_RESULT_ERROR_SECURE_BOOT_ENABLED
     end
 
-    if tResult then
-        fConnected, strErrorMsg = self.tFlasherHelper.connect_retry(self.tPlugin)
-        if fConnected then
-            aAttr = self.tFlasher.download(self.tPlugin, flasher_path, nil, true, self.strSecureOption)
-            tResult = self.WS_RESULT_OK
-        else
-            tResult = self.WS_RESULT_ERROR_UNSPECIFIED
-        end
+    if tResult == self.WS_RESULT_OK  then
+        -- fConnected, strErrorMsg = self.tFlasherHelper.connect_retry(self.tPlugin)
+
+        aAttr = self.tFlasher.download(self.tPlugin, flasher_path, nil, true, self.strSecureOption)
+        tResult = self.WS_RESULT_OK
+
     end
 
     if tResult == self.WS_RESULT_OK then
@@ -333,7 +337,7 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
     local strErrorMsg
     local fCallSuccess
     local strNetxName
-
+    local ulConsoleMode
     self:setPluginOptions()
 
     -- TODO: no longer used
@@ -377,7 +381,7 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
 
         if fConnect then
             -- catch the romloader error to handle it correctly
-            tResult, strErrorMsg = self.tFlasherHelper.connect_retry(tPlugin, 5)
+            tResult, strErrorMsg, ulConsoleMode = self.tFlasherHelper.connect_retry(tPlugin, 5)
             if tResult == false then
                 self.tLog.error(strErrorMsg)
             else
@@ -422,7 +426,7 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
         strErrorMsg = tPlugin
 		tResult = false
     end
-    return tResult, strErrorMsg
+    return tResult, strErrorMsg, ulConsoleMode
 end
 
 function UsipPlayer:prepareUsip(strUsipFilePath, fNoBootswitch)
@@ -2076,7 +2080,7 @@ function UsipPlayer:writeSIPviaFLash(
         iEraseSize = 0x1000
     else
         fDuplicate = true
-        iChipSelect = SIP_ATTRIBUTES[strSipPage].iChipSelect
+        iChipSelect = 1
         iEraseSize = 0x2000
     end
 

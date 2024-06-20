@@ -231,7 +231,7 @@ end
 function M.connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
-    local ulConsoleMode
+    local ulConsoleMode = nil
     print("connect to plugin")
 
     if tPlugin == nil then
@@ -250,7 +250,12 @@ function M.connect_retry(tPlugin, uLRetries)
             break
         end
         ulConsoleMode = tPlugin:get_console_mode()
-
+		if not fCallSuccess then
+			if string.find(strError, "start_mi image has been rejected or execution has failed.") then
+				break
+			end
+		end
+		
         print("connect not successful")
         uLRetries = uLRetries - 1
         M.sleep_s(1)
@@ -259,7 +264,7 @@ function M.connect_retry(tPlugin, uLRetries)
         end
     end
 
-    return fCallSuccess, strError
+    return fCallSuccess, strError, ulConsoleMode
 end
 
 -- Try to open a plugin for an interface with the given name.
@@ -1148,6 +1153,7 @@ function M.create_directory_path(strDirectoryPath)
 	local strErrorMsg = ""
 
 	while not path.exists(strCurrentPath) do
+		strCurrentPath = path.abspath(strCurrentPath)
 		strCurrentPathNew = path.dirname(strCurrentPath)
 		strFolderName = string.sub(strCurrentPath, string.len(strCurrentPathNew)+2)
 		table.insert(tFoldersToCreate, strFolderName)
