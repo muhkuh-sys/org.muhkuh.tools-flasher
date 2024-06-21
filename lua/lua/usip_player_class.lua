@@ -91,6 +91,43 @@ function UsipPlayer:_deinit()
     end
 end
 
+function UsipPlayer:dumpSipFiles(strOutputFolderPath, strComSipData, strAppSipData, strCalSipData)
+    local tResult
+    local strErrorMsg = ""
+
+    -- set the sip file path to save the sip data
+    if strOutputFolderPath == nil then
+        strOutputFolderPath = self.tempFolderConfPath
+    end
+    if not path.exists(strOutputFolderPath) then
+        self.tFlasherHelper.create_directory_path(strOutputFolderPath)
+    end
+
+    local strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
+    local strAppSipFilePath = path.join( strOutputFolderPath, "app_sip.bin")
+    -- write the com sip data to a file
+    self.tLog.info("Saving COM SIP to %s ", strComSipFilePath)
+    local tFile = io.open(strComSipFilePath, "wb")
+    tFile:write(strComSipData)
+    tFile:close()
+    -- write the app sip data to a file
+    self.tLog.info("Saving APP SIP to %s ", strAppSipFilePath)
+    tFile = io.open(strAppSipFilePath, "wb")
+    tFile:write(strAppSipData)
+    tFile:close()
+
+    if strCalSipData ~= nil then
+        local strCalSipFilePath = path.join( strOutputFolderPath, "cal_sip.bin")
+        -- write the com sip data to a file
+        self.tLog.info("Saving CAL SIP to %s ", strCalSipFilePath)
+        local tFile = io.open(strCalSipFilePath, "wb")
+        tFile:write(strCalSipData)
+        tFile:close()
+    end
+    tResult = true
+    return tResult, strErrorMsg
+end
+
 function UsipPlayer:commandReadSip(
     strOutputFolderPath,
     fReadCal,
@@ -128,36 +165,7 @@ function UsipPlayer:commandReadSip(
             self.strReadSipPath, self.atPluginOptions, self.strExecReturnPath)
 
         if iReadSipResult and fStoreFile then
-            -- set the sip file path to save the sip data
-            if strOutputFolderPath == nil then
-                strOutputFolderPath = self.tempFolderConfPath
-            end
-            if not path.exists(strOutputFolderPath) then
-                self.tFlasherHelper.create_directory_path(strOutputFolderPath)
-            end
-
-            local strComSipFilePath = path.join( strOutputFolderPath, "com_sip.bin")
-            local strAppSipFilePath = path.join( strOutputFolderPath, "app_sip.bin")
-            -- write the com sip data to a file
-            self.tLog.info("Saving COM SIP to %s ", strComSipFilePath)
-            local tFile = io.open(strComSipFilePath, "wb")
-            tFile:write(strComSipData)
-            tFile:close()
-            -- write the app sip data to a file
-            self.tLog.info("Saving APP SIP to %s ", strAppSipFilePath)
-            tFile = io.open(strAppSipFilePath, "wb")
-            tFile:write(strAppSipData)
-            tFile:close()
-            tResult = true
-
-            if fReadCal then
-                local strCalSipFilePath = path.join( strOutputFolderPath, "cal_sip.bin")
-                -- write the com sip data to a file
-                self.tLog.info("Saving CAL SIP to %s ", strCalSipFilePath)
-                local tFile = io.open(strCalSipFilePath, "wb")
-                tFile:write(strCalSipData)
-                tFile:close()
-            end
+            tResult, strErrorMsg = self:dumpSipFiles(strOutputFolderPath, strComSipData, strAppSipData, strCalSipData)
         elseif iReadSipResult and fStoreFile == false then
             self.tLog.info("do not save output files")
         else
@@ -2057,6 +2065,51 @@ end
 
 -- write SIP data (4kB) into sekected SIP
 -- create a new hash for the data
+function UsipPlayer:verifySIPviaFLash(
+    strSipPage,
+    strSipData,
+    aAttr
+)
+    local fResult
+    local fDetectResult
+    local iBus
+    local iUnit
+    local iChipSelect
+    local fDuplicate
+    local iEraseSize
+    local strMsg
+
+    iBus = SIP_ATTRIBUTES[strSipPage].iBus
+    iUnit = SIP_ATTRIBUTES[strSipPage].iUnit
+
+    iChipSelect = 3
+    fDuplicate = false
+    iEraseSize = 0x1000
+
+
+    -- check if the selected flash is present
+    fDetectResult = self.tFlasher.detect(
+        self.tPlugin, aAttr,
+        iBus,
+        iUnit,
+        iChipSelect
+    )
+
+    if not fDetectResult then
+        strMsg = "No Flash connected!"
+    else
+        -- write to the flash
+        fResult = self.tFlasher.verifyArea(self.tPlugin, aAttr, 0x0, strSipData)
+        if not fResult then
+            strMsg = "verification failed for " .. strSipPage .. " SIP"
+        end
+    end
+
+    return fResult, strMsg
+end
+
+-- write SIP data (4kB) into sekected SIP
+-- create a new hash for the data
 function UsipPlayer:writeSIPviaFLash(
     strSipPage,
     strSipData,
@@ -2243,6 +2296,154 @@ function UsipPlayer:checkHideSipRegister()
     return fHideSet, strErrorMsg, fSecureBootEnabled
 end
 
+
+function UsipPlayer:commandVerifySipPm(
+    strUsipFilePath,
+    strRawAppSipPath,
+    strRawComSipPath,
+    fCheckKek,
+    fCheckSipProtection
+)
+    local tResult
+    local fResult
+    local strErrorMsg
+    local aAttr
+    local flasher_path = "netx/"
+    local astrHelpersTmp = {"flasher_netx90_hboot"}
+    local ulConsoleMode
+    local strComSipData
+    local strAppSipData
+    local tUsipDataList
+    local tUsipPathList
+    local tUsipConfigDict
+
+    if strUsipFilePath ~= nil then
+        tResult, strErrorMsg, tUsipDataList, tUsipPathList, tUsipConfigDict = self:prepareUsip(strUsipFilePath)
+    end
+
+    if tResult then
+        tResult, strErrorMsg, strComSipData, strAppSipData = self.tUsipGenerator:convertUsipToBin(
+            strRawComSipPath,
+            strRawAppSipPath,
+            tUsipConfigDict,
+            false
+        )
+    end
+    if tResult then
+        tResult, strErrorMsg, ulConsoleMode = self:prepareInterface(true)
+    end
+    if self.strPluginType == "romloader_uart" then
+        table.insert(astrHelpersTmp,  "start_mi")
+    end
+
+    if tResult then
+        tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
+        if tResult then
+            tResult = self.tSipper.VERIFY_RESULT_OK
+        end
+    elseif tResult == false and ulConsoleMode == 1 then
+        tResult = self.tSipper.VERIFY_RESULT_ERROR
+    end
+
+    if tResult == self.tSipper.VERIFY_RESULT_OK  then
+        -- fConnected, strErrorMsg = self.tFlasherHelper.connect_retry(self.tPlugin)
+
+        aAttr = self.tFlasher.download(self.tPlugin, flasher_path, nil, true, self.strSecureOption)
+        tResult = self.tSipper.VERIFY_RESULT_OK
+
+    end
+
+    if tResult == self.tSipper.VERIFY_RESULT_OK then
+        -- check if any of the secure info pages are hidden
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
+    end
+
+    if tResult == self.tSipper.VERIFY_RESULT_OK then
+        fResult, strErrorMsg = self:verifySIPviaFLash("COM", strComSipData, aAttr)
+        if not fResult then
+            tResult = self.tSipper.VERIFY_RESULT_FALSE
+        end
+    end
+    if tResult == self.tSipper.VERIFY_RESULT_OK then
+        fResult, strErrorMsg = self:verifySIPviaFLash("APP", strAppSipData, aAttr)
+        if not fResult then
+            tResult = self.tSipper.VERIFY_RESULT_FALSE
+        end
+    end
+    return tResult, strErrorMsg
+end
+
+function UsipPlayer:commandReadSipPm(
+    strOutputdir,
+    fReadCal
+)
+    local tResult
+    local strErrorMsg
+    local aAttr
+    local flasher_path = "netx/"
+    local astrHelpersTmp = {"flasher_netx90_hboot"}
+    local ulConsoleMode
+    local strCalSipData
+    local strComSipData
+    local strAppSipData
+
+
+    tResult, strErrorMsg, ulConsoleMode = self:prepareInterface(true)
+
+    if self.strPluginType == "romloader_uart" then
+        table.insert(astrHelpersTmp,  "start_mi")
+    end
+
+    if tResult then
+        tResult, strErrorMsg = self:prepareHelperFiles(astrHelpersTmp, true)
+        if tResult then
+            tResult = self.WS_RESULT_OK
+        end
+    elseif tResult == false and ulConsoleMode == 1 then
+        tResult = self.WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+    end
+
+    if tResult == self.WS_RESULT_OK  then
+        -- fConnected, strErrorMsg = self.tFlasherHelper.connect_retry(self.tPlugin)
+
+        aAttr = self.tFlasher.download(self.tPlugin, flasher_path, nil, true, self.strSecureOption)
+        tResult = self.WS_RESULT_OK
+
+    end
+
+    if tResult == self.WS_RESULT_OK then
+        -- check if any of the secure info pages are hidden
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
+    end
+
+    -- read out CAL secure info pages
+    if tResult == self.WS_RESULT_OK and fReadCal then
+        strCalSipData, strErrorMsg = self:readSIPviaFLash("CAL", aAttr)
+        if strCalSipData == nil then
+            tResult = self.WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    -- read out COM secure info pages
+    if tResult == self.WS_RESULT_OK then
+        strComSipData, strErrorMsg = self:readSIPviaFLash("COM", aAttr)
+        if strComSipData == nil then
+            tResult = self.WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    -- read out APP secure info pages
+    if tResult == self.WS_RESULT_OK then
+        strAppSipData, strErrorMsg = self:readSIPviaFLash("APP", aAttr)
+        if strAppSipData == nil then
+            tResult = self.WS_RESULT_ERROR_UNSPECIFIED
+        end
+    end
+
+    self:dumpSipFiles(strOutputdir, strComSipData, strAppSipData, strCalSipData)
+
+    return tResult, strErrorMsg
+end
 
 -- veriify that the netX is in an initial state
 -- the netX is not in an initial state if:

@@ -149,12 +149,13 @@ local function setup_argparser()
     
     
     -- NXTFLASHER-565
-    local strWriteSipsHelp = [[
+    -- NXTFLASHER-906
+    local strWriteSipPmHelp = [[
         write APP and COM secure info page (SIP) based on default values
         the default values can be modified with the data from an USIP file
         the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
     ]]
-    local tParserWriteSips = tParser:command('write_sips ws', strWriteSipsHelp):target('fCommandWriteSipsSelected')
+    local tParserWriteSips = tParser:command('write_sip_pm wsp', strWriteSipPmHelp):target('fCommandWriteSipsSelected')
     tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserWriteSips:option(
         '-V --verbose'
@@ -187,6 +188,56 @@ local function setup_argparser()
         :target('fSetKek')
         :default(false)
 
+    -- NXTFLASHER-906
+    local strReadSipsPmHelp = [[
+        write APP and COM secure info page (SIP) based on default values
+        the default values can be modified with the data from an USIP file
+        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+    ]]
+    local tParserReadSipPm = tParser:command('read_sip_pm rsp', strReadSipsPmHelp):target('fCommandReadSipPmSelected')
+    tParserReadSipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+    tParserReadSipPm:option(
+        '-V --verbose'
+    ):description(
+        string.format(
+            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+        )
+    ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+    tParserReadSipPm:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserReadSipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+    tParserReadSipPm:argument('output'):description(
+        "Set the output directory."
+    ):target("strOutputFolder")
+    tParserReadSipPm:flag('--read_cal'):description(
+        "additional read out and store the cal secure info page"):target('fReadCal')
+
+    -- NXTFLASHER-906
+    local strVerifySipsPmHelp = [[
+        write APP and COM secure info page (SIP) based on default values
+        the default values can be modified with the data from an USIP file
+        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+    ]]
+    local tParserVerifySipPm = tParser:command(
+        'verify_sip_pm vsp', strVerifySipsPmHelp):target('fCommandVerifySipPmSelected')
+    tParserVerifySipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+    tParserVerifySipPm:option(
+        '-V --verbose'
+    ):description(
+        string.format(
+            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+        )
+    ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+    tParserVerifySipPm:option('--com_sip'):description("com SIP binary size 4kB"):target(
+        'strComSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
+    tParserVerifySipPm:option('--app_sip'):description("app SIP binary size 4kB"):target(
+        'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
+    tParserVerifySipPm:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserVerifySipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+
+    tParserVerifySipPm:flag('--check_kek'):description(
+        "additional read out and store the cal secure info page"):target('fCheckKek')
+    tParserVerifySipPm:flag('--check_sip_protection'):description(
+        "additional read out and store the cal secure info page"):target('fCheckSipProtection')
     local strConvertUsipHelp = [[
         apply data of an usip file to the default values of the secure info pages and export these as binary files
     ]]
@@ -619,11 +670,11 @@ local function main()
         )
 
     --------------------------------------------------------------------------
-    -- WRITE SIP COMMAND
+    -- WRITE SIP PM COMMAND
     --------------------------------------------------------------------------
     elseif tArgs.fCommandWriteSipsSelected then
         tLog.info("######################################")
-        tLog.info("# RUNNING WRITE SIP COMMAND          #")
+        tLog.info("# RUNNING WRITE SIP PM COMMAND       #")
         tLog.info("######################################")
         local strComSipBaseData
         local strAppSipBaseData
@@ -665,6 +716,31 @@ local function main()
             tLog.info('RETURN: '.. iWriteSipResult)
             os.exit(iWriteSipResult)
         end
+    --------------------------------------------------------------------------
+    -- WRITE SIP PM COMMAND
+    --------------------------------------------------------------------------
+    elseif tArgs.fCommandReadSipPmSelected then
+        tLog.info("######################################")
+        tLog.info("# RUNNING READ SIP PM COMMAND        #")
+        tLog.info("######################################")
+
+        fFinalResult, strErrorMsg = tUsipPlayer:commandReadSipPm(tArgs.strOutputFolder, tArgs.fReadCal)
+
+    --------------------------------------------------------------------------
+    -- WRITE SIP PM COMMAND
+    --------------------------------------------------------------------------
+    elseif tArgs.fCommandVerifySipPmSelected then
+        tLog.info("######################################")
+        tLog.info("# RUNNING VERIFY SIP PM COMMAND      #")
+        tLog.info("######################################")
+
+        fFinalResult, strErrorMsg = tUsipPlayer:commandVerifySipPm(
+            tArgs.strUsipFilePath,
+            tArgs.strAppSipBinPath,
+            tArgs.strComSipBinPath,
+            tArgs.fCheckKek,
+            tArgs.fCheckSipProtection
+        )
 
     --------------------------------------------------------------------------
     -- Disable Security COMMAND
