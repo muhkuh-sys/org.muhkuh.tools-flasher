@@ -123,6 +123,8 @@ typedef struct CMD_PARAMETER_VERIFY_STRUCT
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
 	unsigned long ulStartAdr;
 	unsigned long ulEndAdr;
+	unsigned long ulKekInfo;
+	unsigned long ulSipProtectionInfo;
 	unsigned char *pucData;
 } CMD_PARAMETER_VERIFY_T;
 

@@ -855,6 +855,8 @@ end
 function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage,
                 fnCallbackProgress)
 	local fEqual = false
+    local ulKekInfo
+    local ulSipProtectionInfo
 	local aulParameter =
 	{
 		OPERATION_MODE_Verify,
@@ -866,11 +868,14 @@ function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBuffer
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 
 	if ulValue==0 then
-		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x08)
+		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x0C)
 		fEqual = (ulValue==0)
 	end
+    ulKekInfo = tPlugin:read_data32(aAttr.ulParameter+0x04)
+    ulSipProtectionInfo = tPlugin:read_data32(aAttr.ulParameter+0x08)
 
-	return fEqual
+
+	return fEqual, ulKekInfo, ulSipProtectionInfo
 end
 
 
@@ -1259,6 +1264,8 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 	local ulBufferLen = aAttr.ulBufferLen
 	local ulChunkSize
 	local strChunk
+    local ulKekInfo
+    local ulSipProtectionInfo
 
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
@@ -1270,15 +1277,16 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 
 		-- Verify the chunk.
 		print(string.format("verifying offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
-		fOk = M.verify(
-      tPlugin,
-      aAttr,
-      ulDeviceOffset,
-      ulDeviceOffset + ulChunkSize,
-      ulBufferAdr,
-      fnCallbackMessage,
-      fnCallbackProgress
-    )
+		fOk, ulKekInfo, ulSipProtectionInfo = M.verify(
+          tPlugin,
+          aAttr,
+          ulDeviceOffset,
+          ulDeviceOffset + ulChunkSize,
+          ulBufferAdr,
+          fnCallbackMessage,
+          fnCallbackProgress
+        )
+
 		if not fOk then
 			return false, "Differences were found."
 		end
