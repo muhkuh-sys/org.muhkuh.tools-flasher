@@ -49,10 +49,10 @@
 #define IFLASH_MODE_MANUAL      4U
 
 
-#define COM_SIP_KEK_SET                 0xA11C0DED   # KEK was programmed into the SIP
-#define COM_SIP_KEK_NOT_SET             0xBA1DBA1D   # KEK area is bald (no kek is set)
-#define COM_SIP_SIP_PROTECTION_SET      0xAFFEDEAD   # sip protection closed monkey dead
-#define COM_SIP_SIP_PROTECTION_NOT_SET  0x0A11C001   # sip protection not set all cool
+#define COM_SIP_KEK_SET                 0xA11C0DED   // KEK was programmed into the SIP
+#define COM_SIP_KEK_NOT_SET             0xBA1DBA1D   // KEK area is bald (no kek is set)
+#define COM_SIP_SIP_PROTECTION_SET      0xAFFEDEAD   // sip protection closed monkey dead
+#define COM_SIP_SIP_PROTECTION_NOT_SET  0x0A11C001   // sip protection not set all cool
 
 #define ROM_STARTUP_PROTECT0            0x753b428b
 #define ROM_STARTUP_PROTECT1            0x622563e2
@@ -1189,14 +1189,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_flash(const INTERNAL_FLASH_ATTRIBUTES_MAZ_
 
 
 
-static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(
-    const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr,
-    unsigned long ulOffsetStart,
-    unsigned long ulLength,
-    unsigned char *pucBuffer,
-    unsigned long *pulKekInfo;
-    unsigned long *pulSipProtectionInfo
-)
+static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, unsigned long ulOffsetStart, unsigned long ulLength, unsigned char *pucBuffer, unsigned long *pulKekInfo unsigned long *pulSipProtectionInfo)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	INTERNAL_FLASH_AREA_T tFlashArea;
