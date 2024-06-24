@@ -1189,7 +1189,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_flash(const INTERNAL_FLASH_ATTRIBUTES_MAZ_
 
 
 
-static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, unsigned long ulOffsetStart, unsigned long ulLength, unsigned char *pucBuffer, unsigned long *pulKekInfo unsigned long *pulSipProtectionInfo)
+static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, unsigned long ulOffsetStart, unsigned long ulLength, unsigned char *pucBuffer, unsigned long *pulKekInfo, unsigned long *pulSipProtectionInfo)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	INTERNAL_FLASH_AREA_T tFlashArea;
