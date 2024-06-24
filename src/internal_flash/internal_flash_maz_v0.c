@@ -1200,6 +1200,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 	const unsigned char *pucEnd;
 	const unsigned long *pulProtectionCnt;
 	const unsigned long *pulProtectionEnd;
+
 	unsigned long ulData;
 
 
@@ -1952,6 +1953,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 	unsigned long ulOffset;
 	unsigned long ulLength;
 	unsigned char *pucInternalWorkingBuffer;
+	unsigned long *pulKekInfo;
+	unsigned long *pulSipProtectionInfo;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 
@@ -1979,7 +1982,9 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
 				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &ptParameter->ulKekInfo, &ptParameter->ulSipProtectionInfo);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &pulKekInfo, &pulSipProtectionInfo);
+                ptParameter->ulKekInfo = *pulKekInfo;
+                ptParameter->ulSipProtectionInfo = *pulSipProtectionInfo;
 
 				pucFlashStart = pucInternalWorkingBuffer;
 
