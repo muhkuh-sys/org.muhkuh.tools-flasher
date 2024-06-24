@@ -1775,7 +1775,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 			    /* only implemented for APP and COM SIP with chip_select 3 */
 			    ptParameter->ulStartAdr = &pulKekInfo;
 			    ptParameter->ulEndAdr = &pulSipProtectionInfo;
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData, &pulKekInfo, &pulSipProtectionInfo);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData, pulKekInfo, pulSipProtectionInfo);
 			}
 			else
 			{
@@ -1879,7 +1879,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
 				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &pulKekInfo, &pulSipProtectionInfo);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, pulKekInfo, pulSipProtectionInfo);
 				if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 				{
 					/* NOTE: The "hash" command initializes the netX90 hash unit for a SHA1 sum.
@@ -1982,7 +1982,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
 				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &pulKekInfo, &pulSipProtectionInfo);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, pulKekInfo, pulSipProtectionInfo);
                 ptParameter->ulKekInfo = *pulKekInfo;
                 ptParameter->ulSipProtectionInfo = *pulSipProtectionInfo;
 
