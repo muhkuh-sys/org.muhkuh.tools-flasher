@@ -944,9 +944,10 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
     return fOk, DestinationXml
 end
 
+-- "%" is not supported due to a problem in a printArgs function
 local function isOperator(strValue)
     for _, operator in ipairs({"not", "and", "or", ">", "<", "==", "<=", ">=", "~=", "+" , "-",
-                                "*", "/", "%", "^"}) do
+                                "*", "/", "^"}) do
         if  strValue == operator then return true end
     end
     return false
@@ -963,7 +964,8 @@ end
 --
 -- Usage:
 -- strExpression - contains the expression in Lua syntax as a string
---   All operators must be separated by spaces.
+--   All operators must be separated by single spaces.
+--   The %-Operator is not supported.
 --   Parantheses are supported but do not eliminate the need for spaces.
 --   Constants are allowed: integers, floats (use dot), hex (use 0x), strings (use \"...\")
 --   Quotation marks inside of strings are not supported.
@@ -975,51 +977,61 @@ end
 --     "Value == 1.4"
 --     "A < 5 * (B - 3)"
 -- astrOperands - contains the corresponding definitions of variables used in the expression
---   Syntax: "<Operand>=<Constant>"
+--   Dict: key = <operand name>,   value = <value of operand>
 --   No spaces are allowed (except in strings)
 --   Allowed Constants: integers, floats (use dot), hex (use 0x), strings (use \"...\")
 --   Numerical constants (any type) can be negative (use -).
 --   The value must be a simple constant, no calculations are supported.
+--   Multiple definitions of the same operand are invalid.
 --   Examples:
---     "A=true"
---     "Text=\"Hello World\""
---     "A=-1"
+--     "A": "true"
+--     "Text": "\"Hello World\""
+--     "A": "-1"
 -- return:
 --   0: expression returns false
 --   1: expression is invalid
 --   2: expression returns true
-local function validateAndCalculate(tLog, tWfpControl, strExpression, astrOperands)
-    -- Create a list of the known operands and their values
-    local atOperands = {}
-    for _, strOperand in ipairs(astrOperands) do
-        for strName, strValue in string.gmatch(strOperand, "(.*)=(.*)") do
-            -- Operand is a string: remove quotation marks and save it
-            if string.sub(strValue, 1, 1) == "\"" and string.sub(strValue, -1) == "\"" then
-                atOperands[strName] = string.sub(strValue, 2, -2)
-                -- Abort if there are other quotation marks in the string (including \\\")
-                -- The sandbox is somehow not able to properly evaluate strings containing
-                -- quotation mark-characters (\\\") (always returns sucess-false)
-                if(string.find(atOperands[strName], "\"")) then
-                    return 1
-                end
-            -- Operand is a bool-keyword
-            elseif strValue == "true" or strValue == "false" then
-                atOperands[strName] = strValue == "true"
-            -- Operand must be a number; Parse the value and save it
-            else
-                atOperands[strName] = tonumber(strValue)
+local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands)
+    -- Check the list of the known operands and their values
+    for strName, strValue in pairs(atOperands) do
+        -- Operand is somehow empty: abort (causes trouble at packing)
+        if strName == nil or strName == "" or strValue == nil or strValue == "" then
+            tLog.error("At least one operand has empty name or no value")
+            return 1
+        end
+        -- Operand is a string: remove quotation marks and save it
+        if string.sub(strValue, 1, 1) == "\"" and string.sub(strValue, -1) == "\"" then
+            atOperands[strName] = string.sub(strValue, 2, -2)
+            -- Abort if there are other quotation marks in the string (including \\\")
+            -- The sandbox is somehow not able to properly evaluate strings containing
+            -- quotation mark-characters (\\\") (always returns sucess-false)
+            if(string.find(atOperands[strName], "\"")) then
+                return 1
             end
+        -- Operand is a bool-keyword
+        elseif strValue == "true" or strValue == "false" then
+            atOperands[strName] = strValue == "true"
+        -- Operand must be a number; Parse the value and save it
+        else
+            atOperands[strName] = tonumber(strValue)
         end
     end
 
     -- Prepare a copy of the expression for validity check
     -- Remove all "("" and ")" that are not part of strings
     -- Remove all spaces inside of strings in expression
+    -- Detect and avoid multiple consecutive spaces
     local inString = false
     local strExprForCheck = ""
     local previousCharacter = nil
     for i = 1, #strExpression do
         local character = string.sub(strExpression, i,i)
+
+        -- Only accept single spaces
+        if(character == " " and previousCharacter == " ") then
+            tLog.error("Multiple consecutive spaces in expression \"%s\"", strExpression)
+            return 1
+        end
 
         -- \" --> string delimiter,   \\\" --> quotation mark in string
         if character == "\"" and previousCharacter ~= "\\" then
@@ -1543,7 +1555,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
         local atConditions = tWfpControl:getConditions()
         local atWfpConditions = {}
         for _, strCondition in ipairs(tArgs.astrConditions) do
-            local strKey, strValue = string.match(strCondition, '%s*([^ =]+)%s*=%s*([^ =]+)%s*')
+            local strKey, strValue = string.match(strCondition, "(.*)=(.*)")
             if strKey == nil then
                 tLog.error('Condition "%s" is invalid.', strCondition)
                 fOk = false
@@ -1816,6 +1828,16 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                     if tArgs.fCommandFlashSelected == true then
                                         -- loop over data inside xml
                                         for _, tData in ipairs(tTargetFlash.atData) do
+                                            -- If there is a condition, check if it is valid
+                                            if tData.strCondition ~= "" then
+                                                if validateAndCalculate(tLog, tWfpControl, tData.strCondition,
+                                                        atWfpConditions) == 1 then
+                                                    tLog.error('Invalid Condition! Expression: %s; Operands: %s', tData.strCondition, atWfpConditions)
+                                                    fOk = false
+                                                    break
+                                                end
+                                            end
+
                                             -- Is this an erase command?
                                             if tData.strFile == nil then
                                                 local ulOffset = tData.ulOffset
@@ -2013,10 +2035,18 @@ elseif tArgs.fCommandCheckHelperSignatureSelected then
 
 elseif tArgs.fCommandCalculateSelected == true then
     tLog.debug("Expression: %s", tArgs.strExpression)
+    local atOperands ={}
     for _, arg in ipairs(tArgs.astrOperands) do
+        operandName, operandValue = string.match(arg, "(.*)=(.*)")
+        -- Throw an error if an element is passed twice
+        if(atOperands[operandName] ~= nil) then
+            tLog.error("Operand %s has multiple definitions", operandName)
+            os.exit(1)
+        end
+        atOperands[operandName] = operandValue
         tLog.debug("Operands: %s", arg)
     end
-    local result = validateAndCalculate(tLog, tWfpControl, tArgs.strExpression, tArgs.astrOperands)
+    local result = validateAndCalculate(tLog, tWfpControl, tArgs.strExpression, atOperands)
     if(result == 1) then
         tLog.error("invalid expression or operands")
     end
