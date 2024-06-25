@@ -30,6 +30,11 @@ function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPlu
     self.WS_RESULT_ERROR_SIP_HIDDEN = 4
     self.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET = 5
 
+    self.COM_SIP_KEK_SET                    = 0xA11C0DED    -- KEK was programmed into the SIP
+    self.COM_SIP_KEK_NOT_SET                = 0xBA1DBA1D    -- KEK area is bald (no kek is set)
+    self.COM_SIP_SIP_PROTECTION_SET         = 0xAFFEDEAD    -- sip protection closed monkey dead
+    self.COM_SIP_SIP_PROTECTION_NOT_SET     = 0x0A11C001    -- sip protection not set all cool
+
     self.tFlasher = require 'flasher'
     self.tFlasherHelper = require 'flasher_helper'
     self.tHelperFiles = require 'helper_files'
@@ -2063,6 +2068,8 @@ function UsipPlayer:readSIPviaFLash(strSipPage, aAttr)
     return strReadData, strMsg
 end
 
+
+
 -- write SIP data (4kB) into sekected SIP
 -- create a new hash for the data
 function UsipPlayer:verifySIPviaFLash(
@@ -2075,17 +2082,16 @@ function UsipPlayer:verifySIPviaFLash(
     local iBus
     local iUnit
     local iChipSelect
-    local fDuplicate
-    local iEraseSize
     local strMsg
+    local ulKekInfo
+    local ulSipProtectionInfo
+    local fKekSet 
+    local fSipProtectionSet
 
     iBus = SIP_ATTRIBUTES[strSipPage].iBus
     iUnit = SIP_ATTRIBUTES[strSipPage].iUnit
 
     iChipSelect = 3
-    fDuplicate = false
-    iEraseSize = 0x1000
-
 
     -- check if the selected flash is present
     fDetectResult = self.tFlasher.detect(
@@ -2099,13 +2105,23 @@ function UsipPlayer:verifySIPviaFLash(
         strMsg = "No Flash connected!"
     else
         -- write to the flash
-        fResult = self.tFlasher.verifyArea(self.tPlugin, aAttr, 0x0, strSipData)
+        fResult, strMsg, ulKekInfo, ulSipProtectionInfo = self.tFlasher.verifyArea(self.tPlugin, aAttr, 0x0, strSipData)
         if not fResult then
             strMsg = "verification failed for " .. strSipPage .. " SIP"
         end
+        if ulKekInfo == self.COM_SIP_KEK_SET then
+            fKekSet = true
+        elseif ulKekInfo == self.COM_SIP_KEK_NOT_SET then
+            fKekSet = false
+        end
+        if ulSipProtectionInfo == self.COM_SIP_SIP_PROTECTION_SET then
+            fSipProtectionSet = true
+        elseif ulSipProtectionInfo == self.COM_SIP_SIP_PROTECTION_NOT_SET then
+            fSipProtectionSet = false
+        end
     end
 
-    return fResult, strMsg
+    return fResult, strMsg, fKekSet, fSipProtectionSet
 end
 
 -- write SIP data (4kB) into sekected SIP
@@ -2316,6 +2332,8 @@ function UsipPlayer:commandVerifySipPm(
     local tUsipDataList
     local tUsipPathList
     local tUsipConfigDict
+    local fKekSet
+    local fSipProtectionSet
 
     if strUsipFilePath ~= nil then
         tResult, strErrorMsg, tUsipDataList, tUsipPathList, tUsipConfigDict = self:prepareUsip(strUsipFilePath)
@@ -2359,9 +2377,21 @@ function UsipPlayer:commandVerifySipPm(
     end
 
     if tResult == self.tSipper.VERIFY_RESULT_OK then
-        fResult, strErrorMsg = self:verifySIPviaFLash("COM", strComSipData, aAttr)
+        fResult, strErrorMsg, fKekSet, fSipProtectionSet = self:verifySIPviaFLash("COM", strComSipData, aAttr)
         if not fResult then
             tResult = self.tSipper.VERIFY_RESULT_FALSE
+        end
+        if fCheckKek and not fKekSet then
+            tResult = self.tSipper.VERIFY_RESULT_FALSE
+            strErrorMsg = "KEK is not set."
+        else
+            self.tLog.info("KEK is set.")
+        end
+        if fCheckSipProtection and not fSipProtectionSet then
+            tResult = self.tSipper.VERIFY_RESULT_FALSE
+            strErrorMsg = "SIP protection cookie is not set."
+        else
+            self.tLog.info("SIP protection cookie is set.")
         end
     end
     if tResult == self.tSipper.VERIFY_RESULT_OK then

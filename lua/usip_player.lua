@@ -8,7 +8,6 @@
 
 -- requirements
 local argparse = require 'argparse'
-local mhash = require 'mhash'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
 local tFlasher = require 'flasher'
@@ -151,9 +150,11 @@ local function setup_argparser()
     -- NXTFLASHER-565
     -- NXTFLASHER-906
     local strWriteSipPmHelp = [[
-        write APP and COM secure info page (SIP) based on default values
-        the default values can be modified with the data from an USIP file
-        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+        Write Secure Info Pages (SIP) in production mode based on default values.
+        The default values can be modified with the data from an USIP file.
+        The calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
     local tParserWriteSips = tParser:command('write_sip_pm wsp', strWriteSipPmHelp):target('fCommandWriteSipsSelected')
     tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
@@ -170,7 +171,7 @@ local function setup_argparser()
         'strComSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
     tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
         'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
-    
+
     -- maybe keep option '--_no_verify'
     tParserWriteSips:flag('--no_verify'):description(
         "Do not verify the content of a USIP image against a netX SIP content after writing the USIP. The reset, that activates the USIP data is still executed."
@@ -190,9 +191,9 @@ local function setup_argparser()
 
     -- NXTFLASHER-906
     local strReadSipsPmHelp = [[
-        write APP and COM secure info page (SIP) based on default values
-        the default values can be modified with the data from an USIP file
-        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+        Read Secure Info Pages (SIP) in production mode.
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
     local tParserReadSipPm = tParser:command('read_sip_pm rsp', strReadSipsPmHelp):target('fCommandReadSipPmSelected')
     tParserReadSipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
@@ -213,9 +214,9 @@ local function setup_argparser()
 
     -- NXTFLASHER-906
     local strVerifySipsPmHelp = [[
-        write APP and COM secure info page (SIP) based on default values
-        the default values can be modified with the data from an USIP file
-        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+        Verify content of Secure Info Pages (SIP) in production mode.
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
     local tParserVerifySipPm = tParser:command(
         'verify_sip_pm vsp', strVerifySipsPmHelp):target('fCommandVerifySipPmSelected')
@@ -253,7 +254,7 @@ local function setup_argparser()
     tParserConvertUsip:argument('output')
         :description('Write the generated SIP pages to output directory.')
         :target('strOutputDir')
-    tParserConvertUsip:option('--set_sip_protection')
+    tParserConvertUsip:flag('--set_sip_protection')
         :description('Set the SIP protection cookie.')
         :target('fSetSipProtectionCookie')
         :default(false)

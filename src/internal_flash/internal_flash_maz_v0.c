@@ -1199,7 +1199,6 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 	const unsigned char *pucCnt;
 	const unsigned char *pucEnd;
 	const unsigned long *pulProtectionCnt;
-	const unsigned long *pulProtectionEnd;
 
 	unsigned long ulData;
 
@@ -1271,7 +1270,6 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 
 				    /* get info if SIP protection cookie is set or not */
 				    pulProtectionCnt = (const unsigned long*)pucBuffer;
-				    pulProtectionEnd = pulProtectionCnt+3;
 
                     *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_NOT_SET;
 
