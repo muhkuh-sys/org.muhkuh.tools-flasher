@@ -1826,9 +1826,8 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                     end
 
                                     if tArgs.fCommandFlashSelected == true then
-                                        -- loop over data inside xml
+                                        -- loop over data inside xml and check if the conditions are valid
                                         for _, tData in ipairs(tTargetFlash.atData) do
-                                            -- If there is a condition, check if it is valid
                                             if tData.strCondition ~= "" then
                                                 if validateAndCalculate(tLog, tWfpControl, tData.strCondition,
                                                         atWfpConditions) == 1 then
@@ -1837,7 +1836,10 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                     break
                                                 end
                                             end
+                                        end
 
+                                        -- loop over data in xml and flash/erase
+                                        for _, tData in ipairs(tTargetFlash.atData) do
                                             -- Is this an erase command?
                                             if tData.strFile == nil then
                                                 local ulOffset = tData.ulOffset
