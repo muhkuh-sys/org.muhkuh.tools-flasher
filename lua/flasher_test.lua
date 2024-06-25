@@ -61,9 +61,10 @@ local flasher_test_interface = {
 	iUnit = nil,
 	iChipSelect =nil,
 
-	-- Limit the reported device size (size of the test area) to 128 MiByte
+	-- Limit the reported device size (size of the test area) to 256 KiByte
 	-- This test is supposed to focus on if the flasher itself works as intended
-	ulDeviceSizeMax = 0x8000000
+	-- Limitation is required for suitable test runtimes.
+	ulDeviceSizeMax = 0x40000
 }
 
 function flasher_test_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)

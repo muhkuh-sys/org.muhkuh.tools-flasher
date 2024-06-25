@@ -856,10 +856,11 @@ end
 --========================================================================
 
 local flasher_test_interface_cli = {
-	-- Limit the reported device size (size of the test area) to 1 MiByte
+	-- Limit the reported device size (size of the test area) to 64 KiByte
 	-- This test is supposed to focus on connecting and disconnecting
 	-- Since the device size does not affect this, its smaller for shorter test runtime
-	ulDeviceSizeMax = 0x100000
+	-- Limitation is required for suitable test runtimes.
+	ulDeviceSizeMax = 0x10000
 }
 
 
