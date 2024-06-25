@@ -172,10 +172,6 @@ local function setup_argparser()
     tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
         'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
 
-    -- maybe keep option '--_no_verify'
-    tParserWriteSips:flag('--no_verify'):description(
-        "Do not verify the content of a USIP image against a netX SIP content after writing the USIP. The reset, that activates the USIP data is still executed."
-    ):target('fVerifyContentDisabled')
     tParserWriteSips:flag('--disable_helper_signature_check')
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
