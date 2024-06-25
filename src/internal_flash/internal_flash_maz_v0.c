@@ -1985,6 +1985,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, pulKekInfo, pulSipProtectionInfo);
                 ptParameter->ulKekInfo = *pulKekInfo;
                 ptParameter->ulSipProtectionInfo = *pulSipProtectionInfo;
+                ptParameter->ulStartAdr = pulKekInfo;
+                ptParameter->ulEndAdr = pulSipProtectionInfo;
 
 				pucFlashStart = pucInternalWorkingBuffer;
 
