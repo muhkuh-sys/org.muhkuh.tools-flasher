@@ -1773,9 +1773,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 			if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS )
 			{
 			    /* only implemented for APP and COM SIP with chip_select 3 */
-			    ptParameter->ulStartAdr = &pulKekInfo;
-			    ptParameter->ulEndAdr = &pulSipProtectionInfo;
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData, &pulKekInfo, &pulSipProtectionInfo);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData, &ulKekInfo, &ulSipProtectionInfo);
 			}
 			else
 			{
