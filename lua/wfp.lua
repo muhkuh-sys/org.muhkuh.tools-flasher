@@ -1839,98 +1839,100 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         end
 
                                         -- loop over data in xml and flash/erase
-                                        for _, tData in ipairs(tTargetFlash.atData) do
-                                            -- Is this an erase command?
-                                            if tData.strFile == nil then
-                                                local ulOffset = tData.ulOffset
-                                                local ulSize = tData.ulSize
-                                                local strCondition = tData.strCondition
-                                                tLog.info(
-                                                    'Found erase 0x%08x-0x%08x and condition "%s".',
-                                                    ulOffset,
-                                                    ulOffset + ulSize,
-                                                    strCondition
-                                                )
-
-                                                if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
-                                                    tLog.info('Not processing erase : prevented by condition.')
-                                                else
-                                                    if tArgs.fDryRun == true then
-                                                        tLog.warning('Not touching the flash as dry run is selected.')
-                                                    else
-                                                        fOk, strMsg = tFlasher.eraseArea(
-                                                            tPlugin,
-                                                            aAttr,
-                                                            ulOffset,
-                                                            ulSize
-                                                        )
-                                                        if fOk ~= true then
-                                                            tLog.error('Failed to erase the area: %s', strMsg)
-                                                            break
-                                                        end
-                                                    end
-                                                end
-                                            else
-                                                local strFile
-                                                if tWfpControl:getHasSubdirs() == true then
-                                                    tLog.info('WFP archive uses subdirs.')
-                                                    strFile = tData.strFile
-                                                else
-                                                    tLog.info('WFP archive does not use subdirs.')
-                                                    strFile = pl.path.basename(tData.strFile)
-                                                end
-
-                                                local ulOffset = tData.ulOffset
-                                                local strCondition = tData.strCondition
-                                                tLog.info(
-                                                    'Found file "%s" with offset 0x%08x and condition "%s".',
-                                                    strFile,
-                                                    ulOffset,
-                                                    strCondition
-                                                )
-
-                                                if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
+                                        if fOk == true then
+                                            for _, tData in ipairs(tTargetFlash.atData) do
+                                                -- Is this an erase command?
+                                                if tData.strFile == nil then
+                                                    local ulOffset = tData.ulOffset
+                                                    local ulSize = tData.ulSize
+                                                    local strCondition = tData.strCondition
                                                     tLog.info(
-                                                        'Not processing file %s : prevented by condition.',
-                                                        strFile
+                                                        'Found erase 0x%08x-0x%08x and condition "%s".',
+                                                        ulOffset,
+                                                        ulOffset + ulSize,
+                                                        strCondition
                                                     )
-                                                else
-                                                    -- Loading the file data from the archive.
-                                                    local strData = tWfpControl:getData(strFile)
-                                                    if strData == nil then
-                                                        tLog.error('Failed to get the data %s', strFile)
-                                                        fOk = false
-                                                        break
+    
+                                                    if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
+                                                        tLog.info('Not processing erase : prevented by condition.')
                                                     else
-                                                        local sizData = string.len(strData)
                                                         if tArgs.fDryRun == true then
-                                                            tLog.warning(
-                                                                'Not touching the flash as dry run is selected.'
-                                                            )
+                                                            tLog.warning('Not touching the flash as dry run is selected.')
                                                         else
-                                                            tLog.debug('Flashing %d bytes...', sizData)
-
                                                             fOk, strMsg = tFlasher.eraseArea(
                                                                 tPlugin,
                                                                 aAttr,
                                                                 ulOffset,
-                                                                sizData
+                                                                ulSize
                                                             )
                                                             if fOk ~= true then
                                                                 tLog.error('Failed to erase the area: %s', strMsg)
-                                                                fOk = false
                                                                 break
+                                                            end
+                                                        end
+                                                    end
+                                                else
+                                                    local strFile
+                                                    if tWfpControl:getHasSubdirs() == true then
+                                                        tLog.info('WFP archive uses subdirs.')
+                                                        strFile = tData.strFile
+                                                    else
+                                                        tLog.info('WFP archive does not use subdirs.')
+                                                        strFile = pl.path.basename(tData.strFile)
+                                                    end
+    
+                                                    local ulOffset = tData.ulOffset
+                                                    local strCondition = tData.strCondition
+                                                    tLog.info(
+                                                        'Found file "%s" with offset 0x%08x and condition "%s".',
+                                                        strFile,
+                                                        ulOffset,
+                                                        strCondition
+                                                    )
+    
+                                                    if tWfpControl:matchCondition(atWfpConditions, strCondition)~=true then
+                                                        tLog.info(
+                                                            'Not processing file %s : prevented by condition.',
+                                                            strFile
+                                                        )
+                                                    else
+                                                        -- Loading the file data from the archive.
+                                                        local strData = tWfpControl:getData(strFile)
+                                                        if strData == nil then
+                                                            tLog.error('Failed to get the data %s', strFile)
+                                                            fOk = false
+                                                            break
+                                                        else
+                                                            local sizData = string.len(strData)
+                                                            if tArgs.fDryRun == true then
+                                                                tLog.warning(
+                                                                    'Not touching the flash as dry run is selected.'
+                                                                )
                                                             else
-                                                                fOk, strMsg = tFlasher.flashArea(
+                                                                tLog.debug('Flashing %d bytes...', sizData)
+    
+                                                                fOk, strMsg = tFlasher.eraseArea(
                                                                     tPlugin,
                                                                     aAttr,
                                                                     ulOffset,
-                                                                    strData
+                                                                    sizData
                                                                 )
                                                                 if fOk ~= true then
-                                                                    tLog.error('Failed to flash the area: %s', strMsg)
+                                                                    tLog.error('Failed to erase the area: %s', strMsg)
                                                                     fOk = false
                                                                     break
+                                                                else
+                                                                    fOk, strMsg = tFlasher.flashArea(
+                                                                        tPlugin,
+                                                                        aAttr,
+                                                                        ulOffset,
+                                                                        strData
+                                                                    )
+                                                                    if fOk ~= true then
+                                                                        tLog.error('Failed to flash the area: %s', strMsg)
+                                                                        fOk = false
+                                                                        break
+                                                                    end
                                                                 end
                                                             end
                                                         end
