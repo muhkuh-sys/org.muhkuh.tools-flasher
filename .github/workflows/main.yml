@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ dev_NXTFLASHER-906 ]
+    branches: [ dev_v2.1.0 ]
     tags:
     - '*'
   pull_request:
@@ -34,6 +34,56 @@ jobs:
       fail-fast: false
       matrix:
         platform:
+        - name: Ubuntu 18.04 x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: x86
+        - name: Ubuntu 18.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 18.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 20.04 x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86
+        - name: Ubuntu 20.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 20.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 22.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 22.04 armhf
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: armhf
+        - name: Ubuntu 22.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 22.04 riscv64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: riscv64
         - name: Windows x86
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
           distribution-id: windows
