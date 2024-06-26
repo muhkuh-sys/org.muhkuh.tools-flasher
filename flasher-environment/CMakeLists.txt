@@ -93,7 +93,7 @@ SET(TARGET_LUA TARGET_lua54)
 SET(INSTALL_DIR_LUA_MODULES ${FLASHER_PACKAGE_DIR}/lua_plugins)
 ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
 
-INSTALL(FILES ${FLASHER_PACKAGE_DIR}/lua_plugins/hboot_start_mi_netx90_com_intram.bin
+INSTALL(FILES build/artifacts/${INSTALL_DIR_LUA_MODULES}/hboot_start_mi_netx90_com_intram.bin
  DESTINATION ${HELPER_IMG_DIR})
 
 #----------------------------------------------------------------------------
