@@ -53,7 +53,7 @@ SET(FLASHER_PACKAGE_DIR flasher_cli-${MBS_PROJECT_VERSION})
 INSTALL(DIRECTORY "${CMAKE_HOME_DIRECTORY}/../targets/testbench/"
         DESTINATION ${FLASHER_PACKAGE_DIR})
 
-SET(HELPER_IMG_DIR ${FLASHER_PACKAGE_DIR}/netx/hboot/unsigned/netx90/)
+
 #----------------------------------------------------------------------------
 
 ADD_SUBDIRECTORY(com.github.lunarmodules-Penlight)
@@ -91,12 +91,8 @@ SET(PLUGINS_SOURCES_DIR "${CMAKE_HOME_DIRECTORY}/org.muhkuh.lua-romloader/target
 SET(TARGET_LIBUSB TARGET_libusb)
 SET(TARGET_LUA TARGET_lua54)
 SET(INSTALL_DIR_LUA_MODULES ${FLASHER_PACKAGE_DIR}/lua_plugins)
-message(FLASHER_PACKAGE_DIR="${FLASHER_PACKAGE_DIR}")
-message(INSTALL_DIR_LUA_MODULES="${INSTALL_DIR_LUA_MODULES}")
 ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
 
-INSTALL(FILES build/artifacts/${INSTALL_DIR_LUA_MODULES}/hboot_start_mi_netx90_com_intram.bin
- DESTINATION ${HELPER_IMG_DIR})
 
 #----------------------------------------------------------------------------
 #
