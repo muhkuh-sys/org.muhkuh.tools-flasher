@@ -885,7 +885,7 @@ if fBuildIsFull==True:
         'targets/testbench/netx/hboot/unsigned/netx90/return_exec.bin':                      'helper_binaries/netx90/return_exec.bin',
         'targets/testbench/netx/hboot/unsigned/netx90/set_kek.bin':                          'helper_binaries/netx90/set_kek.bin',
         'targets/testbench/netx/hboot/unsigned/netx90/verify_sig.bin':                       'helper_binaries/netx90/verify_sig.bin',
-#        'targets/testbench/netx/hboot/unsigned/netx90/hboot_start_mi_netx90_com_intram.bin': 'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin',
+        'targets/testbench/netx/hboot/unsigned/netx90/hboot_start_mi_netx90_com_intram.bin': 'helper_binaries/netx90/hboot_start_mi_netx90_com_intram.bin',
 
         'targets/testbench/netx/helper/netx90/hboot_netx90_exec_bxlr.bin':              hboot_netx90_exec_bxlr_bin,
         'targets/testbench/netx/helper/netx90/com_default_rom_init_ff_netx90_rev2.bin': 'helper_binaries/netx90/com_default_rom_init_ff_netx90_rev2.bin',
