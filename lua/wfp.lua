@@ -1469,8 +1469,8 @@ else
     -- if a signed helper directory is specified on the command line,
     -- set aArgs.astrHelpersToSigCheck, unless --disable_helper_signature_check
     -- is specified, too.
-    if tArgs.strSecureOption ~= nil 
-    and tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+    if tArgs.strSecureOption ~= nil and
+      tArgs.strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
         if tArgs.fDisableHelperSignatureChecks ~= true then
             tArgs.aHelperKeysForSigCheck = astrHelpersToCheck
         else

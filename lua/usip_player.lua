@@ -8,7 +8,6 @@
 
 -- requirements
 local argparse = require 'argparse'
-local mhash = require 'mhash'
 local tFlasherHelper = require 'flasher_helper'
 local tHelperFiles = require 'helper_files'
 local tFlasher = require 'flasher'
@@ -32,81 +31,11 @@ local atLogLevels = {
 }
 
 
-local function setup_argparser()
-    local strUsipPlayerGeneralHelp = [[
-        The USIP-Player is a Flasher extension to modify, read-out and verify the Secure-Info-Pages on a netX90.
-    
-        The secure info pages (SIPs) are a part of the secure boot functionality of the netX90 and are not supposed
-        to modify directly as a security feature. There is a SIP for the COM and a SIP for the APP side of the netX90.
-    
-        To actually modify the secure info pages a update-secure-info-page (USIP) file is necessary. These USIP files
-        can be generated with the newest netX-Studio version.
-    
-        Folder structure inside flasher:
-        |- flasher_cli-X.Y.Z                     -- main folder
-           |- .tmp                               -- temporary folder created by the usip_player to save temp files
-           |- doc
-           |- lua                                -- more lua files
-           |- lua_plugins                        -- lua plugins
-           |- netx
-              |- hboot                           -- hboot images, necessary for for the flasher
-                 |- unsigned                     -- unsigned hboot images
-                    |- netx90                    -- netx specific folder containing hboot images
-                    |- netx90_usip               -- netx specific folder containing usip images
-              |- helper
-                 |- netx90                       -- helper files that must not be signed
-           
-           |- lua5.4(.exe)                       -- lua executable
-           |- usip_player.lua                    -- usip_player lua file
-    
-    
-        To use the usip_player in secure mode:
-            - create a dedicated folder for signed images (e.g. 'netx/hboot/signed')
-            - sign the images found in netx/hboot/unsigned/netx90 with the firmware key and copy them into the signed
-              folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90')
-            - sign the images found in netx/hboot/unsigned/netx90_usip with the master key and copy them into the signed
-              folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90_usip')
-            - use the created folder as the handover parameter for the parameters '--sec' and '--sec_p2'
-    
-    ]]
-    local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
-    
-    -- Add a hidden flag to disable the version checks on helper files.
-    tParser:flag "--disable_helper_version_check":hidden(true)
-        :description "Disable version checks on helper files."
-        :action(function()
-            tHelperFiles.disableHelperFileChecks()
-        end)
-    
-    -- Add a hidden flag to disable the version checks on helper files.
-    tParser:flag "--enable_temp_files":hidden(true)
-        :description "Enable writing some temporary data to files for debugging."
-        :action(function()
-            tFlasherHelper.enableStoreTempFiles()
-        end)
-    
-    -- Add the "usip" command and all its options.
-    local strBootswitchHelp = [[
-        Control the boot process after the execution of the sip update.
-    
-        Options:
-         - 'UART' (Open uart-console-mode)
-         - 'ETH' (Open ethernet-console-mode)
-         - 'MFW' (Start MFW)
-         - 'JTAG' (Use an execute-chunk to activate JTAG)
-    ]]
-    
-    -- todo change help string
-    local strHelpSecP2 = [[
-        Path to helper files that are used after the last usip was executed.
-    ]]
-    
-    
+local function addArgparserUsip(tParser, strHelpSecP2)
     local strUsipHelp = [[
         Load an USIP file to a netX 90, reset the netX , update SecureInfoPage, and continue boot process.
     ]]
-    
-    
+
     local tParserCommandUsip = tParser:command('usip u', strUsipHelp):target('fCommandUsipSelected')
     -- todo: make mandatory:
     tParserCommandUsip:option('-i --input'):count("1"):description("USIP image file path (image may only contain USIP chunks)"):target('strUsipFilePath')
@@ -147,14 +76,18 @@ local function setup_argparser()
     ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
     ):target('fDisableReset'):default(false)
     
-    
+end
+local function addArgparserWriteSipPm(tParser)    
     -- NXTFLASHER-565
-    local strWriteSipsHelp = [[
-        write APP and COM secure info page (SIP) based on default values
-        the default values can be modified with the data from an USIP file
-        the calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+    -- NXTFLASHER-906
+    local strWriteSipPmHelp = [[
+        Write Secure Info Pages (SIP) in production mode based on default values.
+        The default values can be modified with the data from an USIP file.
+        The calibration values 'atTempDiode' inside the APP SIP will be updated with the values from the CAL SIP
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
-    local tParserWriteSips = tParser:command('write_sips ws', strWriteSipsHelp):target('fCommandWriteSipsSelected')
+    local tParserWriteSips = tParser:command('write_sip_pm wsp', strWriteSipPmHelp):target('fCommandWriteSipsSelected')
     tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserWriteSips:option(
         '-V --verbose'
@@ -169,11 +102,7 @@ local function setup_argparser()
         'strComSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
     tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
         'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
-    
-    -- maybe keep option '--_no_verify'
-    tParserWriteSips:flag('--no_verify'):description(
-        "Do not verify the content of a USIP image against a netX SIP content after writing the USIP. The reset, that activates the USIP data is still executed."
-    ):target('fVerifyContentDisabled')
+
     tParserWriteSips:flag('--disable_helper_signature_check')
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
@@ -186,7 +115,61 @@ local function setup_argparser()
         :description('Set the KEK (Key exchange key).')
         :target('fSetKek')
         :default(false)
+end
+local function addArgparserReadSipPm(tParser)
+    -- NXTFLASHER-906
+    local strReadSipsPmHelp = [[
+        Read Secure Info Pages (SIP) in production mode.
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
+    ]]
+    local tParserReadSipPm = tParser:command('read_sip_pm rsp', strReadSipsPmHelp):target('fCommandReadSipPmSelected')
+    tParserReadSipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+    tParserReadSipPm:option(
+        '-V --verbose'
+    ):description(
+        string.format(
+            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+        )
+    ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+    tParserReadSipPm:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserReadSipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+    tParserReadSipPm:argument('output'):description(
+        "Set the output directory."
+    ):target("strOutputFolder")
+    tParserReadSipPm:flag('--read_cal'):description(
+        "additional read out and store the cal secure info page"):target('fReadCal')
+end
+local function addArgparserVerifySipPm(tParser)
+    -- NXTFLASHER-906
+    local strVerifySipsPmHelp = [[
+        Verify content of Secure Info Pages (SIP) in production mode.
+        Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
+        Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
+    ]]
+    local tParserVerifySipPm = tParser:command(
+        'verify_sip_pm vsp', strVerifySipsPmHelp):target('fCommandVerifySipPmSelected')
+    tParserVerifySipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
+    tParserVerifySipPm:option(
+        '-V --verbose'
+    ):description(
+        string.format(
+            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
+        )
+    ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+    tParserVerifySipPm:option('--com_sip'):description("com SIP binary size 4kB"):target(
+        'strComSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
+    tParserVerifySipPm:option('--app_sip'):description("app SIP binary size 4kB"):target(
+        'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
+    tParserVerifySipPm:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserVerifySipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 
+    tParserVerifySipPm:flag('--check_kek'):description(
+        "additional read out and store the cal secure info page"):target('fCheckKek')
+    tParserVerifySipPm:flag('--check_sip_protection'):description(
+        "additional read out and store the cal secure info page"):target('fCheckSipProtection')
+end
+local function addArgparserConvert(tParser)
     local strConvertUsipHelp = [[
         apply data of an usip file to the default values of the secure info pages and export these as binary files
     ]]
@@ -202,11 +185,12 @@ local function setup_argparser()
     tParserConvertUsip:argument('output')
         :description('Write the generated SIP pages to output directory.')
         :target('strOutputDir')
-    tParserConvertUsip:option('--set_sip_protection')
+    tParserConvertUsip:flag('--set_sip_protection')
         :description('Set the SIP protection cookie.')
         :target('fSetSipProtectionCookie')
         :default(false)
-
+end
+local function addArgparserVim(tParser)
     -- NXTFLASHER-692
     local strVerifyInitialModeHelp = [[
         verify that the netX is in an initial state which means:
@@ -230,7 +214,8 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-
+end
+local function addArgparserDisableSecurity(tParser)
     -- NXTFLASHER-603
     -- NXTFLASHER-550
 
@@ -290,8 +275,8 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-    
-    
+end
+local function addArgparserSsp(tParser)    
     
     -- Add the "set_sip_protection" command and all its options.
     local strSetSipProtectionHelp = [[
@@ -322,7 +307,8 @@ local function setup_argparser()
     tParserCommandSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
     
-    
+end
+local function addArgparserKek(tParser, strHelpSecP2)   
     -- Add the "set_kek" command and all its options.
     local strSetKekHelp = [[
         Set the KEK (Key exchange key).
@@ -363,7 +349,8 @@ local function setup_argparser()
     tParserCommandKek:flag('--no_reset'
     ):description('Skip the last reset after booting an USIP. Without the reset, verifying the content is also disabled.'
     ):target('fDisableReset'):default(false)
-    
+end
+local function addArgparserVerify(tParser)   
     -- Add the "verify_content" command and all its options.
     local strVerifyHelp = [[
         Verify the content of a usip file against the content of a secure info page
@@ -389,7 +376,8 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-    
+end
+local function addArgparserCheckSipProt(tParser)    
     local strCheckCookieHelp = [[
         Check if the SIP protection cookie is set
     ]]
@@ -410,7 +398,8 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-    
+end
+local function addArgparserReadSip(tParser)   
     -- Add the "read_sip" command and all its options.
     local strReadHelp = [[
         Read out the sip content and save it into a temporary folder
@@ -436,21 +425,23 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-    
-    
+end
+local function addArgparserDetectSecure(tParser)
+
     -- Add the "detect_secure_mode" command and note, that it is moved to "cli_flash.lua"
-    
-    strDetectSecureModeHelp = [[
+
+    local strDetectSecureModeHelp = [[
         This command was moved into cli_flash.lua and renamed to 'detect_secure_boot_mode' ('dsbm').
     ]]
     tParser:command(
         'detect_secure_mode', strDetectSecureModeHelp
     ):target('fCommandDetectSelected')
-    
-    
+
+end
+local function addArgparserGetUid(tParser)
     -- Add the "get_uid" command and all its options.
     
-    strGetUidHelp = [[
+    local strGetUidHelp = [[
         Get the unique ID.
     ]]
     
@@ -470,7 +461,8 @@ local function setup_argparser()
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
         :default(false)
-    
+end
+local function addArgparserVerifyHelper(tParser)
     -- Add command check_helper_signature chs
     local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target(
         'fCommandCheckHelperSignatureSelected')
@@ -485,6 +477,81 @@ local function setup_argparser()
     tParserCommandVerifyHelperSig:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserCommandVerifyHelperSig:option('--sec'):description("Path to signed image directory"):target(
         'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
+end
+
+local function setup_argparser()
+    local strUsipPlayerGeneralHelp = [[
+        The USIP-Player is a Flasher extension to modify, read-out and verify the Secure-Info-Pages on a netX90.
+    
+        The secure info pages (SIPs) are a part of the secure boot functionality of the netX90 and are not supposed
+        to modify directly as a security feature. There is a SIP for the COM and a SIP for the APP side of the netX90.
+    
+        To actually modify the secure info pages a update-secure-info-page (USIP) file is necessary. These USIP files
+        can be generated with the newest netX-Studio version.
+    
+        Folder structure inside flasher:
+        |- flasher_cli-X.Y.Z                     -- main folder
+           |- .tmp                               -- temporary folder created by the usip_player to save temp files
+           |- doc
+           |- lua                                -- more lua files
+           |- lua_plugins                        -- lua plugins
+           |- netx
+              |- hboot                           -- hboot images, necessary for for the flasher
+                 |- unsigned                     -- unsigned hboot images
+                    |- netx90                    -- netx specific folder containing hboot images
+                    |- netx90_usip               -- netx specific folder containing usip images
+              |- helper
+                 |- netx90                       -- helper files that must not be signed
+           
+           |- lua5.4(.exe)                       -- lua executable
+           |- usip_player.lua                    -- usip_player lua file
+    
+    
+        To use the usip_player in secure mode:
+            - create a dedicated folder for signed images (e.g. 'netx/hboot/signed')
+            - sign the images found in netx/hboot/unsigned/netx90 with the firmware key and copy them into the signed
+              folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90')
+            - sign the images found in netx/hboot/unsigned/netx90_usip with the master key and copy them into the signed
+              folder into a subdirectory named 'netx90'( e.g. 'netx/hboot/signed/netx90_usip')
+            - use the created folder as the handover parameter for the parameters '--sec' and '--sec_p2'
+    
+    ]]
+    local tParser = argparse('usip_player', strUsipPlayerGeneralHelp):command_target("strSubcommand")
+
+    -- Add a hidden flag to disable the version checks on helper files.
+    tParser:flag "--disable_helper_version_check":hidden(true)
+        :description "Disable version checks on helper files."
+        :action(function()
+            tHelperFiles.disableHelperFileChecks()
+        end)
+
+    -- Add a hidden flag to disable the version checks on helper files.
+    tParser:flag "--enable_temp_files":hidden(true)
+        :description "Enable writing some temporary data to files for debugging."
+        :action(function()
+            tFlasherHelper.enableStoreTempFiles()
+        end)
+
+    -- todo change help string
+    local strHelpSecP2 = [[
+        Path to helper files that are used after the last usip was executed.
+    ]]
+
+    addArgparserUsip(tParser, strHelpSecP2)
+    addArgparserKek(tParser, strHelpSecP2)
+    addArgparserReadSip(tParser)
+    addArgparserVerify(tParser)
+    addArgparserConvert(tParser)
+    addArgparserWriteSipPm(tParser)
+    addArgparserReadSipPm(tParser)
+    addArgparserVerifySipPm(tParser)
+    addArgparserVim(tParser)
+    addArgparserDisableSecurity(tParser)
+    addArgparserSsp(tParser)
+    addArgparserCheckSipProt(tParser)
+    addArgparserGetUid(tParser)
+    addArgparserVerifyHelper(tParser)
+    addArgparserDetectSecure(tParser)
 
     -- parse args
     local tArgs = tParser:parse()
@@ -494,6 +561,8 @@ local function setup_argparser()
     -- ArgParser
     --------------------------------------------------------------------------
 end
+
+
 
 
 local function main()
@@ -619,11 +688,11 @@ local function main()
         )
 
     --------------------------------------------------------------------------
-    -- WRITE SIP COMMAND
+    -- WRITE SIP PM COMMAND
     --------------------------------------------------------------------------
     elseif tArgs.fCommandWriteSipsSelected then
         tLog.info("######################################")
-        tLog.info("# RUNNING WRITE SIP COMMAND          #")
+        tLog.info("# RUNNING WRITE SIP PM COMMAND       #")
         tLog.info("######################################")
         local strComSipBaseData
         local strAppSipBaseData
@@ -665,6 +734,77 @@ local function main()
             tLog.info('RETURN: '.. iWriteSipResult)
             os.exit(iWriteSipResult)
         end
+    --------------------------------------------------------------------------
+    -- WRITE SIP PM COMMAND
+    --------------------------------------------------------------------------
+    elseif tArgs.fCommandReadSipPmSelected then
+        tLog.info("######################################")
+        tLog.info("# RUNNING READ SIP PM COMMAND        #")
+        tLog.info("######################################")
+
+        fFinalResult, strErrorMsg = tUsipPlayer:commandReadSipPm(tArgs.strOutputFolder, tArgs.fReadCal)
+
+    --------------------------------------------------------------------------
+    -- WRITE SIP PM COMMAND
+    --------------------------------------------------------------------------
+    elseif tArgs.fCommandVerifySipPmSelected then
+        tLog.info("######################################")
+        tLog.info("# RUNNING VERIFY SIP PM COMMAND      #")
+        tLog.info("######################################")
+
+        uResultCode, strErrorMsg = tUsipPlayer:commandVerifySipPm(
+            tArgs.strUsipFilePath,
+            tArgs.strAppSipBinPath,
+            tArgs.strComSipBinPath,
+            tArgs.fCheckKek,
+            tArgs.fCheckSipProtection
+        )
+        print("uResultCode: " .. uResultCode)
+        if uResultCode == tSipper.VERIFY_RESULT_OK then
+            tLog.info('')
+            tLog.error("")
+            tLog.error("########  ######   ##    ##  ######  ##      ")
+            tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
+            tLog.error("##       ##    ##  ##    ## ##    ## ##      ")
+            tLog.error("#######  ##    ##  ##    ## ######## ##      ")
+            tLog.error("##       ##  ####  ##    ## ##    ## ##      ")
+            tLog.error("##       ##   ###  ##    ## ##    ## ##      ")
+            tLog.error("########  ##### ##  ######  ##    ## ########")
+            tLog.info('')
+            tLog.info('RESULT: The data in the info page(s) is equal to the data in the USIP file.')
+            if strErrorMsg then 
+                tLog.info(strErrorMsg)
+            end
+
+        elseif uResultCode == tSipper.VERIFY_RESULT_FALSE then
+            tLog.error("")
+            tLog.error("##    ##  #######  ########     ########  ######   ##    ##  ######  ##      ")
+            tLog.error("###   ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
+            tLog.error("####  ## ##     ##    ##        ##       ##    ##  ##    ## ##    ## ##      ")
+            tLog.error("## ## ## ##     ##    ##        #######  ##    ##  ##    ## ######## ##      ")
+            tLog.error("##  #### ##     ##    ##        ##       ##  ####  ##    ## ##    ## ##      ")
+            tLog.error("##   ### ##     ##    ##        ##       ##   ###  ##    ## ##    ## ##      ")
+            tLog.error("##    ##  #######     ##        ########  ##### ##  ######  ##    ## ########")
+            tLog.error("")
+            tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
+            tLog.error(strErrorMsg or "Unknown error")
+
+        else
+            tLog.error("")
+            tLog.error("######## #######  #######   ######  ####### ")
+            tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+            tLog.error("##       ##    ## ##    ## ##    ## ##    ##")
+            tLog.error("#######  #######  #######  ##    ## ####### ")
+            tLog.error("##       ## ##    ## ##    ##    ## ## ##   ")
+            tLog.error("##       ##  ##   ##  ##   ##    ## ##  ##  ")
+            tLog.error("######## ##   ##  ##   ##   ######  ##   ## ")
+            tLog.error("")
+            tLog.info("RESULT: The data in the info page(s) could not be checked as an error has occurred:")
+            tLog.error(strErrorMsg or "Unknown error")
+
+        end
+        tLog.info('RETURN: '.. uResultCode)
+        os.exit(uResultCode)
 
     --------------------------------------------------------------------------
     -- Disable Security COMMAND

@@ -49,6 +49,16 @@
 #define IFLASH_MODE_MANUAL      4U
 
 
+#define COM_SIP_KEK_SET                 0xA11C0DED   // KEK was programmed into the SIP
+#define COM_SIP_KEK_NOT_SET             0xBA1DBA1D   // KEK area is bald (no kek is set)
+#define COM_SIP_SIP_PROTECTION_SET      0xAFFEDEAD   // sip protection closed monkey dead
+#define COM_SIP_SIP_PROTECTION_NOT_SET  0x0A11C001   // sip protection not set all cool
+
+#define ROM_STARTUP_PROTECT0            0x753b428b
+#define ROM_STARTUP_PROTECT1            0x622563e2
+#define ROM_STARTUP_PROTECT2            0x6b311e8a
+#define ROM_STARTUP_PROTECT3            0x03d7b428
+
 typedef union IFLASH_PAGE_BUFFER_UNION
 {
 	unsigned char auc[IFLASH_MAZ_V0_PAGE_SIZE_BYTES];
@@ -1179,12 +1189,18 @@ static NETX_CONSOLEAPP_RESULT_T infoS_flash(const INTERNAL_FLASH_ATTRIBUTES_MAZ_
 
 
 
-static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, unsigned long ulOffsetStart, unsigned long ulLength, unsigned char *pucBuffer)
+static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRIBUTES_MAZ_V0_T *ptAttr, unsigned long ulOffsetStart, unsigned long ulLength, unsigned char *pucBuffer, unsigned long *pulKekInfo, unsigned long *pulSipProtectionInfo)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 	const unsigned char *pucFlashData;
+    unsigned char ucData;
+	const unsigned char *pucCnt;
+	const unsigned char *pucEnd;
+	const unsigned long *pulProtectionCnt;
+
+	unsigned long ulData;
 
 
 	/* The special "S" secure info pages can only be flashed as a complete page. */
@@ -1234,6 +1250,37 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 				tFlashArea = ptAttr->tArea;
 				if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS )
 				{
+				    /* get info if KEK is set or not */
+                    ucData = 0xffU;
+                    pucCnt = (const unsigned char*)pucBuffer;
+                    pucCnt += 0x0740U;
+                    pucEnd = pucCnt + 0xc0U;
+                    do
+                    {
+                        ucData &= *(pucCnt++);
+                    } while( pucCnt<pucEnd );
+                    if( ucData!=0xffU )
+                    {
+                        *pulKekInfo = COM_SIP_KEK_SET;
+                    }
+                    else
+                    {
+                        *pulKekInfo = COM_SIP_KEK_NOT_SET;
+                    }
+
+				    /* get info if SIP protection cookie is set or not */
+				    pulProtectionCnt = (const unsigned long*)pucBuffer;
+
+                    *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_NOT_SET;
+
+                    if (*(pulProtectionCnt+0) != ROM_STARTUP_PROTECT0 ||
+                        *(pulProtectionCnt+1) != ROM_STARTUP_PROTECT0 ||
+                        *(pulProtectionCnt+2) != ROM_STARTUP_PROTECT0 ||
+                        *(pulProtectionCnt+3) != ROM_STARTUP_PROTECT0)
+                    {
+                        *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_SET;
+                    }
+
 				    /* mask out KEK */
 					infoS_clear_IF1(pucBuffer);
 				}
@@ -1697,6 +1744,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 	const unsigned char *pucFlashStart;
 	unsigned char *pucBufferStart;
 	unsigned long ulOffset;
+	unsigned long ulKekInfo;
+	unsigned long ulSipProtectionInfo;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 
@@ -1722,7 +1771,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_read(CMD_PARAMETER_READ_T *ptPara
 			if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS )
 			{
 			    /* only implemented for APP and COM SIP with chip_select 3 */
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, ptParameter->pucData, &ulKekInfo, &ulSipProtectionInfo);
 			}
 			else
 			{
@@ -1792,6 +1841,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 	const unsigned char *pucFlashArea;
 	const unsigned char *pucFlashStart;
 	unsigned char *pucInternalWorkingBuffer;
+	unsigned long ulKekInfo;
+	unsigned long ulSipProtectionInfo;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 
@@ -1824,7 +1875,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_sha1(CMD_PARAMETER_CHECKSUM_T *pt
 				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
 				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &ulKekInfo, &ulSipProtectionInfo);
 				if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 				{
 					/* NOTE: The "hash" command initializes the netX90 hash unit for a SHA1 sum.
@@ -1898,6 +1949,8 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 	unsigned long ulOffset;
 	unsigned long ulLength;
 	unsigned char *pucInternalWorkingBuffer;
+	unsigned long ulKekInfo;
+	unsigned long ulSipProtectionInfo;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 
@@ -1925,9 +1978,12 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
 				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer);
+				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &ulKekInfo, &ulSipProtectionInfo);
+                ptParameter->ulKekInfo = ulKekInfo;
+                ptParameter->ulSipProtectionInfo = ulSipProtectionInfo;
 
 				pucFlashStart = pucInternalWorkingBuffer;
+
 			}
 			else
 			{

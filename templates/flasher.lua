@@ -855,12 +855,16 @@ end
 function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage,
                 fnCallbackProgress)
 	local fEqual = false
+    local ulKekInfo
+    local ulSipProtectionInfo
 	local aulParameter =
 	{
 		OPERATION_MODE_Verify,
 		aAttr.ulDeviceDesc,
 		ulFlashStartOffset,
 		ulFlashEndOffset,
+		0,  -- placeholder for return values
+		0,  -- placeholder for return values
 		ulBufferAddress
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
@@ -870,7 +874,11 @@ function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBuffer
 		fEqual = (ulValue==0)
 	end
 
-	return fEqual
+	ulKekInfo = tPlugin:read_data32(aAttr.ulParameter+0x20)
+	ulSipProtectionInfo = tPlugin:read_data32(aAttr.ulParameter+0x24)
+
+
+	return fEqual, ulKekInfo, ulSipProtectionInfo
 end
 
 
@@ -1259,6 +1267,8 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 	local ulBufferLen = aAttr.ulBufferLen
 	local ulChunkSize
 	local strChunk
+    local ulKekInfo
+    local ulSipProtectionInfo
 
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
@@ -1270,15 +1280,16 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 
 		-- Verify the chunk.
 		print(string.format("verifying offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
-		fOk = M.verify(
-      tPlugin,
-      aAttr,
-      ulDeviceOffset,
-      ulDeviceOffset + ulChunkSize,
-      ulBufferAdr,
-      fnCallbackMessage,
-      fnCallbackProgress
-    )
+		fOk, ulKekInfo, ulSipProtectionInfo = M.verify(
+          tPlugin,
+          aAttr,
+          ulDeviceOffset,
+          ulDeviceOffset + ulChunkSize,
+          ulBufferAdr,
+          fnCallbackMessage,
+          fnCallbackProgress
+        )
+
 		if not fOk then
 			return false, "Differences were found."
 		end
@@ -1288,7 +1299,7 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 		ulDeviceOffset = ulDeviceOffset + ulChunkSize
 	end
 
-	return true, "The data in the flash is equal to the input file."
+	return true, "The data in the flash is equal to the input file.", ulKekInfo, ulSipProtectionInfo
 end
 
 
