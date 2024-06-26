@@ -863,16 +863,19 @@ function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBuffer
 		aAttr.ulDeviceDesc,
 		ulFlashStartOffset,
 		ulFlashEndOffset,
+		0,  -- placeholder for return values
+		0,  -- placeholder for return values
 		ulBufferAddress
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 
 	if ulValue==0 then
-		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x0C)
+		ulValue = tPlugin:read_data32(aAttr.ulParameter+0x08)
 		fEqual = (ulValue==0)
 	end
-    ulKekInfo = tPlugin:read_data32(aAttr.ulParameter+0x04)
-    ulSipProtectionInfo = tPlugin:read_data32(aAttr.ulParameter+0x08)
+
+	ulKekInfo = tPlugin:read_data32(aAttr.ulParameter+0x20)
+	ulSipProtectionInfo = tPlugin:read_data32(aAttr.ulParameter+0x24)
 
 
 	return fEqual, ulKekInfo, ulSipProtectionInfo
@@ -1296,7 +1299,7 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 		ulDeviceOffset = ulDeviceOffset + ulChunkSize
 	end
 
-	return true, "The data in the flash is equal to the input file."
+	return true, "The data in the flash is equal to the input file.", ulKekInfo, ulSipProtectionInfo
 end
 
 
