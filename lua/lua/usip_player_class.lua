@@ -2384,13 +2384,13 @@ function UsipPlayer:commandVerifySipPm(
         if fCheckKek and not fKekSet then
             tResult = self.tSipper.VERIFY_RESULT_FALSE
             strErrorMsg = "KEK is not set."
-        else
+        elseif fKekSet then
             self.tLog.info("KEK is set.")
         end
         if fCheckSipProtection and not fSipProtectionSet then
             tResult = self.tSipper.VERIFY_RESULT_FALSE
             strErrorMsg = "SIP protection cookie is not set."
-        else
+        elseif fSipProtectionSet then
             self.tLog.info("SIP protection cookie is set.")
         end
     end
