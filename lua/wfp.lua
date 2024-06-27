@@ -1,5 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
---require("LuaPanda").start("127.0.0.1",8818)
+require("LuaPanda").start("127.0.0.1",8818)
 
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
@@ -307,7 +307,7 @@ local function add_sip_data_to_wfp_xml(strWfpPath, strComSipBin, strAppSipBin, s
     local strWfpData
     local strUsipBaseName
 
-    -- parse input wfp xml 
+    -- parse input wfp xml
     wfp_xml:parse(strWfpPath)
     tparsedTarget = wfp_xml:get_target(strNetX)
 
@@ -944,15 +944,6 @@ local function backup(tArgs, tLog, tWfpControl, bCompMode, strSecureOption, atPl
     return fOk, DestinationXml
 end
 
--- "%" is not supported due to a problem in a printArgs function
-local function isOperator(strValue)
-    for _, operator in ipairs({"not", "and", "or", ">", "<", "==", "<=", ">=", "~=", "+" , "-",
-                                "*", "/", "^"}) do
-        if  strValue == operator then return true end
-    end
-    return false
-end
-
 local function isOperand(atOperands, strValue)
     for operand, _  in pairs(atOperands) do
         if  strValue == operand then return true end
@@ -964,9 +955,9 @@ end
 --
 -- Usage:
 -- strExpression - contains the expression in Lua syntax as a string
---   All operators must be separated by single spaces.
---   The %-Operator is not supported.
---   Parantheses are supported but do not eliminate the need for spaces.
+--   The %-Operator is not supported
+--   Parantheses are supported
+--   Spaces, newline and carriage return characters are supported
 --   Constants are allowed: integers, floats (use dot), hex (use 0x), strings (use \"...\")
 --   Quotation marks inside of strings are not supported.
 --   Examples:
@@ -979,92 +970,101 @@ end
 -- astrOperands - contains the corresponding definitions of variables used in the expression
 --   Dict: key = <operand name>,   value = <value of operand>
 --   No spaces are allowed (except in strings)
---   Allowed Constants: integers, floats (use dot), hex (use 0x), strings (use \"...\")
---   Numerical constants (any type) can be negative (use -).
---   The value must be a simple constant, no calculations are supported.
---   Multiple definitions of the same operand are invalid.
+--   The values must be passed in the string format. Text must be passed without \"
+--   Numerical constants (any type) can be negative (use -)
+--   The value must be a simple constant, no calculations are supported
+--   Multiple definitions of the same operand are invalid
 --   Examples:
 --     "A": "true"
---     "Text": "\"Hello World\""
+--     "Text": "Hello World"
 --     "A": "-1"
 -- return:
 --   0: expression returns false
 --   1: expression is invalid
 --   2: expression returns true
 local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands)
-    -- Check the list of the known operands and their values
+    -- Check and parse the list of the known operands and their values
     for strName, strValue in pairs(atOperands) do
         -- Operand is somehow empty: abort (causes trouble at packing)
         if strName == nil or strName == "" or strValue == nil or strValue == "" then
-            tLog.error("At least one operand has empty name or no value")
+            tLog.error("At least one operand has empty name or no value: %s=%s", strName, strValue)
             return 1
-        end
-        -- Operand is a string: remove quotation marks and save it
-        if string.sub(strValue, 1, 1) == "\"" and string.sub(strValue, -1) == "\"" then
-            atOperands[strName] = string.sub(strValue, 2, -2)
-            -- Abort if there are other quotation marks in the string (including \\\")
-            -- The sandbox is somehow not able to properly evaluate strings containing
-            -- quotation mark-characters (\\\") (always returns sucess-false)
-            if(string.find(atOperands[strName], "\"")) then
-                return 1
-            end
         -- Operand is a bool-keyword
         elseif strValue == "true" or strValue == "false" then
             atOperands[strName] = strValue == "true"
-        -- Operand must be a number; Parse the value and save it
-        else
+        -- Operand is a number; Parse the value and save it
+        elseif string.match(strValue, "^-?%d+$") or                 -- int
+               string.match(strValue, "^-?%d+.?") or                -- float
+               string.match(strValue, "^-?0[xX][0-9a-fA-F]+") then  -- hex
             atOperands[strName] = tonumber(strValue)
+        -- Operand is nothing of the above? Must be a string
+        else
+            -- Abort if there are other quotation marks in the string
+            -- The sandbox is somehow not able to properly evaluate strings containing
+            -- quotation mark-characters (always returns "sucess, false")
+            if string.find(strValue, "\"") or string.find(strValue, "\'") then
+                tLog.error("Quotation Marks in operand: %s=%s", strName, strValue)
+                return 1
+            end
+            -- Leave the value as it is (a string)
+            -- Sourrounding quotation marks are omitted to ensure compatibility with old wfp.xml versions
         end
     end
 
     -- Prepare a copy of the expression for validity check
     -- Remove all "("" and ")" that are not part of strings
     -- Remove all spaces inside of strings in expression
-    -- Detect and avoid multiple consecutive spaces
     local inString = false
     local strExprForCheck = ""
     local previousCharacter = nil
     for i = 1, #strExpression do
         local character = string.sub(strExpression, i,i)
 
-        -- Only accept single spaces
-        if(character == " " and previousCharacter == " ") then
-            tLog.error("Multiple consecutive spaces in expression \"%s\"", strExpression)
-            return 1
-        end
-
-        -- \" --> string delimiter,   \\\" --> quotation mark in string
-        if character == "\"" and previousCharacter ~= "\\" then
+        -- \" --> string delimiter, \\\" --> quotation mark in string
+        if ((character == "\"" or character == "\'") and previousCharacter ~= "\\") then
             inString = not inString
         end
 
-        -- Only copy characters that do not match the filter
-        if (inString == false and character ~= "(" and character ~= ")") or
+        -- Outside of strings: Remove paranteses, \r and \n
+        -- Inside  of strings: Remove spaces
+        if (inString == false and character ~= "(" and character ~= ")"
+            and character ~= "\r" and character ~= "\n") or
             (inString == true and character ~= " ") then
                 strExprForCheck = strExprForCheck .. character
         end
         previousCharacter = character
     end
 
-    -- Split the expression at remaining spaces and check that every part is valid
+    -- Replace supported operators with spaces (= separators)
+    -- "%" is not supported due to a problem in a printArgs function
+    local validOperators = {" not ", " and ", " or ", "<=", ">=", ">", "<", "==", "~=", "%+" , "%-",
+            "%*", "/", "%^"}
+    -- Add space for correct " not "-substitution when not is written in the first place
+    strExprForCheck = " " .. strExprForCheck
+    for _, operator in ipairs(validOperators) do
+        strExprForCheck = string.gsub(strExprForCheck, operator, " ");
+    end
+
+    -- Split the remaining parts of the expression at remaining spaces and check that every part is valid
     for partOfExpr in string.gmatch(strExprForCheck, "[^" .. " " .. "]+") do
-        -- Compare the part to a list of valid operators
-        if isOperator(partOfExpr) then
-            tLog.debug("%s is an operator", partOfExpr)
         -- If in quotation marks, it must be a string
-        elseif string.sub(partOfExpr, 1, 1) == "\"" and string.sub(partOfExpr, -1) == "\"" then
+        if string.sub(partOfExpr, 1, 1) == "\"" and string.sub(partOfExpr, -1) == "\"" or
+               string.sub(partOfExpr, 1, 1) == "\'" and string.sub(partOfExpr, -1) == "\'" then
             tLog.debug("%s is a string", partOfExpr)
             -- Abort if there are other quotation marks in the string (including \\\")
             -- The sandbox is somehow not able to properly evaluate strings containing
-            -- quotation mark-characters (\\\") (always returns sucess-false)
-            if(string.find(string.sub(partOfExpr, 2, -2), "\"")) then
+            -- quotation mark-characters (\\\") (always returns success-false)
+            if string.find(string.sub(partOfExpr, 2, -2), "\"") or
+               string.find(string.sub(partOfExpr, 2, -2), "\'") then
+                tLog.error("%s is invalid: quotation marks in expression", partOfExpr)
                 return 1
             end
         -- If one of the regex is matched, it must be a number
-        elseif string.match(partOfExpr, "^-?%d+$") or       -- int
-        string.match(partOfExpr, "^-?%d+.?") or             -- float
+        elseif string.match(partOfExpr, "^-?%d+$") or          -- int
+        string.match(partOfExpr, "^-?%d+.?") or                -- float
         string.match(partOfExpr, "^-?0[xX][0-9a-fA-F]+") then  -- hex
             tLog.debug("%s is a number", partOfExpr)
+        -- Bool-Values
         elseif partOfExpr == "true" or partOfExpr == "false" then
             tLog.debug("%s is a boolean value", partOfExpr)
         -- Compare to the list of known operands
@@ -1436,7 +1436,7 @@ print()
 
 
 local astrHelpersToCheck = {}
-    
+
 -- Define which helper fines are (potentially) required for the selected
 -- command and check presence and version.
 if tArgs.fCommandFlashSelected               -- flash
