@@ -1273,10 +1273,10 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 
                     *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_NOT_SET;
 
-                    if (*(pulProtectionCnt+0) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+1) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+2) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+3) != ROM_STARTUP_PROTECT0)
+                    if (*(pulProtectionCnt+0) == ROM_STARTUP_PROTECT0 &&
+                        *(pulProtectionCnt+1) == ROM_STARTUP_PROTECT0 &&
+                        *(pulProtectionCnt+2) == ROM_STARTUP_PROTECT0 &&
+                        *(pulProtectionCnt+3) == ROM_STARTUP_PROTECT0)
                     {
                         *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_SET;
                     }

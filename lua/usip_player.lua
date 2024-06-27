@@ -124,7 +124,6 @@ local function addArgparserReadSipPm(tParser)
         Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
     local tParserReadSipPm = tParser:command('read_sip_pm rsp', strReadSipsPmHelp):target('fCommandReadSipPmSelected')
-    tParserReadSipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserReadSipPm:option(
         '-V --verbose'
     ):description(
