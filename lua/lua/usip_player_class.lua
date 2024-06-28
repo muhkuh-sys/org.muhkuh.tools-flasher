@@ -15,7 +15,7 @@ local SIP_ATTRIBUTES = {
 local UsipPlayer = class()
 
 
-function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPluginName, strPluginType, fDisableHelperSignatureChecks)
+function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPluginName, strPluginType, fDisableHelperSignatureChecks, fDoReset)
     --tLog.info("initialize UsipPlayer")
     self.tLog = tLog
 
@@ -39,6 +39,12 @@ function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPlu
     self.tFlasherHelper = require 'flasher_helper'
     self.tHelperFiles = require 'helper_files'
     self.tVerifySignature = require 'verify_signature'
+
+    if fDoReset == nil then
+        self.fDoReset = true
+    else
+        self.fDoReset = fDoReset
+    end
 
     self.tUsipGenerator = usip_gen(tLog)
     self.tSipper = sipper(tLog)
@@ -705,16 +711,19 @@ function UsipPlayer:setPluginOptions()
     else
         self.atResetPluginOptions = self.atPluginOptions
     end
-
-    self.atPluginOptionsFirstConnect = {
-        romloader_jtag = {
-            jtag_reset = "HardReset", -- HardReset, SoftReset or Attach
-            jtag_frequency_khz = 6000 -- optional
-        },
-        romloader_uart = {
-            netx90_m2m_image = self.strnetX90M2MImageBin
+    if self.fDoReset then
+        self.atPluginOptionsFirstConnect = {
+            romloader_jtag = {
+                jtag_reset = "HardReset", -- HardReset, SoftReset or Attach
+                jtag_frequency_khz = 6000 -- optional
+            },
+            romloader_uart = {
+                netx90_m2m_image = self.strnetX90M2MImageBin
+            }
         }
-    }
+    else
+        self.atPluginOptionsFirstConnect = self.atPluginOptions
+    end
 end
 
 function UsipPlayer:loadDataToIntram(strData, ulLoadAddress)
@@ -2320,7 +2329,7 @@ function UsipPlayer:commandVerifySipPm(
     fCheckKek,
     fCheckSipProtection
 )
-    local tResult
+    local tResult = true
     local fResult
     local strErrorMsg
     local aAttr
@@ -2373,7 +2382,7 @@ function UsipPlayer:commandVerifySipPm(
 
     if tResult == self.tSipper.VERIFY_RESULT_OK then
         -- check if any of the secure info pages are hidden
-        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr, true)
     end
 
     if tResult == self.tSipper.VERIFY_RESULT_OK then
@@ -2451,7 +2460,7 @@ function UsipPlayer:commandReadSipPm(
 
     if tResult == self.WS_RESULT_OK then
         -- check if any of the secure info pages are hidden
-        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr, true)
     end
 
     -- read out CAL secure info pages
@@ -2491,7 +2500,8 @@ end
 -- * the rom func mode cookie is not set
 -- returns iResult, strMsg, strCalSipData
 function UsipPlayer:verifyInitialMode(
-    aAttr
+    aAttr,
+    fProductionMode
 )
     local iResult = self.WS_RESULT_OK
     local strComSipData
@@ -2503,6 +2513,9 @@ function UsipPlayer:verifyInitialMode(
     local strMsg
     local fSipCookieSet
     local fRomFuncCookieSet
+    if fProductionMode == nil then
+        fProductionMode = false
+    end
 
     -- check if any of the secure info pages are hidden
     fSipHidden, strMsg, fComSecureBootEnabled = self:checkHideSipRegister(self.tPlugin)
@@ -2514,48 +2527,49 @@ function UsipPlayer:verifyInitialMode(
         self.tLog.info("ERROR: one or more secure info page is hidden.")
     end
 
-
-    -- read out CAL secure info pages
-    if iResult == self.WS_RESULT_OK then
-        strCalSipData, strMsg = self:readSIPviaFLash("CAL", aAttr)
-        if strCalSipData == nil then
-            iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+    if not fProductionMode then
+        -- read out CAL secure info pages
+        if iResult == self.WS_RESULT_OK then
+            strCalSipData, strMsg = self:readSIPviaFLash("CAL", aAttr)
+            if strCalSipData == nil then
+                iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+            end
         end
-    end
 
-    -- read out COM secure info pages
-    if iResult == self.WS_RESULT_OK then
-        strComSipData, strMsg = self:readSIPviaFLash("COM", aAttr)
-        if strComSipData == nil then
-            iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+        -- read out COM secure info pages
+        if iResult == self.WS_RESULT_OK then
+            strComSipData, strMsg = self:readSIPviaFLash("COM", aAttr)
+            if strComSipData == nil then
+                iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+            end
         end
-    end
 
-    -- read out APP secure info pages
-    if iResult == self.WS_RESULT_OK then
-        strAppSipData, strMsg = self:readSIPviaFLash("APP", aAttr)
-        if strAppSipData == nil then
-            iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+        -- read out APP secure info pages
+        if iResult == self.WS_RESULT_OK then
+            strAppSipData, strMsg = self:readSIPviaFLash("APP", aAttr)
+            if strAppSipData == nil then
+                iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+            end
         end
-    end
 
-    if iResult == self.WS_RESULT_OK then
-        -- check for secure boot flags
-        fComSecureBootEnabled, fAppSecureBootEnabled = self:checkSecureBootFlag(strComSipData, strAppSipData)
-        -- check for sip protection cookie
-        fSipCookieSet = self:checkSipProtectionCookieViaFlash(strComSipData)
-        -- check if the fum func mode cookie is set
-        fRomFuncCookieSet = self:checkRomFuncModeCookie(strCalSipData)
+        if iResult == self.WS_RESULT_OK then
+            -- check for secure boot flags
+            fComSecureBootEnabled, fAppSecureBootEnabled = self:checkSecureBootFlag(strComSipData, strAppSipData)
+            -- check for sip protection cookie
+            fSipCookieSet = self:checkSipProtectionCookieViaFlash(strComSipData)
+            -- check if the fum func mode cookie is set
+            fRomFuncCookieSet = self:checkRomFuncModeCookie(strCalSipData)
 
-        if fComSecureBootEnabled or fAppSecureBootEnabled then
-            iResult = self.WS_RESULT_ERROR_SECURE_BOOT_ENABLED
-            self.tLog.info("ERROR: Secure boot is enabled. End command.")
-        elseif fSipCookieSet then
-            iResult = self.WS_RESULT_ERROR_SIP_PROTECTION_SET
-            self.tLog.info("ERROR: SIP protection cookie is set. End command.")
-        elseif not fRomFuncCookieSet then
-            iResult = self.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET
-            self.tLog.info("ERROR: rom func mode cookie not set")
+            if fComSecureBootEnabled or fAppSecureBootEnabled then
+                iResult = self.WS_RESULT_ERROR_SECURE_BOOT_ENABLED
+                self.tLog.info("ERROR: Secure boot is enabled. End command.")
+            elseif fSipCookieSet then
+                iResult = self.WS_RESULT_ERROR_SIP_PROTECTION_SET
+                self.tLog.info("ERROR: SIP protection cookie is set. End command.")
+            elseif not fRomFuncCookieSet then
+                iResult = self.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET
+                self.tLog.info("ERROR: rom func mode cookie not set")
+            end
         end
     end
     return iResult, strMsg, strCalSipData
@@ -2690,7 +2704,7 @@ function UsipPlayer:writeAllSips(
     end
     if tResult == self.WS_RESULT_OK then
         -- check if any of the secure info pages are hidden
-        tResult, strErrorMsg = self:verifyInitialMode(aAttr)
+        tResult, strErrorMsg = self:verifyInitialMode(aAttr, true)
     end
 
     if tResult == self.WS_RESULT_OK then
