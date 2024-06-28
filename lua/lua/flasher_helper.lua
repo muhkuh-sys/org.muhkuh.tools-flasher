@@ -288,13 +288,13 @@ local function getPluginByName(strName, strPluginType, atPluginOptions)
 
 			for i,v in ipairs(aDetectedInterfaces) do
 				print(string.format(
-          "%d: %s (%s) Used: %s, Valid: %s",
-          i,
-          v:GetName(),
-          v:GetTyp(),
-          tostring(v:IsUsed()),
-          tostring(v:IsValid())
-        ))
+					"%d: %s (%s) Used: %s, Valid: %s",
+					i,
+					v:GetName(),
+					v:GetTyp(),
+					tostring(v:IsUsed()),
+					tostring(v:IsValid())
+					))
 				if strName == v:GetName() then
 					if not v:IsValid() then
 						return nil, "Plugin is not valid"

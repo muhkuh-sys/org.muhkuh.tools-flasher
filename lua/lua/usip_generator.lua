@@ -597,11 +597,10 @@ function UsipGenerator:convertUsipToBin(strComSipBinPath, strAppSipBinPath, tUsi
                 strComSipData = self:setSipProtectionCookie(strComSipData)
             end
             strComSipData, strAppSipData = self.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
-
-            strComSipData = self.updateSipHash(strComSipData)
-            strAppSipData = self.updateSipHash(strAppSipData)
         end
     end
+    strComSipData = self.updateSipHash(strComSipData)
+    strAppSipData = self.updateSipHash(strAppSipData)
 
     return fResult, strErrorMsg, strComSipData, strAppSipData
 end

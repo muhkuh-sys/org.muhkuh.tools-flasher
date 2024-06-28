@@ -1250,6 +1250,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 				tFlashArea = ptAttr->tArea;
 				if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS )
 				{
+				    uprintf("Check if KEK is set.\n");
 				    /* get info if KEK is set or not */
                     ucData = 0xffU;
                     pucCnt = (const unsigned char*)pucBuffer;
@@ -1261,23 +1262,30 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
                     } while( pucCnt<pucEnd );
                     if( ucData!=0xffU )
                     {
+                        uprintf("Found data in KEK area.\n");
                         *pulKekInfo = COM_SIP_KEK_SET;
                     }
                     else
                     {
+                        uprintf("No data found in KEK area.\n");
                         *pulKekInfo = COM_SIP_KEK_NOT_SET;
                     }
 
 				    /* get info if SIP protection cookie is set or not */
 				    pulProtectionCnt = (const unsigned long*)pucBuffer;
 
+                    uprintf("Checking if SIP protection cookie is set.\n");
                     *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_NOT_SET;
-
-                    if (*(pulProtectionCnt+0) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+1) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+2) != ROM_STARTUP_PROTECT0 ||
-                        *(pulProtectionCnt+3) != ROM_STARTUP_PROTECT0)
+                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+0), ROM_STARTUP_PROTECT0);
+                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+1), ROM_STARTUP_PROTECT1);
+                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+2), ROM_STARTUP_PROTECT2);
+                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+3), ROM_STARTUP_PROTECT3);
+                    if (*(pulProtectionCnt+0) == ROM_STARTUP_PROTECT0 &&
+                        *(pulProtectionCnt+1) == ROM_STARTUP_PROTECT1 &&
+                        *(pulProtectionCnt+2) == ROM_STARTUP_PROTECT2 &&
+                        *(pulProtectionCnt+3) == ROM_STARTUP_PROTECT3)
                     {
+                        uprintf("Checking if SIP protection cookie is set.\n");
                         *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_SET;
                     }
 
