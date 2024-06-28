@@ -173,7 +173,7 @@ local function addArgparserVerifySipPm(tParser)
 end
 local function addArgparserConvert(tParser)
     local strConvertUsipHelp = [[
-        apply data of an usip file to the default values of the secure info pages and export these as binary files
+        Apply data of an usip file to the default values of the secure info pages and export these as binary files
     ]]
     local tParserConvertUsip = tParser:command('convert_usip cu', strConvertUsipHelp):target('fCommandConvertUsipSelected')
     tParserConvertUsip:argument('input_file'):description("USIP image file path"):target('strUsipFilePath')
@@ -195,7 +195,7 @@ end
 local function addArgparserVim(tParser)
     -- NXTFLASHER-692
     local strVerifyInitialModeHelp = [[
-        verify that the netX is in an initial state which means:
+        Verify that the netX is in an initial state which means:
         - SIP protection cookie is not set
         - secure boot mode is not enabled
         - SIPs are not hidden
@@ -466,7 +466,10 @@ local function addArgparserGetUid(tParser)
 end
 local function addArgparserVerifyHelper(tParser)
     -- Add command check_helper_signature chs
-    local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', 'Verify the signatures of the helper files.'):target(
+    local VerifyHelperDescription = [[
+        Verify the signatures of the helper files.
+    ]]
+    local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', VerifyHelperDescription):target(
         'fCommandCheckHelperSignatureSelected')
     tParserCommandVerifyHelperSig:option(
         '-V --verbose'
