@@ -102,7 +102,10 @@ local function addArgparserWriteSipPm(tParser)
         'strComSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_COM_SIP_BIN):hidden(true)
     tParserWriteSips:option('--app_sip'):description("app SIP binary size 4kB"):target(
         'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
-
+    tParserWriteSips:option('--com_sip_out'):target(
+                'strComOutputFile'):hidden(true)
+    tParserWriteSips:option('--app_sip_out'):target(
+        'strAppOutputFile'):hidden(true)
     tParserWriteSips:flag('--disable_helper_signature_check')
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')
@@ -697,7 +700,7 @@ local function main()
         local strAppSipBaseData
         local strErrorMsg
 
-
+        tUsipPlayer.fDoReset = false -- production mode does not do resets
         iWriteSipResult, strErrorMsg = tUsipPlayer:writeAllSips(
             tArgs.strComSipBinPath,
             tArgs.strAppSipBinPath,
@@ -740,7 +743,8 @@ local function main()
         tLog.info("######################################")
         tLog.info("# RUNNING READ SIP PM COMMAND        #")
         tLog.info("######################################")
-
+        
+        tUsipPlayer.fDoReset = false -- production mode does not do resets
         fFinalResult, strErrorMsg = tUsipPlayer:commandReadSipPm(tArgs.strOutputFolder, tArgs.fReadCal)
 
     --------------------------------------------------------------------------
@@ -751,6 +755,7 @@ local function main()
         tLog.info("# RUNNING VERIFY SIP PM COMMAND      #")
         tLog.info("######################################")
 
+        tUsipPlayer.fDoReset = false -- production mode does not do resets
         uResultCode, strErrorMsg = tUsipPlayer:commandVerifySipPm(
             tArgs.strUsipFilePath,
             tArgs.strAppSipBinPath,
