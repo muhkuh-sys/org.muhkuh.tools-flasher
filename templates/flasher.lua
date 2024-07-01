@@ -1291,7 +1291,7 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
         )
 
 		if not fOk then
-			return false, "Differences were found."
+			return false, "Differences were found.", ulKekInfo, ulSipProtectionInfo
 		end
 
 		-- Increase pointers.

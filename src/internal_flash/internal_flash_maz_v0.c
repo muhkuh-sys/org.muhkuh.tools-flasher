@@ -1117,7 +1117,7 @@ static void infoS_clear_IF1(unsigned char *pucBuffer, unsigned long ulMaskSipPro
 	if (ulMaskSipProtectionCookie == MASK_OUT_SIP_COOKIE)
 	{
 		/* Mask out the sip protection cookie from the data. */
-	    memset(pucBuffer, 0xffU, 0x0FU);
+	    memset(pucBuffer, 0xffU, 0x10U);
 	}
 	/* Update the hash. */
 	infoS_update_hash(pucBuffer);
@@ -2026,7 +2026,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
                     ulSipProtectionInfo = MASK_OUT_SIP_COOKIE;
                     /* mask out the SIP protection cookie of the verify data (it is also done to the SIP content) */
                     pucBufferStart = ptParameter->pucData;
-                    memset(pucBufferStart, 0xFF, 0x0F);
+                    memset(pucBufferStart, 0xFFU, 0x10U);
                     infoS_update_hash(pucBufferStart);
                 }
 
