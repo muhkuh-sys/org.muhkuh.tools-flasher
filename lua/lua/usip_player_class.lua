@@ -2343,6 +2343,8 @@ function UsipPlayer:commandVerifySipPm(
     local tUsipConfigDict
     local fKekSet
     local fSipProtectionSet
+    local strCalSipData
+    local fCookieIsSet
 
     if strUsipFilePath ~= nil then
         tResult, strErrorMsg, tUsipDataList, tUsipPathList, tUsipConfigDict = self:prepareUsip(strUsipFilePath)
@@ -2382,7 +2384,7 @@ function UsipPlayer:commandVerifySipPm(
 
     if tResult == self.tSipper.VERIFY_RESULT_OK then
         -- check if any of the secure info pages are hidden
-        tResult, strErrorMsg = self:verifyInitialMode(aAttr, true)
+        tResult, strErrorMsg, strCalSipData, fCookieIsSet = self:verifyInitialMode(aAttr, true)
     end
 
     if tResult == self.tSipper.VERIFY_RESULT_OK then
@@ -2526,8 +2528,17 @@ function UsipPlayer:verifyInitialMode(
         iResult = self.WS_RESULT_ERROR_SIP_HIDDEN
         self.tLog.info("ERROR: one or more secure info page is hidden.")
     end
+    if fProductionMode then
+        -- read out COM secure info pages
+        if iResult == self.WS_RESULT_OK then
+            strComSipData, strMsg = self:readSIPviaFLash("COM", aAttr)
+            if strComSipData == nil then
+                iResult = self.WS_RESULT_ERROR_UNSPECIFIED
+            end
+        end
+        fSipCookieSet = self:checkSipProtectionCookieViaFlash(strComSipData)
 
-    if not fProductionMode then
+    else
         -- read out CAL secure info pages
         if iResult == self.WS_RESULT_OK then
             strCalSipData, strMsg = self:readSIPviaFLash("CAL", aAttr)
@@ -2572,7 +2583,7 @@ function UsipPlayer:verifyInitialMode(
             end
         end
     end
-    return iResult, strMsg, strCalSipData
+    return iResult, strMsg, strCalSipData, fSipCookieSet
 end
 
 -- upate the calibration values 'atTempDiode' inside the APP SIP with the values from the CAL SIP
