@@ -1206,7 +1206,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 	const unsigned char *pucCnt;
 	const unsigned char *pucEnd;
 	const unsigned long *pulProtectionCnt;
-	const unsigned long ulMaskSipProtectionCookie;
+	unsigned long ulMaskSipProtectionCookie;
 
 	unsigned long ulData;
 
