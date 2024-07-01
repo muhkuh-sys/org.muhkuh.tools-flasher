@@ -1,5 +1,5 @@
 -- uncomment the following line to debug code (use IP of computer this is running on)
-require("LuaPanda").start("127.0.0.1",8818)
+--require("LuaPanda").start("127.0.0.1",8818)
 
 local argparse = require 'argparse'
 local pl = require 'pl.import_into'()
