@@ -1441,7 +1441,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_flash(CMD_PARAMETER_FLASH_T *ptPa
 		{
 		    /* check if the data's checksum is correct */
             if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS ||
-             INTERNAL_FLASH_AREA_Flash2_Info || INTERNAL_FLASH_AREA_Flash1_Info)
+             tFlashArea==INTERNAL_FLASH_AREA_Flash2_Info || tFlashArea==INTERNAL_FLASH_AREA_Flash1_Info)
             {
                 pucBufferStart = ptParameter->pucData;
                 if( infoS_check_hash(pucBufferStart)!=0 )
