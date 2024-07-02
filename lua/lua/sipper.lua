@@ -31,6 +31,8 @@ function Sipper:_init(tLog)
     self.VERIFY_RESULT_OK = 0
     self.VERIFY_RESULT_ERROR = 1
     self.VERIFY_RESULT_FALSE = 2
+    self.VERIFY_SIP_PROTECTION_NOT_SET = 3
+    self.VERIFY_KEK_NOT_SET = 4
 end
 
 function Sipper:verify_usip(tUsipConfigData, strComSipData, strAppSipData)
