@@ -1669,7 +1669,8 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                             strType = "Data",
                                             strFile = tSip['file'],
                                             ulOffset = 0,
-                                            strCondition = tSip['condition']
+                                            strCondition = tSip['condition'],
+                                            fUpdateHash = true
                                             }
                                         }
 
@@ -1769,7 +1770,8 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         strType = "Data",
                                         strFile = tSip['file'],
                                         ulOffset = 0,
-                                        strCondition = tSip['condition']
+                                        strCondition = tSip['condition'],
+                                        fUpdateHash = true
                                         }
                                     }
 
@@ -1778,7 +1780,8 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         strType = "Data",
                                         strFile = tSip['file'],
                                         ulOffset = 4096,
-                                        strCondition = tSip['condition']
+                                        strCondition = tSip['condition'],
+                                        fUpdateHash = true
                                     })
                                     end
 
@@ -1898,6 +1901,11 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                                     else
                                                         -- Loading the file data from the archive.
                                                         local strData = tWfpControl:getData(strFile)
+                                                        if tData.fUpdateHash then
+                                                            local usip_generator = require 'usip_generator'
+                                                            local tUsipGen = usip_generator(tLog)
+                                                            strData = tUsipGen.updateSipHash(strData)
+                                                        end
                                                         if strData == nil then
                                                             tLog.error('Failed to get the data %s', strFile)
                                                             fOk = false
