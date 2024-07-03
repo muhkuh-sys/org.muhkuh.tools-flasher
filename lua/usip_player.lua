@@ -140,7 +140,7 @@ local function addArgparserReadSipPm(tParser)
         "Set the output directory."
     ):target("strOutputFolder")
     tParserReadSipPm:flag('--read_cal'):description(
-        "additional read out and store the cal secure info page"):target('fReadCal')
+        "Additional read out and store the cal secure info page"):target('fReadCal'):default(false)
 end
 local function addArgparserVerifySipPm(tParser)
     -- NXTFLASHER-906
@@ -167,9 +167,9 @@ local function addArgparserVerifySipPm(tParser)
     tParserVerifySipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
 
     tParserVerifySipPm:flag('--check_kek'):description(
-        "additional read out and store the cal secure info page"):target('fCheckKek')
+        "Additional read out and store the cal secure info page"):target('fCheckKek')
     tParserVerifySipPm:flag('--check_sip_protection'):description(
-        "additional read out and store the cal secure info page"):target('fCheckSipProtection')
+        "Additional read out and store the cal secure info page"):target('fCheckSipProtection')
 end
 local function addArgparserConvert(tParser)
     local strConvertUsipHelp = [[
@@ -422,7 +422,7 @@ local function addArgparserReadSip(tParser)
     tParserReadSip:option('--sec'):description("Path to signed image directory"):target(
         'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     tParserReadSip:flag('--read_cal'):description(
-            "additional read out and store the cal secure info page"):target('fReadCal')
+            "Additional read out and store the cal secure info page"):target('fReadCal'):default(false)
     tParserReadSip:flag('--disable_helper_signature_check')
         :description('Disable signature checks on helper files.')
         :target('fDisableHelperSignatureChecks')

@@ -2321,7 +2321,21 @@ function UsipPlayer:checkHideSipRegister()
     return fHideSet, strErrorMsg, fSecureBootEnabled
 end
 
-
+--[[
+expected bahaviour for verify command inside flasher binary
++--------------------+------------------+---------------------+------------------------+----------------+--------+------------------------------------------+
+| SIP Prot. in input | SIP Prot. in SIP | --check_sp argument | SIP prot. In SIP found | Compare result | result |                 comment                  |
++--------------------+------------------+---------------------+------------------------+----------------+--------+------------------------------------------+
+|       False        |      False       |         True        |         False          |      True      | False  | Check_sp was selected no SIP prot. found |
+|        True        |      False       |         True        |         False          |      True      | False  | Check_sp was selected no SIP prot. found |
+|        True        |       True       |         True        |          True          |      True      |  True  |                                          |
+|       False        |       True       |         True        |          True          |      True      |  True  |                                          |
+|       False        |      False       |        False        |         False          |      True      |  True  |                                          |
+|        True        |      False       |        False        |         False          |      True      |  True  |    SIP prot. In input is not relevant    |
+|        True        |       True       |        False        |          True          |      True      |  True  |                                          |
+|       False        |       True       |        False        |          True          |      True      |  True  |                                          |
++--------------------+------------------+---------------------+------------------------+----------------+--------+------------------------------------------+
+]]--
 function UsipPlayer:commandVerifySipPm(
     strUsipFilePath,
     strRawAppSipPath,
