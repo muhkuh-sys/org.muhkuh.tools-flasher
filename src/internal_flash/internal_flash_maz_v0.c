@@ -53,6 +53,7 @@
 #define COM_SIP_KEK_NOT_SET             0xBA1DBA1D   // KEK area is bald (no kek is set)
 #define COM_SIP_SIP_PROTECTION_SET      0xAFFEDEAD   // sip protection closed monkey dead
 #define COM_SIP_SIP_PROTECTION_NOT_SET  0x0A11C001   // sip protection not set all cool
+#define MASK_OUT_SIP_COOKIE             0x0A0B0C0D   // used for verify command to mask out sip protection cookie
 
 #define ROM_STARTUP_PROTECT0            0x753b428b
 #define ROM_STARTUP_PROTECT1            0x622563e2
@@ -1108,10 +1109,16 @@ static void infoS_patch_IF1(unsigned char *pucBuffer)
 
 
 
-static void infoS_clear_IF1(unsigned char *pucBuffer)
+static void infoS_clear_IF1(unsigned char *pucBuffer, unsigned long ulMaskSipProtectionCookie)
 {
 	/* Fill offset 0x0740 with a length of 0xc0 bytes with 0xffU. */
 	memset(pucBuffer+0x0740U, 0xffU, 0xc0U);
+
+	if (ulMaskSipProtectionCookie == MASK_OUT_SIP_COOKIE)
+	{
+		/* Mask out the sip protection cookie from the data. */
+	    memset(pucBuffer, 0xffU, 0x10U);
+	}
 	/* Update the hash. */
 	infoS_update_hash(pucBuffer);
 }
@@ -1199,8 +1206,11 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 	const unsigned char *pucCnt;
 	const unsigned char *pucEnd;
 	const unsigned long *pulProtectionCnt;
+	unsigned long ulMaskSipProtectionCookie;
 
 	unsigned long ulData;
+
+	ulMaskSipProtectionCookie = *pulSipProtectionInfo;
 
 
 	/* The special "S" secure info pages can only be flashed as a complete page. */
@@ -1276,10 +1286,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
 
                     uprintf("Checking if SIP protection cookie is set.\n");
                     *pulSipProtectionInfo = COM_SIP_SIP_PROTECTION_NOT_SET;
-                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+0), ROM_STARTUP_PROTECT0);
-                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+1), ROM_STARTUP_PROTECT1);
-                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+2), ROM_STARTUP_PROTECT2);
-                    uprintf("0x%08x == 0x%08x\n", *(pulProtectionCnt+3), ROM_STARTUP_PROTECT3);
+
                     if (*(pulProtectionCnt+0) == ROM_STARTUP_PROTECT0 &&
                         *(pulProtectionCnt+1) == ROM_STARTUP_PROTECT1 &&
                         *(pulProtectionCnt+2) == ROM_STARTUP_PROTECT2 &&
@@ -1290,7 +1297,7 @@ static NETX_CONSOLEAPP_RESULT_T infoS_prepareReadData(const INTERNAL_FLASH_ATTRI
                     }
 
 				    /* mask out KEK */
-					infoS_clear_IF1(pucBuffer);
+					infoS_clear_IF1(pucBuffer, ulMaskSipProtectionCookie);
 				}
 				else
 				{
@@ -1406,6 +1413,7 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_flash(CMD_PARAMETER_FLASH_T *ptPa
 	unsigned long ulChunkSize;
 	unsigned long ulDataSize;
 	unsigned char *pucInternalWorkingBuffer;
+    unsigned char *pucBufferStart;
 	INTERNAL_FLASH_AREA_T tFlashArea;
 	FLASH_BLOCK_ATTRIBUTES_T tFlashBlock;
 	IFLASH_PAGE_BUFFER_T tFlashBuffer; /* This is the buffer for the data to flash. */
@@ -1429,6 +1437,20 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_flash(CMD_PARAMETER_FLASH_T *ptPa
 
 		tFlashArea = ptAttr->tArea;
 		tResult = check_info_write_protection(tFlashArea, 1);
+		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+		{
+		    /* check if the data's checksum is correct */
+            if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS ||
+             tFlashArea==INTERNAL_FLASH_AREA_Flash2_Info || tFlashArea==INTERNAL_FLASH_AREA_Flash1_Info)
+            {
+                pucBufferStart = ptParameter->pucData;
+                if( infoS_check_hash(pucBufferStart)!=0 )
+                {
+                    uprintf("! The flash data has an invalid checksum.\n");
+                    tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+                }
+            }
+        }
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
 			if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS )
@@ -1979,18 +2001,41 @@ NETX_CONSOLEAPP_RESULT_T internal_flash_maz_v0_verify(CMD_PARAMETER_VERIFY_T *pt
 
 		tFlashArea = ptAttr->tArea;
 		tResult = check_info_write_protection(tFlashArea, 0);
+        if( tResult==NETX_CONSOLEAPP_RESULT_OK )
+		{
+		    /* check if the data's checksum is correct */
+            if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS ||
+             tFlashArea==INTERNAL_FLASH_AREA_Flash2_Info || tFlashArea==INTERNAL_FLASH_AREA_Flash1_Info)
+            {
+                pucBufferStart = ptParameter->pucData;
+                if( infoS_check_hash(pucBufferStart)!=0 )
+                {
+                    uprintf("! The verify data has an invalid checksum.\n");
+                    tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+                }
+            }
+        }
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
 			if( tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS || tFlashArea==INTERNAL_FLASH_AREA_Flash2_InfoS )
 			{
-				/* This command needs an internal working buffer. Place it at the end of the data buffer. */
-				pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
+                /* This command needs an internal working buffer. Place it at the end of the data buffer. */
+                pucInternalWorkingBuffer = flasher_version.pucBuffer_End - IFLASH_MAZ_V0_ERASE_BLOCK_SIZE_IN_BYTES;
+                if (tFlashArea==INTERNAL_FLASH_AREA_Flash1_InfoS)
+                {
+                    ulSipProtectionInfo = MASK_OUT_SIP_COOKIE;
+                    /* mask out the SIP protection cookie of the verify data (it is also done to the SIP content) */
+                    pucBufferStart = ptParameter->pucData;
+                    memset(pucBufferStart, 0xFFU, 0x10U);
+                    infoS_update_hash(pucBufferStart);
+                }
 
-				tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &ulKekInfo, &ulSipProtectionInfo);
+                tResult = infoS_prepareReadData(ptAttr, ulOffsetStart, ulLength, pucInternalWorkingBuffer, &ulKekInfo, &ulSipProtectionInfo);
                 ptParameter->ulKekInfo = ulKekInfo;
                 ptParameter->ulSipProtectionInfo = ulSipProtectionInfo;
 
-				pucFlashStart = pucInternalWorkingBuffer;
+                pucFlashStart = pucInternalWorkingBuffer;
+
 
 			}
 			else
