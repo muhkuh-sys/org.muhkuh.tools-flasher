@@ -356,16 +356,21 @@ subprocess.check_call(
 )
 
 # Copy the romloader binaries to a separate zip
+
+# Create paths
 print("Copying romloader Montest binaries to artifacts folder")
 strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
 tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
 strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
+print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
 strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
 strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
-assert(os.path.exists(strMontestOutputFolder) and os.path.exists(strMon))
-print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
 strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
 strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", "montest_netX")
+
+# Check that the romloader version parsed from the xml file is valid
+assert(os.path.exists(strMontestOutputFolder), "Can not find montest output folder")
+assert(os.path.exists(strMontestZipFolder), "Montest output zip archive is missing")
 
 # Unzip the romloader artifact (delete output from previous run first)
 if os.path.exists(strMontestUnZipFolder):
