@@ -355,6 +355,55 @@ subprocess.check_call(
     )
 )
 
+# Copy the romloader binaries to a separate zip
+print("Copying romloader Montest binaries to artifacts folder")
+strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
+tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
+strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
+strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
+strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
+assert(os.path.exists(strMontestOutputFolder) and os.path.exists(strMon))
+print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
+strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
+strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", "montest_netX")
+
+# Unzip the romloader artifact (delete output from previous run first)
+if os.path.exists(strMontestUnZipFolder):
+    shutil.rmtree(strMontestUnZipFolder)
+with zipfile.ZipFile(strMontestZipFolder, 'r') as zip:
+    zip.extractall(strMontestUnZipFolder)
+
+# Copy the required files to a fresh zip-preparation folder
+strMontestPreparedForZipPath = os.path.join(strMontestOutputFolder, "montest_netX")
+if os.path.exists(strMontestPreparedForZipPath):
+    shutil.rmtree(strMontestPreparedForZipPath)
+os.mkdir(strMontestPreparedForZipPath)
+atCopyFiles = {
+    "/test_romloader_lua54.lua",
+    "/netx/montest_netiol.bin",
+    "/netx/montest_netx10.bin",
+    "/netx/montest_netx4000.bin",
+    "/netx/montest_netx50.bin",
+    "/netx/montest_netx500.bin",
+    "/netx/montest_netx56.bin",
+    "/netx/montest_netx90.bin",
+    "/netx/montest_netx90_mpw.bin"
+}
+for file in atCopyFiles:
+    ret = shutil.copy(strMontestUnZipFolder + file, strMontestPreparedForZipPath)
+
+# Rename the lua5.4 file to be the "normal" file
+rename_old = os.path.join(strMontestPreparedForZipPath, "test_romloader_lua54.lua")
+rename_new = os.path.join(strMontestPreparedForZipPath, "test_romloader.lua")
+os.rename(rename_old, rename_new)
+
+# Compress the files in the zip preparation folder into a .zip archive in the artifacts directory
+shutil.make_archive(strMontestArtifactPath , 'zip', strMontestPreparedForZipPath)
+
+# Remove the folders created in the lua repository folder
+shutil.rmtree(strMontestPreparedForZipPath)
+shutil.rmtree(strMontestUnZipFolder)
+
 
 # ---------------------------------------------------------------------------
 #
@@ -381,46 +430,3 @@ astrCmd = [
     'install', 'package'
 ]
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)
-
-
-# Copy the romloader binaries to a separate zip
-print("Copying romloader Montest binaries to artifacts folder")
-flasherDir = os.getcwd()
-romloaderVersion = "2.5.4" # TODO
-strRomloaderBasePath = os.path.join(flasherDir, "flasher-environment", "org.muhkuh.lua-romloader")
-strRomloaderOutputPath = os.path.join(strRomloaderBasePath, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", romloaderVersion)
-strMontestUnZipPath = os.path.join(strRomloaderOutputPath, "romloader-montest-" + romloaderVersion)
-strMontestZipPath = os.path.join(strMontestUnZipPath + '.zip')
-
-# Unzip the romloader artifact TODO delete output from previous run first
-with zipfile.ZipFile(strMontestZipPath, 'r') as zip:
-    zip.extractall(strMontestUnZipPath)
-# Copy the required files to a fresh zip-preparation folder
-strMontestPreparedForZipPath = os.path.join(strRomloaderOutputPath, "montest_netX")
-if os.path.exists(strMontestPreparedForZipPath):
-    shutil.rmtree(strMontestPreparedForZipPath)
-os.mkdir(strMontestPreparedForZipPath)
-atCopyFiles = {
-    "/test_romloader_lua54.lua",
-    "/netx/montest_netiol.bin",
-    "/netx/montest_netx10.bin",
-    "/netx/montest_netx4000.bin",
-    "/netx/montest_netx50.bin",
-    "/netx/montest_netx500.bin",
-    "/netx/montest_netx56.bin",
-    "/netx/montest_netx90.bin",
-    "/netx/montest_netx90_mpw.bin"
-}
-for file in atCopyFiles:
-    ret = shutil.copy(strMontestUnZipPath + file, strMontestPreparedForZipPath)
-
-# Rename the lua5.4 file to be the "normal" file
-rename_old = os.path.join(strMontestPreparedForZipPath, "test_romloader_lua54.lua")
-rename_new = os.path.join(strMontestPreparedForZipPath, "test_romloader.lua")
-os.rename(rename_old, rename_new)
-# Pack the files in the zip preparation folder into a .zip archive in the artifacts directory
-artifactPath = os.path.join(flasherDir, "flasher-environment", "build", "artifacts", "montest_netX")
-shutil.make_archive(artifactPath , 'zip', strMontestPreparedForZipPath)
-# Remove the folders created in the lua repository folder
-shutil.rmtree(strMontestPreparedForZipPath)
-shutil.rmtree(strMontestUnZipPath)
