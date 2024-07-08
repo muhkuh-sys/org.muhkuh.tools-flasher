@@ -9,6 +9,8 @@ import subprocess
 import sys
 import zipfile
 import shutil
+import git
+import re
 
 
 tPlatform, gitTagRequested = cli_args.parse()
@@ -315,6 +317,7 @@ for strPath in astrFolders:
 # ---------------------------------------------------------------------------
 #
 # Read the project version from the "setup.xml" file in the root folder.
+# Get the last git tag on the current branch if enabled
 #
 tSetupXml = xml.etree.ElementTree.parse(
     os.path.join(
@@ -322,7 +325,51 @@ tSetupXml = xml.etree.ElementTree.parse(
         'setup.xml'
     )
 )
-strMbsProjectVersion = tSetupXml.find('project_version').text
+strMbsProjectVersion = tSetupXml.find('project_version').text # "2.1.0"
+
+# Get the current branch name
+repo = git.Repo(strCfg_projectFolder)
+strBranchName = repo.active_branch.name
+strBranchName = "dev_v2.1.0"
+
+# only dev branches will have dev tags (they match the pattern "dev_vX.Y.Z")
+if re.match(r"^dev_v\d+.\d+.\d+$", strBranchName):
+    # Get the previous git tag on the branch
+    lastTag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
+    lastTagCommit = lastTag._get_commit()
+
+    # Avoid setting multiple tags on a single commit (compare their hashes)
+    if not lastTagCommit.binsha == repo.head.reference._get_commit().binsha:
+        # Check that the name of the previous tag is valid
+        assert re.match(r"^v\d+.\d+.\d+-dev\d+$", lastTag.name), "Invalid previous dev tag!"
+        commitVersion = re.search(r"v\d+.\d+.\d+", strBranchName).group()
+        lastTagVersion = re.search(r"v\d+.\d+.\d+", lastTag.name).group()
+        assert commitVersion == lastTagVersion, """Invalid version in previous dev tag! Forgot to manually 
+            set \"dev_vX.Y.Z-dev0\" Tag at branch creation??"""
+        
+        # Find out how many commits have been made since the last tag was set
+        commitsSinceLastTag = int(repo.git.rev_list('--count', f'{lastTagCommit.hexsha}..{repo.head.commit.hexsha}'))
+
+        # Create a new tag increased by the number of commits since last tag
+        newDevTagNumber = int(re.findall(r'\d+', lastTag.name)[-1]) + commitsSinceLastTag
+        newDevTagName = lastTagVersion + "-dev" + str(newDevTagNumber)
+
+        if gitTagRequested:
+        try:
+            newTag = git.Tag.create(repo, newDevTagName, repo.head.commit, "Tag created automatically by flasher build process")
+        except:
+            print(f'Could not create tag \"{newDevTagName}\" on commit \"{repo.head.commit.hexsha}\" on branch \"{strBranchName}\"')
+                sys.exit("Failed to set git tag, check that the repository is clean!")
+    else:
+        print("Tag already set on current commit")
+
+# If the current branch is not a dev branch and a tag was requested, throw an error and abort
+elif gitTagRequested:
+    sys.exit("Not on dev-Branch, no Tag will be set!")
+
+
+
+
 print('Project version = %s' % strMbsProjectVersion)
 
 
