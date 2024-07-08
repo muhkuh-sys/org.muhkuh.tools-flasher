@@ -11,8 +11,10 @@ import zipfile
 import shutil
 
 
-tPlatform = cli_args.parse()
+tPlatform, gitTagRequested = cli_args.parse()
 print('Building for %s' % tPlatform['platform_id'])
+if(gitTagRequested):
+    print('Setting a new git Tag after build.')
 
 
 # --------------------------------------------------------------------------
@@ -369,8 +371,8 @@ strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
 strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", "montest_netX")
 
 # Check that the romloader version parsed from the xml file is valid
-assert(os.path.exists(strMontestOutputFolder), "Can not find montest output folder")
-assert(os.path.exists(strMontestZipFolder), "Montest output zip archive is missing")
+assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
+assert os.path.exists(strMontestZipFolder), "Montest output zip archive is missing"
 
 # Unzip the romloader artifact (delete output from previous run first)
 if os.path.exists(strMontestUnZipFolder):
