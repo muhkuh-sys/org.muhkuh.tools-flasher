@@ -44,7 +44,7 @@ FIND_PACKAGE(SWIG REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 INCLUDE(cmake/muhkuh_swig_lua_runtime.cmake)
 
-SET(FLASHER_PACKAGE_DIR flasher_cli-${MBS_PROJECT_VERSION})
+SET(FLASHER_PACKAGE_DIR flasher-cli_${MBS_PROJECT_VERSION})
 
 #----------------------------------------------------------------------------
 #
@@ -100,7 +100,7 @@ ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
 #
 SET(CPACK_OUTPUT_FILE_PREFIX ${CMAKE_BINARY_DIR}/../artifacts)
 SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
-SET(CPACK_PACKAGE_FILE_NAME "flasher_cli-${MBS_PROJECT_VERSION}-${JONCHKI_PLATFORM}")
+SET(CPACK_PACKAGE_FILE_NAME "flasher-cli_${MBS_PROJECT_VERSION}_${ARTIFACT_PLATFORM_STRING}")
 
 # Set the archive format.
 IF(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
