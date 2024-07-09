@@ -98,6 +98,9 @@ ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
 #
 # Build a package for the selected platform.
 #
+# ARTIFACT_PLATFORM_STRING is set by build_artifact.py and contains the platform
+# of the target system in hilscher-compliant syntax
+#
 SET(CPACK_OUTPUT_FILE_PREFIX ${CMAKE_BINARY_DIR}/../artifacts)
 SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
 SET(CPACK_PACKAGE_FILE_NAME "flasher-cli_${MBS_PROJECT_VERSION}_${ARTIFACT_PLATFORM_STRING}")
