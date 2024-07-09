@@ -13,9 +13,9 @@ import git
 import re
 
 
-tPlatform, gitTagRequested = cli_args.parse()
+tPlatform, flags = cli_args.parse()
 print('Building for %s' % tPlatform['platform_id'])
-if(gitTagRequested):
+if(flags["gitTagRequested"]):
     print('Setting a new git Tag after build.')
 
 
@@ -330,48 +330,45 @@ strMbsProjectVersion = tSetupXml.find('project_version').text # "2.1.0"
 # Get the current branch name
 repo = git.Repo(strCfg_projectFolder)
 strBranchName = repo.active_branch.name
-strBranchName = "dev_v2.1.0"
+strBranchName = "dev_v2.1.0" #TODO set for test purposes, delete this
 
 # only dev branches will have dev tags (they match the pattern "dev_vX.Y.Z")
-if re.match(r"^dev_v\d+.\d+.\d+$", strBranchName):
+if not re.match(r"^dev_v\d+.\d+.\d+$", strBranchName):
+    if flags["gitTagRequested"]:
+        sys.exit("Not on dev-Branch, no Tag will be set!")
+else:
     # Get the previous git tag on the branch
     lastTag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
     lastTagCommit = lastTag._get_commit()
 
-    # Avoid setting multiple tags on a single commit (compare their hashes)
-    if not lastTagCommit.binsha == repo.head.reference._get_commit().binsha:
         # Check that the name of the previous tag is valid
         assert re.match(r"^v\d+.\d+.\d+-dev\d+$", lastTag.name), "Invalid previous dev tag!"
         commitVersion = re.search(r"v\d+.\d+.\d+", strBranchName).group()
         lastTagVersion = re.search(r"v\d+.\d+.\d+", lastTag.name).group()
         assert commitVersion == lastTagVersion, """Invalid version in previous dev tag! Forgot to manually 
             set \"dev_vX.Y.Z-dev0\" Tag at branch creation??"""
+    lastDevTagNumber = int(re.findall(r'\d+', lastTag.name)[-1])
         
         # Find out how many commits have been made since the last tag was set
         commitsSinceLastTag = int(repo.git.rev_list('--count', f'{lastTagCommit.hexsha}..{repo.head.commit.hexsha}'))
 
+    # Avoid setting multiple tags on a single commit (compare their hashes)
+    if flags["gitTagRequested"] and lastTagCommit.binsha != repo.head.reference._get_commit().binsha:
         # Create a new tag increased by the number of commits since last tag
-        newDevTagNumber = int(re.findall(r'\d+', lastTag.name)[-1]) + commitsSinceLastTag
+        newDevTagNumber = lastDevTagNumber + commitsSinceLastTag
         newDevTagName = lastTagVersion + "-dev" + str(newDevTagNumber)
-
-        if gitTagRequested:
         try:
             newTag = git.Tag.create(repo, newDevTagName, repo.head.commit, "Tag created automatically by flasher build process")
+            strMbsProjectVersion += "-dev" + str(newDevTagNumber) + "-" + str(commitsSinceLastTag) # TODO commits should be included?
         except:
             print(f'Could not create tag \"{newDevTagName}\" on commit \"{repo.head.commit.hexsha}\" on branch \"{strBranchName}\"')
                 sys.exit("Failed to set git tag, check that the repository is clean!")
     else:
-        print("Tag already set on current commit")
-
-# If the current branch is not a dev branch and a tag was requested, throw an error and abort
-elif gitTagRequested:
-    sys.exit("Not on dev-Branch, no Tag will be set!")
-
+        strMbsProjectVersion += "-dev" + str(lastDevTagNumber) + "-" + str(commitsSinceLastTag) # TODO commits should be included?
 
 
 
 print('Project version = %s' % strMbsProjectVersion)
-
 
 # ---------------------------------------------------------------------------
 #
@@ -391,6 +388,20 @@ subprocess.check_call(
 #
 # Build the romloader netX code.
 #
+# Generate the output folder name out of the romloader git tags
+romloaderSubmodule = None
+
+romloaderSubmodule = next(submodule for submodule in repo.submodules if submodule.name == "flasher-environment/org.muhkuh.lua-romloader")
+assert romloaderSubmodule is not None, "Romloader Submodule not found"
+romloaderRepo = git.Repo(romloaderSubmodule.abspath)
+romloaderLatestTag = sorted(romloaderRepo.tags, key=lambda t: t.commit.committed_datetime)[-1]
+romloaderLatestTagName = romloaderLatestTag.name
+commitsSinceLastTag = int(romloaderRepo.git.rev_list('--count', f'{romloaderLatestTag.commit.hexsha}..{romloaderRepo.head.commit.hexsha}'))
+romloaderArtifactName = "montest-" + romloaderLatestTagName[1:] + "-" + str(commitsSinceLastTag) + "-g" + str(romloaderRepo.head.commit.hexsha)[:7]
+if romloaderRepo.is_dirty():
+    romloaderArtifactName += "+" # TODO in filenames ok?
+
+# Build
 astrArguments = [
     sys.executable,
     'mbs/mbs'
@@ -405,9 +416,9 @@ subprocess.check_call(
 )
 
 # Copy the romloader binaries to a separate zip
-
 # Create paths
-print("Copying romloader Montest binaries to artifacts folder")
+if flags["buildMontest"]:
+    print("Creating romloader montest artifact")
 strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
 tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
 strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
@@ -415,7 +426,7 @@ print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
 strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
 strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
 strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
-strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", "montest_netX")
+    strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", romloaderArtifactName)
 
 # Check that the romloader version parsed from the xml file is valid
 assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
@@ -428,7 +439,7 @@ with zipfile.ZipFile(strMontestZipFolder, 'r') as zip:
     zip.extractall(strMontestUnZipFolder)
 
 # Copy the required files to a fresh zip-preparation folder
-strMontestPreparedForZipPath = os.path.join(strMontestOutputFolder, "montest_netX")
+    strMontestPreparedForZipPath = os.path.join(strMontestOutputFolder, romloaderArtifactName)
 if os.path.exists(strMontestPreparedForZipPath):
     shutil.rmtree(strMontestPreparedForZipPath)
 os.mkdir(strMontestPreparedForZipPath)
@@ -484,3 +495,7 @@ astrCmd = [
     'install', 'package'
 ]
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)
+
+# Print a message that reminds the user to push the tag to the repository
+if flags["gitTagRequested"]:
+    print("A local git tag was requested. Dont forget to push it to the GitHub repository using \"git push --tags\"")

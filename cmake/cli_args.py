@@ -28,13 +28,14 @@ def parse():
         type=str,
         nargs='*',
         help='Additional CMake defines.')
-    tParser.add_argument("-t", action='store_true')
-    tParser.add_argument("--create-tag", action='store_true')
-    #tParser.add_argument("", action='store_true')
+    tParser.add_argument("-t", "--create_tag", action='store_true', help="Set a new dev tag. Only works on dev branch (dev_vX.Y.Z)")
+    tParser.add_argument("-m", "--build_montest", action='store_true', help="Provide zipped montest binaries")
     tArgs = tParser.parse_args()
 
-    # Detect git tag creation flag
-    gitTagRequested = tArgs.t or tArgs.create_tag
+    # Save the flags
+    flags = {}
+    flags["gitTagRequested"] = tArgs.create_tag
+    flags["buildMontest"] = tArgs.build_montest
 
     # Parse arguments
     sizJonchkiIDs = len(tArgs.astrJonchkiIDs)
@@ -104,7 +105,7 @@ def parse():
         cmake_defines=astrCMakeDefines
     )
 
-    return tPlatform, gitTagRequested
+    return tPlatform, flags
 
 
 def to_jonchki_args(tPlatform):
