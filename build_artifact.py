@@ -349,22 +349,34 @@ else:
             set \"dev_vX.Y.Z-dev0\" Tag at branch creation??"""
     lastDevTagNumber = int(re.findall(r'\d+', lastTag.name)[-1])
         
-        # Find out how many commits have been made since the last tag was set
+    # Find out how many commits have been made since the last tag was set and if the repository is dirty
         commitsSinceLastTag = int(repo.git.rev_list('--count', f'{lastTagCommit.hexsha}..{repo.head.commit.hexsha}'))
+    isDirtyPlusChar = "+" if repo.is_dirty() else ""
 
     # Avoid setting multiple tags on a single commit (compare their hashes)
     if flags["gitTagRequested"] and lastTagCommit.binsha != repo.head.reference._get_commit().binsha:
-        # Create a new tag increased by the number of commits since last tag
+        # Create a new tag increased by the number of commits since last tag and generate project version string
         newDevTagNumber = lastDevTagNumber + commitsSinceLastTag
         newDevTagName = lastTagVersion + "-dev" + str(newDevTagNumber)
         try:
             newTag = git.Tag.create(repo, newDevTagName, repo.head.commit, "Tag created automatically by flasher build process")
-            strMbsProjectVersion += "-dev" + str(newDevTagNumber) + "-" + str(commitsSinceLastTag) # TODO commits should be included?
+            commitsSinceLastTag = 0
+            strMbsProjectVersion += "-dev" + str(newDevTagNumber)
         except:
             print(f'Could not create tag \"{newDevTagName}\" on commit \"{repo.head.commit.hexsha}\" on branch \"{strBranchName}\"')
                 sys.exit("Failed to set git tag, check that the repository is clean!")
     else:
-        strMbsProjectVersion += "-dev" + str(lastDevTagNumber) + "-" + str(commitsSinceLastTag) # TODO commits should be included?
+        strMbsProjectVersion += "-dev" + str(lastDevTagNumber) 
+    strMbsProjectVersion += "-" + str(commitsSinceLastTag) + isDirtyPlusChar + "g" + str(repo.head.commit.hexsha)[:7]
+
+# Create the name of the platform following the hilscher naming conventions
+dict = {}
+dict["x86"] = "x86"
+dict["x86_64"] = "x64"
+dict["windows"] = "Windows"
+dict["ubuntu"] = "Ubuntu"
+strPlatform = tPlatform["distribution_version"] or ""
+strArtifactPlatform = dict[tPlatform["distribution_id"]] + strPlatform + "-" + dict[tPlatform["cpu_architecture"]]
 
 
 
@@ -397,9 +409,8 @@ romloaderRepo = git.Repo(romloaderSubmodule.abspath)
 romloaderLatestTag = sorted(romloaderRepo.tags, key=lambda t: t.commit.committed_datetime)[-1]
 romloaderLatestTagName = romloaderLatestTag.name
 commitsSinceLastTag = int(romloaderRepo.git.rev_list('--count', f'{romloaderLatestTag.commit.hexsha}..{romloaderRepo.head.commit.hexsha}'))
-romloaderArtifactName = "montest-" + romloaderLatestTagName[1:] + "-" + str(commitsSinceLastTag) + "-g" + str(romloaderRepo.head.commit.hexsha)[:7]
-if romloaderRepo.is_dirty():
-    romloaderArtifactName += "+" # TODO in filenames ok?
+isDirtyPlusChar = "+" if romloaderRepo.is_dirty() else ""
+romloaderArtifactName = "montest_" + romloaderLatestTagName[1:] + "-" + str(commitsSinceLastTag) + isDirtyPlusChar + "g" + str(romloaderRepo.head.commit.hexsha)[:7]
 
 # Build
 astrArguments = [
@@ -483,7 +494,8 @@ astrCmd = [
     '-DCMAKE_INSTALL_PREFIX=""',
     '-DPRJ_DIR=%s' % strCmakeFolder,
     '-DWORKING_DIR=%s' % strCfg_workingFolder,
-    '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion
+    '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion,
+    '-DARTIFACT_PLATFORM_STRING=%s' % strArtifactPlatform
 ]
 astrCmd.extend(astrCMAKE_COMPILER)
 astrCmd.extend(astrCMAKE_PLATFORM)
@@ -498,4 +510,4 @@ subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, e
 
 # Print a message that reminds the user to push the tag to the repository
 if flags["gitTagRequested"]:
-    print("A local git tag was requested. Dont forget to push it to the GitHub repository using \"git push --tags\"")
+    print("A local git tag was requested. Do not forget to push it to the GitHub repository using \"git push --tags\"")
