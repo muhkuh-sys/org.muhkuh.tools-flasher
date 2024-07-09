@@ -325,35 +325,36 @@ tSetupXml = xml.etree.ElementTree.parse(
         'setup.xml'
     )
 )
-strMbsProjectVersion = tSetupXml.find('project_version').text # "2.1.0"
+strMbsProjectVersion = tSetupXml.find('project_version').text # e.g. "2.1.0"
 
-# Get the current branch name
+# Get the flasher repo and the current branch name
 repo = git.Repo(strCfg_projectFolder)
 strBranchName = repo.active_branch.name
-strBranchName = "dev_v2.1.0" #TODO set for test purposes, delete this
+strBranchName = "dev_v2.1.0" #TODO set for test purposes, comment this line before creating a pull request
 
-# only dev branches will have dev tags (they match the pattern "dev_vX.Y.Z")
+# only dev branches should have dev tags (they match the pattern "dev_vX.Y.Z")
 if not re.match(r"^dev_v\d+.\d+.\d+$", strBranchName):
     if flags["gitTagRequested"]:
         sys.exit("Not on dev-Branch, no Tag will be set!")
 else:
-    # Get the previous git tag on the branch
-    lastTag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
-    lastTagCommit = lastTag._get_commit()
+    # Get the current version and all previous tags (beginning with newest)
+    currentVersion = re.search(r"v\d+.\d+.\d+", strBranchName).group()
+    tagHistory = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
 
-        # Check that the name of the previous tag is valid
-        assert re.match(r"^v\d+.\d+.\d+-dev\d+$", lastTag.name), "Invalid previous dev tag!"
-        commitVersion = re.search(r"v\d+.\d+.\d+", strBranchName).group()
-        lastTagVersion = re.search(r"v\d+.\d+.\d+", lastTag.name).group()
-        assert commitVersion == lastTagVersion, """Invalid version in previous dev tag! Forgot to manually 
-            set \"dev_vX.Y.Z-dev0\" Tag at branch creation??"""
-    lastDevTagNumber = int(re.findall(r'\d+', lastTag.name)[-1])
+    # Try to find the latest tag that contains the current version, abort if none is found
+    for tag in tagHistory:
+        lastTagCommit = tag._get_commit()
+        lastTagVersion = re.search(r"v\d+.\d+.\d+", tag.name).group()
+        if re.match(r"^v\d+.\d+.\d+-dev\d+$", tag.name) and lastTagVersion == currentVersion:
+            lastDevTagNumber = int(re.findall(r'\d+', tag.name)[-1])
+            break
+    assert lastDevTagNumber != None, "Unable to find Tag that matches current version, forgot to manually set \"dev_vX.Y.Z-dev0\"-Tag?"
         
     # Find out how many commits have been made since the last tag was set and if the repository is dirty
         commitsSinceLastTag = int(repo.git.rev_list('--count', f'{lastTagCommit.hexsha}..{repo.head.commit.hexsha}'))
     isDirtyPlusChar = "+" if repo.is_dirty() else ""
 
-    # Avoid setting multiple tags on a single commit (compare their hashes)
+    # Do not set multiple tags on a single commit
     if flags["gitTagRequested"] and lastTagCommit.binsha != repo.head.reference._get_commit().binsha:
         # Create a new tag increased by the number of commits since last tag and generate project version string
         newDevTagNumber = lastDevTagNumber + commitsSinceLastTag
@@ -370,11 +371,7 @@ else:
     strMbsProjectVersion += "-" + str(commitsSinceLastTag) + isDirtyPlusChar + "g" + str(repo.head.commit.hexsha)[:7]
 
 # Create the name of the platform following the hilscher naming conventions
-dict = {}
-dict["x86"] = "x86"
-dict["x86_64"] = "x64"
-dict["windows"] = "Windows"
-dict["ubuntu"] = "Ubuntu"
+translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu")
 strPlatform = tPlatform["distribution_version"] or ""
 strArtifactPlatform = dict[tPlatform["distribution_id"]] + strPlatform + "-" + dict[tPlatform["cpu_architecture"]]
 
