@@ -9,7 +9,7 @@ import subprocess
 import sys
 import zipfile
 import shutil
-import git
+from gitVersionManager import gitVersionManager
 import re
 
 
@@ -316,66 +316,35 @@ for strPath in astrFolders:
 
 # ---------------------------------------------------------------------------
 #
-# Read the project version from the "setup.xml" file in the root folder.
-# Get the last git tag on the current branch if enabled
+# Versioning
 #
-tSetupXml = xml.etree.ElementTree.parse(
-    os.path.join(
-        strCfg_projectFolder,
-        'setup.xml'
-    )
-)
-strMbsProjectVersion = tSetupXml.find('project_version').text # e.g. "2.1.0"
+# Set git tag if desired.
+# Get the flasher version from git.
+# Prepare the artifact archive name.
+# Write the flasher version to the setup.xml file
+#
 
 # Get the flasher repo and the current branch name
-repo = git.Repo(strCfg_projectFolder)
-strBranchName = repo.active_branch.name
-strBranchName = "dev_v2.1.0" #TODO set for test purposes, comment this line before creating a pull request
+repoManager = gitVersionManager(strCfg_projectFolder)
+if flags["gitTagRequested"]:
+    repoManager.createDevTag()
 
-# only dev branches should have dev tags (they match the pattern "dev_vX.Y.Z")
-if not re.match(r"^dev_v\d+.\d+.\d+$", strBranchName):
-    if flags["gitTagRequested"]:
-        sys.exit("Not on dev-Branch, no Tag will be set!")
-else:
-    # Get the current version and all previous tags (beginning with newest)
-    currentVersion = re.search(r"v\d+.\d+.\d+", strBranchName).group()
-    tagHistory = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
-
-    # Try to find the latest tag that contains the current version, abort if none is found
-    for tag in tagHistory:
-        lastTagCommit = tag._get_commit()
-        lastTagVersion = re.search(r"v\d+.\d+.\d+", tag.name).group()
-        if re.match(r"^v\d+.\d+.\d+-dev\d+$", tag.name) and lastTagVersion == currentVersion:
-            lastDevTagNumber = int(re.findall(r'\d+', tag.name)[-1])
-            break
-    assert lastDevTagNumber != None, "Unable to find Tag that matches current version, forgot to manually set \"dev_vX.Y.Z-dev0\"-Tag?"
-        
-    # Find out how many commits have been made since the last tag was set and if the repository is dirty
-        commitsSinceLastTag = int(repo.git.rev_list('--count', f'{lastTagCommit.hexsha}..{repo.head.commit.hexsha}'))
-    isDirtyPlusChar = "+" if repo.is_dirty() else ""
-
-    # Do not set multiple tags on a single commit
-    if flags["gitTagRequested"] and lastTagCommit.binsha != repo.head.reference._get_commit().binsha:
-        # Create a new tag increased by the number of commits since last tag and generate project version string
-        newDevTagNumber = lastDevTagNumber + commitsSinceLastTag
-        newDevTagName = lastTagVersion + "-dev" + str(newDevTagNumber)
-        try:
-            newTag = git.Tag.create(repo, newDevTagName, repo.head.commit, "Tag created automatically by flasher build process")
-            commitsSinceLastTag = 0
-            strMbsProjectVersion += "-dev" + str(newDevTagNumber)
-        except:
-            print(f'Could not create tag \"{newDevTagName}\" on commit \"{repo.head.commit.hexsha}\" on branch \"{strBranchName}\"')
-                sys.exit("Failed to set git tag, check that the repository is clean!")
-    else:
-        strMbsProjectVersion += "-dev" + str(lastDevTagNumber) 
-    strMbsProjectVersion += "-" + str(commitsSinceLastTag) + isDirtyPlusChar + "g" + str(repo.head.commit.hexsha)[:7]
-
+# Set the artifact name
+strMbsProjectVersion = repoManager.getFullVersionString()
+ 
 # Create the name of the platform following the hilscher naming conventions
 translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu")
 strPlatform = tPlatform["distribution_version"] or ""
-strArtifactPlatform = dict[tPlatform["distribution_id"]] + strPlatform + "-" + dict[tPlatform["cpu_architecture"]]
+strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[tPlatform["cpu_architecture"]]
 
-
+# Write the flasher version to the xml file (XML parser would delete comments in file)
+with  open(os.path.join(strCfg_projectFolder, 'setup.xml'), "r+") as tSetupXmlFile:
+    groups = list(re.search(r"([\d\D\s]+)(<project_version>)(.+)(<\/project_version>)([\d\D\s]*)", tSetupXmlFile.read()).groups())
+    groups[2] = repoManager.getVersionNumber()[1:]
+    stringOut = "".join(groups)
+    tSetupXmlFile.seek(0)
+    tSetupXmlFile.write(stringOut)
+    tSetupXmlFile.truncate()
 
 print('Project version = %s' % strMbsProjectVersion)
 
@@ -398,16 +367,8 @@ subprocess.check_call(
 # Build the romloader netX code.
 #
 # Generate the output folder name out of the romloader git tags
-romloaderSubmodule = None
-
-romloaderSubmodule = next(submodule for submodule in repo.submodules if submodule.name == "flasher-environment/org.muhkuh.lua-romloader")
-assert romloaderSubmodule is not None, "Romloader Submodule not found"
-romloaderRepo = git.Repo(romloaderSubmodule.abspath)
-romloaderLatestTag = sorted(romloaderRepo.tags, key=lambda t: t.commit.committed_datetime)[-1]
-romloaderLatestTagName = romloaderLatestTag.name
-commitsSinceLastTag = int(romloaderRepo.git.rev_list('--count', f'{romloaderLatestTag.commit.hexsha}..{romloaderRepo.head.commit.hexsha}'))
-isDirtyPlusChar = "+" if romloaderRepo.is_dirty() else ""
-romloaderArtifactName = "montest_" + romloaderLatestTagName[1:] + "-" + str(commitsSinceLastTag) + isDirtyPlusChar + "g" + str(romloaderRepo.head.commit.hexsha)[:7]
+romloaderRepoManager = gitVersionManager("flasher-environment/org.muhkuh.lua-romloader")
+romloaderArtifactName = "montest_" + romloaderRepoManager.getFullVersionString()
 
 # Build
 astrArguments = [
@@ -427,55 +388,55 @@ subprocess.check_call(
 # Create paths
 if flags["buildMontest"]:
     print("Creating romloader montest artifact")
-strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
-tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
-strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
-print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
-strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
-strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
-strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
+    strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
+    tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
+    strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
+    print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
+    strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
+    strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
+    strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
     strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", romloaderArtifactName)
 
-# Check that the romloader version parsed from the xml file is valid
-assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
-assert os.path.exists(strMontestZipFolder), "Montest output zip archive is missing"
+    # Check that the romloader version parsed from the xml file is valid
+    assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
+    assert os.path.exists(strMontestZipFolder), "Montest output zip archive is missing"
 
-# Unzip the romloader artifact (delete output from previous run first)
-if os.path.exists(strMontestUnZipFolder):
-    shutil.rmtree(strMontestUnZipFolder)
-with zipfile.ZipFile(strMontestZipFolder, 'r') as zip:
-    zip.extractall(strMontestUnZipFolder)
+    # Unzip the romloader artifact (delete output from previous run first)
+    if os.path.exists(strMontestUnZipFolder):
+        shutil.rmtree(strMontestUnZipFolder)
+    with zipfile.ZipFile(strMontestZipFolder, 'r') as zip:
+        zip.extractall(strMontestUnZipFolder)
 
-# Copy the required files to a fresh zip-preparation folder
+    # Copy the required files to a fresh zip-preparation folder
     strMontestPreparedForZipPath = os.path.join(strMontestOutputFolder, romloaderArtifactName)
-if os.path.exists(strMontestPreparedForZipPath):
+    if os.path.exists(strMontestPreparedForZipPath):
+        shutil.rmtree(strMontestPreparedForZipPath)
+    os.mkdir(strMontestPreparedForZipPath)
+    atCopyFiles = {
+        "/test_romloader_lua54.lua",
+        "/netx/montest_netiol.bin",
+        "/netx/montest_netx10.bin",
+        "/netx/montest_netx4000.bin",
+        "/netx/montest_netx50.bin",
+        "/netx/montest_netx500.bin",
+        "/netx/montest_netx56.bin",
+        "/netx/montest_netx90.bin",
+        "/netx/montest_netx90_mpw.bin"
+    }
+    for file in atCopyFiles:
+        ret = shutil.copy(strMontestUnZipFolder + file, strMontestPreparedForZipPath)
+
+    # Rename the lua5.4 file to be the "normal" file
+    rename_old = os.path.join(strMontestPreparedForZipPath, "test_romloader_lua54.lua")
+    rename_new = os.path.join(strMontestPreparedForZipPath, "test_romloader.lua")
+    os.rename(rename_old, rename_new)
+
+    # Compress the files in the zip preparation folder into a .zip archive in the artifacts directory
+    shutil.make_archive(strMontestArtifactPath , 'zip', strMontestPreparedForZipPath)
+
+    # Remove the folders created in the lua repository folder
     shutil.rmtree(strMontestPreparedForZipPath)
-os.mkdir(strMontestPreparedForZipPath)
-atCopyFiles = {
-    "/test_romloader_lua54.lua",
-    "/netx/montest_netiol.bin",
-    "/netx/montest_netx10.bin",
-    "/netx/montest_netx4000.bin",
-    "/netx/montest_netx50.bin",
-    "/netx/montest_netx500.bin",
-    "/netx/montest_netx56.bin",
-    "/netx/montest_netx90.bin",
-    "/netx/montest_netx90_mpw.bin"
-}
-for file in atCopyFiles:
-    ret = shutil.copy(strMontestUnZipFolder + file, strMontestPreparedForZipPath)
-
-# Rename the lua5.4 file to be the "normal" file
-rename_old = os.path.join(strMontestPreparedForZipPath, "test_romloader_lua54.lua")
-rename_new = os.path.join(strMontestPreparedForZipPath, "test_romloader.lua")
-os.rename(rename_old, rename_new)
-
-# Compress the files in the zip preparation folder into a .zip archive in the artifacts directory
-shutil.make_archive(strMontestArtifactPath , 'zip', strMontestPreparedForZipPath)
-
-# Remove the folders created in the lua repository folder
-shutil.rmtree(strMontestPreparedForZipPath)
-shutil.rmtree(strMontestUnZipFolder)
+    shutil.rmtree(strMontestUnZipFolder)
 
 
 # ---------------------------------------------------------------------------

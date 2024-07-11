@@ -22,6 +22,7 @@
 
 import os.path
 import struct
+from gitVersionManager import gitVersionManager
 
 #----------------------------------------------------------------------------
 #
@@ -253,7 +254,17 @@ atEnv.DEFAULT.Version('targets/version/flasher_version.xsl', 'templates/flasher_
 from datetime import datetime
 tBuildTime = datetime.now()
 strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
-tDict = {'BUILD_TIME': strBuildTime, 'BUILD_TYPE': '-dev13'}
+tDict = {'BUILD_TIME': strBuildTime} 
+
+# Set the dev ending
+# dev-branch: "devX" or master-branch ""
+repoManager = gitVersionManager(".")
+if repoManager.onDevBranch() or repoManager.onMasterBranch():
+    tDict['BUILD_TYPE'] = repoManager.getDevEnding()
+# everything else: "DEVBRANCH"
+else:
+    tDict['BUILD_TYPE'] = "-DEVBRANCH"
+
 lua_flasher_version_tmp = atEnv.DEFAULT.Version('targets/version/flasher_version_TMP.lua', 'templates/flasher_version.lua')
 lua_flasher_version = atEnv.DEFAULT.Filter('#/targets/version/flasher_version.lua', lua_flasher_version_tmp, SUBSTITUTIONS=tDict)
 
