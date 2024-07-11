@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ dev_v2.1.0 ]
+    branches: [ NXTFLASHER-912-patch ]
     tags:
     - '*'
   pull_request:
