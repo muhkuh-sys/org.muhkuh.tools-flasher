@@ -97,7 +97,7 @@ jobs:
     container: ${{ matrix.platform.image }}
     steps:
     - name: Install python dependencies
-      run: apt-get install -y python3-pip && pip install gitpython
+      run: python -m ensurepip --upgrade && pip install gitpython
     - name: Checkout repository
       # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
       uses: actions/checkout@v1
