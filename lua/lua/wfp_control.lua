@@ -5,7 +5,7 @@ local WfpControl = class()
 local VERSION_MAJOR_POS = 1
 local VERSION_MINOR_POS = 2
 
-local SUPPORTED_VERSION = "1.3"
+local SUPPORTED_VERSION = "1.4"
 
 
 function WfpControl:_init(tLogWriter, fAllowNewerMinor, fAllowNewerMajor, fUseProductionMode)
