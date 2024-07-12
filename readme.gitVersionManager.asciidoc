@@ -1,0 +1,62 @@
+# Git Versioning
+
+The versioning of the flasher is partially automated. 
+The version of the flasher will appear when calling `-v` on `cli_flash.lua` and as part of the artifact directory names.
+
+## Branches:
+There are tree types of branches:
+
+- *default branch* : Releases (`master`)
+
+- *dev branches* : Development of new version (e.g. `dev_v2.1.0`)
+
+- *feature branches* : Development of new features (e.g. `dev_NXTFLASHER-912`)
+
+## Tags:
+For highlighting milestones of the project, git tags are used.
+
+dev-versions will get *dev tags*, e.g. `v2.1.0-dev13`.
+
+The last number describes the number of commits on the dev branch.
+
+*When creating a new dev branch, the `vA.B.X-dev0` tag must be set manually.*
+
+Releases will get a *release-tag*, e.g.: `v2.1.0`
+
+*When merging a dev branch into the default branch, a release tag must be set manually.*
+
+build_artifact.py will check if the type of tag (dev/release) matches the kind of the current branch (feature/dev or release).
+If the type does not match, the build process will abort.
+
+
+## Automated tag creation
+
+dev tags can be created using the build script "build_artifact.py".
+Simply add the `-t` or `--create-tag` flag to the call.
+
+The script will only set dev tags on dev branches.
+If the project is not on a dev-branch, to tag will be set and the build process is aborted.
+It is not possible to set two tags on a single commit.
+Avoid manually creating tags with a different name scheme.
+
+The dev tag number is increased automatically by the script.
+Setting the dev tags by hand will work too but is not recommended.
+
+## Example workflow
+
+1) Create a branch from the default branch (master) and name it "dev_v2.2.0"
+
+2) Manually set a tag on the first commit of the dev branch and name it `v2.2.0-dev0``
+
+3) Create feature branches, work on them as desired and create and merge pull requests.
+
+4) Checkout the dev branch and build it using `build_artifact.py -t`.
+The script will create a new tag on the branch.
+If there were 12 commits since `v2.2.0-dev0`, the new tag will be named `v2.2.0-dev12`.
+
+Note: The build process will automatically update the project version in `setup.xml` which results in a local worktree change once per dev branch.
+Simply commit this change to the repository.
+
+5) Merge the dev branch to the default branch
+
+6) Create a dev tag on the merge commit and call it `v2.2.0`

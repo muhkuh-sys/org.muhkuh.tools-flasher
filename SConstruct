@@ -257,13 +257,14 @@ strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
 tDict = {'BUILD_TIME': strBuildTime} 
 
 # Set the dev ending
-# dev-branch: "devX" or master-branch ""
+# dev-branch:      "devX"
+# release-branch:  ""
+# everything else: branch name
 repoManager = gitVersionManager(".")
-if repoManager.onDevBranch() or repoManager.onMasterBranch():
+if repoManager.onDevBranch() or repoManager.onReleaseBranch():
     tDict['BUILD_TYPE'] = repoManager.getDevEnding()
-# everything else: "DEVBRANCH"
 else:
-    tDict['BUILD_TYPE'] = "-DEVBRANCH"
+    tDict['BUILD_TYPE'] = "-" + repoManager.getCurrentBranchName()
 
 lua_flasher_version_tmp = atEnv.DEFAULT.Version('targets/version/flasher_version_TMP.lua', 'templates/flasher_version.lua')
 lua_flasher_version = atEnv.DEFAULT.Filter('#/targets/version/flasher_version.lua', lua_flasher_version_tmp, SUBSTITUTIONS=tDict)
