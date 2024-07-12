@@ -98,7 +98,7 @@ jobs:
     steps:
     #- name: Install dependencies
     - uses: actions/checkout@v1
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v3
       #with:
         #python-version: '3.10' 
     - run: |
