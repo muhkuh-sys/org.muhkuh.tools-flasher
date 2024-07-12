@@ -96,7 +96,7 @@ jobs:
           cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
     steps:
-    - name: Install dependencies
+    #- name: Install dependencies
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
