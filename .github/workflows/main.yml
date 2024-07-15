@@ -109,7 +109,7 @@ jobs:
 #      with:
 #        name: targets
     - name: Install pip and get dependencies for build script
-      run:  apt update && apt install -y python3-pip && pip install gitpython
+      run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
       run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Upload artifacts
