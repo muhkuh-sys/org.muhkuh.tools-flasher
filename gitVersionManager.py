@@ -1,6 +1,9 @@
-import git
 import re
 import sys
+try:
+    import git
+except:
+    raise ImportError("Module gitpython missing, install using \"pip install gitpython\"")
 
 # Class for managing git tags and getting version strings in the flasher and romloader repo
 class gitVersionManager:

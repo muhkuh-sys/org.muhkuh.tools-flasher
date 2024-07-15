@@ -108,8 +108,10 @@ jobs:
 #      uses: actions/download-artifact@v1
 #      with:
 #        name: targets
+    - name: Install pip and get dependencies for build script
+      run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
-      run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+      run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Upload artifacts
       # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/upload-artifact@v1
