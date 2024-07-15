@@ -108,12 +108,8 @@ jobs:
 #      uses: actions/download-artifact@v1
 #      with:
 #        name: targets
-    #- name: Get python
-    #  uses: actions/setup-python@v5
-    #  with:
-    #    python-version: '3.10'
-    - name: Install dependencies for build script
-      run: python3 -m pip install gitpython
+    - name: Install pip and get dependencies for build script
+      run:  apt update && apt install python3-pip && pip install gitpython
     - name: Build flasher
       run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Upload artifacts
