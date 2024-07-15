@@ -333,7 +333,7 @@ if flags["gitTagRequested"]:
 strMbsProjectVersion = repoManager.getFullVersionString()
  
 # Create the name of the platform following the hilscher naming conventions
-translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu")
+translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu", arm64 = "arm64", armhf="armhf", riscv64="riscv64")
 strPlatform = tPlatform["distribution_version"] or ""
 strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[tPlatform["cpu_architecture"]]
 
