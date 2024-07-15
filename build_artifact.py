@@ -367,7 +367,8 @@ subprocess.check_call(
 # Build the romloader netX code.
 #
 # Generate the output folder name out of the romloader git tags
-romloaderRepoManager = gitVersionManager("flasher-environment/org.muhkuh.lua-romloader")
+strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
+romloaderRepoManager = gitVersionManager(strRomloaderFolder)
 romloaderArtifactName = "montest_" + romloaderRepoManager.getFullVersionString()
 
 # Build
@@ -388,7 +389,6 @@ subprocess.check_call(
 # Create paths
 if flags["buildMontest"]:
     print("Creating romloader montest artifact")
-    strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
     tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
     strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
     print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
