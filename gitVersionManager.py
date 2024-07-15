@@ -33,7 +33,9 @@ class gitVersionManager:
                     or currentCommit == branch.commit:
                     return branch
         else:
+            assert not self.repo.active_branch == None
             return self.repo.active_branch
+        sys.exit("Can not get current branch")
 
 
     # Gets the current branch name
