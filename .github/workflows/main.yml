@@ -113,7 +113,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: Install dependencies for build script
-      run: pip install gitpython
+      run: python3 -m pip install gitpython
     - name: Build flasher
       run: ./build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Upload artifacts
