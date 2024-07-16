@@ -16,7 +16,7 @@ class gitVersionManager:
 
     # Creates a gitVersionManager Object
     #
-    # strRepoPath = path the current repo is in (use "/" for dirs, "." for current dir)
+    # strRepoPath = path the current repo is in (use "/" in paths, "." for current dir)
     def __init__(self, strRepoPath):
         self.repo = git.Repo(strRepoPath)
 
@@ -25,6 +25,18 @@ class gitVersionManager:
     #
     # Detached Head state is tricky. Will return the first found branch the current commit is on.
     def getCurrentBranch(self):
+        # DEBUG-Print (trying to find out what git version the pipeline runs on):
+        print("getCurrentBranch Debug Output:")
+        print(f"Is detached: {self.repo.head.is_detached}")
+        if not self.repo.head.is_detached:
+            print(f"Branch name: {self.repo.active_branch.name}" )
+        print(f"Commit: {self.repo.head.commit.hexsha}")
+        print(f"Commit message: {self.repo.head.commit.message}")
+        print(f"Commit comitter: {self.repo.head.commit.committer}")
+        print(f"List of available remote branches:")
+        for branch in self.repo.remotes["origin"].refs:
+            print(str(branch))
+
         # Try to get the current branch, if the head is detached, look for a branch containing the current commit
         currentCommit = self.repo.head.commit
         if self.repo.head.is_detached:
@@ -33,7 +45,7 @@ class gitVersionManager:
                     or currentCommit == branch.commit:
                     return branch
         else:
-            assert not self.repo.active_branch == None
+            assert self.repo.active_branch != None
             return self.repo.active_branch
         sys.exit("Can not get current branch")
 
