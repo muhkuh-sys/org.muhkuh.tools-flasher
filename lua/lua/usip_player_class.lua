@@ -376,7 +376,7 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
             self.tFlasherHelper.getPlugin,
             self.strPluginName,
             self.strPluginType,
-            self.atPluginOptionsFirstConnect
+            self.atPluginOptions
         )
     else
         fCallSuccess = true
@@ -903,7 +903,7 @@ function UsipPlayer:extendBootswitchData(strUsipData, strBootswitchParam)
             tFile:close()
         end
         fResult = true
-        strMsg = "Extendet bootswitch."
+        strMsg = "Extended bootswitch."
     else
         strUsipData = nil
         strMsg = "The combined image exceeds the size of 32kB. Choose a smaller USIP file!"

@@ -60,7 +60,8 @@ function WFPXml:get_target(strNetX)
 end
 
 function WFPXml:new(version)
-    version = version or "1.3.0"
+    local strSupportedVersion = wfp_control.getSupportedVersionStr() .. ".0"
+    version = version or strSupportedVersion
     self.nodeFlasherPack = self.xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
     self.nodeFlasherPack:set_attrib("has_subdirs", "True")
@@ -1186,14 +1187,15 @@ tParserCommandVerify:flag('--disable_helper_signature_check')
                     :description('Disable signature checks on helper files.')
                     :target('fDisableHelperSignatureChecks')
                     :default(false)
+tParserCommandVerify:flag('--production_mode -m')
+                    :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
+                    :target('fUseProductionMode')
+                    :default(false)
 tParserCommandVerify:flag('--allow_future_version')
                     :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                     :target('fAllowFutureVersion')
                     :default(false)
-tParserCommandVerify:flag('--production-mode -m')
-                    :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
-                    :target('fUseProductionMode')
-                    :default(false)
+
 
 -- Add the "Read" command and all its options.
 local tParserCommandRead =
@@ -1227,14 +1229,15 @@ tParserCommandRead:mutex(
                       :target('strSecureOption')
                       :default(tFlasher.DEFAULT_HBOOT_OPTION)
 )
-tParserCommandRead:flag('-m --production-mode')
+tParserCommandRead:flag('--disable_helper_signature_check')
+:description('Disable signature checks on helper files.')
+:target('fDisableHelperSignatureChecks')
+:default(false)
+tParserCommandRead:flag('-m --production_mode')
                   :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
                   :target('fUseProductionMode')
                   :default(false)
-tParserCommandRead:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                  :target('fAllowFutureVersion')
-                  :default(false)
+
 tParserCommandRead:flag('--allow_future_version')
                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
                   :target('fAllowFutureVersion')
@@ -1385,10 +1388,10 @@ local tParserCommandCalculate = tParser:command('calc calculate',
                        :usage('Provide an expression and at least one variable definition.\n'..
                         'Example:\n'..
                         "lua5.4.exe wfp.lua calculate \"Var == 1\" \"Var=1\"\n\n"..
-                        "In expression: operators must be sourrounded by spaces.\n"..
+                        "In expression: operators must be surrounded by spaces.\n"..
                         "In operands: Do not use spaces (except in strings).\n"..
                         "Do not use spaces in string constants.\n\n"..
-                        "The expression will checked and evaluated.\n"..
+                        "The expression will be checked and evaluated.\n"..
                         "Exit codes:\n"..
                         "0 = false\n"..
                         "1 = error\n"..
