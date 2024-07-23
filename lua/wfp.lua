@@ -60,7 +60,8 @@ function WFPXml:get_target(strNetX)
 end
 
 function WFPXml:new(version)
-    version = version or "1.3.0"
+    local strSupportedVersion = wfp_control.getSupportedVersionStr() .. ".0"
+    version = version or strSupportedVersion
     self.nodeFlasherPack = self.xml.new("FlasherPackage")
     self.nodeFlasherPack:set_attrib("version", version)
     self.nodeFlasherPack:set_attrib("has_subdirs", "True")
