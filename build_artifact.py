@@ -7,10 +7,17 @@ import xml.etree.ElementTree
 import os
 import subprocess
 import sys
+import zipfile
+import shutil
+from gitVersionManager import gitVersionManager
+import re
+from datetime import datetime
 
 
-tPlatform = cli_args.parse()
+tPlatform, flags = cli_args.parse()
 print('Building for %s' % tPlatform['platform_id'])
+if(flags["gitTagRequested"]):
+    print('Setting a new git Tag after build.')
 
 
 # --------------------------------------------------------------------------
@@ -310,17 +317,37 @@ for strPath in astrFolders:
 
 # ---------------------------------------------------------------------------
 #
-# Read the project version from the "setup.xml" file in the root folder.
+# Versioning
 #
-tSetupXml = xml.etree.ElementTree.parse(
-    os.path.join(
-        strCfg_projectFolder,
-        'setup.xml'
-    )
-)
-strMbsProjectVersion = tSetupXml.find('project_version').text
-print('Project version = %s' % strMbsProjectVersion)
+# Set git tag if desired.
+# Get the flasher version from git.
+# Prepare the artifact archive name.
+# Write the flasher version to the setup.xml file
+#
 
+# Get the flasher repo and the current branch name
+repoManager = gitVersionManager(strCfg_projectFolder)
+if flags["gitTagRequested"]:
+    repoManager.createDevTag()
+
+# Set the artifact name
+strMbsProjectVersion = repoManager.getFullVersionString()
+ 
+# Create the name of the platform following the hilscher naming conventions
+translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu", arm64 = "arm64", armhf="armhf", riscv64="riscv64")
+strPlatform = tPlatform["distribution_version"] or ""
+strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[tPlatform["cpu_architecture"]]
+
+# Write the flasher version to the xml file (XML parser would delete comments in file)
+with open(os.path.join(strCfg_projectFolder, 'setup.xml'), "r+") as tSetupXmlFile:
+    groups = list(re.search(r"([\d\D\s]+)(<project_version>)(.+)(<\/project_version>)([\d\D\s]*)", tSetupXmlFile.read()).groups())
+    groups[2] = repoManager.getVersionNumber()[1:]
+    stringOut = "".join(groups)
+    tSetupXmlFile.seek(0)
+    tSetupXmlFile.write(stringOut)
+    tSetupXmlFile.truncate()
+
+print('Project version = %s' % strMbsProjectVersion)
 
 # ---------------------------------------------------------------------------
 #
@@ -340,6 +367,12 @@ subprocess.check_call(
 #
 # Build the romloader netX code.
 #
+# Generate the output folder name out of the romloader git tags
+strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
+romloaderRepoManager = gitVersionManager(strRomloaderFolder)
+romloaderArtifactName = "montest_" + romloaderRepoManager.getFullVersionString()
+
+# Build
 astrArguments = [
     sys.executable,
     'mbs/mbs'
@@ -352,6 +385,73 @@ subprocess.check_call(
         'org.muhkuh.lua-romloader'
     )
 )
+
+# Copy the romloader binaries and a version info file to a separate zip
+# Create paths
+if flags["buildMontest"]:
+    print("Creating romloader montest artifact")
+    tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
+    strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
+    print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
+    strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
+    strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
+    strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
+    strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", romloaderArtifactName)
+
+    # Check that the romloader version parsed from the xml file is valid
+    assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
+    assert os.path.exists(strMontestZipFolder), "Montest output zip archive is missing"
+
+    # Unzip the romloader artifact (delete output from previous run first)
+    if os.path.exists(strMontestUnZipFolder):
+        shutil.rmtree(strMontestUnZipFolder)
+    with zipfile.ZipFile(strMontestZipFolder, 'r') as zip:
+        zip.extractall(strMontestUnZipFolder)
+
+    # Copy the required files to a fresh zip-preparation folder
+    strMontestPreparedForZipPath = os.path.join(strMontestOutputFolder, romloaderArtifactName)
+    if os.path.exists(strMontestPreparedForZipPath):
+        shutil.rmtree(strMontestPreparedForZipPath)
+    os.mkdir(strMontestPreparedForZipPath)
+    atCopyFiles = {
+        "/test_romloader_lua54.lua",
+        "/netx/montest_netiol.bin",
+        "/netx/montest_netx10.bin",
+        "/netx/montest_netx4000.bin",
+        "/netx/montest_netx50.bin",
+        "/netx/montest_netx500.bin",
+        "/netx/montest_netx56.bin",
+        "/netx/montest_netx90.bin",
+        "/netx/montest_netx90_mpw.bin"
+    }
+    for file in atCopyFiles:
+        ret = shutil.copy(strMontestUnZipFolder + file, strMontestPreparedForZipPath)
+
+    # Create a file that contains version information
+    with open(os.path.join(strMontestPreparedForZipPath, "version_info.txt"), "w") as versionInfoFile:
+        commitTime = romloaderRepoManager.repo.head.commit.authored_datetime.strftime("%Y.%m.%d %H:%M:%S")
+        currentTime = datetime.now().strftime("%Y.%M.%d %H:%M:%S")
+        info = f"This file contains version information about the romloader montest artifacts.\n"
+        info += f"Generated by build_artifact.py during flasher build process.\n"
+        info += f"Used for human reading only, no processing elsewhere.\n\n"
+        info += f"Version:     {romloaderRepoManager.getFullVersionString()}\n"
+        info += f"Commit:      {romloaderRepoManager.repo.head.commit.hexsha}\n"
+        info += f"Commit time: {commitTime}\n"
+        info += f"Repo dirty:  {romloaderRepoManager.repo.is_dirty()}\n"
+        info += f"Build time:  {currentTime}\n"
+        versionInfoFile.write(info)
+
+    # Rename the lua5.4 file to be the "normal" file
+    rename_old = os.path.join(strMontestPreparedForZipPath, "test_romloader_lua54.lua")
+    rename_new = os.path.join(strMontestPreparedForZipPath, "test_romloader.lua")
+    os.rename(rename_old, rename_new)
+
+    # Compress the files in the zip preparation folder into a .zip archive in the artifacts directory
+    shutil.make_archive(strMontestArtifactPath , 'zip', strMontestPreparedForZipPath)
+
+    # Remove the folders created in the lua repository folder
+    shutil.rmtree(strMontestPreparedForZipPath)
+    shutil.rmtree(strMontestUnZipFolder)
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +467,8 @@ astrCmd = [
     '-DCMAKE_INSTALL_PREFIX=""',
     '-DPRJ_DIR=%s' % strCmakeFolder,
     '-DWORKING_DIR=%s' % strCfg_workingFolder,
-    '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion
+    '-DMBS_PROJECT_VERSION=%s' % strMbsProjectVersion,
+    '-DARTIFACT_PLATFORM_STRING=%s' % strArtifactPlatform
 ]
 astrCmd.extend(astrCMAKE_COMPILER)
 astrCmd.extend(astrCMAKE_PLATFORM)
@@ -379,3 +480,7 @@ astrCmd = [
     'install', 'package'
 ]
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)
+
+# Print a message that reminds the user to push the tag to the repository
+if flags["gitTagRequested"]:
+    print("A local git tag was requested. Do not forget to push it to the GitHub repository using \"git push --tags\"")

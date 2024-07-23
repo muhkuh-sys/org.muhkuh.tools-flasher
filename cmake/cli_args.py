@@ -17,7 +17,8 @@ def parse():
             'host. 2 arguments are the distribution ID and CPU architecture ' +
             'for targets without a distribution version (like windows). 3 ' +
             'arguments are the distribution ID, distribution version and ' +
-            'CPU architecture.'
+            'CPU architecture. Use -t or --create-tag to automatically '+
+            'generate a new git tag after the build (not pushed to origin)'
         )
     )
     tParser.add_argument(
@@ -27,8 +28,16 @@ def parse():
         type=str,
         nargs='*',
         help='Additional CMake defines.')
+    tParser.add_argument("-t", "--create_tag", action='store_true', help="Set a new dev tag. Only works on dev branch (dev_vX.Y.Z)")
+    tParser.add_argument("-m", "--build_montest", action='store_true', help="Provide zipped montest binaries")
     tArgs = tParser.parse_args()
 
+    # Save the flags
+    flags = {}
+    flags["gitTagRequested"] = tArgs.create_tag
+    flags["buildMontest"] = tArgs.build_montest
+
+    # Parse arguments
     sizJonchkiIDs = len(tArgs.astrJonchkiIDs)
     if sizJonchkiIDs == 0:
         # No platform was specified on the command line.
@@ -96,7 +105,7 @@ def parse():
         cmake_defines=astrCMakeDefines
     )
 
-    return tPlatform
+    return tPlatform, flags
 
 
 def to_jonchki_args(tPlatform):
