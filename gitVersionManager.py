@@ -98,7 +98,7 @@ class gitVersionManager:
     def getCommitsSinceLastTag(self):
         lastTagCommitHash = self.getLastTag()._get_commit().hexsha
         currentCommitHash = self.repo.head.commit.hexsha
-        return int(self.repo.git.rev_list('--count', f'{lastTagCommitHash}..{currentCommitHash}'))
+        return int(self.repo.git.rev_list('--count', '--ancestry-path', f'{lastTagCommitHash}..{currentCommitHash}'))
 
 
     # Creates a new dev tag with a new number (vA.B.C-devD)
