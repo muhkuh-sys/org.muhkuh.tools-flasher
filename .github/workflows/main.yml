@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ master, dev_v2.1.0, dev_NXTFLASHER-* ]
+    branches: [ master, dev_v2.1.0, dev_NXTFLASHER-*]
     tags:
     - '*'
 
@@ -109,7 +109,7 @@ jobs:
     - name: Install pip and get dependencies for build script
       run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
-      run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+      run: python3 build_artifact.py -m ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     - name: Upload artifacts
       # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/upload-artifact@v1
