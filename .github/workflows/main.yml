@@ -116,6 +116,6 @@ jobs:
       with:
         name: my-artifact
         path: |
-        flasher-environment/build/artifacts/flasher*
-        flasher-environment/build/artifacts/montest*
+          flasher-environment/build/artifacts/flasher*
+          flasher-environment/build/artifacts/montest*
 
