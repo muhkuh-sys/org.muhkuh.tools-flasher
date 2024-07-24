@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ master, dev_v2.1.0, dev_NXTFLASHER-* ]
+    branches: [ master, dev_v2.1.0, dev_NXTFLASHER-*, dev_test_packing ]
     tags:
     - '*'
 
