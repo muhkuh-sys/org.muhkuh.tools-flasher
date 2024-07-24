@@ -28,6 +28,7 @@ if(flags["gitTagRequested"]):
 
 # Get the project folder. This is the folder of this script.
 strCfg_projectFolder = os.path.dirname(os.path.realpath(__file__))
+print(f"CWD: {strCfg_projectFolder}")
 
 # This is the complete path to the testbench folder. The installation will be
 # written there.
@@ -386,9 +387,10 @@ subprocess.check_call(
         'org.muhkuh.lua-romloader'
     )
 )
-
+print(f"CWD: {strCfg_projectFolder}")
 build_artifact_path = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts")
 print("creating sha256 images of flasher packet")
+print(f"search dir: {build_artifact_path}")
 for filename in os.listdir(build_artifact_path):
     if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
         print(f"found image:    {filename}")
