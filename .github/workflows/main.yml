@@ -110,9 +110,9 @@ jobs:
       run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
       run: python3 build_artifact.py -m ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
-
-    - name: Upload individual
+    - name: Upload artifacts
+      # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/upload-artifact@v1
       with:
-        name: my-artifact
-        path: flasher-environment/build/artifacts/*
+        name: artifacts_${{ matrix.platform.distribution-id }}${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
+        path: flasher-environment/build/artifacts
