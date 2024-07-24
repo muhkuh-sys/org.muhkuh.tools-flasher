@@ -389,19 +389,6 @@ subprocess.check_call(
 )
 print(f"CWD: {strCfg_projectFolder}")
 build_artifact_path = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts")
-print("creating sha256 images of flasher packet")
-print(f"search dir: {build_artifact_path}")
-for filename in os.listdir(build_artifact_path):
-    if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
-        print(f"found image:    {filename}")
-        with open(filename, 'rb') as f:
-            data = f.read()
-            filename_sha = filename+".sha256"
-            hash_sha256 = hashlib.sha256(data).hexdigest()
-            print(f"generate image: {filename_sha}")
-            with open(filename_sha, "w") as sha_f:
-                sha_f.write(f"{hash_sha256} *{filename}")
-            print("")
 
 # Copy the romloader binaries and a version info file to a separate zip
 # Create paths
@@ -473,7 +460,29 @@ if flags["buildMontest"]:
     shutil.rmtree(strMontestPreparedForZipPath)
     shutil.rmtree(strMontestUnZipFolder)
 
+# debug stuff
+print("what folders are actually there:")
+for root, dirs, files in os.walk(strCfg_projectFolder):
+    for dir in dirs:
+        print(os.path.join(root, dir))
+    for file in files:
+        print(os.path.join(root, file))
+print("end")
+# debug stugg
 
+print("creating sha256 images of flasher packet")
+print(f"search dir: {build_artifact_path}")
+for filename in os.listdir(build_artifact_path):
+    if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
+        print(f"found image:    {filename}")
+        with open(filename, 'rb') as f:
+            data = f.read()
+            filename_sha = filename+".sha256"
+            hash_sha256 = hashlib.sha256(data).hexdigest()
+            print(f"generate image: {filename_sha}")
+            with open(filename_sha, "w") as sha_f:
+                sha_f.write(f"{hash_sha256} *{filename}")
+            print("")
 
 # ---------------------------------------------------------------------------
 #
