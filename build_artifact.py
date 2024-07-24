@@ -14,12 +14,10 @@ import re
 from datetime import datetime
 import hashlib
 
-
 tPlatform, flags = cli_args.parse()
 print('Building for %s' % tPlatform['platform_id'])
-if(flags["gitTagRequested"]):
+if (flags["gitTagRequested"]):
     print('Setting a new git Tag after build.')
-
 
 # --------------------------------------------------------------------------
 # -
@@ -28,7 +26,6 @@ if(flags["gitTagRequested"]):
 
 # Get the project folder. This is the folder of this script.
 strCfg_projectFolder = os.path.dirname(os.path.realpath(__file__))
-print(f"CWD: {strCfg_projectFolder}")
 
 # This is the complete path to the testbench folder. The installation will be
 # written there.
@@ -316,7 +313,6 @@ for strPath in astrFolders:
     if os.path.exists(strPath) is not True:
         os.makedirs(strPath)
 
-
 # ---------------------------------------------------------------------------
 #
 # Versioning
@@ -334,15 +330,18 @@ if flags["gitTagRequested"]:
 
 # Set the artifact name
 strMbsProjectVersion = repoManager.getFullVersionString()
- 
+
 # Create the name of the platform following the hilscher naming conventions
-translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu", arm64 = "arm64", armhf="armhf", riscv64="riscv64")
+translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu", arm64="arm64", armhf="armhf",
+                  riscv64="riscv64")
 strPlatform = tPlatform["distribution_version"] or ""
-strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[tPlatform["cpu_architecture"]]
+strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[
+    tPlatform["cpu_architecture"]]
 
 # Write the flasher version to the xml file (XML parser would delete comments in file)
 with open(os.path.join(strCfg_projectFolder, 'setup.xml'), "r+") as tSetupXmlFile:
-    groups = list(re.search(r"([\d\D\s]+)(<project_version>)(.+)(<\/project_version>)([\d\D\s]*)", tSetupXmlFile.read()).groups())
+    groups = list(
+        re.search(r"([\d\D\s]+)(<project_version>)(.+)(<\/project_version>)([\d\D\s]*)", tSetupXmlFile.read()).groups())
     groups[2] = repoManager.getVersionNumber()[1:]
     stringOut = "".join(groups)
     tSetupXmlFile.seek(0)
@@ -363,7 +362,6 @@ subprocess.check_call(
     astrArguments,
     cwd=strCfg_projectFolder
 )
-
 
 # ---------------------------------------------------------------------------
 #
@@ -387,14 +385,14 @@ subprocess.check_call(
         'org.muhkuh.lua-romloader'
     )
 )
-print(f"CWD: {strCfg_projectFolder}")
+
 build_artifact_path = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts")
 
 # Copy the romloader binaries and a version info file to a separate zip
 # Create paths
 if flags["buildMontest"]:
     print("Creating romloader montest artifact")
-    tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
+    tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder, 'setup.xml'))
     strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
     print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
     strMontestOutputFolder = os.path.join(
@@ -454,35 +452,11 @@ if flags["buildMontest"]:
     os.rename(rename_old, rename_new)
 
     # Compress the files in the zip preparation folder into a .zip archive in the artifacts directory
-    shutil.make_archive(strMontestArtifactPath , 'zip', strMontestPreparedForZipPath)
+    shutil.make_archive(strMontestArtifactPath, 'zip', strMontestPreparedForZipPath)
 
     # Remove the folders created in the lua repository folder
     shutil.rmtree(strMontestPreparedForZipPath)
     shutil.rmtree(strMontestUnZipFolder)
-
-# debug stuff
-print("what folders are actually there:")
-for root, dirs, files in os.walk(strCfg_projectFolder):
-    for dir in dirs:
-        print(os.path.join(root, dir))
-    for file in files:
-        print(os.path.join(root, file))
-print("end")
-# debug stugg
-
-print("creating sha256 images of flasher packet")
-print(f"search dir: {build_artifact_path}")
-for filename in os.listdir(build_artifact_path):
-    if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
-        print(f"found image:    {filename}")
-        with open(filename, 'rb') as f:
-            data = f.read()
-            filename_sha = filename+".sha256"
-            hash_sha256 = hashlib.sha256(data).hexdigest()
-            print(f"generate image: {filename_sha}")
-            with open(filename_sha, "w") as sha_f:
-                sha_f.write(f"{hash_sha256} *{filename}")
-            print("")
 
 # ---------------------------------------------------------------------------
 #
@@ -510,6 +484,21 @@ astrCmd = [
     'install', 'package'
 ]
 subprocess.check_call(' '.join(astrCmd), shell=True, cwd=strCfg_workingFolder, env=astrEnv)
+
+print("creating sha256 images of flasher packet")
+print(f"search dir: {build_artifact_path}")
+for filename in os.listdir(build_artifact_path):
+    if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
+        print(f"found image:    {filename}")
+        filepath = os.path.join(build_artifact_path, filename)
+        with open(filepath, 'rb') as f:
+            data = f.read()
+            filename_sha = os.path.join(build_artifact_path, filename + ".sha256")
+            hash_sha256 = hashlib.sha256(data).hexdigest()
+            print(f"generate image: {filename_sha}")
+            with open(filename_sha, "w") as sha_f:
+                sha_f.write(f"{hash_sha256} *{filename}")
+            print("")
 
 # Print a message that reminds the user to push the tag to the repository
 if flags["gitTagRequested"]:
