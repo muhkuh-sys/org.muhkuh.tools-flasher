@@ -12,6 +12,7 @@ import shutil
 from gitVersionManager import gitVersionManager
 import re
 from datetime import datetime
+import hashlib
 
 
 tPlatform, flags = cli_args.parse()
@@ -386,6 +387,20 @@ subprocess.check_call(
     )
 )
 
+build_artifact_path = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts")
+print("creating sha256 images of flasher packet")
+for filename in os.listdir(build_artifact_path):
+    if filename.endswith(".tar.gz") or filename.endswith(".zip") and filename.startswith("flasher"):
+        print(f"found image:    {filename}")
+        with open(filename, 'rb') as f:
+            data = f.read()
+            filename_sha = filename+".sha256"
+            hash_sha256 = hashlib.sha256(data).hexdigest()
+            print(f"generate image: {filename_sha}")
+            with open(filename_sha, "w") as sha_f:
+                sha_f.write(f"{hash_sha256} *{filename}")
+            print("")
+
 # Copy the romloader binaries and a version info file to a separate zip
 # Create paths
 if flags["buildMontest"]:
@@ -393,10 +408,13 @@ if flags["buildMontest"]:
     tRomloaderSetupXml = xml.etree.ElementTree.parse(os.path.join(strRomloaderFolder,'setup.xml'))
     strRomloaderVersion = tRomloaderSetupXml.find('project_version').text
     print('Romloader version parsed from setup.xml = %s' % strRomloaderVersion)
-    strMontestOutputFolder = os.path.join(strRomloaderFolder, "targets", "jonchki", "repository", "org", "muhkuh", "lua", "romloader", strRomloaderVersion)
+    strMontestOutputFolder = os.path.join(
+        strRomloaderFolder, "targets", "jonchki", "repository", "org",
+        "muhkuh", "lua", "romloader", strRomloaderVersion
+    )
     strMontestUnZipFolder = os.path.join(strMontestOutputFolder, "romloader-montest-" + strRomloaderVersion)
-    strMontestZipFolder = os.path.join(strMontestUnZipFolder + '.zip')
-    strMontestArtifactPath = os.path.join(strCfg_projectFolder, "flasher-environment", "build", "artifacts", romloaderArtifactName)
+    strMontestZipFolder = strMontestUnZipFolder + '.zip'
+    strMontestArtifactPath = os.path.join(build_artifact_path, romloaderArtifactName)
 
     # Check that the romloader version parsed from the xml file is valid
     assert os.path.exists(strMontestOutputFolder), "Can not find montest output folder"
@@ -452,6 +470,7 @@ if flags["buildMontest"]:
     # Remove the folders created in the lua repository folder
     shutil.rmtree(strMontestPreparedForZipPath)
     shutil.rmtree(strMontestUnZipFolder)
+
 
 
 # ---------------------------------------------------------------------------
