@@ -22,8 +22,16 @@ local tFlasherHelper = require 'flasher_helper'
 local flasher_test = require 'flasher_test'
 local tHelperFiles = require 'helper_files'
 local tVerifySignature = require 'verify_signature'
+local tLogWriterConsole = require 'log.writer.console'.new()
+local tLogWriterFilter = require 'log.writer.filter'.new('debug', tLogWriterConsole)
+local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
+local tLog = require 'log'.new('trace',
+    tLogWriter,
+    require 'log.formatter.format'.new())
 
 local FLASHER_PATH = "netx/"
+
+local ALLOW_INTERNAL_CHIPSELECTS = false
 
 --------------------------------------------------------------------------
 -- Usage
@@ -191,7 +199,7 @@ end
 local function addSecureArgs(tParserCommand)
   tParserCommand:mutex(
     tParserCommand:flag('--comp')
-      :description("use compatibility mode for netx90 M2M interfaces")
+      :description("Use compatibility mode for netX 90 M2M interfaces.")
       :target('bCompMode')
       :default(false),
     tParserCommand:option('--sec')
@@ -218,6 +226,13 @@ local function addJtagResetArg(tParserCommand)
       'JTAG reset method. Possible values are: hard (default), soft, attach'
     ):target('strJtagReset')
     tOption.choices = {"hard", "soft", "attach" }
+end
+
+-- #Todo choose a better name
+local function addNoSfdp(tParserCommand)
+    tParserCommand:flag('--no_sfdp')
+            :description('Skip reading SFDP data to get erase operations. Only use operations predefined in fash table.')
+            :target('bNoSfdp'):default(false)
 end
 
 local argparse = require 'argparse'
@@ -318,8 +333,25 @@ addJtagResetArg(tParserCommandErase)
 addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
 
+-- smart erase
+local tParserCommandSmartErase = tParser:command('smart_erase se', 'Erase area inside SPI-flash with optimised erase block sizes'):target('fCommandSmartEraseSelected')
+-- required_args = {"b", "u", "cs", "s", "l"}
+addBusOptionArg(tParserCommandSmartErase)
+addUnitOptionArg(tParserCommandSmartErase)
+addChipSelectOptionArg(tParserCommandSmartErase)
+addStartOffsetArg(tParserCommandSmartErase)
+addLengthArg(tParserCommandSmartErase)
+-- optional_args = {"p", "t", "jf", "jr"}
+addPluginNameArg(tParserCommandSmartErase)
+addPluginTypeArg(tParserCommandSmartErase)
+addJtagResetArg(tParserCommandSmartErase)
+addJtagKhzArg(tParserCommandSmartErase)
+addSecureArgs(tParserCommandSmartErase)
+addNoSfdp(tParserCommandSmartErase)
+
+
 -- verify
-local tParserCommandVerify = tParser:command('verify v', 'Verify that a file is flashed')
+local tParserCommandVerify = tParser:command('verify v', 'Verify file data inside flash using raw content. Return 0 if matching else 1')
   :target('fCommandVerifySelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerify)
@@ -335,7 +367,7 @@ addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Quick compare using checksums')
+local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Verify file data inside flash using hash value only. Return 0 if matching else 1')
   :target('fCommandVerifyHashSelected')
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
@@ -496,40 +528,6 @@ addPluginTypeArg(tParserCommandCheckHelperSignature)
 addPluginNameArg(tParserCommandCheckHelperSignature)
 addSecureArgs(tParserCommandCheckHelperSignature)
 
--- printTable(tTable, ulIndent)
--- Print all elements from a table
--- returns
---   nothing
-local function printTable(tTable, ulIndent)
-    local strIndentSpace = string.rep(" ", ulIndent)
-    for key, value in pairs(tTable) do
-        if type(value) == "table" then
-            printf( "%s%s",strIndentSpace, key )
-            printTable(value, ulIndent + 4)
-        else
-            printf( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
-        end
-    end
-    if next(tTable) == nil then
-        printf( "%s%s",strIndentSpace, " -- empty --" )
-    end
-end
-
-
--- printArgs(tArguments)
--- Print all arguments in a table
--- returns
---   nothing
-local function printArgs(tArguments)
-  print("")
-  print("Command line:" .. table.concat(arg, " ", -1, #arg))
-  print("")
-  print("Running CLI flasher with the following args:")
-  print("--------------------------------------------")
-  
-  printTable(tArguments, 0)
-  print("")
-end
 
 
 
@@ -647,7 +645,7 @@ local function exec(aArgs)
 		-- Therefore we clear the start of the intram boot image.
 		if fOk then
 			local iChiptype = tPlugin:GetChiptyp()
-      local romloader = require 'romloader'
+      		local romloader = require 'romloader'
 			if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_SMALL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_FULL
 			or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED then
@@ -697,7 +695,11 @@ local function exec(aArgs)
 			else
 				-- check if the selected flash is present
 				print("Detecting flash device")
-				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect)
+				local ulDetectFlags = 0
+				if not aArgs.bNoSfdp and aArgs.fCommandSmartEraseSelected  then
+					ulDetectFlags = flasher.FLAG_DETECT_SPI_USE_SFDP_ERASE
+				end
+				fOk, strMsg, ulDeviceSize = flasher.detectAndCheckSizeLimit(tPlugin, aAttr, iBus, iUnit, iChipSelect, nil, nil, nil, ulDetectFlags)
 				if fOk ~= true then
 					fOk = false
 				else
@@ -731,6 +733,10 @@ local function exec(aArgs)
 			fOk, strMsg = flasher.eraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
 		end
 
+		if fOk and (aArgs.fCommandSmartEraseSelected) then
+			fOk, strMsg = flasher.smartEraseArea(tPlugin, aAttr, ulStartOffset, ulLen)
+		end
+		
 		-- flash: flash the data
 		if fOk and aArgs.fCommandFlashSelected then
 			fOk, strMsg = flasher.flashArea(tPlugin, aAttr, ulStartOffset, strData)
@@ -788,24 +794,24 @@ local function exec(aArgs)
 
 		-- verify_hash: compute the hash of the input file and compare
 		if fOk and aArgs.fCommandVerifyHashSelected then
-      local mhash = require 'mhash'
-      local mh = mhash.mhash_state()
-			mh:init(mhash.MHASH_SHA1)
-			mh:hash(strData)
-			strFileHashBin = mh:hash_end()
-			strFileHash = tFlasherHelper.getHexString(strFileHashBin)
-			print("File SHA1: " .. strFileHash)
+			local mhash = require 'mhash'
+			local mh = mhash.mhash_state()
+					mh:init(mhash.MHASH_SHA1)
+					mh:hash(strData)
+					strFileHashBin = mh:hash_end()
+					strFileHash = tFlasherHelper.getHexString(strFileHashBin)
+					print("File SHA1: " .. strFileHash)
 
-			if strFileHashBin == strFlashHashBin then
-				print("Checksums are equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file have the same checksum"
-			else
-				print("Checksums are not equal!")
-				fOk = true
-				strMsg = "The data in the flash and the file do not have the same checksum"
-			end
-		end
+					if strFileHashBin == strFlashHashBin then
+						print("Checksums are equal!")
+						fOk = true
+						strMsg = "The data in the flash and the file have the same checksum"
+					else
+						print("Checksums are not equal!")
+						fOk = false
+						strMsg = "The data in the flash and the file do not have the same checksum"
+					end
+				end
 
 		-- save output file   strData --> strDataFileName
 		if fOk and aArgs.fCommandReadSelected then
@@ -849,9 +855,16 @@ end
 --                    test interface
 --========================================================================
 
-local flasher_interface = {}
+local flasher_test_interface_cli = {
+	-- Limit the reported device size (size of the test area) to 64 KiByte
+	-- This test is supposed to focus on connecting and disconnecting
+	-- Since the device size does not affect this, its smaller for shorter test runtime
+	-- Limitation is required for suitable test runtimes.
+	ulDeviceSizeMax = 0x10000
+}
 
-function flasher_interface:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
+
+function flasher_test_interface_cli:configure(strPluginName, iBus, iUnit, iChipSelect, atPluginOptions)
 	self.aArgs = {
 		strPluginName = strPluginName,
 		iBus = iBus,
@@ -867,34 +880,58 @@ end
 -- replaced with individual flags for each operation, we need to clear
 -- these flags after use or before re-using the argument list.
 -- Note: This function must be updated when the argument list changes
-function flasher_interface.clearArgs(aArgs)
-	aArgs.iMode = nil
-	aArgs.fCommandFlashSelected = nil
-	aArgs.fCommandVerifySelected = nil
-	aArgs.fCommandReadSelected = nil
-	aArgs.fCommandEraseSelected = nil
+function flasher_test_interface_cli.clearArgs(aArgs)
+
+	-- Clear memory segment pos/size
 	aArgs.ulStartOffset = nil
 	aArgs.ulLen = nil
+
+	-- Clear iMode
+	aArgs.iMode = nil
+
+	-- Clear all command flags
+	aArgs.fCommandFlashSelected = nil
+	aArgs.fCommandReadSelected = nil
+	aArgs.fCommandEraseSelected = nil
+	aArgs.fCommandVerifySelected = nil
+	aArgs.fCommandVerifyHashSelected = nil
+	aArgs.fCommandHashSelected = nil
+	aArgs.fCommandDetectSelected = nil
+	aArgs.fCommandTestSelected = nil
+	aArgs.fCommandTestCliSelected = nil
+	aArgs.fCommandInfoSelected = nil
+	aArgs.fParserCommandIdentifyNetxSelected = nil
+	aArgs.fCommandResetSelected = nil
 end
 
-function flasher_interface.init()
+function flasher_test_interface_cli.init()
 	return true
 end
 
 
-function flasher_interface.finish()
+function flasher_test_interface_cli.finish()
 end
 
 
-function flasher_interface:getDeviceSize()
-	flasher_interface.clearArgs(self.aArgs)
+function flasher_test_interface_cli:getLimitedDeviceSize()
 	self.aArgs.iMode = MODE_GET_DEVICE_SIZE
-	return exec(self.aArgs)
+	local ulSize, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
+
+	if ulSize then
+		-- Limit the device size so the test will not take too long
+		if ulSize > self.ulDeviceSizeMax then
+			ulSize = self.ulDeviceSizeMax
+		end
+		return ulSize, strMsg
+	else
+		return nil, "Failed to get device size"
+	end
 end
 
 
 -- bus 0: parallel, bus 1: serial
-function flasher_interface:getBusWidth()
+function flasher_test_interface_cli:getBusWidth()
 	if self.aArgs.iBus==flasher.BUS_Parflash then
 		return 2 -- may be 1, 2 or 4
 	elseif self.aArgs.iBus==flasher.BUS_Spi then
@@ -906,7 +943,7 @@ function flasher_interface:getBusWidth()
 	end
 end
 
-function flasher_interface:getEmptyByte()
+function flasher_test_interface_cli:getEmptyByte()
 	if self.aArgs.iBus == flasher.BUS_Parflash then
 		return 0xff
 	elseif self.aArgs.iBus == flasher.BUS_Spi then
@@ -918,7 +955,7 @@ function flasher_interface:getEmptyByte()
 	end
 end
 
-function flasher_interface:flash(ulOffset, strData)
+function flasher_test_interface_cli:flash(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -928,11 +965,13 @@ function flasher_interface:flash(ulOffset, strData)
     self.aArgs.fCommandFlashSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
-	return exec(self.aArgs)
+	fOk, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
-function flasher_interface:verify(ulOffset, strData)
+function flasher_test_interface_cli:verify(ulOffset, strData)
 
 	local fOk, strMsg = tFlasherHelper.writeBin(self.aArgs.strDataFileName, strData)
 
@@ -942,18 +981,20 @@ function flasher_interface:verify(ulOffset, strData)
     self.aArgs.fCommandVerifySelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = strData:len()
-	return exec(self.aArgs)
+	fOk, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
-function flasher_interface:read(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
+function flasher_test_interface_cli:read(ulOffset, ulSize)
 	self.aArgs.fCommandReadSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
 
 	local fOk, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
 
-  local strData
+    local strData
 	if not fOk then
 		return nil, strMsg
 	else
@@ -964,36 +1005,38 @@ function flasher_interface:read(ulOffset, ulSize)
 end
 
 
-function flasher_interface:erase(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
+function flasher_test_interface_cli:erase(ulOffset, ulSize)
 	self.aArgs.fCommandEraseSelected = true
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
-	return exec(self.aArgs)
+	local fOk, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
-function flasher_interface:isErased(ulOffset, ulSize)
-	flasher_interface.clearArgs(self.aArgs)
+function flasher_test_interface_cli:isErased(ulOffset, ulSize)
 	self.aArgs.iMode = MODE_IS_ERASED
 	self.aArgs.ulStartOffset = ulOffset
 	self.aArgs.ulLen = ulSize
-	return exec(self.aArgs)
+	local fOk, strMsg = exec(self.aArgs)
+	flasher_test_interface_cli.clearArgs(self.aArgs)
+	return fOk, strMsg
 end
 
 
-function flasher_interface:eraseChip()
-	return self:erase(0, self:getDeviceSize())
+function flasher_test_interface_cli:eraseChip()
+	return self:erase(0, self:getLimitedDeviceSize())
 end
 
 
-function flasher_interface:readChip()
-	return self:read(0, self:getDeviceSize())
+function flasher_test_interface_cli:readChip()
+	return self:read(0, self:getLimitedDeviceSize())
 end
 
 
-function flasher_interface:isChipErased()
-	return self:isErased(0, self:getDeviceSize())
+function flasher_test_interface_cli:isChipErased()
+	return self:isErased(0, self:getLimitedDeviceSize())
 end
 
 --------------------------------------------------------------------------
@@ -1042,9 +1085,20 @@ local function main()
 		astrHelpersToCheck = {"start_mi", "verify_sig"}
 	end
 
+    -- Catch internal chipselects.
+    if(
+        ALLOW_INTERNAL_CHIPSELECTS~=true and
+        aArgs.iBus==flasher.BUS_IFlash and
+        (aArgs.iUnit==1 or aArgs.iUnit==2) and
+        aArgs.iChipSelect==3
+    ) then
+      print("Error: invalid chipselect: " .. tostring(aArgs.iChipSelect))
+      os.exit(1)
+    end
+
     -- todo: how to set this properly?
     aArgs.strSecureOption = aArgs.strSecureOption or flasher.DEFAULT_HBOOT_OPTION
-    printArgs(aArgs)
+	tFlasherHelper:printArgs(aArgs, "cli_flash.lua", tLog)
 
 	local path = require 'pl.path'
 	local strnetX90UnsignedHelperPath = path.join(flasher.DEFAULT_HBOOT_OPTION, "netx90")
@@ -1144,14 +1198,14 @@ local function main()
         os.exit(fOk and 0 or 1)
 
     elseif aArgs.fCommandTestCliSelected then
-        flasher_interface:configure(
+        flasher_test_interface_cli:configure(
           aArgs.strPluginName,
           aArgs.iBus,
           aArgs.iUnit,
           aArgs.iChipSelect,
           aArgs.atPluginOptions
         )
-        fOk, strMsg = flasher_test.testFlasher(flasher_interface)
+        fOk, strMsg = flasher_test.testFlasher(flasher_test_interface_cli)
         if fOk then
             if strMsg then
                 print(strMsg)

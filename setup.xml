@@ -2,7 +2,8 @@
 <?xml-stylesheet type="text/xsl" href="mbs/setup2html.xsl"?>
 
 <muhkuh_buildsystem group="org.muhkuh.tools" module="flasher">
-	<project_version>2.0.2</project_version>
+	<!-- Project version will be automatically overwritten by build_artifact.py-->
+	<project_version>2.1.0</project_version>
 
 	<scons>
 		<group>org.scons</group>

@@ -44,15 +44,17 @@ local OPERATION_MODE_Flash             = ${OPERATION_MODE_Flash}
 local OPERATION_MODE_Erase             = ${OPERATION_MODE_Erase}
 local OPERATION_MODE_Read              = ${OPERATION_MODE_Read}
 local OPERATION_MODE_Verify            = ${OPERATION_MODE_Verify}
-local OPERATION_MODE_Checksum          = ${OPERATION_MODE_Checksum}     -- Build a checksum over the contents of a specified area of a device.
-local OPERATION_MODE_Detect            = ${OPERATION_MODE_Detect}     -- Detect a device.
-local OPERATION_MODE_IsErased          = ${OPERATION_MODE_IsErased}     -- Check if the specified area of a device is erased.
+local OPERATION_MODE_Checksum          = ${OPERATION_MODE_Checksum}			-- Build a checksum over the contents of a specified area of a device.
+local OPERATION_MODE_Detect            = ${OPERATION_MODE_Detect}			-- Detect a device.
+local OPERATION_MODE_IsErased          = ${OPERATION_MODE_IsErased}			-- Check if the specified area of a device is erased.
 local OPERATION_MODE_GetEraseArea      = ${OPERATION_MODE_GetEraseArea}     -- Expand an area to the erase block borders.
 local OPERATION_MODE_GetBoardInfo      = ${OPERATION_MODE_GetBoardInfo}     -- Get bus and unit information.
-local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}     -- A combination of GetEraseArea, IsErased and Erase.
-local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}    -- A debug mode to send commands to a SPI flash.
-local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}    -- Blink the status LED for 5 seconds to visualy identify the hardware
-local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}    -- Reset the netX by triggering a watchdog reset
+local OPERATION_MODE_EasyErase         = ${OPERATION_MODE_EasyErase}		-- A combination of GetEraseArea, IsErased and Erase.
+local OPERATION_MODE_SpiMacroPlayer    = ${OPERATION_MODE_SpiMacroPlayer}	-- A debug mode to send commands to a SPI flash.
+local OPERATION_MODE_Identify          = ${OPERATION_MODE_Identify}			-- Blink the status LED for 5 seconds to visualy identify the hardware
+local OPERATION_MODE_Reset             = ${OPERATION_MODE_Reset}			-- Reset the netX by triggering a watchdog reset
+local OPERATION_MODE_SmartErase        = ${OPERATION_MODE_SmartErase}		-- Erases with variable erase block sizes
+local OPERATION_MODE_GetFlashSize	   = ${OPERATION_MODE_GetFlashSize}		-- Gets the actual and the supported flash size
 
 
 M.MSK_SQI_CFG_IDLE_IO1_OE          = ${MSK_SQI_CFG_IDLE_IO1_OE}
@@ -91,14 +93,26 @@ local OFFS_FLASH_ATTR_aucIdSend  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdSend
 local OFFS_FLASH_ATTR_aucIdMask  = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMask}
 local OFFS_FLASH_ATTR_aucIdMagic = ${OFFSETOF_SPIFLASH_ATTRIBUTES_Ttag_aucIdMagic}
 
+-- Offsets for getActualFlashSize memory access
+local OFFS_FLASH_ATTR_ullActualFlashSize	= ${OFFSETOF_CMD_PARAMETER_GETFLASHSIZE_STRUCT_ullActualFlashSize}
+											+ ${OFFSETOF_tFlasherInputParameter_STRUCT_uParameter}
+											+ 0x0c
+local OFFS_FLASH_ATTR_ulSupportedFlashSize	= ${OFFSETOF_CMD_PARAMETER_GETFLASHSIZE_STRUCT_ulSupportedFlashSize}
+											+ ${OFFSETOF_tFlasherInputParameter_STRUCT_uParameter}
+											+ 0x0c
 
 -- global variable for usage of hboot mode.
 -- If this Flag is set to True we use the hboot mode for netx90 M2M connections
 local bHbootFlash = false
 local path = require "pl.path"
-local FLASHER_DIR = path.currentdir()
+local strCurrentModulePath = path.dirname(debug.getinfo(1, "S").source:sub(2))
+local FLASHER_DIR = path.normpath(path.join(strCurrentModulePath, '..'))
 M.DEFAULT_HBOOT_OPTION = path.join(FLASHER_DIR, "netx", "hboot", "unsigned")
 M.HELPER_FILES_PATH = path.join(FLASHER_DIR, "netx", "helper")
+
+-- M.detect() optional flags
+-- Flags specific to SPI mode
+M.FLAG_DETECT_SPI_USE_SFDP_ERASE = 1
 
 --------------------------------------------------------------------------
 -- callback/progress functions,
@@ -494,10 +508,10 @@ end
 
 
 -- check if a device is available on tBus/ulUnit/ulChipSelect
-function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter)
+function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage, fnCallbackProgress, atParameter, ulFlags)
 	local aulParameter
 	atParameter = atParameter or {}
-
+	local ulFlagsLocal = ulFlags or 0
 
 	if tBus==M.BUS_Spi then
 		-- Set the initial SPI speed. The default is 1000kHz (1MHz).
@@ -533,7 +547,10 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			ulIdleCfg,                            -- idle configuration
 			ulSpiMode,                            -- mode
 			ulMmioConfiguration,                  -- MMIO configuration
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags
+												  -- Bit 0: Use SFDP erase operations
+												  -- Bit 31-1: reserved
 		}
 	elseif tBus==M.BUS_Parflash then
 		-- Set the allowed bus widths. This parameter is not used yet.
@@ -551,7 +568,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
   elseif tBus==M.BUS_IFlash then
     aulParameter =
@@ -565,7 +583,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
       0,                                    -- reserved
       0,                                    -- reserved
       0,                                    -- reserved
-      aAttr.ulDeviceDesc                    -- data block for the device description
+      aAttr.ulDeviceDesc,                   -- data block for the device description
+      ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
     }
 	elseif tBus==M.BUS_SDIO then
 		aulParameter = {
@@ -578,7 +597,8 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 			0,                                    -- reserved
 			0,                                    -- reserved
 			0,                                    -- reserved
-			aAttr.ulDeviceDesc                    -- data block for the device description
+			aAttr.ulDeviceDesc,                   -- data block for the device description
+			ulFlagsLocal,                         -- Status flags. Bit 31-0: reserved
 		}
 
 	else
@@ -590,26 +610,26 @@ function M.detect(tPlugin, aAttr, tBus, ulUnit, ulChipSelect, fnCallbackMessage,
 end
 
 
--- Detect the device and check if the size is in 32 bit range.
+-- Detect the device and print a warning if the usable size is limited to 2^32 Bytes
 function M.detectAndCheckSizeLimit(tPlugin, aAttr, ...)
 	local fOk = M.detect(tPlugin, aAttr, ...)
 	local strMsg
-	local ulDeviceSize
+	local ulDeviceSize, ullActualDeviceSize
 
 	if fOk ~= true then
 		fOk = false
-		--strMsg = "Failed to get a device description!"
 		strMsg = "Failed to detect the device!"
 	else
-		ulDeviceSize = M.getFlashSize(tPlugin, aAttr)
+		ullActualDeviceSize, ulDeviceSize = M.getActualFlashSize(tPlugin, aAttr)
 		if ulDeviceSize == nil then
 			fOk = false
 			strMsg = "Failed to get the device size!"
 
 		-- If the device size is >= 4GiB, the SDIO driver returns size 0xffffffff.
 		elseif ulDeviceSize == 0xffffffff then
-			fOk = false
-			strMsg = "Devices with a size of 2^32 bytes or more are not supported!"
+				fOk = true
+				print("Warning: Device with size > 2^32 Bytes detected. Will be treated as 4 GiB device!")
+				print(string.format("Size of Device: %u Bytes, will use first %u Bytes", ullActualDeviceSize, ulDeviceSize))
 		end
 	end
 
@@ -835,12 +855,16 @@ end
 function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBufferAddress, fnCallbackMessage,
                 fnCallbackProgress)
 	local fEqual = false
+    local ulKekInfo
+    local ulSipProtectionInfo
 	local aulParameter =
 	{
 		OPERATION_MODE_Verify,
 		aAttr.ulDeviceDesc,
 		ulFlashStartOffset,
 		ulFlashEndOffset,
+		0,  -- placeholder for return values
+		0,  -- placeholder for return values
 		ulBufferAddress
 	}
 	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
@@ -850,7 +874,11 @@ function M.verify(tPlugin, aAttr, ulFlashStartOffset, ulFlashEndOffset, ulBuffer
 		fEqual = (ulValue==0)
 	end
 
-	return fEqual
+	ulKekInfo = tPlugin:read_data32(aAttr.ulParameter+0x20)
+	ulSipProtectionInfo = tPlugin:read_data32(aAttr.ulParameter+0x24)
+
+
+	return fEqual, ulKekInfo, ulSipProtectionInfo
 end
 
 
@@ -907,6 +935,29 @@ end
 function M.getFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
 	local _, ulEraseEnd = M.getEraseArea(tPlugin, aAttr, 0, 0xffffffff, fnCallbackMessage, fnCallbackProgress)
 	return ulEraseEnd
+end
+
+function M.getActualFlashSize(tPlugin, aAttr, fnCallbackMessage, fnCallbackProgress)
+	local ulValue
+	local aulParameter
+	local ullActualFlashSize
+	local ulSupportedFlashSize
+
+	aulParameter =
+	{
+		OPERATION_MODE_GetFlashSize,           -- operation mode: get erase area
+		aAttr.ulDeviceDesc,                    -- data block for the device description
+	}
+
+	ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	if ulValue==0 then
+		local ullActualFlashSizeLow = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ullActualFlashSize)
+		local ullActualFlashSizeHigh = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ullActualFlashSize+4)
+		ullActualFlashSize = ullActualFlashSizeHigh << 32 | ullActualFlashSizeLow
+		ulSupportedFlashSize = tPlugin:read_data32(aAttr.ulParameter+OFFS_FLASH_ATTR_ulSupportedFlashSize)
+
+	return ullActualFlashSize, ulSupportedFlashSize
+	end
 end
 
 
@@ -985,6 +1036,80 @@ function M.easy_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessag
 	return ulValue == 0
 end
 
+
+
+-- Smart Erase. Erase an area in SPI-Flash with automatic choice of the optimal erase Commands.
+-- The start and end addresses must be aligned to sector boundaries as
+-- set by getEraseArea.
+function M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	local aulParameter = 
+	{
+		OPERATION_MODE_SmartErase,                     -- operation mode: smart_erase
+		aAttr.ulDeviceDesc,                            -- data block for the device description
+		ulEraseStart,
+		ulEraseEnd,
+	}
+	local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
+	return ulValue == 0
+  end
+
+
+-----------------------------------------------------------------------------
+-- Erase an area with mart erase sizes:
+-- ulSize = 0xffffffff to erase from ulDeviceOffset to end of chip
+--
+-- OK:
+-- Area erased
+--
+-- Error messages:
+-- getEraseArea failed!
+-- Failed to erase the area! (Failure during smart_erase)
+-- Failed to erase the area! (isErased check failed)
+
+
+function M.smartEraseArea(tPlugin, aAttr, ulDeviceOffset, ulSize, fnCallbackMessage, fnCallbackProgress)
+	local fIsErased
+	local ulEndOffset
+	local ulEraseStart,ulEraseEnd
+
+	-- If length = 0xffffffff we get the erase area now in order to detect the flash size.
+	if ulSize == 0xffffffff then
+		ulEndOffset = ulSize
+		ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if not (ulEraseStart and ulEraseEnd) then
+			return false, "getEraseArea failed!"
+		end
+		
+		ulEndOffset = ulEraseEnd
+	else
+		ulEndOffset = ulDeviceOffset + ulSize
+	end
+	
+	print(string.format("Area:  [0x%08x, 0x%08x[", ulDeviceOffset, ulEndOffset))
+	print("Checking if the area is already empty")
+	fIsErased = M.isErased(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+
+	-- Get area to erase, this aligns the operation to the flash sectors
+	ulEraseStart,ulEraseEnd = M.getEraseArea(tPlugin, aAttr, ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+	if not (ulEraseStart and ulEraseEnd) then
+		return false, "Unable to get erase area!"
+	end
+
+	print("Smart-Erasing flash")
+	print(string.format("Erase: [0x%08x, 0x%08x[", ulEraseStart, ulEraseEnd))
+
+	fIsErased = M.smart_erase(tPlugin, aAttr, ulEraseStart, ulEraseEnd, fnCallbackMessage, fnCallbackProgress)
+	if fIsErased~=true then
+		return false, "Failed to erase the area! (Failure during smart_erase)"
+	else
+		print("Checking if the area has been erased")
+		fIsErased = M.isErased(tPlugin, aAttr,  ulDeviceOffset, ulEndOffset, fnCallbackMessage, fnCallbackProgress)
+		if fIsErased~=true then
+			return false, "Failed to erase the area! (isErased check failed)"
+		end
+	end
+return true, "Area erased"
+end
 
 
 
@@ -1142,6 +1267,8 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 	local ulBufferLen = aAttr.ulBufferLen
 	local ulChunkSize
 	local strChunk
+    local ulKekInfo
+    local ulSipProtectionInfo
 
 	while ulDataOffset<ulDataByteSize do
 		-- Extract the next chunk.
@@ -1153,17 +1280,18 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 
 		-- Verify the chunk.
 		print(string.format("verifying offset 0x%08x-0x%08x.", ulDeviceOffset, ulDeviceOffset+ulChunkSize))
-		fOk = M.verify(
-      tPlugin,
-      aAttr,
-      ulDeviceOffset,
-      ulDeviceOffset + ulChunkSize,
-      ulBufferAdr,
-      fnCallbackMessage,
-      fnCallbackProgress
-    )
+		fOk, ulKekInfo, ulSipProtectionInfo = M.verify(
+          tPlugin,
+          aAttr,
+          ulDeviceOffset,
+          ulDeviceOffset + ulChunkSize,
+          ulBufferAdr,
+          fnCallbackMessage,
+          fnCallbackProgress
+        )
+
 		if not fOk then
-			return false, "Differences were found."
+			return false, "Differences were found.", ulKekInfo, ulSipProtectionInfo
 		end
 
 		-- Increase pointers.
@@ -1171,7 +1299,7 @@ function M.verifyArea(tPlugin, aAttr, ulDeviceOffset, strData, fnCallbackMessage
 		ulDeviceOffset = ulDeviceOffset + ulChunkSize
 	end
 
-	return true, "The data in the flash is equal to the input file."
+	return true, "The data in the flash is equal to the input file.", ulKekInfo, ulSipProtectionInfo
 end
 
 

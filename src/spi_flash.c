@@ -253,12 +253,13 @@ extern const char _binary_spi_flash_types_exo_end[];
 /*! detect_flash
 *   Convert the linear input address to the device's addressing mode
 *
-*   \param   ptFls              pointer to the instance of the spi flash
-*   \param   ulLinearAddress    linear address                  
-*                                                                              
+*   \param   ptFlash              pointer to the instance of the spi flash
+*   \param   pptFlashAttr         Pointer chain to struct with attributes of the flash
+*   \param   ucUseSfdpErase       Use erase operations gathered from SFDP data instead of table entries
+*
 *   \return  RX_OK              status successfully returned
 */
-static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_T **pptFlashAttr, char *pcBufferEnd)
+static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_T **pptFlashAttr, char *pcBufferEnd, uint8_t ucUseSfdpErase)
 {
 	int           iResult = 1;
 	int           fFoundId;
@@ -404,6 +405,60 @@ static int detect_flash(FLASHER_SPI_FLASH_T *ptFlash, const SPIFLASH_ATTRIBUTES_
 			/* Try to detect the device parameters with SFDP. */
 			ptSr = sfdp_detect(ptFlash);
 		}
+	}
+	else /* If the detected list is used, fill out the erase codes as good as possible*/
+	{
+		
+#if CFG_INCLUDE_SMART_ERASE==1
+		/* Clear entries */
+		for (unsigned int entry = 0; entry < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; entry++)
+		{
+			ptFlash->tSpiErase[entry].OpCode = 0;
+			ptFlash->tSpiErase[entry].Size = 0;
+		}
+
+		/* Required for sorting */
+		ptFlash->usNrEraseOperations = 0;
+
+		/* Sector erase (always exists) */
+		ptFlash->tSpiErase[0].OpCode = ptSr->ucEraseSectorOpcode;
+		ptFlash->tSpiErase[0].Size = ptSr->ulSectorPages*ptSr->ulPageSize;
+		ptFlash->usNrEraseOperations++;
+
+		/* Page erase (if it exists) */
+		if(ptSr->ucErasePageOpcode != 0x00){
+			ptFlash->tSpiErase[1].OpCode = ptSr->ucErasePageOpcode;
+			ptFlash->tSpiErase[1].Size = ptSr->ulPageSize;
+			ptFlash->usNrEraseOperations++;
+		}
+
+		// If other erase commands are included in the XML, read them in here
+
+		/* Sort the erase commands so the smallest is in element 0 */
+		spi_sort_erase_entries(ptFlash->tSpiErase, ptFlash->usNrEraseOperations);
+
+		// Try overwriting the erase entries with SFDP data
+		if (ucUseSfdpErase == 1){
+			FLASHER_SPI_FLASH_T tDummyFlash = *ptFlash;
+			tDummyFlash.usNrEraseOperations = 0;
+			sfdp_detect(&tDummyFlash);
+			
+			// Only overwrite if SFDP contains more instructions than the table
+			if(tDummyFlash.usNrEraseOperations > ptFlash->usNrEraseOperations){
+				for(unsigned char i = 0; i < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; i++){
+					ptFlash->tSpiErase[i] = tDummyFlash.tSpiErase[i];
+				}
+				ptFlash->usNrEraseOperations = tDummyFlash.usNrEraseOperations;
+			}
+		}
+
+		/* Print sorted list of operations */
+		uprintf(". Erase operations:\n");
+		for(unsigned int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++)
+		{
+			uprintf(". OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
+		}
+#endif
 	}
 
 	/* return result only if the pointer is not NULL */
@@ -689,12 +744,13 @@ int board_get_spi_driver(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SP
 *   Initializes the FLASH
 *               
 *   \param  ptFls   Pointer to FLASH Control Block
-*                                                                              
+*   \param  ulFlags Detect flags as bitfield. Used for bit 0: Use SFDP erase entries
+*
 *   \return  RX_OK                   FLASH successfully initialized
 *            Drv_SpiS_INVALID        Specified Flash Control Block invalid
 *            Drv_SpiS_UNKNOWN_FLASH  failed to detect the serial FLASH
 */
-int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd)
+int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_SPI_FLASH_T *ptFlash, char *pcBufferEnd, FLASHER_SPI_FLAGS_T tFlags)
 {
 	int   iResult;
 	const SPIFLASH_ATTRIBUTES_T *ptFlashAttr;
@@ -720,7 +776,7 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 	else
 	{
 		/* try to autodetect the flash */
-		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd);
+		iResult = detect_flash(ptFlash, &ptFlashAttr, pcBufferEnd, tFlags.bits.bUseSfdpErase);
 		if( iResult!=0 )
 		{
 			//uprintf("ERROR: Drv_SpiInitializeFlash: detect_flash failed with %d.\n", iResult);
@@ -884,7 +940,78 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 	return iResult;
 }
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
+/**
+ * \brief Erase an area of the specified SPI flash using the provided opCode
+ * 
+ * \param ptFlash          Pointer to the SPI flash information struct
+ * \param ulLinearAddress  Memory address to use for the erase command
+ * \param eraseOpcode      Erase command OpCode to send to the flash
+ * 
+ * \return int             Returns 0 on success, else 1
+ */
+int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode)
+{
+	int iResult;
+	unsigned char abCmd[4];
+	unsigned long ulDeviceAddress;
+
+	DEBUGMSG(ZONE_FUNCTION, ("+Drv_SpiEraseFlashSector(): ptFlash=0x%08x, ulLinearAddress=0x%08x\n", ptFlash, ulLinearAddress));
+
+	/* unlock write operations */
+	iResult = write_enable(ptFlash);
+	if (iResult != 0)
+	{
+		//uprintf("ERROR: Drv_SpiEraseFlashSector: DrvSflWriteEnable failed with %d.\n", iResult);
+		DBG_CALL_FAILED_VAL("write_enable", iResult)
+	}
+	else
+	{
+#if CFG_DEBUGMSG!=0
+		/* show initial status */
+		iResult = print_status(ptFlash);
+		if( iResult==0 )
+		{
+#endif
+		/* convert linear address to device address */
+		ulDeviceAddress = getDeviceAddress(ptFlash, ulLinearAddress);
+
+		/* cut off the byteoffset */
+		ulDeviceAddress &= ~((1U << ptFlash->uiSectorAdrShift) - 1U);
+		//uprintf(". Erasing deviceAddr: %x\n",ulDeviceAddress);
+
+		/* set the sector erase opcode */
+		abCmd[0] = eraseOpcode;
+		/* byte 1-3 is the sector address */
+		abCmd[1] = (unsigned char) ((ulDeviceAddress >> 16) & 0xff);
+		abCmd[2] = (unsigned char) ((ulDeviceAddress >> 8) & 0xff);
+		abCmd[3] = (unsigned char) (ulDeviceAddress & 0xff);
+
+		/* send command */
+		iResult = send_simple_cmd(ptFlash, abCmd, 4);
+		if (iResult != 0)
+		{
+			DBG_CALL_FAILED_VAL("send_simple_cmd", iResult)
+		}
+		else
+		{
+			/* wait for operation finish */
+			iResult = wait_for_ready(ptFlash);
+			if (iResult != 0)
+			{
+				DBG_CALL_FAILED_VAL("wait_for_ready", iResult)
+			}
+		}
+#if CFG_DEBUGMSG!=0
+	}
+#endif
+	}
+
+	DEBUGMSG(ZONE_FUNCTION, ("-Drv_SpiEraseFlashSector(): iResult=%d.\n", iResult));
+	return iResult;
+}
+#endif
 
 /*! Drv_SpiEraseFlashSector
 *   Erases a Sector in the specified serial FLASH
@@ -1685,3 +1812,21 @@ const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode)
 }
 
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
+void spi_sort_erase_entries(FLASHER_SPI_ERASE_T* ptEraseArray, const unsigned int iNrEntries){
+	// Sort for each position
+	for(unsigned int pos1 = 0; pos1 < iNrEntries-1; pos1++){
+		unsigned int min_pos = pos1;
+		for(unsigned int pos2 = pos1+1; pos2 < iNrEntries; pos2++){
+			if(ptEraseArray[pos2].Size < ptEraseArray[min_pos].Size){
+				min_pos = pos2;
+			}
+		}
+
+		FLASHER_SPI_ERASE_T tTmpErase = ptEraseArray[pos1];
+		ptEraseArray[pos1] = ptEraseArray[min_pos];
+		ptEraseArray[min_pos] = tTmpErase;
+	}
+}
+#endif

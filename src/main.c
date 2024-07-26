@@ -81,7 +81,10 @@ static NETX_CONSOLEAPP_RESULT_T opMode_detect(tFlasherInputParameter *ptAppParam
 	case BUS_SPI:
 		/* Use SPI flash */
 		uprintf("SPI flash\n");
-		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End));
+		FLASHER_SPI_FLAGS_T flags = {
+			.rawValue = ptParameter->ulFlags
+		};
+		tResult = spi_detect(&(ptParameter->uSourceParameter.tSpi), &(ptDeviceDescription->uInfo.tSpiInfo), (char*)(flasher_version.pucBuffer_End), flags);
 		if( tResult==NETX_CONSOLEAPP_RESULT_OK )
 		{
 			ptDeviceDescription->fIsValid = 1;
@@ -321,6 +324,66 @@ static NETX_CONSOLEAPP_RESULT_T opMode_erase(tFlasherInputParameter *ptAppParams
 
 /* ------------------------------------- */
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
+/**
+ * \brief opMode function for the smart erase feature.
+ *        Currently only supports SPI devices,
+ *        will fall back to normal erase for other devices.
+ * 
+ * \param ptAppParams  The flasher input parameters
+ * 
+ * \return NETX_CONSOLEAPP_RESULT_T
+ * - NETX_CONSOLEAPP_RESULT_OK     Flash was erase successfully
+ * - NETX_CONSOLEAPP_RESULT_ERROR  An error occured while erasing the flash
+ */
+static NETX_CONSOLEAPP_RESULT_T opMode_smartErase(tFlasherInputParameter *ptAppParams)
+{
+	CMD_PARAMETER_SMART_ERASE_T *ptParams = &(ptAppParams->uParameter.tSmartErase);
+
+	/* Be pessimistic. */
+	NETX_CONSOLEAPP_RESULT_T tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+
+	/* get the source type */
+	BUS_T tSourceTyp = ptParams->ptDeviceDescription->tSourceTyp;
+	switch (tSourceTyp)
+	{
+	case BUS_SPI:
+		/*  use SPI flash */
+		tResult = spi_smart_erase(&(ptParams->ptDeviceDescription->uInfo.tSpiInfo), ptParams->ulStartAdr, ptParams->ulEndAdr);
+		if(tResult != 0){
+			uprintf("! smart_erase operation failed");
+			return tResult;
+		}
+		break;
+
+	case BUS_ParFlash:
+		/*  use parallel flash - not yet implemented.  */
+		uprintf("! Parallel flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_IFlash:
+		/*  use internal flash - not yet implemented.  */
+		uprintf("! Internal flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	case BUS_SDIO:
+		/*  use sdio flash - not yet implemented.  */
+		uprintf("! SDIO flash is not yet supported by smart_erase\n");
+		uprintf("! Falling back to normal erase routine\n");
+		tResult = opMode_erase(ptAppParams);
+		break;
+	default: /* Unknown/wrong flash types */
+		tResult = NETX_CONSOLEAPP_RESULT_ERROR;
+		break;
+	}
+	return tResult;
+}
+#endif
+/* ------------------------------------- */
+
 
 static NETX_CONSOLEAPP_RESULT_T opMode_read(tFlasherInputParameter *ptAppParams)
 {
@@ -549,15 +612,13 @@ static NETX_CONSOLEAPP_RESULT_T opMode_isErased(tFlasherInputParameter *ptAppPar
 
 /* ------------------------------------- */
 
-/* Flash size in bytes, except for SD cards, where it is KB */
-static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription)
-{
+/* Actual Flash size in bytes */
+static unsigned long long getActualFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription){
 	BUS_T tSrcType;
-	unsigned long ulFlashSize;
+	unsigned long long ullFlashSize;
 
-	
 	/* This is the default value for the error case. */
-	ulFlashSize = 0;
+	ullFlashSize = 0;
 
 	/* Get the source type. */
 	tSrcType = ptDeviceDescription->tSourceTyp;
@@ -565,12 +626,13 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 	{
 #ifdef CFG_INCLUDE_PARFLASH
 	case BUS_ParFlash:
-		ulFlashSize = ptDeviceDescription->uInfo.tParFlash.ulFlashSize;
+		ullFlashSize = ptDeviceDescription->uInfo.tParFlash.ulFlashSize;
 		break;
 #endif
 
 	case BUS_SPI:
-		ulFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
+		uprintf("erase block size: 0x%08x\n", ptDeviceDescription->uInfo.tSpiInfo.ulSectorSize);
+		ullFlashSize = ptDeviceDescription->uInfo.tSpiInfo.tAttributes.ulSize;
 		break;
 
 #ifdef CFG_INCLUDE_INTFLASH
@@ -581,28 +643,19 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 			break;
 
 		case INTERNAL_FLASH_TYPE_MAZ_V0:
-			ulFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
+			uprintf("erase block size: 0x%08x\n", 0x1000);
+			ullFlashSize = ptDeviceDescription->uInfo.tInternalFlashInfo.uAttributes.tMazV0.ulSizeInBytes;
 			break;
 		}
 		break;
 #endif
 		
 	/* 
-		The stored size is in KB. 
-		If the number fits into a DWord, convert it to bytes.
-		If not, set the maximum value.
+		The stored size is in KB, "<< 10" converts it to bytes.
 	*/
 #ifdef CFG_INCLUDE_SDIO
 	case BUS_SDIO:
-		ulFlashSize = ptDeviceDescription->uInfo.tSdioHandle.ulSizeKB;
-		if (ulFlashSize < 0x00400000U) 
-		{
-			ulFlashSize <<= 10; 
-		}
-		else
-		{
-			ulFlashSize = 0xffffffffU;
-		}
+		ullFlashSize = (unsigned long long) ptDeviceDescription->uInfo.tSdioHandle.ulSizeKB << 10;
 		break;
 #endif
 
@@ -612,11 +665,40 @@ static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescriptio
 		break;
 	}
 
-	return ulFlashSize;
+	return ullFlashSize;
 }
 
-/* Todo: check for flash devices with sizes >= 4 GB, as we cannot
-   represent a device size of 4 GB or larger. */
+
+/* Supported flash size in bytes (Limited to 2^32) */
+static unsigned long getFlashSize(const DEVICE_DESCRIPTION_T *ptDeviceDescription)
+{
+	unsigned long long ulFlashSize = getActualFlashSize(ptDeviceDescription);
+
+	// Detect SD-cards larger than 4 GiB and treat them as 4 GiB SD-cards
+	// Assumption: No SD Card has exactly 0xffffffff bytes, there are always some defects
+	// Therefore 0xffffffff can be used for limitation detection
+#ifdef CFG_INCLUDE_SDIO
+	if (ptDeviceDescription->tSourceTyp == BUS_SDIO && ulFlashSize > 0xffffffffU)
+	{
+		ulFlashSize = 0xffffffffU;
+	}
+#endif
+
+	return (unsigned long)ulFlashSize;
+}
+
+/* Actual flash size in bytes */
+static NETX_CONSOLEAPP_RESULT_T opMode_getActualFlashSize(tFlasherInputParameter *ptAppParams){
+	CMD_PARAMETER_GETFLASHSIZE_T *ptParameter;
+
+	// Get a shortcut to the parameters
+	ptParameter = &(ptAppParams->uParameter.tGetFlashSize);
+	ptParameter->ullActualFlashSize = getActualFlashSize(ptParameter->ptDeviceDescription);
+	ptParameter->ulSupportedFlashSize = getFlashSize(ptParameter->ptDeviceDescription);
+
+	return NETX_CONSOLEAPP_RESULT_OK;
+}
+
 static NETX_CONSOLEAPP_RESULT_T opMode_getEraseArea(tFlasherInputParameter *ptAppParams)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
@@ -812,8 +894,8 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 	unsigned long ulParamVersion;
 	OPERATION_MODE_T tOpMode;
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
-	unsigned long ulStartAdr;
-	unsigned long ulEndAdr       = 0; /* avoid 'uninitialized' warning */
+	unsigned long ulStartAdr	 = 0; /* avoid 'uninitialized' warning */
+	unsigned long ulEndAdr       = 0; /* dito */
 	unsigned long ulDataByteSize = 0; /* dito */
 	unsigned char *pucData;
 	unsigned long ulFlashSize;
@@ -940,7 +1022,23 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		uprintf(". Mode: Reset netX from binary\n");
 		break;
 
+#if CFG_INCLUDE_SMART_ERASE==1
 
+	case OPERATION_MODE_SmartErase:
+		ulPars = FLAG_STARTADR + FLAG_ENDADR + FLAG_DEVICE;
+		ulStartAdr = ptAppParams->uParameter.tSmartErase.ulStartAdr;
+		ulEndAdr = ptAppParams->uParameter.tSmartErase.ulEndAdr;
+		ptDeviceDescription = ptAppParams->uParameter.tSmartErase.ptDeviceDescription;
+		uprintf(". Mode: Smart Erase\n");
+		uprintf(". Flash offset [0x%08x, 0x%08x[\n", ulStartAdr, ulEndAdr);
+		break;
+#endif
+
+	case OPERATION_MODE_GetFlashSize:
+		ulPars = FLAG_DEVICE;
+		ptDeviceDescription = ptAppParams->uParameter.tGetFlashSize.ptDeviceDescription;
+		uprintf(". Mode: Get Flash Size\n");
+		break;
 	default:
 		ulPars = 0;
 		uprintf("! unknown operation mode: %d\n", tOpMode);
@@ -961,6 +1059,12 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
+			if(ulFlashSize == 0xFFFFFFFF){
+				uprintf(". Warning: Only first 2^32 of actual 0x%08x%08x bytes are supported\n",
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
+			}
+
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1131,6 +1235,11 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		{
 			ulFlashSize = getFlashSize(ptDeviceDescription);
 			uprintf(". Flash size: 0x%08x\n", ulFlashSize);
+			if(ulFlashSize == 0xFFFFFFFF){
+				uprintf(". Warning: Only first 2^32 of actual 0x%08x%08x bytes are supported\n",
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
+					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
+			}
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1297,6 +1406,19 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			case OPERATION_MODE_Reset:
 				tResult = opMode_reset();
 				break;
+
+			case OPERATION_MODE_SmartErase:
+#if CFG_INCLUDE_SMART_ERASE==1
+				tResult = opMode_smartErase(ptAppParams);
+				break;
+#else
+				/* This is possible since the parameters for normal and smart erase are identical. */
+				tResult = opMode_erase(ptAppParams);
+				break;
+#endif
+			case OPERATION_MODE_GetFlashSize:
+				tResult = opMode_getActualFlashSize(ptAppParams);
+				break;
 			}
 		}
 	}
@@ -1316,4 +1438,3 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 
 	return tResult;
 }
-

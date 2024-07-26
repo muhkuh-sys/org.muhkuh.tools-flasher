@@ -74,8 +74,8 @@ local atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-0-g2886822befb2:reV",
-        version_offset = 0x1044
+        version = "Ver:GITv1.0.0-dev9-0-g9b7f25b40f30:reV",
+        version_offset = 0x10B8
     },
 
     {
@@ -88,21 +88,21 @@ local atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-0-g427ff28e7e1a:reV",
-        version_offset = 0x93c
+        version = "Ver:GITv1.0.0-dev5-0",
+        version_offset = 0x9B8
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.0.2-0-g",
+        version = "GITv2.1.0",
         version_offset = 0x0410
     },
 
     {
         key = "start_mi",
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.4-0-gfeb8b422a33b:reV",
+        version = "Ver:GITv2.5.5",
         version_offset = 0x0454
     },
 
@@ -231,6 +231,7 @@ end
 local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
     local fAllOk = true
     local atCheckedDirs = {}
+    local strErrorMsg
 
     for iDir = 1, #astrHelperDirs do
         local strDir = astrHelperDirs[iDir]
@@ -240,9 +241,10 @@ local function checkHelperFilesIntern(astrHelperDirs, astrHelperNames)
 
             for _, strName in ipairs(astrHelperNames) do
                 print()
-                local strBin = checkHelperFileIntern(strDir, strName, true)
+                local strBin, strErrorMsg = checkHelperFileIntern(strDir, strName, true)
                 if strBin == nil then
                     fAllOk = false
+                    print(strErrorMsg)
                 end
             end
 

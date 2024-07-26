@@ -2,9 +2,7 @@
 
 local argparse = require 'argparse'
 local mhash = require 'mhash'
-local pl = require 'pl.import_into'()
 local class = require 'pl.class'
-local path = require 'pl.path'
 local tFlasherHelper = require 'flasher_helper'
 
 local atLogLevels = {
@@ -15,13 +13,23 @@ local atLogLevels = {
     'fatal'
 }
 
+local tBootCookies = {}
+
+tBootCookies["NETX90"] = {}
+tBootCookies["NETX90"]["cookie"] = string.char(0x00, 0xAF, 0xBE, 0xF3)
 
 
 local UsipGenerator = class()
 
 function UsipGenerator:_init(tLog)
-    print("initialize USIP Generator")
+    tLog.debug("initialize USIP Generator")
     self.tLog = tLog
+
+    -- This is the SIP protection cookie.
+    self.strSipProtectionCookie = string.char(
+        0x8b, 0x42, 0x3b, 0x75, 0xe2, 0x63, 0x25, 0x62,
+        0x8a, 0x1e, 0x31, 0x6b, 0x28, 0xb4, 0xd7, 0x03
+    )
 end
 
 function UsipGenerator:gen_multi_usip(tUsipConfigDict)
@@ -111,6 +119,7 @@ end
 function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPrefix)
     local tResult = true
 
+    local path = require 'pl.path'
     if not path.exists(strOutputDir) then
         path.mkdir(strOutputDir)
     end
@@ -124,10 +133,10 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
     local strUsipData
 
     for iIdx = 0, tUsipConfigDict["num_of_chunks"] -1 do
-        local strOutputFilePath = pl.path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
+        local strOutputFilePath = path.join(strOutputDir, string.format("%ssingle_usip_%s.usp", strPrefix, iIdx))
         table.insert(aOutputList, strOutputFilePath)
 
-        strUsipData = aDataList[iIdx]
+        strUsipData = aDataList[iIdx+1]
 
         local tUsipFileHandle = io.open(strOutputFilePath, 'wb')
         tUsipFileHandle:write(strUsipData)
@@ -139,18 +148,21 @@ function UsipGenerator:gen_multi_usip_hboot(tUsipConfigDict, strOutputDir, strPr
 end
 
 function UsipGenerator:analyze_usip(strUsipFilePath)
-    local tResult = true -- be optimistic
-    local strErrorMsg = ""
+    local tResult
+    local strErrorMsg
     local tUsipFileContent
     local iUsipChunkIdx
+    local tLog = self.tLog
 
-    self.tLog.info(string.format("Analyzing usip file: %s", strUsipFilePath))
+    tLog.info(string.format("Analyzing usip file: %s", strUsipFilePath))
 
     self.strUsipFilePath = strUsipFilePath
 
     -- set initial values for the usip config
     self.tUsipConfigDict = {}
     self.tUsipConfigDict["num_of_chunks"] = 0
+    self.tUsipConfigDict["boot_cookie"] = "unknown"
+    self.tUsipConfigDict["netx_type"] = "unknown"
     -- key settings
     self.tUsipConfigDict["master_key"] = "not used"
     self.tUsipConfigDict["firmware_key"] = "not used"
@@ -174,14 +186,24 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     -- header checksum
     self.tUsipConfigDict["header_check_sum"] = "unknown"
 
+    local path = require 'pl.path'
     if path.exists(strUsipFilePath) then
         local tUsipFileHandle = io.open(strUsipFilePath, 'rb')
+        local strCookieBytes = tUsipFileHandle:read(4)
+        self.tUsipConfigDict["boot_cookie"] = strCookieBytes
+        local strImageCookie = tFlasherHelper.bytes_to_uint32(strCookieBytes)
 
+        for tNetX in pairs(tBootCookies) do
+            if strCookieBytes == tBootCookies[tNetX]["cookie"] then
+                self.tUsipConfigDict["netx_type"] = tNetX
+                break
+            end
+        end
         -- read 4 bytes at offset 16 for the header checksum
         tUsipFileHandle:seek("set", 16)
         local strHeaderImgSize = tUsipFileHandle:read(4)
         self.tUsipConfigDict["header_image_size"] = strHeaderImgSize
-        --print(string.format("%02X ", string.byte(strHeaderImgSize)))
+        tLog.debug("Header size: 0x%02X bytes", string.byte(strHeaderImgSize))
 
         -- read 28 bytes at offset 32 for the sha224
         tUsipFileHandle:seek("set", 32)
@@ -200,20 +222,23 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
 
             for iIdx = 0, (self.tUsipConfigDict["num_of_chunks"] - 1) do
                 if tUsipFileContent[iIdx]['key_idx_int'] ~= 255 then
-                    if self.tUsipConfigDict["uuid_int"] ~= "unknown" and self.tUsipConfigDict["uuid_int"] ~= tUsipFileContent[iIdx]["uuid_int"] then
+                    if(
+                        self.tUsipConfigDict["uuid_int"] ~= "unknown" and
+                        self.tUsipConfigDict["uuid_int"] ~= tUsipFileContent[iIdx]["uuid_int"]
+                    ) then
                         tResult = false
                         strErrorMsg = "Identity conflict occur! Multiple Chunks in one file with colliding identities."
                         break
                     else
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_0_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_1_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_2_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_3_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "uuid_mask_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_0_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_1_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_2_int")
-                        self:__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_3_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_0_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_1_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_2_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_3_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "uuid_mask_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_0_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_1_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_2_int")
+                        self.__check_binding_value(tUsipFileContent[iIdx], self.tUsipConfigDict, "anchor_mask_3_int")
                     end
                 end
             end
@@ -228,11 +253,11 @@ function UsipGenerator:analyze_usip(strUsipFilePath)
     return tResult, strErrorMsg, self.tUsipConfigDict
 end
 
-function UsipGenerator:__check_binding_value(tInputTable, tOutputTable, strCompareKey)
+function UsipGenerator.__check_binding_value(tInputTable, tOutputTable, strCompareKey)
     if tOutputTable[strCompareKey] ~= ("unknown") then
-        ulValueInput = tInputTable[strCompareKey]
-        ulValueOutput = tOutputTable[strCompareKey]
-        ulNewVal = ulValueInput | ulValueOutput
+        local ulValueInput = tInputTable[strCompareKey]
+        local ulValueOutput = tOutputTable[strCompareKey]
+        local ulNewVal = ulValueInput | ulValueOutput
         tOutputTable[strCompareKey] = ulNewVal
     else
         tOutputTable[strCompareKey] = tInputTable[strCompareKey]
@@ -244,10 +269,10 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     local strErrorMsg = ""
     local tUsipFileHandle
     local i
-    local j
     local tUsipFileContent = {}
     local ulSignatureSize = 4
     local iUsipChunkIdx = 0
+    local tLog = self.tLog
 
     local tSignatures = {}
     tSignatures[1] = {}  --ECC
@@ -268,14 +293,14 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
 
     if tUsipFileHandle ~= nil then
 
-        local iUsipFileOffset = 0
+        local iUsipFileOffset
 
 
         -- read whole file and find the first USIP chunk
-        -- Note: this will cause an error if the string "USIP" occurs 
+        -- Note: this will cause an error if the string "USIP" occurs
         -- somewhere before the first USIP chunk.
         local strUsipFileContent = tUsipFileHandle:read("*a")
-        i, j = string.find(strUsipFileContent, "USIP")
+        i = string.find(strUsipFileContent, "USIP")
         iUsipFileOffset = i - 1
 
         -- reset the file pointer
@@ -289,19 +314,26 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
             local ulChunkSize
 
             if strChunkId == nil or tFlasherHelper.bytes_to_uint32(strChunkId) == 0 then
-                print("No Chunk ID found. End of loop.")
+                tLog.debug("No Chunk ID found. End of loop.")
                 break
             end
 
             -- get the chunk size
             ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize) * 4
+            tLog.debug(
+                'Found chunk "%s" at offset 0x%04x with 0x%04x bytes.',
+                strChunkId,
+                iUsipFileOffset,
+                ulChunkSize
+            )
             if strChunkId ~= "USIP" then
                 -- skip over this chunk
-                print(string.format("Skip over '%s' chunk", strChunkId))
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                tLog.debug(string.format("Skip over '%s' chunk", strChunkId))
+                -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8
 
             elseif strChunkId == "USIP" then
-                self.tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
+                tLog.info("found USIP chunk at offset %s", iUsipFileOffset)
 
                 -- add new entry for this USIP chunk
                 tUsipFileContent[iUsipChunkIdx] = {}
@@ -377,21 +409,21 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                         tUsipFileContent[iUsipChunkIdx][string.format("anchor_mask_%s_int", idx)] = ulAnchorMask
                     end
 
-                    print("strKeyAlgorithm offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strKeyAlgorithm offset " ..tUsipFileHandle:seek())
                     -- extract the key algorithm
                     local strKeyAlgorithm = tUsipFileHandle:read(1)
                     local ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm)
                     tUsipFileContent[iUsipChunkIdx]["key_algorithm"] = strKeyAlgorithm
 
 
-                    print("strKeyStrength offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strKeyStrength offset " ..tUsipFileHandle:seek())
                     -- extract key strength
                     local strKeyStrength = tUsipFileHandle:read(1)
                     local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength)
                     tUsipFileContent[iUsipChunkIdx]["key_strength"] = strKeyStrength
 
                     tUsipFileHandle:seek("set", tUsipFileHandle:seek()-2)
-                    print("strPaddedKey offset " ..tUsipFileHandle:seek())
+                    tLog.debug("strPaddedKey offset " ..tUsipFileHandle:seek())
                     -- extract padded key
                     local strPaddedKey = tUsipFileHandle:read(520)
                     tUsipFileContent[iUsipChunkIdx]["padded_key"] = strPaddedKey
@@ -420,7 +452,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                 local iDataIdx = 0
                 local ulExtractedDataSize = 0
                 tUsipFileContent[iUsipChunkIdx]["data"] = {}
-                print("Data part offset " .. tUsipFileHandle:seek())
+                tLog.debug("Data part offset " .. tUsipFileHandle:seek())
 
                 while tResult do
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx] = {}
@@ -439,7 +471,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["size_int"] = ulDataSize
                     ulExtractedDataSize = ulExtractedDataSize + 2
 
-                    local current = tUsipFileHandle:seek()
+                    tUsipFileHandle:seek()
                     local strPatchedData = tUsipFileHandle:read(ulDataSize)
                     mh_sha384:hash(strPatchedData)
                     tUsipFileContent[iUsipChunkIdx]["data"][iDataIdx]["patched_data"] = strPatchedData
@@ -450,7 +482,7 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     if ulDataLeftSize <= 1 then
 
 
-                        print("exit loop")
+                        tLog.debug("exit loop")
                         break
                     end
                     iDataIdx = iDataIdx + 1
@@ -470,13 +502,14 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
                     tUsipFileContent[iUsipChunkIdx]["padding"] = ""
                 end
 
-                local current = tUsipFileHandle:seek()
+                tUsipFileHandle:seek()
                 local strSignature = tUsipFileHandle:read(ulSignatureSize)
                 tUsipFileContent[iUsipChunkIdx]["signature"] = strSignature
 
                 tUsipFileContent[iUsipChunkIdx]["sha384_hash"] = mh_sha384:hash_end()
 
-                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8 -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                -- add chunk size to the usip file offset plus 8 bytes for chunk id and size value
+                iUsipFileOffset = iUsipFileOffset + ulChunkSize + 8
                 -- increment the index
                 iUsipChunkIdx = iUsipChunkIdx + 1
             end
@@ -490,16 +523,289 @@ function UsipGenerator:get_usip_file_content(strUsipFilePath)
     return tResult, strErrorMsg, tUsipFileContent, iUsipChunkIdx
 end
 
-function main()
+
+--- Set the SIP protection cookie in a COM SIP.
+-- @param strComSipData The COM SIP where the cookie should be set.
+-- @return The modified COM SIP page.
+function UsipGenerator:setSipProtectionCookie(strComSipData)
+    -- Replace the first 16 bytes of the COM page with the SIP protection cookie.
+    return self.strSipProtectionCookie .. string.sub(strComSipData, 16+1)
+end
+
+
+-- apply data from an usip file to APP and COM SIP data
+function UsipGenerator.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+    local strNewComSipData = strComSipData
+    local strNewAppSipData = strAppSipData
+    local ulSipPage
+    local strUsedData
+    local strBefore
+    local strAfter
+    local tData
+    local tSipPage
+
+    for ulChunks= 0, tUsipConfigDict.num_of_chunks - 1 do
+    --for _, tSipPage in ipairs(tUsipConfigDict.content) do
+        tSipPage = tUsipConfigDict.content[ulChunks]
+        ulSipPage = tSipPage.page_type_int
+        if ulSipPage == 1 then
+            strUsedData = strNewComSipData
+        elseif ulSipPage == 2 then
+            strUsedData = strNewAppSipData
+        end
+        for iDataIdx=0, tSipPage['ulDataCount'] do
+        -- for ulIdx, tData in ipairs(tSipPage.data) do
+            tData = tSipPage.data[iDataIdx]
+            strBefore = string.sub(strUsedData, 1, tData.offset_int)
+            strAfter = string.sub(strUsedData, tData.offset_int + tData.size_int + 1)
+            strUsedData = strBefore .. tData.patched_data ..strAfter
+        end
+        if ulSipPage == 1 then
+            strNewComSipData = strUsedData
+        elseif ulSipPage == 2 then
+            strNewAppSipData = strUsedData
+        end
+    end
+
+    return strNewComSipData, strNewAppSipData
+end
+
+
+-- convert an input USIP binary to SIP binaries of the COM and APP SIP
+-- if no USIP is provided, the default SIP data will be returned
+function UsipGenerator:convertUsipToBin(strComSipBinPath, strAppSipBinPath, tUsipConfigDict, fSetSipProtectionCookie)
+
+    local fResult = true
+    local strErrorMsg
+    local strComSipData
+    local strAppSipData
+
+    strComSipData, strErrorMsg = tFlasherHelper.loadBin(strComSipBinPath)
+    if strComSipData == nil then
+        self = false
+    else
+        strAppSipData, strErrorMsg = tFlasherHelper.loadBin(strAppSipBinPath)
+        if strAppSipData == nil then
+            fResult = false
+        end
+    end
+
+    if fResult == true then
+        if tUsipConfigDict ~= nil then
+            -- Set the SIP protection cookie if requested.
+            if fSetSipProtectionCookie then
+                strComSipData = self:setSipProtectionCookie(strComSipData)
+            end
+            strComSipData, strAppSipData = self.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+        end
+    end
+    strComSipData = self.updateSipHash(strComSipData)
+    strAppSipData = self.updateSipHash(strAppSipData)
+
+    return fResult, strErrorMsg, strComSipData, strAppSipData
+end
+
+
+--- Update the hash for a COM and APP secure info page.
+-- The hash is used to check the integrity of the pages. It is a SHA384 sum over the complete data area.
+-- @param strSipData The data of the complete secure info page.
+-- @return The updated page.
+function UsipGenerator.updateSipHash(strSipData)
+    -- Get the data part of the page.
+    local strData = string.sub(strSipData, 1, 0x0fd0)
+    -- Get the hash for the data part.
+    local mh = mhash.mhash_state()
+    mh:init(mhash.MHASH_SHA384)
+    mh:hash(strData)
+    local strHash = mh:hash_end()
+    -- Return the updated page.
+    return strData .. strHash
+end
+
+
+function UsipGenerator:gen_uniform_data(strComSipTemplate, strAppSipTemplate, strUsipFilePath, fSetSipProtectionCookie)
+    local tLog = self.tLog
+    local strComSipData
+    local strAppSipData
+    local strMessage
+
+    -- The template data for the COM and APP secure info page must have 4096 bytes.
+    local sizComSipPage = string.len(strComSipTemplate)
+    local sizAppSipPage = string.len(strAppSipTemplate)
+    if sizComSipPage~=4096 then
+        strMessage = string.format('The COM SIP template must have 4096 bytes, but it has %d.', sizComSipPage)
+
+    elseif sizAppSipPage~=4096 then
+        strMessage = string.format('The APP SIP template must have 4096 bytes, but it has %d.', sizAppSipPage)
+
+    else
+        -- Analyze the USIP file.
+        local tUsipAnalyzeResult, strUsipAnalyzeMsg, tUsipConfigDict = self:analyze_usip(strUsipFilePath)
+        if tUsipAnalyzeResult~=true then
+            strMessage = string.format(
+                'Failed to analyze the USIP data from "%s": %s',
+                strUsipFilePath,
+                strUsipAnalyzeMsg
+            )
+
+        else
+            -- Dump the analyzed USIP data.
+            -- This is a lot of output including some binary data. Do not print this by default, even not on
+            -- the "debug" level.
+            -- tLog.debug('USIP contents: %s', require 'pl.pretty'.write(tUsipConfigDict))
+
+            -- Use the template as the initial contents for the secure info pages.
+            strComSipData = strComSipTemplate
+            strAppSipData = strAppSipTemplate
+
+            -- Set the SIP protection cookie if requested.
+            if fSetSipProtectionCookie then
+                strComSipData = self:setSipProtectionCookie(strComSipData)
+            end
+
+            -- Apply the USIP file to the secure info pages.
+            strComSipData, strAppSipData = self.apply_usip_data(strComSipData, strAppSipData, tUsipConfigDict)
+
+            -- Update the hashes.
+            strComSipData = self.updateSipHash(strComSipData)
+            strAppSipData = self.updateSipHash(strAppSipData)
+        end
+    end
+
+    return strComSipData, strAppSipData, strMessage
+end
+
+
+function UsipGenerator:cmd_gen_uniform_data(strComSipTemplatePath, strAppSipTemplatePath, strUsipFilePath,
+                                            strComOutputFile, strAppOutputFile,
+                                            fSetSipProtectionCookie)
+    local tLog = self.tLog
+
+    local utils = require 'pl.utils'
+    tLog.debug('Reading COM SIP template from "%s".', strComSipTemplatePath)
+    local strComSipTemplate, strComSipReadError = utils.readfile(strComSipTemplatePath, true)
+    if strComSipTemplate==nil then
+        tLog.error(
+            'Failed to read the COM SIP template from "%s": %s',
+            strComSipTemplatePath,
+            strComSipReadError
+        )
+    else
+        tLog.debug('Reading APP SIP template from "%s".', strAppSipTemplatePath)
+        local strAppSipTemplate, strAppSipReadError = utils.readfile(strAppSipTemplatePath, true)
+        if strAppSipTemplate==nil then
+            tLog.error(
+                'Failed to read the APP SIP template from "%s": %s',
+                strAppSipTemplatePath,
+                strAppSipReadError
+            )
+        else
+            tLog.debug('Generating uniform data...')
+            local strComSipPage, strAppSipPage, strMessage = self:gen_uniform_data(
+                strComSipTemplate,
+                strAppSipTemplate,
+                strUsipFilePath,
+                fSetSipProtectionCookie
+            )
+            if strComSipPage==nil or strAppSipPage==nil then
+                tLog.error('Failed to generate the uniform data: %s', strMessage)
+            else
+                local fWriteComResult, strWriteComMessage = utils.writefile(strComOutputFile, strComSipPage, true)
+                if fWriteComResult~=true then
+                    tLog.error(
+                        'Failed to write the generated COM SIP data to "%s": %s',
+                        strComOutputFile,
+                        strWriteComMessage
+                    )
+                else
+                    local fWriteAppResult, strWriteAppMessage = utils.writefile(strAppOutputFile, strAppSipPage, true)
+                    if fWriteAppResult~=true then
+                        tLog.error(
+                            'Failed to write the generated APP SIP data to "%s": %s',
+                            strAppOutputFile,
+                            strWriteAppMessage
+                        )
+                    else
+                        tLog.info('Generated uniform COM SIP data: "%s"',strComOutputFile)
+                        tLog.info('Generated uniform APP SIP data: "%s"',strAppOutputFile)
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+local function main()
+    -- Get the path to this source file.
+    local strThisModulePath = debug.getinfo(1, "S").source:sub(2)
+    -- Construct the path to the helper binaries starting at this module.
+    local path = require 'pl.path'
+    local strHelperFilesPath = path.normpath(
+        path.join(
+            path.dirname(strThisModulePath),
+            '..',
+            'netx',
+            'helper'
+        )
+    )
+
+    -- Get the path to the default COM and APP SIP templates.
+    local NETX90_DEFAULT_COM_SIP_BIN = path.join(strHelperFilesPath, 'netx90', 'com_sip_default_ff.bin')
+    local NETX90_DEFAULT_APP_SIP_BIN = path.join(strHelperFilesPath, 'netx90', 'app_sip_default_ff.bin')
+
     local tParser = argparse('UsipGenerator', ''):command_target("strSubcommand")
-    local tUsipData
-    local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file'):target('fCommandAnalyzeSelected')
-    tParserCommandAnalyze:argument('usip_file', 'input usip file'):target('strUsipFilePath')
-    tParserCommandAnalyze:argument('json_file', 'json file'):target('strJsonFilePath')
-    tParserCommandAnalyze                    :option(
-            '-V --verbose'
-    )                                        :description(string.format('Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-            table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
+
+    local tParserCommandAnalyze = tParser:command('analyze a', 'analyze an usip file and create json file')
+                                         :target('fCommandAnalyzeSelected')
+    tParserCommandAnalyze:argument('usip_file', 'input usip file')
+                        :target('strUsipFilePath')
+    tParserCommandAnalyze:argument('json_file', 'json file')
+                         :target('strJsonFilePath')
+    tParserCommandAnalyze:option('-V --verbose')
+                         :description(string.format(
+                             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                             table.concat(atLogLevels, ', ')
+                         ))
+                         :argname('<LEVEL>')
+                         :default('debug')
+                         :target('strLogLevel')
+
+    local tParserCommandUniform = tParser:command('uniform u', ''):target('fCommandUniformSelected')
+    tParserCommandUniform:argument('usip_input')
+                        :argname('<USIP_FILE>')
+                        :description("Apply the contents of USIP_FILE to the secure info pages.")
+                        :target('strUsipFilePath')
+    tParserCommandUniform:argument('com_sip_output')
+                        :argname('<COM_OUTPUT_FILE>')
+                        :description('Write the generated COM SIP page to COM_OUTPUT_FILE.')
+                        :target('strComOutputFile')
+    tParserCommandUniform:argument('app_sip_output')
+                        :argname('<APP_OUTPUT_FILE>')
+                        :description('Write the generated APP SIP page to APP_OUTPUT_FILE.')
+                        :target('strAppOutputFile')
+    tParserCommandUniform:option('--com_sip_template')
+                        :argname('<COM_TEMPLATE_FILE>')
+                        :description("Read the default COM SIP contents from COM_TEMPLATE_FILE.")
+                        :target('strComSipTemplatePath')
+                        :default(NETX90_DEFAULT_COM_SIP_BIN)
+    tParserCommandUniform:option('--app_sip_template')
+                        :argname('<APP_TEMPLATE_FILE>')
+                        :description("Read the default APP SIP contents from APP_TEMPLATE_FILE.")
+                        :target('strAppSipTemplatePath')
+                        :default(NETX90_DEFAULT_APP_SIP_BIN)
+    tParserCommandUniform:flag('--set_sip_protection')
+                        :description('Set the SIP protection cookie.')
+                        :target('fSetSipProtectionCookie')
+                        :default(false)
+    tParserCommandUniform:option('-V --verbose')
+                        :description(string.format(
+                            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+                            table.concat(atLogLevels, ', ')
+                        ))
+                        :argname('<LEVEL>')
+                        :default('debug')
+                        :target('strLogLevel')
 
     local tArgs = tParser:parse()
 
@@ -509,12 +815,24 @@ function main()
     local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
 
     if tArgs.fCommandAnalyzeSelected == true then
-        print("=== Analyze ===")
-        usip_gen = UsipGenerator(tLog)
-        tResult, strErrorMsg, tUsipData = usip_gen:analyze_usip(tArgs.strUsipFilePath, tArgs.strJsonFilePath)
+        tLog.debug("=== Analyze ===")
+        local usip_gen = UsipGenerator(tLog)
+        local tResult, strErrorMsg, tUsipData = usip_gen:analyze_usip(tArgs.strUsipFilePath, tArgs.strJsonFilePath)
 
-        strOutputDir = ".tmp"
+        local strOutputDir = ".tmp"
         usip_gen:gen_multi_usip_hboot(tUsipData, strOutputDir)
+
+    elseif tArgs.fCommandUniformSelected then
+        tLog.info('Generate uniform data.')
+        local usip_gen = UsipGenerator(tLog)
+        usip_gen:cmd_gen_uniform_data(
+            tArgs.strComSipTemplatePath,
+            tArgs.strAppSipTemplatePath,
+            tArgs.strUsipFilePath,
+            tArgs.strComOutputFile,
+            tArgs.strAppOutputFile,
+            tArgs.fSetSipProtectionCookie
+        )
     end
 end
 
@@ -530,5 +848,3 @@ end
 
 
 return UsipGenerator
-
-

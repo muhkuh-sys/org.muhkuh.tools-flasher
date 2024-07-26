@@ -1,3 +1,19 @@
+Updated in CLI Flasher v2.1.0
+=============================
+
+CLI Flasher:
+* 'detect_secure_boot_mode' command now also works via ethernet intrerface
+
+Usip Player:
+* production mode commands for speeding up production work flow:
+	* 'write_sip_pm' write secure info pages
+	* 'read_sip_pm' read secure info pages
+	* 'verify_sip_pm' verify secure info pages content
+
+WFP:
+* integration of 'write_sip_pm' functionality into wfp commands
+* new command 'calculate' for evaluating condition operations
+
 
 Updates in CLI Flasher v2.0.2
 ==============================

@@ -20,19 +20,25 @@ local function __print_verify_summary(atFlashDataTable, tLog)
   tLog.info("===========================================")
   for _, atFlashData in pairs(atFlashDataTable) do
       if atFlashData['atChunkList'] ~= nil then
+        if atFlashData['tBus'] == 2 and atFlashData['ulUnit'] == 1 and (atFlashData['ulChipSelect'] == 1 or atFlashData['ulChipSelect'] ==3) then
+            tLog.info("COM SIP")
+        elseif atFlashData['tBus'] == 2 and atFlashData['ulUnit'] == 2 and (atFlashData['ulChipSelect'] == 1 or atFlashData['ulChipSelect'] ==3) then
+            tLog.info("APP SIP")
+        else
           tLog.info(
             "Flash Bus: " .. atFlashData['tBus'] ..
             " Unit: " .. atFlashData['ulUnit'] ..
             " ChipSelect: " .. atFlashData['ulChipSelect']
           )
-          tLog.info("-------------------------------------------")
+        end
+        tLog.info("-------------------------------------------")
       end
       for _, tChunk in ipairs(atFlashData['atChunkList']) do
           if tChunk.verified == true then
-              tLog.info("    %s Chunk 0x%08x - 0x%08x: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              tLog.info("    %s Chunk [0x%08x - 0x%08x[: OK ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
               ulSuccessCount = ulSuccessCount +1
           else
-              tLog.info("    %s Chunk 0x%08x - 0x%08x: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
+              tLog.info("    %s Chunk [0x%08x - 0x%08x[: FAILED ", tChunk.strType, tChunk.ulOffset, tChunk.ulEndOffset)
               ulFailCount = ulFailCount +1
           end
       end
@@ -60,7 +66,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
               -- alter the start of the chunk
               tLog.info('alter the start of the chunk')
-              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('alter chunk area from : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
               local ulSplitOffset = tNewChunk['ulEndOffset']-tChunk['ulOffset']
 
@@ -71,7 +77,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               end
               -- modify strData inside tChunk
 
-              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                   to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
 
 
           -- check if the whole chunk is overwritten by file
@@ -79,7 +85,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               tNewChunk['ulEndOffset'] >= tChunk['ulEndOffset'] then
 
               -- mark index to be removed
-              tLog.info('delete chunk          : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('delete chunk          : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               tChunk['delete'] = true
 
           -- check if file overlaps end of chunk
@@ -89,7 +95,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
 
               -- alter the end of the chunk
               tLog.info('alter the end of the chunk')
-              tLog.info('alter chunk area from : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('alter chunk area from : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
               local ulDataSize = tChunk['ulEndOffset']-tChunk['ulOffset']
               local ulSplitOffset = tNewChunk['ulOffset']-tChunk['ulOffset']
 
@@ -100,7 +106,7 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
                   tChunk['strData'] = strNewChunkData
               end
               tChunk['ulEndOffset'] = tNewChunk['ulOffset']
-              tLog.info('                   to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                   to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
 
 
           -- check if file is inside of chunk
@@ -135,8 +141,8 @@ local function __addChunkToList(tDataChunks, tNewChunk, tFile, tLog)
               tChunk['ulEndOffset'] = tNewChunk['ulOffset']
               tChunk['strData'] = strNewChunkData
 
-              tLog.info('split chunk area to : 0x%08x - 0x%08x', tChunk['ulOffset'], tChunk['ulEndOffset'])
-              tLog.info('                and : 0x%08x - 0x%08x', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
+              tLog.info('split chunk area to : [0x%08x - 0x%08x[', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('                and : [0x%08x - 0x%08x[', tSplitChunk['ulOffset'], tSplitChunk['ulEndOffset'])
           end
       end
   end
@@ -201,11 +207,12 @@ local function __generateFileList(tTargetFlash, tWfpControl, atWfpConditions, tL
 end
 
 
-local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
+local function __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
   -- run verify command for flash data chunks with in wfp.xml
   -- run iserased command for erase commands in wfp.xml
   local fVerified = true  -- be optimistic
   local fOk
+  local tDataChunks = atFlashData['atChunkList']
   tLog.info('verify chunks from chunk list')
 
   -- verify the created chunks
@@ -213,14 +220,20 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
 
       if tChunk['strType'] == "erase" then
           -- run isErased function for areas that are expected to be erased after using the wfp archive
-          tLog.info('verify erase command at offset 0x%08x to 0x%08x.', tChunk['ulOffset'], tChunk['ulEndOffset'])
+          tLog.info('(Flash Bus: %s Unit: %s ChipSelect: %s): verify erase command at offset [0x%08x, 0x%08x[.',
+            atFlashData['tBus'],
+            atFlashData['ulUnit'],
+            atFlashData['ulChipSelect'],
+            tChunk['ulOffset'],
+            tChunk['ulEndOffset']
+        )
 
           fOk = tFlasher.isErased(tPlugin, aAttr, tChunk['ulOffset'], tChunk['ulEndOffset'])
           if fOk == true then
               tLog.info('ok')
               tChunk['verified'] = true
           else
-              tLog.info("ERROR: area 0x%08x to 0x%08x not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info("ERROR: area [0x%08x to 0x%08x[ not erased!", tChunk['ulOffset'], tChunk['ulEndOffset'])
               fVerified = false
               tChunk['verified'] = false
               print("verified result: " .. tostring(fVerified))
@@ -233,7 +246,10 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
           -- run verify function for flashed data that is supposed to be in the flash after flashing the whole wfp
           -- archive
           tLog.info(
-            'verify flash command at offset [0x%08x, 0x%08x[. file %s',
+            '(Flash Bus: %s Unit: %s ChipSelect: %s): verify flash command at offset [0x%08x, 0x%08x[. file %s',
+            atFlashData['tBus'],
+            atFlashData['ulUnit'],
+            atFlashData['ulChipSelect'],
             tChunk['ulOffset'],
             tChunk['ulEndOffset'],
             tChunk['tFile']['strFilePath']
@@ -246,7 +262,13 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
               tLog.info(strMessage or "")
               tChunk['verified'] = true
           else
-              tLog.info('ERROR: verify failed for area 0x%08x to 0x%08x!', tChunk['ulOffset'], tChunk['ulEndOffset'])
+              tLog.info('ERROR: (Flash Bus: %s Unit: %s ChipSelect: %s): verify failed for area [0x%08x - 0x%08x[!',
+               atFlashData['tBus'],
+              atFlashData['ulUnit'],
+              atFlashData['ulChipSelect'],
+               tChunk['ulOffset'],
+                tChunk['ulEndOffset']
+            )
               tLog.info(strMessage or "")
               fVerified = false
               tChunk['verified'] = false
@@ -259,7 +281,7 @@ local function __verifyWFPData(tDataChunks, tPlugin, tFlasher, aAttr, tLog)
 end
 
 
-function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog)
+function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, tFlasher, aAttr, tLog, fUseProductionMode)
 
 	-- loop over each target flash
 	---- get all files (write or erase commands) for current target flash
@@ -479,11 +501,12 @@ function M.verifyWFP(tTarget, tWfpControl, iChiptype, atWfpConditions, tPlugin, 
         atFlashData['atChunkList'] = tCleanChunkList
 
         -- pass the chunk list of current flash to __verifyWFPData
-        fOk = __verifyWFPData(atFlashData['atChunkList'], tPlugin, tFlasher, aAttr, tLog)
+        fOk = __verifyWFPData(atFlashData, tPlugin, tFlasher, aAttr, tLog)
         if fOk == false then
             fVerified = false
         end
     end
+
     -- print final verify result and return
     __print_verify_summary(atFlashDataTable, tLog)
 

@@ -56,6 +56,7 @@
 
 SPIFLASH_ATTRIBUTES_T tSfdpAttributes;
 
+
 static int read_sfdp(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulAddress, unsigned char *pucData, size_t sizData)
 {
 	int iResult;
@@ -143,6 +144,45 @@ static int read_jedec_flash_parameter(FLASHER_SPI_FLASH_T *ptFlash, unsigned lon
 	{
 		hexdump(uSfdpData.auc, sizeof(uSfdpData.auc));
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
+		/** Read erase instruction entries from JEDEC Basic Flash Parametes
+		 *  Read starting from DWORD 8, there are 4 erase entries each with:
+		 *  8-Bit for the size in 2^N format
+		 *  8-Bit for the OpCode
+		 */
+		const unsigned char DWORD_8_START = 7*4; /* Nr of DWords starts at 1*/
+		unsigned short nrEraseOps = 0; /* Required for sorting */
+
+		/* Clear the array */
+		for(int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++){
+			ptFlash->tSpiErase[nrEraseOps].Size = 0;
+			ptFlash->tSpiErase[nrEraseOps].OpCode = 0;
+		}
+
+		/* Get erase operations from SFDP data */
+		for(int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++){
+			unsigned char shift = uSfdpData.auc[DWORD_8_START + 2*opNr];
+			unsigned char opCode = uSfdpData.auc[DWORD_8_START + 2*opNr + 1];
+			/* No instruction present or shift further than variable size */
+			if(shift != 0 && shift < sizeof(unsigned long long)*8){
+				ptFlash->tSpiErase[nrEraseOps].Size = 1U << shift;
+				ptFlash->tSpiErase[nrEraseOps].OpCode = opCode;
+				nrEraseOps++;
+			}
+		}
+		ptFlash->usNrEraseOperations = nrEraseOps;
+
+		/* Sort the erase commands so the smallest is in element 0 */
+		spi_sort_erase_entries(ptFlash->tSpiErase, ptFlash->usNrEraseOperations);
+
+		/* Print sorted list of operations */
+		uprintf("Erase operations:\n");
+		for(unsigned int opNr = 0; opNr < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; opNr++)
+		{
+			uprintf("OpCode: 0x%2x, Memory: %d\n", ptFlash->tSpiErase[opNr].OpCode, ptFlash->tSpiErase[opNr].Size);
+		}
+#endif
 		/* Clear the complete structure. */
 		memset(&tSfdpAttributes, 0, sizeof(tSfdpAttributes));
 

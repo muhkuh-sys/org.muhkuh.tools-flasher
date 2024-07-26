@@ -43,6 +43,7 @@
 
 #define SPI_BUFFER_SIZE 8192
 unsigned char pucSpiBuffer[SPI_BUFFER_SIZE];
+#define SPI_ERASE_BITMAP_ENTRY_CNT 32  /* Used by smart_erase. Allows erase commands of up to 1024 sectors size */
 
 /*-----------------------------------*/
 
@@ -537,6 +538,259 @@ NETX_CONSOLEAPP_RESULT_T spi_flash(const FLASHER_SPI_FLASH_T *ptFlashDescription
 
 /*-----------------------------------*/
 
+#if CFG_INCLUDE_SMART_ERASE==1
+
+/**
+ * \brief Check if a memory sector is empty (all 0xFF)
+ * 
+ * \param sectorSizeBytes  The size of the sector in byte
+ * \param sectorBuffer     Pointer to the first element in the sector buffer
+ * \return int             true (1==1) if empty, else false
+ */
+static int sectorIsEmpty(unsigned long sectorSizeBytes, unsigned char* sectorBuffer)
+{
+	unsigned char theByte = 0xFF;
+	for(unsigned long byteNr = 0; byteNr < sectorSizeBytes; byteNr++)
+	{
+		theByte = theByte & sectorBuffer[byteNr];
+	}
+	if(theByte == 0xFF)
+	{
+		return 1==1;
+	}
+
+	return 0==1;
+}
+
+/**
+ * @brief Sets the value of a single bit inside a bitmap
+ * 
+ * @param value   The value to set (0/1)
+ * @param bitPos  The position of the bit to set
+ * @param bitmap  Pointer to the bitmap which will be manipulated
+ */
+static void bitmapWriteBit(const unsigned int value, const unsigned long bitPos, unsigned int* bitmap)
+{
+	const unsigned int bitPerMapEntry = sizeof(unsigned int)*8;
+	unsigned int entry = bitPos/bitPerMapEntry;
+	unsigned int bitShift = bitPos%bitPerMapEntry;
+	if(value >= 1)
+	{
+		bitmap[entry] = bitmap[entry] | (1U << bitShift);
+	}
+	else
+	{
+		bitmap[entry] = bitmap[entry] & ~(1U << bitShift);
+	}
+	
+}
+
+/**
+ * @brief Reads the value of a specific bit inside a bitmap
+ * 
+ * @param bitPos  Position of the bit to read
+ * @param bitmap  Pointer to the bitmap which will be read
+ * @return int    Value of the requested bit (0/1)
+ */
+static int bitmapReadBit(unsigned long bitPos, unsigned int* bitmap)
+{
+	const unsigned int bitPerMapEntry = sizeof(unsigned int)*8;
+	unsigned int entry = bitPos/bitPerMapEntry;
+	unsigned int bitShift = bitPos%bitPerMapEntry;
+	return (bitmap[entry] >> bitShift) & 0x01;
+}
+
+
+/**
+ * @brief Erase a section of SPI memory using variably sized erase commands
+ * 
+ * @attention This function requires the list of erase operations pointed to by ptFlashDescription->tSpiErase
+ *            to be in sorted order with the smallest erase operation being at element 0
+ * 
+ * @param ptFlashDescription [in]  Device information returned by spi_detect.
+ * @param ulStartAdr         [in]  Start offset of the first erase block to be erased.
+ * @param ulEndAdr           [in]  End offset of the last erase block to be erased (offset of the last byte + 1).
+ * 
+ * @return
+ * - NETX_CONSOLEAPP_RESULT_OK: success, the memory has been erased.
+ * - NETX_CONSOLEAPP_RESULT_ERROR: An error has occurred.
+ */
+NETX_CONSOLEAPP_RESULT_T spi_smart_erase(const FLASHER_SPI_FLASH_T *ptFlashDescription, const unsigned long ulStartAdr, const unsigned long ulEndAdr)
+{
+	/* Be Pessimistic */
+	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
+	const SPIFLASH_ATTRIBUTES_T attributes = ptFlashDescription->tAttributes;
+	const FLASHER_SPI_ERASE_T *eraseTypes = ptFlashDescription->tSpiErase;
+	
+	/* Nr of valid entries */
+	unsigned int nrEraseOps = ptFlashDescription->usNrEraseOperations;
+	if(nrEraseOps == 0){
+		// This should only happen if there is no valid entry for this chip in the XML table of flashes
+		// and SFDP is disable by the user (--no_sfdp) or not supported by the chip.
+		uprintf("! No valid erase operations found for this memory.");
+		return NETX_CONSOLEAPP_RESULT_ERROR;
+	}
+
+	/* Get sector size, set a cap if it exceeds the read buffer size */
+	unsigned long sectorSizeBytes = attributes.ulSectorPages * attributes.ulPageSize;
+	if(sectorSizeBytes > SPI_BUFFER_SIZE)
+	{
+		sectorSizeBytes = SPI_BUFFER_SIZE;
+	}else if(sectorSizeBytes == 0){
+		uprintf("! Could not get sector size. Page size: %d, Sector pages: %d\n", attributes.ulPageSize, attributes.ulSectorPages);
+		return NETX_CONSOLEAPP_RESULT_ERROR;
+	}
+
+	unsigned long maxEraseSize = 0;
+	unsigned long nrSectorsInLargestErase = 0;
+	unsigned short usBitmapReady = 0;
+	while(usBitmapReady == 0){
+		/* This assumes the erase entries are sorted (which they should be) */
+		maxEraseSize = eraseTypes[nrEraseOps-1].Size;
+
+		/* Maximum number of chunks we consider at once, limited by the largest erase instruction */
+		nrSectorsInLargestErase = maxEraseSize/sectorSizeBytes;
+
+		/* Number of bytes we need in the sector bitmap (+1 to account for rounding) */
+		unsigned int bitPerMapEntry = (sizeof(unsigned int)*8);
+		unsigned int bitmapSize = nrSectorsInLargestErase / bitPerMapEntry + 1;
+
+		if(bitmapSize > SPI_ERASE_BITMAP_ENTRY_CNT){
+			nrEraseOps = nrEraseOps-1;  // We ignore the current erase command going forward
+			if(nrEraseOps == 0){
+				uprintf("! Remembering too many memory sections required for all erase commands, falling back to normal erase\n");
+				retVal = spi_erase(ptFlashDescription, ulStartAdr, ulEndAdr);
+				return retVal;
+			}
+		}else{
+			usBitmapReady = 1;
+		}
+	}
+	
+	/* Bitmap to store the erase status by sector */
+	unsigned int sectorBitmap[SPI_ERASE_BITMAP_ENTRY_CNT];
+	for (unsigned int i = 0; i < SPI_ERASE_BITMAP_ENTRY_CNT; i++)
+	{
+		sectorBitmap[i] = 0;
+	}
+	
+
+	/* For the first iteration, align the sector map with sectors of largest erase command */
+	unsigned long currAdr = ulStartAdr;
+	unsigned long currSector = 0;
+	currSector = (currAdr % maxEraseSize)/sectorSizeBytes;
+
+	/* Information for debugging */
+	unsigned int eraseOpCount[FLASHER_SPI_NR_ERASE_INSTRUCTIONS] = {0};
+
+	/* Go through entire erase area */
+	progress_bar_init(ulEndAdr-ulStartAdr);
+	while(currAdr < ulEndAdr)
+	{
+		unsigned char partialSector = 0;
+		/* Read a set of sectors */
+		while(currSector < nrSectorsInLargestErase)
+		{
+			if(currAdr >= ulEndAdr){
+				partialSector = 1;
+				break; /* Stop reading if we reached the end */
+			}else if (currAdr == ulStartAdr){
+				partialSector = 1;
+			}
+			retVal = Drv_SpiReadFlash(ptFlashDescription, currAdr, pucSpiBuffer, sectorSizeBytes);
+			if(retVal != NETX_CONSOLEAPP_RESULT_OK)
+			{
+				uprintf("! Could not read the flash at address 0x%x\n", currAdr);
+				return retVal;
+			}
+
+			if(!sectorIsEmpty(sectorSizeBytes, pucSpiBuffer))
+			{
+				bitmapWriteBit(1, currSector, sectorBitmap);
+			}else
+			{
+				bitmapWriteBit(0, currSector, sectorBitmap);
+			}
+			currAdr = currAdr + sectorSizeBytes;
+			currSector = currSector + 1;
+		}
+
+		/* Find optimal erase pattern for read sectors */
+		/* Check each erase command, starting with the largest */
+		for(int eraseCmd = (int) nrEraseOps-1; eraseCmd >= 0; eraseCmd--)
+		{
+			unsigned int nrSectorsEraseable = eraseTypes[eraseCmd].Size/sectorSizeBytes;
+			/* Check if we found a page erase command, we only erase by sector */
+			if(nrSectorsEraseable < 1)
+			{
+				continue;
+			}
+
+			/* Find how many times the command fits into the considered erase area */
+			unsigned int sizeFactor = nrSectorsInLargestErase/nrSectorsEraseable;
+			if(sizeFactor == 0)
+			{
+				uprintf("! Something went wrong calculating size relations between erase commands\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			/* Iterate over the read sectors in chunks, keeping track of the command specific offset */
+			for(unsigned int offsetFactor = 0; offsetFactor < sizeFactor; offsetFactor++)
+			{
+				unsigned int offset = offsetFactor*nrSectorsEraseable;
+				unsigned int nrChunksEmpty = 0;
+				for(unsigned int sector = offset; sector < nrSectorsEraseable+offset; sector++)
+				{
+					if(bitmapReadBit(sector,sectorBitmap) == 0)
+					{
+						nrChunksEmpty++;
+					}
+				}
+
+				// uprintf("OpSz:0x%4x, Empty: %d, Total: %d\n", eraseTypes[eraseCmd].Size, nrChunksEmpty, nrSectorsEraseable);
+
+				/* Use erase command if less than 20% of sectors are empty
+				 * If we're in the first or last block, only erase if no sectors erasable by the command are empty to prevent erasing too far.
+				*/
+				if(((10*nrChunksEmpty) <= (2*nrSectorsEraseable) && partialSector == 0) || (nrChunksEmpty == 0))
+				{
+					unsigned long eraseAdr = currAdr + offset*sectorSizeBytes - currSector*sectorSizeBytes;
+					//uprintf("Erase with command: 0x%2x\n",eraseTypes[eraseCmd].OpCode);
+					retVal = Drv_SpiEraseFlashArea(ptFlashDescription, eraseAdr, eraseTypes[eraseCmd].OpCode);
+					if(retVal != 0)
+					{
+						uprintf("! Error erasing flash area at 0x%8x!\n", eraseAdr);
+						return retVal;
+					}
+
+					for(unsigned int sector = offset; sector < (nrSectorsEraseable+offset); sector++)
+					{
+						bitmapWriteBit(0, sector, sectorBitmap);
+					}
+
+					eraseOpCount[eraseCmd]++;
+				}
+			}
+		}
+
+		currSector = 0;
+		progress_bar_set_position(currAdr-ulStartAdr);
+	}
+	progress_bar_finalize();
+
+
+	uprintf(". Erase operation usage:\n");
+	for(unsigned int i = 0; i < FLASHER_SPI_NR_ERASE_INSTRUCTIONS; i++){
+	uprintf(". OpCode: 0x%2x  Count:%u\n", eraseTypes[i].OpCode, eraseOpCount[i]);
+	}
+
+	return retVal;
+}
+#endif
+
+/*-----------------------------------*/
+
+
 /**
  * @brief Erase a range of the memory. 
  *
@@ -672,13 +926,16 @@ NETX_CONSOLEAPP_RESULT_T spi_verify(const FLASHER_SPI_FLASH_T *ptFlashDescriptio
  * @param ptSpiConfiguration [in]  Configuration of the SPI interface, e.g. the clock frequency.
  * @param ptFlashDescription [out] Information about the flash device, if any was identified.
  * @param pcBufferEnd        [in]  Pointer to the end of a buffer at least 8 KB in size.
+ * @param tFlags           [in]  32-Bit detect flag bitfield.
+ *                                 Bit    0: Always use SFDP to get erase operations
+ *                                 Bit 31-1: reserved
  *
  * @return
  * - NETX_CONSOLEAPP_RESULT_OK: a device was detected and the device information is stored in ptFlashDescription.
  * - NETX_CONSOLEAPP_RESULT_ERROR: no device was detected or an error occurred.
  */
 
-NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd)
+NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfiguration, FLASHER_SPI_FLASH_T *ptFlashDescription, char *pcBufferEnd, FLASHER_SPI_FLAGS_T ulFlags)
 {
 	NETX_CONSOLEAPP_RESULT_T tResult;
 	int iResult;
@@ -687,7 +944,7 @@ NETX_CONSOLEAPP_RESULT_T spi_detect(FLASHER_SPI_CONFIGURATION_T *ptSpiConfigurat
 	/* try to detect flash */
 	uprintf(". Detecting SPI flash on unit %d, chip select %d...\n", ptSpiConfiguration->uiUnit, ptSpiConfiguration->uiChipSelect);
 	ptFlashDescription->uiSlaveId = ptSpiConfiguration->uiChipSelect;
-	iResult = Drv_SpiInitializeFlash(ptSpiConfiguration, ptFlashDescription, pcBufferEnd);
+	iResult = Drv_SpiInitializeFlash(ptSpiConfiguration, ptFlashDescription, pcBufferEnd, ulFlags);
 	if( iResult!=0 )
 	{
 		/* failed to detect the SPI flash */
@@ -870,4 +1127,3 @@ NETX_CONSOLEAPP_RESULT_T spi_getEraseArea(const FLASHER_SPI_FLASH_T *ptFlashDesc
 }
 
 /*-----------------------------------*/
-

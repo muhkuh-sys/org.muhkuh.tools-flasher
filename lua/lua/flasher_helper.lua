@@ -9,6 +9,7 @@ local M = {}
 -----------------------------------------------------------------------------
 
 local class = require 'pl.class'
+local path = require 'pl.path'
 
 -- exit code for detect_netx
 local STATUS_OK = 0
@@ -22,6 +23,10 @@ local SECURE_BOOT_ONLY_APP_ENABLED = 50
 local SECURE_BOOT_UNKNOWN = 2
 local SECURE_BOOT_ERROR = 1
 
+local tFlasher = require 'flasher'
+
+M.NETX90_DEFAULT_COM_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "com_sip_default_ff.bin")
+M.NETX90_DEFAULT_APP_SIP_BIN = path.join(tFlasher.HELPER_FILES_PATH, "netx90", "app_sip_default_ff.bin")
 --------------------------------------------------------------------------
 -- helpers
 --------------------------------------------------------------------------
@@ -226,15 +231,16 @@ end
 function M.connect_retry(tPlugin, uLRetries)
     local fCallSuccess
     local strError
+    local ulConsoleMode = nil
     print("connect to plugin")
 
     if tPlugin == nil then
         strError = "No plugin selected for connect"
     end
 
-    -- default retries are 5
+    -- default retries are 3
     if uLRetries == nil then
-        uLRetries = 5
+        uLRetries = 3
     end
 
     while uLRetries > 0 do
@@ -243,6 +249,13 @@ function M.connect_retry(tPlugin, uLRetries)
             print("connect successful")
             break
         end
+        ulConsoleMode = tPlugin:get_console_mode()
+		if not fCallSuccess then
+			if string.find(strError, "start_mi image has been rejected or execution has failed.") then
+				break
+			end
+		end
+		
         print("connect not successful")
         uLRetries = uLRetries - 1
         M.sleep_s(1)
@@ -251,7 +264,7 @@ function M.connect_retry(tPlugin, uLRetries)
         end
     end
 
-    return fCallSuccess, strError
+    return fCallSuccess, strError, ulConsoleMode
 end
 
 -- Try to open a plugin for an interface with the given name.
@@ -275,13 +288,13 @@ local function getPluginByName(strName, strPluginType, atPluginOptions)
 
 			for i,v in ipairs(aDetectedInterfaces) do
 				print(string.format(
-          "%d: %s (%s) Used: %s, Valid: %s",
-          i,
-          v:GetName(),
-          v:GetTyp(),
-          tostring(v:IsUsed()),
-          tostring(v:IsValid())
-        ))
+					"%d: %s (%s) Used: %s, Valid: %s",
+					i,
+					v:GetName(),
+					v:GetTyp(),
+					tostring(v:IsUsed()),
+					tostring(v:IsValid())
+					))
 				if strName == v:GetName() then
 					if not v:IsValid() then
 						return nil, "Plugin is not valid"
@@ -576,8 +589,8 @@ local function readSip_via_jtag(tPlugin, strReadSipHbootImg)
 end
 
 function M.detect_secure_boot_mode(aArgs)
-  local tFlasher = require 'flasher'
-  local romloader = require 'romloader'
+  
+	local romloader = require 'romloader'
 	local strPluginName  = aArgs.strPluginName
 	local strPluginType  = aArgs.strPluginType
 	local atPluginOptions= aArgs.atPluginOptions
@@ -593,14 +606,14 @@ function M.detect_secure_boot_mode(aArgs)
 
 	local iSecureBootStatus = SECURE_BOOT_ERROR
 
-  local path = require 'pl.path'
+
 
 	local tPlugin, strMsg = M.getPlugin(strPluginName, strPluginType, atPluginOptions)
 	if tPlugin == nil then
 		strMsg = strMsg or "Could not connect to device."
 
-	elseif tPlugin:GetTyp() == "romloader_uart" then
-		fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+	elseif tPlugin:GetTyp() == "romloader_uart" or tPlugin:GetTyp() == "romloader_eth" then
+		fConnected, strMsg = M.connect_retry(tPlugin)
 		print("Connect() result: ", fConnected, strMsg)
 
 		local strMsgComp = "start_mi image has been rejected or execution has failed."
@@ -710,14 +723,14 @@ function M.detect_secure_boot_mode(aArgs)
       "unsigned",
       "netx90",
       "read_sip_M2M.bin"
-    )  --tFlasher.HELPER_FILES_PATH,
+    )  --tFlasher.HELPER_FILES_PATH
 		printf("Trying to load netX 90 read_sip_M2M image from %s", strReadSipPath)
-    local strReadSipBin
+		local strReadSipBin
 		strReadSipBin, strMsg = M.loadBin(strReadSipPath)
 		if strReadSipBin == nil then
 			print(strMsg)
 		else
-			fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+			fConnected, strMsg = M.connect_retry(tPlugin)
 			print("Connect() result: ", fConnected, strMsg)
 
 			if not fConnected then
@@ -774,14 +787,14 @@ function M.detect_secure_boot_mode(aArgs)
 							if tPlugin == nil then
 								strMsg = strMsg or "Could not re-open the JTAG interface."
 							else
-								fConnected, strMsg = pcall(tPlugin.Connect, tPlugin)
+								fConnected, strMsg = M.connect_retry(tPlugin)
 								print("Connect() result: ", fConnected, strMsg)
 
 								if not fConnected then
 									print("Failed to reconnect.")
 								else
 									-- read the SIP pages
-                  local tRes
+									local tRes
 									tRes, strMsg = readSip_via_jtag(tPlugin, strReadSipBin)
 
 									if tRes == nil then
@@ -834,7 +847,7 @@ function M.detect_secure_boot_mode(aArgs)
 		end -- readSipM2M image
 
 	else
-		strMsg = "Only romloader_uart and romloader_jtag are supported."
+		strMsg = "Only romloader_uart, romloader_eth and romloader_jtag are supported."
 	end -- if tPlugin
 
 	if iSecureBootStatus==SECURE_BOOT_DISABLED then
@@ -1058,6 +1071,112 @@ function M.dump_trace(tPlugin, strOutputFolder, strOutputFileName)
 end
 
 
+-- strNetxName chiptypeToName(iChiptype)
+-- transfer integer chiptype into a netx name
+-- returns netX name as a string otherwise nil
+function M.chiptypeToName(iChiptype)
+    local romloader = _G.romloader
+    local strNetxName
+    -- First catch the unlikely case that "iChiptype" is nil.
+	-- Otherwise each ROMLOADER_CHIPTYP_* which is also nil will match.
+	if iChiptype==romloader.ROMLOADER_CHIPTYP_NETX500 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX100 then
+		strNetxName = 'netx500'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX50 then
+		strNetxName = 'netx50'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX10 then
+		strNetxName = 'netx10'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56 or iChiptype==romloader.ROMLOADER_CHIPTYP_NETX56B then
+		strNetxName = 'netx56'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_RELAXED or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4000_FULL or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX4100_SMALL then
+		strNetxName = 'netx4000'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90_MPW then
+		strNetxName = 'netx90_mpw'
+    elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90 then
+		strNetxName = 'netx90_rev_0'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90C or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETX90D_INTRAM then
+		strNetxName = 'netx90'
+	elseif iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLA or
+            iChiptype==romloader.ROMLOADER_CHIPTYP_NETIOLB then
+		strNetxName = 'netiol'
+    else
+        strNetxName = nil
+	end
+    return strNetxName
+end
+
+
+-- printTable(tTable, ulIndent)
+-- Print all elements from a table
+-- returns
+--   nothing
+function M:printTable(tTable, ulIndent, tLog)
+    local strIndentSpace = string.rep(" ", ulIndent)
+    for key, value in pairs(tTable) do
+        if type(value) == "table" then
+            tLog.info( "%s%s",strIndentSpace, key )
+            self:printTable(value, ulIndent + 4, tLog)
+        else
+            tLog.info( "%s%s%s%s",strIndentSpace, key, " = ", tostring(value) )
+        end
+    end
+    if next(tTable) == nil then
+        tLog.info( "%s%s",strIndentSpace, " -- empty --" )
+    end
+end
+
+-- printArgs(tArguments)
+-- Print all arguments in a table
+-- returns
+--   nothing
+function M:printArgs(tArguments, strLuaScript, tLog)
+    tLog.info("")
+    tLog.info("Command line:" .. table.concat(arg, " ", -1, #arg))
+    tLog.info("")
+    tLog.info("run %s with the following args:", strLuaScript)
+    tLog.info("--------------------------------------------")
+    self:printTable(tArguments, 0, tLog)
+    tLog.info("")
+end
+
+function M.create_directory_path(strDirectoryPath)
+	local tFoldersToCreate = {}
+	local strCurrentPath = strDirectoryPath
+	local strFolderName
+	local strCurrentPathNew
+	local strCreateFolderPath
+	local fResult
+	local strErrorMsg = ""
+
+	while not path.exists(strCurrentPath) do
+		strCurrentPath = path.abspath(strCurrentPath)
+		strCurrentPathNew = path.dirname(strCurrentPath)
+		strFolderName = string.sub(strCurrentPath, string.len(strCurrentPathNew)+2)
+		table.insert(tFoldersToCreate, strFolderName)
+		strCurrentPath = strCurrentPathNew
+	end
+
+	for idx = #tFoldersToCreate, 1, -1 do
+		strFolderName = tFoldersToCreate[idx]
+		strCreateFolderPath = path.join(strCurrentPath, strFolderName)
+		path.mkdir(strCreateFolderPath)
+		strCurrentPath = strCreateFolderPath
+	end
+
+	if path.exists(strDirectoryPath) then
+		fResult = true
+		strErrorMsg = "created directory: " .. strDirectoryPath
+	else
+		fResult = false
+		strErrorMsg = "could not create directory: " .. strDirectoryPath
+	end
+	return fResult, strErrorMsg
+end
+
 -- helper class 'StringHandle' takes a string and mimics a file handle and some of it's functions
 -- !! this class does not provide every functionality of a file handle !!
 
@@ -1080,6 +1199,8 @@ end
 function StringHandle:__getStringPosInBytes()
     return (self.ulCurrentPointer - 1)
 end
+
+
 
 function StringHandle:seek(strWhence, ulOffset)
 

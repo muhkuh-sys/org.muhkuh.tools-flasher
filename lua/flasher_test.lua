@@ -28,9 +28,6 @@ end
 -- Number of random data segments to add
 local iNumAddSegments = 100
 
--- Limit the reported device size (size of the test area) to 128 MB.
-local ulDeviceSizeMax = 0x8000000
-
 --========================================================================
 --                      interface to flasher.lua
 --========================================================================
@@ -42,8 +39,8 @@ local ulDeviceSizeMax = 0x8000000
 --
 -- fOk, strMsg      init()            -- open plugin, download flasher, detect chip etc.
 --
--- ulSize           getDeviceSize()   -- returns chip size in bytes
--- ulBusWidth       getBusWidth()     -- returns 1, 2 or 4
+-- ulSize           getLimitedDeviceSize()   -- returns chip size in bytes
+-- ulBusWidth       getBusWidth()            -- returns 1, 2 or 4
 --
 -- fOk, strMsg      flash(ulOffset, strData)
 -- fOk, strMsg      verify(ulOffset, strData)
@@ -56,16 +53,21 @@ local ulDeviceSizeMax = 0x8000000
 -- fOk, strMsg      isChipErased()
 
 
-local flasher_interface = {
+local flasher_test_interface = {
 	-- private:
 	tPlugin = nil,
 	a_attr = nil,
 	iBus = nil,
 	iUnit = nil,
 	iChipSelect =nil,
+
+	-- Limit the reported device size (size of the test area) to 256 KiByte
+	-- This test is supposed to focus on if the flasher itself works as intended
+	-- Limitation is required for suitable test runtimes.
+	ulDeviceSizeMax = 0x40000
 }
 
-function flasher_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
+function flasher_test_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChipSelect, bCompMode, strSecureOption)
 	self.tPlugin = tPlugin
 	self.strFlasherPath = strFlasherPath
 	self.iBus = iBus
@@ -75,19 +77,19 @@ function flasher_interface:configure(tPlugin, strFlasherPath, iBus, iUnit, iChip
 	self.strSecureOption = strSecureOption
 end
 
-function flasher_interface:init()
+function flasher_test_interface:init()
 	if self.iBus == tFlasher.BUS_IFlash then
 		error("This test is not suitable to test intflash. Write chunks may collide in 16 byte pages.")
 	end
 
 	print("Downloading flasher binary")
 	self.aAttr = tFlasher.download(
-    self.tPlugin,
-    self.strFlasherPath,
-    self.fnCallbackProgress,
-    self.bCompMode,
-    self.strSecureOption
-  )
+	self.tPlugin,
+	self.strFlasherPath,
+	self.fnCallbackProgress,
+	self.bCompMode,
+	self.strSecureOption
+	)
 	if not self.aAttr then
 		return false, "Error while downloading flasher binary"
 	end
@@ -106,17 +108,17 @@ function flasher_interface:init()
 	return true
 end
 
-function flasher_interface.finish()
+function flasher_test_interface.finish()
 end
 
-function flasher_interface:getDeviceSize()
+function flasher_test_interface:getLimitedDeviceSize()
 	local ulSize = tFlasher.getFlashSize(
 		self.tPlugin, self.aAttr,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 
 	if ulSize then
-		if ulSize > ulDeviceSizeMax then
-			ulSize = ulDeviceSizeMax
+		if ulSize > self.ulDeviceSizeMax then
+			ulSize = self.ulDeviceSizeMax
 		end
 		return ulSize
 	else
@@ -124,11 +126,11 @@ function flasher_interface:getDeviceSize()
 	end
 end
 
-function flasher_interface:getBus()
+function flasher_test_interface:getBus()
 	return self.iBus
 end
 
-function flasher_interface:getBusWidth()
+function flasher_test_interface:getBusWidth()
 	if self.iBus == tFlasher.BUS_Parflash then
 		return 2 -- 1 or 2 or 4
 	elseif self.iBus == tFlasher.BUS_Spi then
@@ -140,7 +142,7 @@ function flasher_interface:getBusWidth()
 	end
 end
 
-function flasher_interface:getEmptyByte()
+function flasher_test_interface:getEmptyByte()
 	if self.iBus == tFlasher.BUS_Parflash then
 		return 0xff
 	elseif self.iBus == tFlasher.BUS_Spi then
@@ -152,35 +154,35 @@ function flasher_interface:getEmptyByte()
 	end
 end
 
-function flasher_interface:flash(ulOffset, strData)
+function flasher_test_interface:flash(ulOffset, strData)
 	return tFlasher.flashArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface:verify(ulOffset, strData)
+function flasher_test_interface:verify(ulOffset, strData)
 	return tFlasher.verifyArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, strData,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface:read(ulOffset, ulSize)
+function flasher_test_interface:read(ulOffset, ulSize)
 	return tFlasher.readArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface:erase(ulOffset, ulSize)
+function flasher_test_interface:erase(ulOffset, ulSize)
 	return tFlasher.eraseArea(
 		self.tPlugin, self.aAttr,
 		ulOffset, ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
 end
 
-function flasher_interface:isErased(ulOffset, ulSize)
+function flasher_test_interface:isErased(ulOffset, ulSize)
 	local fIsErased = tFlasher.isErased(
 		self.tPlugin, self.aAttr, ulOffset, ulOffset + ulSize,
 		self.fnCallbackMessage, self.fnCallbackProgress)
@@ -188,19 +190,19 @@ function flasher_interface:isErased(ulOffset, ulSize)
 	return fIsErased, fIsErased and "The area is empty" or "The area is not empty"
 end
 
-function flasher_interface:eraseChip()
-	return self:erase(0, self:getDeviceSize())
+function flasher_test_interface:eraseChip()
+	return self:erase(0, self:getLimitedDeviceSize())
 end
 
-function flasher_interface:readChip()
-	return self:read(0, self:getDeviceSize())
+function flasher_test_interface:readChip()
+	return self:read(0, self:getLimitedDeviceSize())
 end
 
-function flasher_interface:isChipErased()
-	return self:isErased(0, self:getDeviceSize())
+function flasher_test_interface:isChipErased()
+	return self:isErased(0, self:getLimitedDeviceSize())
 end
 
-M.flasher_interface = flasher_interface
+M.flasher_interface = flasher_test_interface
 
 --========================================================================
 --                           Helper routines
@@ -270,6 +272,16 @@ local function insert_random_segment(atSegments, ulDeviceSize, iWordSize)
 		offset2 = offset2 - (offset2 % iWordSize) + (iWordSize-1)
 
 		local size1 = offset2 - offset1 + 1
+
+		-- Only add segments that are bigger than the minimum size
+		if size1 < iWordSize then
+			return false
+
+		-- Limit segment size to 1MiB (0x100000) to avoid performance issues
+		elseif size1 > 0x100000 then
+			size1 = size1 % 0x100000
+		end
+
 		printf("0x%08x+0x%08x --> 0x%08x+0x%08x", offset, size, offset1, size1)
 		local tSegment = {offset = offset1, size = size1}
 
@@ -287,19 +299,41 @@ end
 --========================================================================
 
 
-function M.testFlasher(tFlasherInterface, fnLogPrintf)
-
-	tFlasherInterface = tFlasherInterface or flasher_interface
+function M.testFlasher(tFlasherTestInterfaceCli, fnLogPrintf)
+	-- If a testcli-Test-Interface is given, use it, otherwise use the interface defined above
+	local tFlasherTestInterface = tFlasherTestInterfaceCli or flasher_test_interface
 	local log_printf = fnLogPrintf or log_printf_fallback
 
 	-- init flasher
-	local fOk, strMsg = tFlasherInterface:init()
+	local fOk, strMsg = tFlasherTestInterface:init()
 	assert(fOk, strMsg)
 
-	local ulDeviceSize = tFlasherInterface:getDeviceSize()
+	local ulDeviceSize = tFlasherTestInterface:getLimitedDeviceSize()
 
-	local bEmptyByte = tFlasherInterface:getEmptyByte()
+	local bEmptyByte = tFlasherTestInterface:getEmptyByte()
 
+	-- Detect if a NetX90 is connected and the internal flash is targeted (iBus = 2)
+	-- Will use different segment adresses to avoid problems with CRC generation
+	-- "test" will use the existing connection, "testcli" needs to get (and free) a plugin
+	local iChiptype
+	if(tFlasherTestInterface.tPlugin) then
+		iChiptype = tFlasherTestInterface.tPlugin:GetChiptyp()
+	else
+		local tFlasherHelper = require 'flasher_helper'
+		local tPlugin = tFlasherHelper.getPlugin(tFlasherTestInterface.aArgs["strPluginName"],
+			nil, tFlasherTestInterface.aArgs["atPluginOptions"])
+		tPlugin:Connect()
+		iChiptype = tPlugin:GetChiptyp()
+		tPlugin:Disconnect()
+	end
+	local netX90iFlashDetected =
+		(iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90D
+		or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90_MPW)
+		and tFlasherTestInterface.aArgs.iBus == 2
 
 	-- for serial flash
 	local atSegments_1={
@@ -363,10 +397,32 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 		{offset = ulDeviceSize - 12348, size = 12348},
 	}
 
+	-- for NetX90 iFlash
+	-- offset/size must be multiples of 8 because of 8Byte-CRC
+	local atSegments_8={
+		{offset = 0, size = 12344},
+		{offset = 0x10000, size = 0x10000},
+		{offset = 0x30000, size = 0x10000},
+		{offset = 0x50008, size = 0x10000},
+		{offset = 0x60008, size = 0x10000},
+
+		{offset = 0x20000, size = 8},
+		{offset = 0x21008, size = 8},
+		{offset = 0x22008, size = 16},
+
+		{offset = 0x23000, size = 8},
+		{offset = 0x23210, size = 8},
+
+		{offset = ulDeviceSize - 12344, size = 12344},
+	}
+
 	-- select the segments list according to the flash type
-  local atSegments
-	local iBusWidth = tFlasherInterface:getBusWidth()
-	if iBusWidth==1 then
+	local atSegments
+	local iBusWidth = tFlasherTestInterface:getBusWidth()
+	if netX90iFlashDetected then
+		atSegments = atSegments_8
+		iBusWidth = 8
+	elseif iBusWidth==1 then
 		atSegments = atSegments_1
 	elseif iBusWidth==2 then
 		atSegments = atSegments_2
@@ -414,7 +470,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	-- erase
 	log_printf("")
 	log_printf("Erase whole flash")
-	fOk, strMsg = tFlasherInterface:eraseChip()
+	fOk, strMsg = tFlasherTestInterface:eraseChip()
 	log_printf("Result: %s %s", tostring(fOk), tostring(strMsg))
 	assert(fOk, strMsg)
 
@@ -423,7 +479,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	log_printf("Flash the segments")
 	for iSegment, tSegment in ipairs(atSegments) do
 		log_printf("Flashing Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
-		fOk, strMsg = tFlasherInterface:flash(tSegment.offset, tSegment.data)
+		fOk, strMsg = tFlasherTestInterface:flash(tSegment.offset, tSegment.data)
 		log_printf("Flashed Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
 		log_printf("Result: %s %s", tostring(fOk), tostring(strMsg))
 		assert(fOk)
@@ -434,7 +490,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	log_printf("Verify the segments")
 	for iSegment, tSegment in ipairs(atSegments) do
 		log_printf("Verifying Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
-		fOk, strMsg = tFlasherInterface:verify(tSegment.offset, tSegment.data)
+		fOk, strMsg = tFlasherTestInterface:verify(tSegment.offset, tSegment.data)
 		log_printf("Verified Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
 		log_printf("Result: %s %s", tostring(fOk), tostring(strMsg))
 		assert(fOk)
@@ -446,7 +502,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	fOk = true
 	for iSegment, tSegment in ipairs(atSegments) do
 		log_printf("Reading Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
-		local strData, strMsgRead = tFlasherInterface:read(tSegment.offset, tSegment.size)
+		local strData, strMsgRead = tFlasherTestInterface:read(tSegment.offset, tSegment.size)
 		log_printf("Read Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
 
 		assert(strData, strMsgRead or "Error reading segment")
@@ -456,6 +512,19 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 		else
 			log_printf("Segment %d differs!", iSegment)
 			fOk = false
+
+			-- prints mismatching data for manual comparison
+			local function printContentsInHex(str)
+				local text = ""
+				for i=1, #str do
+					text = text .. string.format("%02x ", string.byte(str,i,i))
+				end
+				log_printf(text)
+			end
+			log_printf("Read (Hex):")
+			printContentsInHex(strData)
+			log_printf("Expected (Hex):")
+			printContentsInHex(tSegment.data)
 		end
 
 	end
@@ -471,7 +540,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	-- Read image
 	log_printf("")
 	log_printf("Read image")
-	local strImage = tFlasherInterface:readChip()
+	local strImage = tFlasherTestInterface:readChip()
 	log_printf("Image read")
 
 	-- Compare the segments and check the space in-between
@@ -508,7 +577,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	log_printf("Erase the segments")
 	for iSegment, tSegment in ipairs(atSegments) do
 		log_printf("Erasing Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
-		fOk, strMsg = tFlasherInterface:erase(tSegment.offset, tSegment.size)
+		fOk, strMsg = tFlasherTestInterface:erase(tSegment.offset, tSegment.size)
 		log_printf("Erased Segment %d  offset:0x%08x  size: %d", iSegment, tSegment.offset, tSegment.size)
 		log_printf("Result: %s %s", tostring(fOk), tostring(strMsg))
 		assert(fOk)
@@ -517,7 +586,7 @@ function M.testFlasher(tFlasherInterface, fnLogPrintf)
 	-- the flash should now be empty
 	log_printf("")
 	log_printf("Check emptyness")
-	fOk, strMsg = tFlasherInterface:isChipErased()
+	fOk, strMsg = tFlasherTestInterface:isChipErased()
 	log_printf("Empty: %s %s", tostring(fOk), tostring(strMsg))
 	assert(fOk)
 
