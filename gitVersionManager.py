@@ -11,7 +11,7 @@ class gitVersionManager:
     devBranchFormat = r"^dev_v\d+\.\d+\.\d+$"
     devTagFormat = r"v\d+\.\d+\.\d+-dev\d+"
     releaseTagFormat = versionFormat
-    releaseBranchName = "master"
+    releaseBranchNames = ["master", "HEAD"]
 
 
     # Creates a gitVersionManager Object
@@ -54,8 +54,7 @@ class gitVersionManager:
     def onReleaseBranch(self):
         current_branch_name = self.getCurrentBranchName()
         print(f"current branch name: {current_branch_name}")
-        return current_branch_name == self.releaseBranchName
-
+        return current_branch_name in self.releaseBranchNames
 
     # Gets the last tag from "git describe"-output
     #
@@ -65,6 +64,7 @@ class gitVersionManager:
     # dev-tags:     "vA.B.C-devD"
     # release-tags: "vA.B.C"
     # Aborts if other tag is found or branch-tag combination is invalid.
+
     def getLastTag(self):
         # Get the git describe output, gitpython has no good way of providing the tag
         description = self.repo.git.describe() # e.g. 'v2.1.0-dev13-15-gb39e454' or 'v2.1.0' when directly on tag
