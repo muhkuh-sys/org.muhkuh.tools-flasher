@@ -135,9 +135,10 @@ class gitVersionManager:
     #
     # Aborts if there is no version in the last tag.
     def getVersionNumber(self):
-        assert re.match(self.versionFormat, self.getLastTag().name), "Invalid format of last git tag"
-        return re.search(self.versionFormat, self.getLastTag().name).group()
-
+        last_git_tag_name = self.getLastTag().name
+        print(f"Last git tag name: {last_git_tag_name}")
+        assert re.match(self.versionFormat, last_git_tag_name), "Invalid format of last git tag"
+        return re.search(self.versionFormat, last_git_tag_name).group()
 
     # Gets the dev ending
     #
