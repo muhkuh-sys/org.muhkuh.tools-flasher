@@ -52,7 +52,9 @@ class gitVersionManager:
 
     # Checks if the current branch is the release branch
     def onReleaseBranch(self):
-        return self.getCurrentBranchName() == self.releaseBranchName
+        current_branch_name = self.getCurrentBranchName()
+        print(f"current branch name: {current_branch_name}")
+        return current_branch_name == self.releaseBranchName
 
 
     # Gets the last tag from "git describe"-output
