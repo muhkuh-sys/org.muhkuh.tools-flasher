@@ -66,7 +66,7 @@ if tPlatform['host_distribution_id'] == 'ubuntu':
             astrCMAKE_COMPILER = []
             astrCMAKE_PLATFORM = []
             astrJONCHKI_SYSTEM = []
-            strMake = 'make'
+            strMake = 'make VERBOSE=1'
 
         elif tPlatform['cpu_architecture'] == 'armhf':
             # Build on linux for raspberry.
