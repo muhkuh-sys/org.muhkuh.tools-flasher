@@ -94,6 +94,8 @@ jobs:
           cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
     steps:
+    - name: Update CMake
+      run: apt update && apt upgrade cmake -y
     - name: Get CMake Version
       run: cmake --version
     - name: Checkout repository
