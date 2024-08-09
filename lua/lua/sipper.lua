@@ -111,314 +111,350 @@ function Sipper.compare_usip_sip(ulOffset, strUsipContent, strSipContent, ulSize
     return tResult, strErrorMsg
 end
 
-function Sipper:gen_data_block(strFileData, strOutputBinPath)
-    local strDataBlock = ""
-
+function Sipper:analyze_hboot_image(strFileData)
+    local tParsedHbootImage = {}
+    local tHbootHeader = {}
+    local atChunks = {}
     local tResult = true
-    local strErrorMsg = ""
-    local strChunkID
-    local strSkipSize
-    local ulSkipSize
-    local strChunkSize
-    local strPageSelect
-    local ulPageSelect
-    local strKeyIdx
-    local ulKeyIdx
-    local strContentSize
-    local strUUID
-    local strAnchor
-    local strUUIDMask
-    local strAnchorMask
-    local strKeyAlgorithm
-    local ulKeyAlgorithm
-    local strSignature
-    local strDataContent
+    local strErrorMsg
+    local tNewChunk
     local ulSignatureSize
-    local strPaddedKey
-    local strChunkHash
-    local fPlaceSignatureAtEnd = false
-
     local tChunkHash = mhash.mhash_state()
-    tChunkHash:init(mhash.MHASH_SHA384)
+
 
     if strFileData == nil then
         tResult = false
         strErrorMsg = string.format("No data received")
     else
         local tBinStringHandle = tFlasherHelper.StringHandle(strFileData)
-        -- read file type at offset 64
-        tBinStringHandle:seek("set", 64)
-        strChunkID = tBinStringHandle:read(4)
-
-        -- check the second expected offset for a secure chunk
-        --  - if the first chunk is a skip-chunk it could be possible that this chunk used for the FHV3-Header,
-        --    skip that chunk and check the next possible area for a secure chunk. The FHV3-Header-Skip chunk has
-        --    always the same length!
-        --  - if the FHV3-Header is already set no skip chunk is found but also no secure chunk is found, check the
-        --    next area in this case.
-        if strChunkID == nil or strChunkID == "SKIP" then
-            strSkipSize = tBinStringHandle:read(4)
-            ulSkipSize = tFlasherHelper.bytes_to_uint32(strSkipSize) * 4
-            local newOffset = tBinStringHandle:seek() + ulSkipSize
-
-            tBinStringHandle:seek("set", newOffset)
-            strChunkID = tBinStringHandle:read(4)
-
-        end
-
-        if strChunkID == "SKIP" then
-            tResult = false
-            strErrorMsg = string.format("Found SKIP chunk, which is no security chunk. Make sure the image is signed.")
-        elseif strChunkID ~= "USIP" and strChunkID ~= "HTBL" then
-            tResult = false
-           strErrorMsg = string.format("Found a %s chunk, which is no security chunk.", strChunkID)
-        elseif strChunkID == "USIP" then
-
-            self.tLog.info("found USIP chunk")
+        -- parse hboot header
+        tHbootHeader["strMagic"] = tBinStringHandle:read(4)
+        tHbootHeader["ulMagicCookie"] = tFlasherHelper.bytes_to_uint32(tHbootHeader["strMagic"])
+        tHbootHeader["strSpeedLimit"] = tBinStringHandle:read(4)
+        tHbootHeader["strFlashOffsetBytes"] = tBinStringHandle:read(4)
+        tBinStringHandle:read(4) -- skip reserved
+        tHbootHeader["strChunksSizeDword"] = tBinStringHandle:read(4)
+        tHbootHeader["strFlashSelection"] = tBinStringHandle:read(4)
+        tHbootHeader["strSignature"] = tBinStringHandle:read(4)
+        tHbootHeader["strHashSizeDword"] = tBinStringHandle:read(4)
+        tHbootHeader["strSHA224"] = tBinStringHandle:read(28)
+        tHbootHeader["ulBootChksm"] = tBinStringHandle:read(4)
 
 
-            -- update the hash with chunk id
-            tChunkHash:hash(strChunkID)
+        while true do
+            -- loop over chunks until chunk id is 00 00
+            tNewChunk = {}
+            tNewChunk["strChunkId"] = tBinStringHandle:read(4)
 
-            -- update the hash with chunk size
-            strChunkSize = tBinStringHandle:read(4)
-            tChunkHash:hash(strChunkSize)
+            -- check if we reached the end of the image
+            if tNewChunk["strChunkId"] == nil or tNewChunk["strChunkId"] == '' then
+                self.tLog.error("found invalid chunk id or end of image '%s' at offset 0x%x", tNewChunk["strChunkId"], (tBinStringHandle["ulCurrentPointer"]-4))
+                tResult = false
+                strErrorMsg = string.format(
+                    "found invalid chunk id or end of image '%s'", tNewChunk["strChunkId"])
+                break
+            end
+            local ulChunkId = tFlasherHelper.bytes_to_uint32(tNewChunk["strChunkId"])
+            if ulChunkId == 0 or ulChunkId == nil then
+                -- self.tLog.info("found end of image")
+                break
+            end
 
-            -- update the hash with page select
-            strPageSelect = tBinStringHandle:read(1)
-            ulPageSelect = tFlasherHelper.bytes_to_uint32(strPageSelect)
-            tChunkHash:hash(strPageSelect)
+            tNewChunk["strChunkSize"] = tBinStringHandle:read(4)
+            tNewChunk["ulChunkSize"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strChunkSize"]) * 4
 
-            -- update the hash with key idx
-            strKeyIdx = tBinStringHandle:read(1)
-            ulKeyIdx = tFlasherHelper.bytes_to_uint32(strKeyIdx)
-            tChunkHash:hash(strKeyIdx)
+            -- self.tLog.info("found %s chunk", tNewChunk["strChunkId"])
 
-            -- update the hash with content size
-            strContentSize = tBinStringHandle:read(2)
-            local ulContentSize = tFlasherHelper.bytes_to_uint32(strContentSize)
-            ulContentSize = ulContentSize + (ulContentSize % 4) -- round up to dword
-            tChunkHash:hash(strContentSize)
+            if tNewChunk["strChunkId"] == "SKIP" then
+                -- parse SKIP chunk
+                local newOffset = tBinStringHandle:seek() + tNewChunk["ulChunkSize"]
+                -- ignore data until end of chunk
+                tBinStringHandle:seek("set", newOffset)
 
-            if ulKeyIdx ~= 255 then
+            elseif tNewChunk["strChunkId"] == "USIP" then
+                local ulUsipStartOffset = tBinStringHandle:seek()
+                tChunkHash:init(mhash.MHASH_SHA384)
+                tChunkHash:hash(tNewChunk["strChunkId"])
+                tChunkHash:hash(tNewChunk["strChunkSize"])
+
+                -- update the hash with page select
+                tNewChunk["strPageSelect"] = tBinStringHandle:read(1)
+                tNewChunk["ulPageSelect"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strPageSelect"])
+                tChunkHash:hash(tNewChunk["strPageSelect"])
+
+                -- get the key idx
+                tNewChunk["strKeyIdx"] = tBinStringHandle:read(1)
+                tNewChunk["ulKeyIdx"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strKeyIdx"])
+                tChunkHash:hash(tNewChunk["strKeyIdx"])
+
+                -- get the content size
+                tNewChunk["strContentSize"] = tBinStringHandle:read(2)
+                local ulContentSize = tFlasherHelper.bytes_to_uint32(tNewChunk["strContentSize"])
+                tNewChunk["ulContentSize"] = ulContentSize + (ulContentSize % 4) -- round up to dword
+                tChunkHash:hash(tNewChunk["strContentSize"])
+
+                if tNewChunk["ulKeyIdx"] ~= 255 then
+                    -- get the uuid
+                    tNewChunk["strUUID"] = tBinStringHandle:read(12)
+                    tChunkHash:hash(tNewChunk["strUUID"])
+
+                    -- extract all 4 anchors
+                    tNewChunk["strAnchor"] = tBinStringHandle:read(16)
+                    tChunkHash:hash(tNewChunk["strAnchor"])
+
+                    -- get the uuid mask
+                    tNewChunk["strUUIDMask"] = tBinStringHandle:read(12)
+                    tChunkHash:hash(tNewChunk["strUUIDMask"])
+
+                    -- get the anchor mask
+                    tNewChunk["strAnchorMask"] = tBinStringHandle:read(16)
+                    tChunkHash:hash(tNewChunk["strAnchorMask"])
+
+                    -- extract the key algorithm
+                    tNewChunk["strKeyAlgorithm"] = tBinStringHandle:read(1)
+                    tNewChunk["ulKeyAlgorithm"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strKeyAlgorithm"])
+
+                    -- extract key strength
+                    tNewChunk["strKeyStrength"] = tBinStringHandle:read(1)
+                    tNewChunk["ulKeyStrength"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strKeyStrength"])
+
+                    tBinStringHandle:seek("set", tBinStringHandle:seek()-2)
+
+                    -- extract padded key
+                    tNewChunk["strPaddedKey"] = tBinStringHandle:read(520)
+                    tChunkHash:hash(tNewChunk["strPaddedKey"])
+
+                    -- check if the extracted values are valid
+                    if tSignatures[tNewChunk["ulKeyAlgorithm"]] == nil then
+                        tResult = false
+                        strErrorMsg = string.format(
+                                "Unknown key algorithm extracted: %s (allowed are [1, 2])", tNewChunk["ulKeyAlgorithm"]
+                        )
+                    end
+                    if tSignatures[tNewChunk["ulKeyAlgorithm"]][tNewChunk["ulKeyStrength"]] == nil then
+                        tResult = false
+                        strErrorMsg = string.format(
+                                "Unknown key strength extracted: %s (allowed are [1, 2, 3])", tNewChunk["ulKeyStrength"]
+                        )
+                    end
+                    ulSignatureSize = tSignatures[tNewChunk["ulKeyAlgorithm"]][tNewChunk["ulKeyStrength"]]
+                    tNewChunk["strDataContent"] = tBinStringHandle:read(tNewChunk["ulContentSize"])
+                    tChunkHash:hash(tNewChunk["strDataContent"])
+
+                    tNewChunk["strSignature"] = tBinStringHandle:read(ulSignatureSize)
+
+                    while string.len(tNewChunk["strSignature"]) < 512 do
+                        tNewChunk["strSignature"] = tNewChunk["strSignature"] .. string.char(0x0)
+                    end
+                end
+
+                -- skip rest of USIP chunk as it is not interesting now
+                local newOffset = ulUsipStartOffset + tNewChunk["ulChunkSize"]
+
+                -- ignore data until end of chunk
+                tBinStringHandle:seek("set", newOffset)
+                tNewChunk["strChunkHash"] = tChunkHash:hash_end()
+            elseif tNewChunk["strChunkId"] =="HTBL" then
+
+                tChunkHash:init(mhash.MHASH_SHA384)
+                tChunkHash:hash(tNewChunk["strChunkId"])
+                tChunkHash:hash(tNewChunk["strChunkSize"])
+
+                local ulReadSize = 8  -- we start after chunk id and chunk size
+
+                -- update the hash with page select
+                tNewChunk["strPageSelect"] = tBinStringHandle:read(1)
+                tNewChunk["ulPageSelect"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strPageSelect"])
+                tChunkHash:hash(tNewChunk["strPageSelect"])
+                ulReadSize = ulReadSize + 1
+
+                -- update the hash with key idx
+                tNewChunk["strKeyIdx"] = tBinStringHandle:read(1)
+                tNewChunk["ulKeyIdx"] = tFlasherHelper.bytes_to_uint32(tNewChunk["strKeyIdx"])
+                tChunkHash:hash(tNewChunk["strKeyIdx"])
+                ulReadSize = ulReadSize + 1
+
+                local strHashTableEntries = tBinStringHandle:read(2)
+                local ulHashTableEntries = tFlasherHelper.bytes_to_uint32(strHashTableEntries)
+                local ulHashTableSize = ulHashTableEntries * 48
+                tChunkHash:hash(strHashTableEntries)
+                ulReadSize = ulReadSize + 2
+
                 -- get the uuid
-                strUUID = tBinStringHandle:read(12)
-                tChunkHash:hash(strUUID)
+                tNewChunk["strUUID"] = tBinStringHandle:read(12)
+                tChunkHash:hash(tNewChunk["strUUID"])
+                ulReadSize = ulReadSize + 12
 
                 -- extract all 4 anchors
-
-                strAnchor = tBinStringHandle:read(16)
-                tChunkHash:hash(strAnchor)
-
+                tNewChunk["strAnchor"] = tBinStringHandle:read(16)
+                tChunkHash:hash(tNewChunk["strAnchor"])
+                ulReadSize = ulReadSize + 16
 
                 -- get the uuid mask
-                strUUIDMask = tBinStringHandle:read(12)
-                tChunkHash:hash(strUUIDMask)
+                tNewChunk["strUUIDMask"] = tBinStringHandle:read(12)
+                tChunkHash:hash(tNewChunk["strUUIDMask"])
+                ulReadSize = ulReadSize + 12
 
-                strAnchorMask = tBinStringHandle:read(16)
-                tChunkHash:hash(strAnchorMask)
+                tNewChunk["strAnchorMask"] = tBinStringHandle:read(16)
+                tChunkHash:hash(tNewChunk["strAnchorMask"])
+                ulReadSize = ulReadSize + 16
 
-                print("strKeyAlgorithm offset " .. tBinStringHandle:seek())
-                -- extract the key algorithm
-                strKeyAlgorithm = tBinStringHandle:read(1)
-                ulKeyAlgorithm = tFlasherHelper.bytes_to_uint32(strKeyAlgorithm)
+                local strHashTableContent = tBinStringHandle:read(ulHashTableSize)
+                tChunkHash:hash(strHashTableContent)
+                ulReadSize = ulReadSize + ulHashTableSize
 
-                print("strKeyStrength offset " .. tBinStringHandle:seek())
-                -- extract key strength
-                local strKeyStrength = tBinStringHandle:read(1)
-                local ulKeyStrength = tFlasherHelper.bytes_to_uint32(strKeyStrength)
+                tNewChunk["strChunkHash"] = tChunkHash:hash_end()
 
-                tBinStringHandle:seek("set", tBinStringHandle:seek()-2)
-                print("strPaddedKey offset " .. tBinStringHandle:seek())
-                -- extract padded key
-                strPaddedKey = tBinStringHandle:read(520)
-                tChunkHash:hash(strPaddedKey)
+                -- print(tBinStringHandle:seek())
+                -- chunk size does not include the chunk id and the chunk size itself
+                tNewChunk["ulSignatureSize"] = tNewChunk["ulChunkSize"] - ulReadSize + 8
+                tNewChunk["strSignature"] = tBinStringHandle:read(tNewChunk["ulSignatureSize"])
+                -- write whole 512 bytes as signature for verify_sig.bin to determine the actual signature size
+                -- to get the the signature from the end of buffer
+                if tNewChunk["ulSignatureSize"] > 512 then
+                    -- strip signature string to be exact 512 bytes
+                    tNewChunk["strSignature"] = string.sub(tNewChunk["strSignature"], -512)
+                else
+                    -- fill up signature string to be exact 512 bytes
+                    local ulFillupSize = 512 - tNewChunk["ulSignatureSize"]
 
-                                    -- check if the extracted values are valid
-                if tSignatures[ulKeyAlgorithm] == nil then
-                    tResult = false
-                    strErrorMsg = string.format(
-                            "Unknown key algorithm extracted: %s (allowed are [1, 2])", ulKeyAlgorithm
-                    )
+                    tNewChunk["strSignature"] = string.rep(string.char(0x0), ulFillupSize) .. tNewChunk["strSignature"]
                 end
-                if tSignatures[ulKeyAlgorithm][ulKeyStrength] == nil then
-                    tResult = false
-                    strErrorMsg = string.format(
-                            "Unknown key strength extracted: %s (allowed are [1, 2, 3])", ulKeyStrength
-                    )
-                end
-                tBinStringHandle:seek()
-                ulSignatureSize = tSignatures[ulKeyAlgorithm][ulKeyStrength]
-                strDataContent = tBinStringHandle:read(ulContentSize)
-                strSignature = tBinStringHandle:read(ulSignatureSize)
-                tChunkHash:hash(strDataContent)
-
-                while string.len(strSignature) < 512 do
-                    strSignature = strSignature .. string.char(0x0)
-                end
-            end
-            strChunkHash = tChunkHash:hash_end()
-        elseif strChunkID =="HTBL" then
-            self.tLog.info("found HTBL chunk")
-            local ulReadSize = 0
-
-            -- update the hash with chunk id
-            tChunkHash:hash(strChunkID)
-            ulReadSize = ulReadSize + 4
-
-            -- update the hash with chunk size
-            strChunkSize = tBinStringHandle:read(4)
-            local ulChunkSize = tFlasherHelper.bytes_to_uint32(strChunkSize) * 4
-            tChunkHash:hash(strChunkSize)
-            ulReadSize = ulReadSize + 4
-
-            -- update the hash with page select
-            strPageSelect = tBinStringHandle:read(1)
-            ulPageSelect = tFlasherHelper.bytes_to_uint32(strPageSelect)
-            tChunkHash:hash(strPageSelect)
-            ulReadSize = ulReadSize + 1
-
-            -- update the hash with key idx
-            strKeyIdx = tBinStringHandle:read(1)
-            ulKeyIdx = tFlasherHelper.bytes_to_uint32(strKeyIdx)
-            tChunkHash:hash(strKeyIdx)
-            ulReadSize = ulReadSize + 1
-
-            local strHashTableEntries = tBinStringHandle:read(2)
-            local ulHashTableEntries = tFlasherHelper.bytes_to_uint32(strHashTableEntries)
-            local ulHashTableSize = ulHashTableEntries * 48
-            tChunkHash:hash(strHashTableEntries)
-            ulReadSize = ulReadSize + 2
-
-            -- get the uuid
-            strUUID = tBinStringHandle:read(12)
-            tChunkHash:hash(strUUID)
-            ulReadSize = ulReadSize + 12
-
-            -- extract all 4 anchors
-            strAnchor = tBinStringHandle:read(16)
-            tChunkHash:hash(strAnchor)
-            ulReadSize = ulReadSize + 16
-
-            -- get the uuid mask
-            strUUIDMask = tBinStringHandle:read(12)
-            tChunkHash:hash(strUUIDMask)
-            ulReadSize = ulReadSize + 12
-
-            strAnchorMask = tBinStringHandle:read(16)
-            tChunkHash:hash(strAnchorMask)
-            ulReadSize = ulReadSize + 16
-
-            local strHashTableContent = tBinStringHandle:read(ulHashTableSize)
-            tChunkHash:hash(strHashTableContent)
-            ulReadSize = ulReadSize + ulHashTableSize
-
-            strChunkHash = tChunkHash:hash_end()
-
-            -- print(tBinStringHandle:seek())
-            -- chunk size does not include the chunk id and the chunk size itself
-            ulSignatureSize = ulChunkSize - ulReadSize + 8
-            strSignature = tBinStringHandle:read(ulSignatureSize)
-            -- write whole 512 bytes as signature for verify_sig.bin to determine the actual signature size
-            -- to get the the signature from the end of buffer
-            if ulSignatureSize > 512 then
-                -- strip signature string to be exact 512 bytes
-                strSignature = string.sub(strSignature, -512)
             else
-                -- fill up signature string to be exact 512 bytes
-                local ulFillupSize = 512 - ulSignatureSize
-
-                strSignature = string.rep(string.char(0x0), ulFillupSize) .. strSignature
+                tNewChunk["strChunkInfo"] = string.format(
+                    "Chunk ID '%s' not parsed in detail for now. This feature will be added in the future", tNewChunk["strChunkId"])
+                -- parse SKIP chunk
+                local newOffset = tBinStringHandle:seek() + tNewChunk["ulChunkSize"]
+                -- ignore data until end of chunk
+                tBinStringHandle:seek("set", newOffset)
             end
-            fPlaceSignatureAtEnd = true
+            -- insert chunk into table
+            table.insert(atChunks, tNewChunk)
         end
-
-        if tResult == true then
-            -- create the data block with the collected data
-            local usOption  = 0x0100
-            local usUsedKeys = 0x0000
-
-            if ulPageSelect == 1 and ulKeyIdx == 16 then
-                usOption = usOption | 0x0003
-                usUsedKeys = usOption | 0x0004
-                -- strDataBlock = strDataBlock .. string.char(0x03, 0x01)
-                -- strDataBlock = strDataBlock .. string.char(0x04, 0x00)
-            elseif ulPageSelect == 1 and ulKeyIdx == 17 then
-                usOption = usOption | 0x0002
-                usUsedKeys =usOption | 0x0001
-                -- strDataBlock = strDataBlock .. string.char(0x02, 0x01)
-                -- strDataBlock = strDataBlock .. string.char(0x01, 0x00)
-            elseif ulPageSelect == 2 and ulKeyIdx == 16 then
-                usOption = usOption | 0x0004
-                usUsedKeys = usOption | 0x0008
-                -- strDataBlock = strDataBlock .. string.char(0x04, 0x01)
-                -- strDataBlock = strDataBlock .. string.char(0x08, 0x00)
-            elseif ulPageSelect == 2 and ulKeyIdx == 17 then
-                usOption = usOption | 0x0004
-                usUsedKeys = usOption | 0x0008
-                -- strDataBlock = strDataBlock .. string.char(0x00, 0x01)
-                -- strDataBlock = strDataBlock .. string.char(0x02, 0x00)
-            end
-            if fPlaceSignatureAtEnd then
-                usOption = usOption | 0x1000  -- set flag UNKNOWN_SIGNATURE_SIZE
-            end
-
-            local usOptionL = (usOption >> 8) & 0xff;
-            local usOptionH = (usOption) & 0xff;
-            local usUsedKeysL = (usUsedKeys >> 8) & 0xff;
-            local usUsedKeysH = (usUsedKeys) & 0xff;
-
-            strDataBlock = strDataBlock .. string.char(usOptionH, usOptionL)
-            strDataBlock = strDataBlock .. string.char(usUsedKeysH, usUsedKeysL)
-
-            strDataBlock = strDataBlock .. strChunkHash
-
-            local strBindingData = ""
-            if ulPageSelect == 1 then
-                strBindingData = strBindingData .. strUUID
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. strAnchor
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. strUUIDMask
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. strAnchorMask
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
-                print(string.len(strBindingData))
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
-                print(string.len(strBindingData))
-            elseif ulPageSelect == 2 then
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
-                strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
-                strBindingData = strBindingData .. strUUID
-                strBindingData = strBindingData .. strAnchor
-                strBindingData = strBindingData .. strUUIDMask
-                strBindingData = strBindingData .. strAnchorMask
-            else
-                tResult = false
-                strErrorMsg = string.format("The selected secure info '%s' page is not supported", ulPageSelect)
-            end
-            print(string.len(strBindingData))
-            strDataBlock = strDataBlock .. strBindingData
-            strDataBlock = strDataBlock .. strSignature
-
-            -- add padding to flush the intram data
-            strDataBlock = strDataBlock .. string.char(0x00, 0x00, 0x00, 0x00)
-
-            if strOutputBinPath ~= nil then
-                local tOutputFileHandle = io.open(strOutputBinPath, 'wb')
-                tOutputFileHandle:write(strDataBlock)
-                tOutputFileHandle:close()
-            end
-        end
-
         tBinStringHandle:close()
+    end
+
+    tParsedHbootImage["tHbootHeader"] = tHbootHeader
+    tParsedHbootImage["atChunks"] = atChunks
+    return tParsedHbootImage, tResult, strErrorMsg
+end
+
+function Sipper:gen_data_block(strFileData, strOutputBinPath)
+    local tParsedHbootImage
+    local tResult
+    local strErrorMsg
+    local strDataBlock = ""
+    local ulPageSelect
+    local ulKeyIdx
+    local fPlaceSignatureAtEnd = false
+    local strChunkHash
+    local strUUID
+    local strAnchor
+    local strUUIDMask
+    local strAnchorMask
+    local strSignature
+
+    tParsedHbootImage, tResult, strErrorMsg = self:analyze_hboot_image(strFileData)
+
+    for _, tChunk in pairs(tParsedHbootImage["atChunks"]) do
+        if tChunk["strChunkId"] == "HTBL" or tChunk["strChunkId"] == "USIP" then
+            ulPageSelect = tChunk["ulPageSelect"]
+            ulKeyIdx = tChunk["ulKeyIdx"]
+            strChunkHash = tChunk["strChunkHash"]
+            strUUID = tChunk["strUUID"]
+            strAnchor = tChunk["strAnchor"]
+            strUUIDMask = tChunk["strUUIDMask"]
+            strAnchorMask = tChunk["strAnchorMask"]
+            strSignature = tChunk["strSignature"]
+            if tChunk["strChunkId"] == "HTBL" then
+                fPlaceSignatureAtEnd = true
+            end
+            break
+        end
+    end
+    if strSignature == nil then
+        tResult = false
+        strErrorMsg = "Image is not signed. No need to generate data block."
+    end
+    if ulPageSelect == nil then
+        tResult = false
+        strErrorMsg = "No secure chunk found in image"
+    end
+    if tResult == true then
+        -- create the data block with the collected data
+        local usOption  = 0x0100
+        local usUsedKeys = 0x0000
+
+        if ulPageSelect == 1 and ulKeyIdx == 16 then
+            usOption = usOption | 0x0003
+            usUsedKeys = usOption | 0x0004
+            -- strDataBlock = strDataBlock .. string.char(0x03, 0x01)
+            -- strDataBlock = strDataBlock .. string.char(0x04, 0x00)
+        elseif ulPageSelect == 1 and ulKeyIdx == 17 then
+            usOption = usOption | 0x0002
+            usUsedKeys =usOption | 0x0001
+            -- strDataBlock = strDataBlock .. string.char(0x02, 0x01)
+            -- strDataBlock = strDataBlock .. string.char(0x01, 0x00)
+        elseif ulPageSelect == 2 and ulKeyIdx == 16 then
+            usOption = usOption | 0x0004
+            usUsedKeys = usOption | 0x0008
+            -- strDataBlock = strDataBlock .. string.char(0x04, 0x01)
+            -- strDataBlock = strDataBlock .. string.char(0x08, 0x00)
+        elseif ulPageSelect == 2 and ulKeyIdx == 17 then
+            usOption = usOption | 0x0004
+            usUsedKeys = usOption | 0x0008
+            -- strDataBlock = strDataBlock .. string.char(0x00, 0x01)
+            -- strDataBlock = strDataBlock .. string.char(0x02, 0x00)
+        end
+        if fPlaceSignatureAtEnd then
+            usOption = usOption | 0x1000  -- set flag UNKNOWN_SIGNATURE_SIZE
+        end
+
+        local usOptionL = (usOption >> 8) & 0xff;
+        local usOptionH = (usOption) & 0xff;
+        local usUsedKeysL = (usUsedKeys >> 8) & 0xff;
+        local usUsedKeysH = (usUsedKeys) & 0xff;
+
+        strDataBlock = strDataBlock .. string.char(usOptionH, usOptionL)
+        strDataBlock = strDataBlock .. string.char(usUsedKeysH, usUsedKeysL)
+
+        strDataBlock = strDataBlock .. strChunkHash
+
+        local strBindingData = ""
+        if ulPageSelect == 1 then
+            strBindingData = strBindingData .. strUUID
+            strBindingData = strBindingData .. strAnchor
+            strBindingData = strBindingData .. strUUIDMask
+            strBindingData = strBindingData .. strAnchorMask
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+        elseif ulPageSelect == 2 then
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 12)
+            strBindingData = strBindingData .. string.rep(string.char(0x0), 16)
+            strBindingData = strBindingData .. strUUID
+            strBindingData = strBindingData .. strAnchor
+            strBindingData = strBindingData .. strUUIDMask
+            strBindingData = strBindingData .. strAnchorMask
+        else
+            tResult = false
+            strErrorMsg = string.format("The selected secure info '%s' page is not supported", ulPageSelect)
+        end
+
+        strDataBlock = strDataBlock .. strBindingData
+        strDataBlock = strDataBlock .. strSignature
+
+        -- add padding to flush the intram data
+        strDataBlock = strDataBlock .. string.char(0x00, 0x00, 0x00, 0x00)
+
+        if strOutputBinPath ~= nil then
+            local tOutputFileHandle = io.open(strOutputBinPath, 'wb')
+            tOutputFileHandle:write(strDataBlock)
+            tOutputFileHandle:close()
+        end
     end
     return strDataBlock, tResult, strErrorMsg
 end

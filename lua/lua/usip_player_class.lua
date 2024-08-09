@@ -1,7 +1,6 @@
 local class = require 'pl.class'
 local mhash = require 'mhash'
 local path = require 'pl.path'
-local archive = require 'archive'
 
 
 local SIP_ATTRIBUTES = {
@@ -574,6 +573,11 @@ function UsipPlayer:verifyHelperSignatures()
     astrFileData, astrPaths = self.tHelperFiles.getAllHelperFilesData(
         {strPath}
     )
+    local astrHelpersToCheck = self.tHelperFiles.getAllHelperKeys()
+    local romloader = _G.romloader
+    local strUnsignedHelperDir = path.join(self.tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+    local aStrHelperFileDirs = path.join(self.strSecureOption, "netx90")
+    local strDetectedHTBLType
     if not astrFileData then
         -- This error should not occur, as all files have previously been checked.
         self.tLog.error("Error during file checks: could not read all helper binaries.")
@@ -581,6 +585,22 @@ function UsipPlayer:verifyHelperSignatures()
     elseif not tResult then
         self.tLog.error(strErrorMsg)
     else
+        if self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+        self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+            if self.strSecureOption ~= self.tFlasher.DEFAULT_HBOOT_OPTION then
+                tResult, strErrorMsg, strDetectedHTBLType = self.tVerifySignature.detectRev2Signatures(
+                    strUnsignedHelperDir, {aStrHelperFileDirs}, astrHelpersToCheck)
+                if tResult ~= true then
+                    self.tLog.error(strErrorMsg)
+                    os.exit(1)
+                elseif strDetectedHTBLType == "netx90_rev2" then
+                    self.tLog.error(
+                        "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use  a netX 90 rev2 chip)"
+                    )
+                    os.exit(1)
+                end
+            end
+        end
         -- TODO: how to be sure that the verify sig will work correct?
         -- NOTE: If the verify_sig file is not signed correctly the process will fail
         -- is there a way to verify the signature of the verify_sig itself?
@@ -596,11 +616,15 @@ function UsipPlayer:verifyHelperSignatures()
         self.tHelperFiles.showFileCheckResults(atResults)
 
         -- TODO: kann die Fehlermeldung geändert werden?
-        if not tResult then
-            self.tLog.error( "The signatures of the helper binaries could not be verified." )
-            self.tLog.error( "Please check if the helper binaries are signed correctly" )
-            strErrorMsg = "Error during file checks: could not read all helper binaries." ..
-            " Please check if the helper binaries are signed correctly."
+        if tResult then
+            self.tLog.info("The signatures of the helper files have been successfully verified.")
+            --fOk = true
+            strErrorMsg = "Helper file signatures OK."
+        else
+            self.tLog.error( "The signatures of the helper files could not be verified." )
+            self.tLog.error( "Please check if the helper files are signed correctly." )
+            tResult = false
+            strErrorMsg = "Could not verify the signatures of the helper files."
         end
     end
     return tResult, strErrorMsg
@@ -632,6 +656,7 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
     end
 
     tResult = self.tHelperFiles.checkHelperFiles(astrVersionCheckDirs, astrHelpersToCheck)
+
     if not tResult then
         self.tLog.error("Error during file version checks.")
         strErrorMsg = "Error during file version checks."
@@ -650,6 +675,27 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
                 self.tLog.error("Error during file checks: could not read all helper binaries.")
                 strErrorMsg = "Error during file checks: could not read all helper binaries."
             else
+                local astrHelpersToCheck = self.tHelperFiles.getAllHelperKeys()
+                local romloader = _G.romloader
+                local strUnsignedHelperDir = path.join(self.tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+                local aStrHelperFileDirs = path.join(self.strSecureOption, "netx90")
+                local strDetectedHTBLType
+                if self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+                self.iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+                    if self.strSecureOption ~= self.tFlasher.DEFAULT_HBOOT_OPTION then
+                        tResult, strErrorMsg, strDetectedHTBLType = self.tVerifySignature.detectRev2Signatures(
+                            strUnsignedHelperDir, {aStrHelperFileDirs}, astrHelpersToCheck)
+                        if tResult ~= true then
+                            self.tLog.error(strErrorMsg)
+                            os.exit(1)
+                        elseif strDetectedHTBLType == "netx90_rev2" then
+                            self.tLog.error(
+                                "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use  a netX 90 rev2 chip)"
+                            )
+                            os.exit(1)
+                        end
+                    end
+                end
                 -- TODO: how to be sure that the verify sig will work correct?
                 -- NOTE: If the verify_sig file is not signed correctly the process will fail
                 -- is there a way to verify the signature of the verify_sig itself?
@@ -664,12 +710,15 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
 
                 self.tHelperFiles.showFileCheckResults(atResults)
 
-                -- TODO: kann die Fehlermeldung geändert werden?
-                if not tResult then
-                    self.tLog.error( "The signatures of the helper binaries could not be verified." )
-                    self.tLog.error( "Please check if the helper binaries are signed correctly" )
-                    strErrorMsg = "Error during file checks: could not read all helper binaries." ..
-                    " Please check if the helper binaries are signed correctly."
+                if tResult then
+                    self.tLog.info("The signatures of the helper files have been successfully verified.")
+                    --fOk = true
+                    strErrorMsg = "Helper file signatures OK."
+                else
+                    self.tLog.error( "The signatures of the helper files could not be verified." )
+                    self.tLog.error( "Please check if the helper files are signed correctly." )
+                    tResult = false
+                    strErrorMsg = "Could not verify the signatures of the helper files."
                 end
             end
             if self.strSecureOptionPhaseTwo ~= self.tFlasher.DEFAULT_HBOOT_OPTION and
