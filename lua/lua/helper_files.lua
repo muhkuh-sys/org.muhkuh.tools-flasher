@@ -74,7 +74,7 @@ local atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev9-0-g9b7f25b40f30:reV",
+        version = "Ver:GITv1.0.0-0-gcb564dcda617+:reV",
         version_offset = 0x10B8
     },
 
@@ -88,7 +88,7 @@ local atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev5-0",
+        version = "Ver:GITV1.0.0-0-gfa884e95913a:reV",
         version_offset = 0x9B8
     },
 
