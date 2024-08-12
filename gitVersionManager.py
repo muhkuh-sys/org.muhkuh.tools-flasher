@@ -17,8 +17,9 @@ class gitVersionManager:
     # Creates a gitVersionManager Object
     #
     # strRepoPath = path the current repo is in (use "/" for dirs, "." for current dir)
-    def __init__(self, strRepoPath):
+    def __init__(self, strRepoPath, repo_nickname=""):
         self.repo = git.Repo(strRepoPath)
+        self.repo_nickname = repo_nickname
 
 
     # Gets the branch the repository is currently on.
@@ -42,6 +43,7 @@ class gitVersionManager:
         # Remove "origin/" if present
         if "/" in branch.name:
             return str.split(branch.name, "/")[-1]
+        print(f"({self.repo_nickname})current branch name: {branch.name}")
         return branch.name
 
 
@@ -53,7 +55,6 @@ class gitVersionManager:
     # Checks if the current branch is the release branch
     def onReleaseBranch(self):
         current_branch_name = self.getCurrentBranchName()
-        print(f"current branch name: {current_branch_name}")
         return current_branch_name in self.releaseBranchNames
 
     # Gets the last tag from "git describe"-output
@@ -67,7 +68,8 @@ class gitVersionManager:
 
     def getLastTag(self):
         # Get the git describe output, gitpython has no good way of providing the tag
-        description = self.repo.git.describe() # e.g. 'v2.1.0-dev13-15-gb39e454' or 'v2.1.0' when directly on tag
+        description = self.repo.git.describe()  # e.g. 'v2.1.0-dev13-15-gb39e454' or 'v2.1.0' when directly on tag
+        print(f"({self.repo_nickname})git describe: {description}")
         if re.match(self.devTagFormat, description):
             assert not self.onReleaseBranch(), "Got dev tag but on release branch - forgot to set release tag?"
             tagName = re.search(self.devTagFormat, description).group()
@@ -132,10 +134,11 @@ class gitVersionManager:
             sys.exit(f'Could not create tag \"{newDevTagName}\" on commit \"{currentCommitHash}\"')
         return newTag
 
-
     # Gets the version number of the last tag (e.g. "v2.1.0")
     #
     # Aborts if there is no version in the last tag.
+
+
     def getVersionNumber(self):
         last_git_tag_name = self.getLastTag().name
         print(f"Last git tag name: {last_git_tag_name}")
@@ -163,7 +166,6 @@ class gitVersionManager:
             ending += "-" + str(self.getCommitsSinceLastTag()) 
         return ending
 
-
     # Get the full Version string suitable for the current branch
     #
     # dev-branch or release branch: 
@@ -181,6 +183,7 @@ class gitVersionManager:
     # HASH = shortened git hash of the current commit
     def getFullVersionString(self):
         name = self.getVersionNumber()
+        print(f"({self.repo_nickname})getFullVersionString: {name}")
         if self.onDevBranch() or self.onReleaseBranch():
             name += self.getDevEnding()
         else:
@@ -188,3 +191,15 @@ class gitVersionManager:
             name += "-g" + str(self.repo.head.commit.hexsha)[:7]
             name += "+" if self.repo.is_dirty() else ""
         return name
+
+
+if __name__ == '__main__':
+    repoManager = gitVersionManager(".")
+    if repoManager.onDevBranch() or repoManager.onReleaseBranch():
+        build_type = repoManager.getDevEnding()
+    else:
+        build_type = "-" + repoManager.getCurrentBranchName()
+
+    # Set the artifact name
+    strMbsProjectVersion = repoManager.getFullVersionString()
+    print("")

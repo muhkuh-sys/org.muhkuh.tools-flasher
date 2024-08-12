@@ -324,7 +324,7 @@ for strPath in astrFolders:
 #
 
 # Get the flasher repo and the current branch name
-repoManager = gitVersionManager(strCfg_projectFolder)
+repoManager = gitVersionManager(strCfg_projectFolder, "flasher")
 if flags["gitTagRequested"]:
     repoManager.createDevTag()
 
@@ -368,9 +368,11 @@ subprocess.check_call(
 # Build the romloader netX code.
 #
 # Generate the output folder name out of the romloader git tags
+print("load romloader files")
 strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
-romloaderRepoManager = gitVersionManager(strRomloaderFolder)
+romloaderRepoManager = gitVersionManager(strRomloaderFolder, "romloader")
 romloaderArtifactName = "montest_" + romloaderRepoManager.getFullVersionString()
+print(f"romloader artifact: {romloaderArtifactName}")
 
 # Build
 astrArguments = [
