@@ -102,7 +102,7 @@ local atHelperFileVersions = {
     {
         key = "start_mi",
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.5",
+        version = "Ver:GITv2.5.5-0-g5eca7e77a4b5:reV",
         version_offset = 0x0454
     },
 
