@@ -95,7 +95,7 @@ local atHelperFileVersions = {
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.1.0",
+        version = "GITv2.1.1",
         version_offset = 0x0410
     },
 
