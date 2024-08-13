@@ -595,7 +595,7 @@ function UsipPlayer:verifyHelperSignatures()
                     os.exit(1)
                 elseif strDetectedHTBLType == "netx90_rev2" then
                     self.tLog.error(
-                        "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use  a netX 90 rev2 chip)"
+                        "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
                     )
                     os.exit(1)
                 end
@@ -690,7 +690,7 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
                             os.exit(1)
                         elseif strDetectedHTBLType == "netx90_rev2" then
                             self.tLog.error(
-                                "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use  a netX 90 rev2 chip)"
+                                "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
                             )
                             os.exit(1)
                         end

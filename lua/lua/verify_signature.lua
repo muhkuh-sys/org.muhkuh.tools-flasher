@@ -234,7 +234,7 @@ function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions,
                         os.exit(1)
                     elseif strDetectedHTBLType == "netx90_rev2" then
                         tLog.error(
-                            "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk of rev2 inside the helper files. (Please sign helper files for netX90 rev1)"
+                            "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
                         )
                         os.exit(1)
                     end
@@ -311,7 +311,7 @@ local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
                         os.exit(1)
                     elseif strDetectedHTBLType == "netx90_rev2" then
                         tLog.error(
-                            "netX 90 rev1 hardware is not compatible with the HTBL chunk of the helper files. (Please sign helper files for netX90 rev1)"
+                            "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
                         )
                         os.exit(1)
                     end
