@@ -4,7 +4,8 @@ local tLogWriterConsole = require 'log.writer.console'.new()
 local tLogWriterFilter = require 'log.writer.filter'.new('info', tLogWriterConsole)
 local tLogWriter = require 'log.writer.prefix'.new('[Main] ', tLogWriterFilter)
 local tLog = require 'log'.new('trace', tLogWriter, require 'log.formatter.format'.new())
-
+local sipper = require 'sipper'
+local tSipper = sipper(tLog)
 local path = require 'pl.path'
 
 
@@ -32,8 +33,6 @@ function M.verifySignature(tPlugin, strPluginType, tDatalist, tPathList, strTemp
     --       result register is structured take a look at https://kb.hilscher.com/x/VpbJBw
 
     -- be optimistic
-    local sipper = require 'sipper'
-    local tSipper = sipper(tLog)
     local tFlasher = require 'flasher'
     local tFlasherHelper = require 'flasher_helper'
     local fOk = true
@@ -198,22 +197,52 @@ function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions,
     local strPath = path.join(strSecureOption, "netx90")
     local tHelperFiles = require 'helper_files'
     local tHelperFileDataList, tPathList = tHelperFiles.getAllHelperFilesData({strPath})
+    local astrHelpersToCheck = tHelperFiles.getAllHelperKeys()
 
     local atResults
 
-    local fOk = false
+    local tResult = false
+    local tFlasher = require 'flasher'
     local tFlasherHelper = require 'flasher_helper'
-    local tPlugin, strMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+    local tPlugin
+    local strErrorMsg
+    local strDetectedHTBLType
+    tPlugin, strErrorMsg = tFlasherHelper.getPlugin(strPluginName, strPluginType, atPluginOptions)
+
     if not tPlugin then
         tLog.error("Failed to open connection: %s", strMsg or "Unknown error")
     else
-        fOk, strMsg = pcall(tPlugin.Connect, tPlugin)
-        if not fOk then
+
+        local romloader = _G.romloader
+
+        local strUnsignedHelperDir = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+        local aStrHelperFileDirs = path.join(strSecureOption, "netx90")
+
+
+        tResult, strErrorMsg = pcall(tPlugin.Connect, tPlugin)
+        if not tResult then
             tLog.error("Failed to open connection: %s", strMsg or "Unknown error")
         else
+            local iChiptype = tPlugin:GetChiptyp()
+            if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+                if strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+                    tResult, strErrorMsg, strDetectedHTBLType = M.detectRev2Signatures(
+                        strUnsignedHelperDir, {aStrHelperFileDirs}, astrHelpersToCheck)
+                    if tResult ~= true then
+                        tLog.error(strErrorMsg)
+                        os.exit(1)
+                    elseif strDetectedHTBLType == "netx90_rev2" then
+                        tLog.error(
+                            "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
+                        )
+                        os.exit(1)
+                    end
+                end
+            end
             local strConnectedPluginType = tPlugin:GetTyp()
 
-            fOk, atResults = M.verifySignature(
+            tResult, atResults = M.verifySignature(
                 tPlugin, strConnectedPluginType, tHelperFileDataList, tPathList, strTmpFolderPath, strVerifySigPath
             )
 
@@ -221,7 +250,7 @@ function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions,
 
             tHelperFiles.showFileCheckResults(atResults)
 
-            if fOk then
+            if tResult then
                 tLog.info("The signatures of the helper files have been successfully verified.")
             else
                 tLog.error( "The signatures of the helper files could not be verified." )
@@ -230,7 +259,7 @@ function M.verifyHelperSignatures(strPluginName, strPluginType, atPluginOptions,
         end
         collectgarbage('collect')
     end
-    return fOk, atResults
+    return tResult, atResults
 end
 
 
@@ -243,53 +272,142 @@ end
 -- or false and an error message if the signatures are invalid, or
 -- the signature verification has failed.
 local function verifyHelperSignatures1(tPlugin, strSecureOption, astrKeys)
-  local fOk
-  local strMsg
-  local atResults
-  local strSecPathNx90 = path.join(strSecureOption, "netx90")
-  local tHelperFiles = require 'helper_files'
-  local _, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+    local tResult
+    local strErrorMsg
+    local atResults
+    local strSecPathNx90 = path.join(strSecureOption, "netx90")
+    local tHelperFiles = require 'helper_files'
+    local tFlasher = require 'flasher'
+    local _, astrFileData, astrPaths = tHelperFiles.getHelperDataAndPaths({strSecPathNx90}, astrKeys)
+    local strDetectedHTBLType
+    if astrPaths == nil then
+    tResult = false
+    strErrorMsg = "Bug: some helper files are unknown"
+    else
+        tLog.info("Checking signatures of helper files ...**")
 
-  if astrPaths == nil then
-      fOk = false
-      strMsg = "Bug: some helper files are unknown"
-  else
-      tLog.info("Checking signatures of helper files ...**")
+        local usipPlayerConf = require 'usip_player_conf'
+        local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
 
-      local usipPlayerConf = require 'usip_player_conf'
-      local tempFolderConfPath = usipPlayerConf.tempFolderConfPath
+        local strVerifySigPath
+        strVerifySigPath, strErrorMsg = tHelperFiles.getHelperPath(strSecPathNx90, "verify_sig")
+        local astrHelpersToCheck = tHelperFiles.getAllHelperKeys()
+        if strVerifySigPath == nil then
+            tResult = false
+            strErrorMsg = strErrorMsg or "Failed to get the path to verify_sig"
+        else
+            local romloader = _G.romloader
 
-      local strVerifySigPath
-      strVerifySigPath, strMsg = tHelperFiles.getHelperPath(strSecPathNx90, "verify_sig")
-      if strVerifySigPath == nil then
-          fOk = false
-          strMsg = strMsg or "Failed to get the path to verify_sig"
-      else
-          local strPluginType = tPlugin:GetTyp()
-          fOk, atResults = M.verifySignature(
-              tPlugin, strPluginType, astrFileData, astrPaths, tempFolderConfPath, strVerifySigPath
-          )
+            local strUnsignedHelperDir = path.join(tFlasher.DEFAULT_HBOOT_OPTION, "netx90")
+            local aStrHelperFileDirs = path.join(strSecureOption, "netx90")
+            local iChiptype = tPlugin:GetChiptyp()
+            if iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90A or iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90B or
+            iChiptype == romloader.ROMLOADER_CHIPTYP_NETX90C then
+                if strSecureOption ~= tFlasher.DEFAULT_HBOOT_OPTION then
+                    tResult, strErrorMsg, strDetectedHTBLType = M.detectRev2Signatures(
+                        strUnsignedHelperDir, {aStrHelperFileDirs}, astrHelpersToCheck)
+                    if tResult ~= true then
+                        tLog.error(strErrorMsg)
+                        os.exit(1)
+                    elseif strDetectedHTBLType == "netx90_rev2" then
+                        tLog.error(
+                            "netX 90 rev1 chip is not compatible with the enhanced HTBL chunk used inside the helper files. (Please sign helper files for netX90 rev1 or use a netX 90 rev2 chip)"
+                        )
+                        os.exit(1)
+                    end
+                end
+            end
+            local strPluginType = tPlugin:GetTyp()
+            tResult, atResults = M.verifySignature(
+                tPlugin, strPluginType, astrFileData, astrPaths, tempFolderConfPath, strVerifySigPath
+            )
 
-          tHelperFiles.showFileCheckResults(atResults)
+            tHelperFiles.showFileCheckResults(atResults)
 
-          if fOk then
-              tLog.info("The signatures of the helper files have been successfully verified.")
-              --fOk = true
-              strMsg = "Helper file signatures OK."
-          else
-              tLog.error( "The signatures of the helper files could not be verified." )
-              tLog.error( "Please check if the helper files are signed correctly." )
-              fOk = false
-              strMsg = "Could not verify the signatures of the helper files."
-          end
-      end
-  end
+            if tResult then
+                tLog.info("The signatures of the helper files have been successfully verified.")
+                --fOk = true
+                strErrorMsg = "Helper file signatures OK."
+            else
+                tLog.error( "The signatures of the helper files could not be verified." )
+                tLog.error( "Please check if the helper files are signed correctly." )
+                tResult = false
+                strErrorMsg = "Could not verify the signatures of the helper files."
+            end
+        end
+    end
 
-  return fOk, strMsg
+    return tResult, strErrorMsg
 end
 
+function M.detectRev2Signatures(strHelperDirUnsigned, aStrHelperDirSigned, astrHelpersToCheck)
+    local tHelperFiles = require 'helper_files'
+    -- TODO add check HTBL chunk here
+    local aStrHelperDataSigned
+    local aStrHelperDataUnigned
+    local astrPaths
+    local strErrorMsg
+    local strDetectedHTBLType
+    local fResult = true
 
-function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
+    tLog.info("Verify signature type of helper images")
+    for idx, strHelperDirSigned in pairs(aStrHelperDirSigned) do
+
+        fResult, aStrHelperDataSigned, astrPaths = tHelperFiles.getHelperDataAndPaths(
+            {strHelperDirSigned}, astrHelpersToCheck)
+        if fResult then
+            fResult, aStrHelperDataUnigned = tHelperFiles.getHelperDataAndPaths(
+                {strHelperDirUnsigned}, astrHelpersToCheck)
+            if fResult then
+                for ulIdx = 1, #aStrHelperDataSigned do
+                    strDetectedHTBLType, fResult, strErrorMsg = M.analyzeNetx90SignatureType(
+                        aStrHelperDataUnigned[ulIdx], aStrHelperDataSigned[ulIdx]
+                    )
+                end
+            end
+        end
+    end
+    if fResult then
+        tLog.info("signature type of helper images is OK")
+    end
+    return fResult, strErrorMsg, strDetectedHTBLType
+end
+
+function M.analyzeNetx90SignatureType(strImageUnsignedData, strImageSignedData)
+    local tParsedHbootImageUnsigned
+    local tParsedHbootImageSigned
+    local fResult
+    local strErrorMsg
+
+    local tFirstChunkUnsigned
+    local tFirstChunkSigned
+    local strDetectedHTBLType
+
+    tParsedHbootImageUnsigned, fResult, strErrorMsg = tSipper:analyze_hboot_image(strImageUnsignedData)
+    if fResult then
+        tParsedHbootImageSigned, fResult, strErrorMsg = tSipper:analyze_hboot_image(strImageSignedData)
+
+        if fResult then
+            -- get first chunks of each analyzed image
+            -- check if the SKIP chunk of the unsigned image is the same size as the HTBL chunk of the stigned image
+            tFirstChunkUnsigned = tParsedHbootImageUnsigned["atChunks"][0] or tParsedHbootImageUnsigned["atChunks"][1]
+            tFirstChunkSigned = tParsedHbootImageSigned["atChunks"][0] or tParsedHbootImageSigned["atChunks"][1]
+            if tFirstChunkSigned["strChunkId"] ~= "HTBL" then
+                strDetectedHTBLType = "unsigned"
+            elseif tFirstChunkUnsigned["ulChunkSize"] == tFirstChunkSigned["ulChunkSize"] then
+                strDetectedHTBLType = "netx90_rev2"
+            elseif tFirstChunkUnsigned["ulChunkSize"] > tFirstChunkSigned["ulChunkSize"] then
+                strDetectedHTBLType = "netx90_rev1"
+            else
+                fResult = false
+                strErrorMsg = "Could not compare unsigned image with signed image."
+            end
+        end
+    end
+    return strDetectedHTBLType, fResult, strErrorMsg
+end
+
+function M.verifyHelperSignatures_wrap(tPlugin, strSecureOption, astrKeys)
     local fOk = true
     local strMsg = nil
     local romloader = require 'romloader'
@@ -309,7 +427,7 @@ function M.verifyHelperSignatures_wrap (tPlugin, strSecureOption, astrKeys)
             end
         end
 
-        fOk, strMsg = verifyHelperSignatures1 (tPlugin, strSecureOption, astrKeysToCheck)
+        fOk, strMsg = verifyHelperSignatures1(tPlugin, strSecureOption, astrKeysToCheck)
     end
 
     return fOk, strMsg

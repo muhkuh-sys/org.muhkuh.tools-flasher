@@ -74,7 +74,7 @@ local atHelperFileVersions = {
     {
         key = "read_sip_m2m",
         filename = "read_sip_M2M.bin",
-        version = "Ver:GITv1.0.0-dev9-0-g9b7f25b40f30:reV",
+        version = "Ver:GITv1.0.0-0-gcb564dcda617+:reV",
         version_offset = 0x10B8
     },
 
@@ -88,21 +88,21 @@ local atHelperFileVersions = {
     {   -- This is verify_sig_intram from the build
         key = "verify_sig",
         filename = "verify_sig.bin",
-        version = "Ver:GITv1.0.0-dev5-0",
+        version = "Ver:GITV1.0.0-0-gfa884e95913a:reV",
         version_offset = 0x9B8
     },
 
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.1.0",
+        version = "GITv2.1.1",
         version_offset = 0x0410
     },
 
     {
         key = "start_mi",
         filename = "hboot_start_mi_netx90_com_intram.bin",
-        version = "Ver:GITv2.5.5",
+        version = "Ver:GITv2.5.5-0-g5eca7e77a4b5:reV",
         version_offset = 0x0454
     },
 
@@ -354,7 +354,7 @@ function M.getHelperPath(strDir, strKey)
 end
 
 
-local function getAllHelperKeys()
+function M.getAllHelperKeys()
     local astrKeys = {}
     for _, e in ipairs(atHelperFileVersions) do
         table.insert(astrKeys, e.key)
@@ -370,7 +370,7 @@ end
 -- fOk: true if all keys could be found, false if not.
 -- astrPaths: the paths that could be generated, may be incomplete.
 local function getHelperPaths(astrDir, astrKeys)
-    astrKeys = astrKeys or getAllHelperKeys()
+    astrKeys = astrKeys or M.getAllHelperKeys()
     local astrPaths = {}
     local fOk = true
     for _, strDir in ipairs(astrDir) do
