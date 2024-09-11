@@ -1092,6 +1092,66 @@ local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands
     end
 end
 
+local function addOptionVerbose(tParserCommand)
+    tParserCommand
+        :option('-V --verbose')
+        :description(string.format(
+            'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
+            table.concat(atLogLevels, ', ')
+        ))
+        :argname('<LEVEL>')
+        :default('debug')
+        :target('strLogLevel')
+end
+
+local function addOptionFutureVersion(tParserCommand, fDefault, fHide)
+    if fHide == nil then
+        fHide = false
+    end
+    if fDefault == nil then
+        fDefault = false
+    end
+    tParserCommand
+        :flag('--allow_future_version')
+        :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
+        :target('fAllowFutureVersion')
+        :default(fDefault)
+        :hidden(fHide)
+end
+
+local function addOptionDHVC(tParserCommand)
+    tParserCommand
+        :flag('--disable_helper_signature_check')
+        :description('Disable signature checks on helper files.')
+        :target('fDisableHelperSignatureChecks')
+        :default(false)
+end
+
+local function addOptionPlugin(tParserCommand)
+    tParserCommand
+        :option('-p --plugin_name')
+        :description("plugin name")
+        :target('strPluginName')
+    tParserCommand
+        :option('-t --plugin_type')
+        :description("plugin type")
+        :target('strPluginType')
+end
+
+local function addOptionSecure(tParserCommand)
+    tParserCommand:mutex(
+        tParserCommand
+            :flag('--comp')
+            :description("use compatibility mode for netx90 M2M interfaces")
+            :target('bCompMode')
+            :default(false),
+        tParserCommand
+            :option('--sec')
+            :description("Path to signed image directory")
+            :target('strSecureOption')
+            :default(tFlasher.DEFAULT_HBOOT_OPTION)
+    )
+end
 
 local strEpilog = [==[
 Note: the command 'check_helper_signature' and the optional arguments
@@ -1116,85 +1176,59 @@ tParser:flag "--disable_helper_version_check":hidden(true)
     end)
 
 -- Add the "flash" command and all its options.
-local tParserCommandFlash = tParser:command('flash f', 'Flash the contents of the WFP.')
-                                   :target('fCommandFlashSelected')
-tParserCommandFlash:argument('archive', 'The WFP file to process.')
-                   :target('strWfpArchiveFile')
-tParserCommandFlash:flag('-d --dry-run')
-                   :description('Dry run. Connect to a netX and read all data from the WFP, ' ..
-                                'but to not alter the flash.')
-                   :default(false)
-                   :target('fDryRun')
-tParserCommandFlash:option('-c --condition')
-                   :description('Add a condition in the form KEY=VALUE.')
-                   :count('*')
-                   :target('astrConditions')
-tParserCommandFlash:option('-V --verbose')
-                   :description(string.format(
-                     'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                     table.concat(atLogLevels, ', ')
-                   ))
-                   :argname('<LEVEL>')
-                   :default('debug')
-                   :target('strLogLevel')
-tParserCommandFlash:option('-p --plugin_name')
-                   :description("plugin name")
-                   :target('strPluginName')
-tParserCommandFlash:option('-t --plugin_type')
-                   :description("plugin type")
-                   :target('strPluginType')
-tParserCommandFlash:mutex(
-    tParserCommandFlash:flag('--comp')
-                       :description("use compatibility mode for netx90 M2M interfaces")
-                       :target('bCompMode')
-                       :default(false),
-    tParserCommandFlash:option('--sec')
-                       :description("Path to signed image directory")
-                       :target('strSecureOption')
-                       :default(tFlasher.DEFAULT_HBOOT_OPTION)
-)
-tParserCommandFlash:flag('--disable_helper_signature_check')
-                   :description('Disable signature checks on helper files.')
-                   :target('fDisableHelperSignatureChecks')
-                   :default(false)
-tParserCommandFlash:flag('--allow_future_version')
-                   :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                   :target('fAllowFutureVersion')
-                   :default(false)
+local tParserCommandFlash = tParser
+        :command('flash f', 'Flash the contents of the WFP.')
+        :target('fCommandFlashSelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
+tParserCommandFlash
+        :argument('archive', 'The WFP file to process.')
+        :target('strWfpArchiveFile')
+tParserCommandFlash
+        :flag('-d --dry-run')
+        :description('Dry run. Connect to a netX and read all data from the WFP, ' ..
+                    'but to not alter the flash.')
+        :default(false)
+        :target('fDryRun')
+tParserCommandFlash
+        :option('-c --condition')
+        :description('Add a condition in the form KEY=VALUE.')
+        :count('*')
+        :target('astrConditions')
+addOptionVerbose(tParserCommandFlash)
+addOptionPlugin(tParserCommandFlash)
+addOptionSecure(tParserCommandFlash)
+addOptionDHVC(tParserCommandFlash)
+addOptionFutureVersion(tParserCommandFlash)
 
 -- Add the "verify" command and all its options.
-local tParserCommandVerify = tParser:command('verify v', 'Verify the contents of the WFP.'):target(
-    'fCommandVerifySelected')
+local tParserCommandVerify = tParser
+        :command('verify v', 'Verify the contents of the WFP.')
+        :target('fCommandVerifySelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
 tParserCommandVerify:option('-c --condition'):description(
     'Add a condition in the form KEY=VALUE.'):count('*'):target('astrConditions')
-tParserCommandVerify:option('-V --verbose'):description(string.format(
-    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-     table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerify:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-tParserCommandVerify:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
-tParserCommandVerify:mutex(
-    tParserCommandVerify:flag('--comp')
-                        :description("use compatibility mode for netx90 M2M interfaces")
-                        :target('bCompMode')
-                        :default(false),
-    tParserCommandVerify:option('--sec')
-                        :description("Path to signed image directory")
-                        :target('strSecureOption')
-                        :default(tFlasher.DEFAULT_HBOOT_OPTION)
-)
-tParserCommandVerify:flag('--disable_helper_signature_check')
-                    :description('Disable signature checks on helper files.')
-                    :target('fDisableHelperSignatureChecks')
-                    :default(false)
+addOptionVerbose(tParserCommandVerify)
+addOptionPlugin(tParserCommandVerify)
+addOptionSecure(tParserCommandVerify)
+addOptionDHVC(tParserCommandVerify)
 tParserCommandVerify:flag('--production_mode -m')
                     :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
                     :target('fUseProductionMode')
                     :default(false)
-tParserCommandVerify:flag('--allow_future_version')
-                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                    :target('fAllowFutureVersion')
-                    :default(false)
+addOptionFutureVersion(tParserCommandVerify)
 
 
 -- Add the "Read" command and all its options.
@@ -1208,210 +1242,180 @@ tParserCommandRead:option("-a --archive",
  'Create a WFP file from the output directory.'):default(nil):target('strWfpArchiveFile')
 tParserCommandRead:flag('-s --simple'):description(
     'Build a SWFP file without compression.'):default(false):target('fBuildSWFP')
-tParserCommandRead:option("-V --verbose"):description(
-    string.format(
-        "Set the verbosity level to LEVEL. Possible values for LEVEL are %s.",
-        table.concat(atLogLevels, ", ")
-    )
-):argname("<LEVEL>"):default("debug"):target("strLogLevel")
-tParserCommandRead:option("-p --plugin_name"):description("plugin name"):target("strPluginName")
-tParserCommandRead:option('-t --plugin_type'):description("plugin type"):target('strPluginType')
+addOptionVerbose(tParserCommandRead)
+addOptionPlugin(tParserCommandRead)
 tParserCommandRead:flag("-o --overwrite"):description(
     "Overwrite an existing folder. The default is to do nothing if the target folder already exists."
 ):default(false):target("fOverwrite")
-tParserCommandRead:mutex(
-    tParserCommandRead:flag('--comp')
-                      :description("use compatibility mode for netx90 M2M interfaces")
-                      :target('bCompMode')
-                      :default(false),
-    tParserCommandRead:option('--sec')
-                      :description("Path to signed image directory")
-                      :target('strSecureOption')
-                      :default(tFlasher.DEFAULT_HBOOT_OPTION)
-)
-tParserCommandRead:flag('--disable_helper_signature_check')
-:description('Disable signature checks on helper files.')
-:target('fDisableHelperSignatureChecks')
-:default(false)
-tParserCommandRead:flag('-m --production_mode')
-                  :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
-                  :target('fUseProductionMode')
-                  :default(false)
+addOptionSecure(tParserCommandRead)
+addOptionDHVC(tParserCommandRead)
 
-tParserCommandRead:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                  :target('fAllowFutureVersion')
-                  :default(false)
+tParserCommandRead
+        :flag('-m --production_mode')
+        :description("Use production mode. If wfp.xml control file contains 'usip' or 'SIP' elements, read data directly from flash and not perform any resets.")
+        :target('fUseProductionMode')
+        :default(false)
+
+addOptionFutureVersion(tParserCommandRead)
 
 -- Add the "list" command and all its options.
-local tParserCommandList = tParser:command('list l',
-                                           'List the contents of the WFP.')
-                                  :target('fCommandListSelected')
-tParserCommandList:argument('archive', 'The WFP file to process.')
-                  :target('strWfpArchiveFile')
-tParserCommandList:option('-V --verbose')
-                  :description(string.format(
-                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                    table.concat(atLogLevels, ', ')
-                  ))
-                  :argname('<LEVEL>')
-                  :default('debug')
-                  :target('strLogLevel')
-tParserCommandList:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                  :target('fAllowFutureVersion')
-                  :default(false)
+local tParserCommandList = tParser
+        :command('list l', 'List the contents of the WFP.')
+        :target('fCommandListSelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
+
+tParserCommandList
+        :argument('archive', 'The WFP file to process.')
+        :target('strWfpArchiveFile')
+addOptionVerbose(tParserCommandList)
+addOptionFutureVersion(tParserCommandList)
 
 -- Add the "pack" command and all its options.
-local tParserCommandPack = tParser:command('pack p',
-                                           'Pack a WFP based on an XML.')
-                                  :target('fCommandPackSelected')
-tParserCommandPack:argument('xml', 'The XML control file.')
-                  :target('strWfpControlFile')
-tParserCommandPack:argument('archive', 'The WFP file to create.')
-                  :target('strWfpArchiveFile')
-tParserCommandPack:flag('-o --overwrite')
-                  :description('Overwrite an existing WFP archive. ' ..
-                               'The default is to do nothing if the target archive already exists.')
-                  :default(false)
-                  :target('fOverwrite')
-tParserCommandPack:flag('-s --simple')
-                  :description('Build a SWFP file without compression.')
-                  :default(false)
-                  :target('fBuildSWFP')
-tParserCommandPack:option('-V --verbose')
-                  :description(string.format(
-                    'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                    table.concat(atLogLevels, ', ')
-                  ))
-                  :argname('<LEVEL>')
-                  :default('debug')
-                  :target('strLogLevel')
-tParserCommandPack:flag('--allow_future_version')
-                  :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                  :target('fAllowFutureVersion')
-                  :default(false)
-
+local tParserCommandPack = tParser
+        :command('pack p', 'Pack a WFP based on an XML.')
+        :target('fCommandPackSelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
+tParserCommandPack
+        :argument('xml', 'The XML control file.')
+        :target('strWfpControlFile')
+tParserCommandPack
+        :argument('archive', 'The WFP file to create.')
+        :target('strWfpArchiveFile')
+tParserCommandPack
+        :flag('-o --overwrite')
+        :description('Overwrite an existing WFP archive. ' ..
+                   'The default is to do nothing if the target archive already exists.')
+        :default(false)
+        :target('fOverwrite')
+tParserCommandPack
+        :flag('-s --simple')
+        :description('Build a SWFP file without compression.')
+        :default(false)
+        :target('fBuildSWFP')
+addOptionVerbose(tParserCommandPack)
+addOptionFutureVersion(tParserCommandPack)
 
 -- Add the "example" command and all its options.
-local tParserCommandExample = tParser:command('example e',
-                                              'Create example XML for connected netX.')
-                                     :target('fCommandExampleSelected')
-tParserCommandExample:argument('xml', 'Output example XML control file.')
-                     :target('strWfpControlFile')
-tParserCommandExample:option("-p --plugin_name")
-                     :description("plugin name")
-                     :target("strPluginName")
-tParserCommandExample:option('-t --plugin_type')
-                     :description("plugin type")
-                     :target('strPluginType')
-tParserCommandExample:option('-V --verbose')
-                     :description(string.format(
-                       'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                       table.concat(atLogLevels, ', ')
-                     ))
-                     :argname('<LEVEL>')
-                     :default('debug')
-                     :target('strLogLevel')
-tParserCommandExample:mutex(
-    tParserCommandExample:flag('--comp')
-                         :description("use compatibility mode for netx90 M2M interfaces")
-                         :target('bCompMode')
-                         :default(false),
-    tParserCommandExample:option('--sec')
-                         :description("Path to signed image directory")
-                         :target('strSecureOption')
-                         :default(tFlasher.DEFAULT_HBOOT_OPTION)
-)
-tParserCommandExample:flag('--disable_helper_signature_check')
-                     :description('Disable signature checks on helper files.')
-                     :target('fDisableHelperSignatureChecks')
-                     :default(false)
-
+local tParserCommandExample = tParser
+        :command('example e', 'Create example XML for connected netX.')
+        :target('fCommandExampleSelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
+tParserCommandExample
+        :argument('xml', 'Output example XML control file.')
+        :target('strWfpControlFile')
+addOptionVerbose(tParserCommandExample)
+addOptionPlugin(tParserCommandExample)
+addOptionSecure(tParserCommandExample)
+addOptionDHVC(tParserCommandExample)
 
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs',
-                                                      'Verify the signatures of the helper files.')
-                                             :target('fCommandCheckHelperSignatureSelected')
-tParserCommandVerifyHelperSig:option('-V --verbose')
-                             :description(string.format(
-                               'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                               table.concat(atLogLevels, ', '
-                             ))
-):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandVerifyHelperSig:option('-p --plugin_name')
-                             :description("plugin name")
-                            :target('strPluginName')
-tParserCommandVerifyHelperSig:option('-t --plugin_type')
-                             :description("plugin type")
-                             :target("strPluginType")
-tParserCommandVerifyHelperSig:option('--sec')
-                             :description("Path to signed image directory")
-                             :target('strSecureOption')
-                             :default(tFlasher.DEFAULT_HBOOT_OPTION)
+local tParserCommandVerifyHelperSig = tParser
+        :command('check_helper_signature chs', 'Verify the signatures of the helper files.')
+        :target('fCommandCheckHelperSignatureSelected')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+        ]])
+
+addOptionVerbose(tParserCommandVerifyHelperSig)
+addOptionPlugin(tParserCommandVerifyHelperSig)
+tParserCommandVerifyHelperSig
+        :option('--sec')
+        :description("Path to signed image directory")
+        :target('strSecureOption')
+        :default(tFlasher.DEFAULT_HBOOT_OPTION)
 
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandSupportedXmlVersion = tParser:command('show_supported_version ssv',
-                                                      'Show supported XML control file version.')
-                                             :target('fCommandSupportedXmlVersion')
-tParserCommandSupportedXmlVersion:option('-V --verbose')
-                            :description(string.format(
-                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandSupportedXmlVersion:flag('--allow_future_version')
-                             :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                             :target('fAllowFutureVersion')
-                             :default(true):hidden(true)
+local tParserCommandSupportedXmlVersion = tParser
+        :command('show_supported_version ssv', 'Show supported XML control file version.')
+        :target('fCommandSupportedXmlVersion')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+                        ]])
+
+addOptionVerbose(tParserCommandSupportedXmlVersion)
+addOptionFutureVersion(tParserCommandSupportedXmlVersion, true, true)
+
 -- Add the "check_helper_signature" command and all its options.
-local tParserCommandXmlVersion = tParser:command('show_wfp_version swv',
-                                                      'Show version of XML control file or WFP archive.')
-                                             :target('fCommandXmlVersion')
-tParserCommandXmlVersion:option('-V --verbose')
-                            :description(string.format(
-                                'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                             table.concat(atLogLevels, ', '))):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-tParserCommandXmlVersion:argument('wfp', 'The XML control file or WFP archive to check.')
-                             :target('strWfpPath')
-tParserCommandXmlVersion:flag('--allow_future_version')
-                    :description('Allow the WFP control xml to have a version with a minor version later than the supported version (only show warning and continue process).')
-                    :target('fAllowFutureVersion')
-                    :default(true):hidden(true)
-tParserCommandXmlVersion:flag('--allow_future_major')
-                    :description('Only used for this command')
-                    :target('fAllowFutureMajor')
-                    :default(true):hidden(true)
+local tParserCommandXmlVersion = tParser
+        :command('show_wfp_version swv', 'Show version of XML control file or WFP archive.')
+        :target('fCommandXmlVersion')
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  OK
+1:  ERROR
+                        ]])
+
+addOptionVerbose(tParserCommandXmlVersion)
+
+tParserCommandXmlVersion
+        :argument('wfp', 'The XML control file or WFP archive to check.')
+        :target('strWfpPath')
+addOptionFutureVersion(tParserCommandXmlVersion, true, true)
+tParserCommandXmlVersion
+        :flag('--allow_future_major')
+        :description('Only used for this command')
+        :target('fAllowFutureMajor')
+        :default(true)
+        :hidden(true)
 
 -- Add the "calc" command and all its options.
-local tParserCommandCalculate = tParser:command('calc calculate',
-                                'Verify and calculate an expression.')
-                       :target('fCommandCalculateSelected')
-                       :usage('Provide an expression and at least one variable definition.\n'..
-                        'Example:\n'..
-                        "lua5.4.exe wfp.lua calculate \"Var == 1\" \"Var=1\"\n\n"..
-                        "In expression: operators must be surrounded by spaces.\n"..
-                        "In operands: Do not use spaces (except in strings).\n"..
-                        "Do not use spaces in string constants.\n\n"..
-                        "The expression will be checked and evaluated.\n"..
-                        "Exit codes:\n"..
-                        "0 = false\n"..
-                        "1 = error\n"..
-                        "2 = true")
+local tParserCommandCalculate = tParser
+        :command('calc calculate', 'Verify and calculate an expression.')
+        :target('fCommandCalculateSelected')
+        :usage("Provide an expression and at least one variable definition.\n"..
+        "Example:\n"..
+        "lua5.4.exe wfp.lua calculate \"Var == 1\" \"Var=1\"\n\n"..
+        "In expression: operators must be surrounded by spaces.\n"..
+        "In operands: Do not use spaces (except in strings).\n"..
+        "Do not use spaces in string constants.\n\n"..
+        "The expression will be checked and evaluated.")
+        :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  FALSE
+1:  ERROR
+2:  TRUE
+                        ]])
 
-tParserCommandCalculate:option('-V --verbose')
-                       :description(string.format(
-                         'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.',
-                         table.concat(atLogLevels, ', ')
-                       ))
-                       :argname('<LEVEL>')
-                       :default('debug')
-                       :target('strLogLevel')
+addOptionVerbose(tParserCommandCalculate)
 
-tParserCommandCalculate:argument('expression', 'Expression in Lua Syntax.')
-                       :target('strExpression')
+tParserCommandCalculate
+        :argument('expression', 'Expression in Lua Syntax.')
+        :target('strExpression')
 
-tParserCommandCalculate:argument('operand', 'Value of operand')
-                       :target('astrOperands')
-                       :args("+") -- at least one operand
+tParserCommandCalculate
+        :argument('operand', 'Value of operand')
+        :target('astrOperands')
+        :args("+") -- at least one operand
 
 local tArgs = tParser:parse()
 
