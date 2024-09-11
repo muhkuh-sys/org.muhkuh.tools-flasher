@@ -25,7 +25,6 @@ tSignatures[2][3] = 512  -- 4096
 local Sipper = class()
 
 function Sipper:_init(tLog)
-    print("initialize Sipper")
     self.tLog = tLog
 
     self.VERIFY_RESULT_OK = 0

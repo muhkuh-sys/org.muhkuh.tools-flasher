@@ -22,7 +22,6 @@ tBootCookies["NETX90"]["cookie"] = string.char(0x00, 0xAF, 0xBE, 0xF3)
 local UsipGenerator = class()
 
 function UsipGenerator:_init(tLog)
-    tLog.debug("initialize USIP Generator")
     self.tLog = tLog
 
     -- This is the SIP protection cookie.
