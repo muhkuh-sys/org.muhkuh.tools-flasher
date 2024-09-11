@@ -565,7 +565,7 @@ local function pack(strWfpArchiveFile,strWfpControlFile,tWfpControl,tLog,fOverwr
                                 tEntry:set_mtime(ulModTime, 0)
 
                                 tArchive:write_header(tEntry)
-                                tArchive:write_data(strComSipData)
+                                tArchive:write_data(strAppSipData)
                                 tArchive:finish_entry()
 
                             end
