@@ -33,65 +33,65 @@ jobs:
       matrix:
         platform:
         - name: Ubuntu 18.04 x86
-          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86:latest
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
           distribution-id: ubuntu
           distribution-version: "18.04"
           cpu-architecture: x86
         - name: Ubuntu 18.04 x86_64
-          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
           distribution-id: ubuntu
           distribution-version: "18.04"
           cpu-architecture: x86_64
-#        - name: Ubuntu 18.04 arm64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "18.04"
-#          cpu-architecture: arm64
-#        - name: Ubuntu 20.04 x86
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86:latest
-#          distribution-id: ubuntu
-#          distribution-version: "20.04"
-#          cpu-architecture: x86
-#        - name: Ubuntu 20.04 x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "20.04"
-#          cpu-architecture: x86_64
-#        - name: Ubuntu 20.04 arm64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "20.04"
-#          cpu-architecture: arm64
-#        - name: Ubuntu 22.04 x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: x86_64
-#        - name: Ubuntu 22.04 armhf
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: armhf
-#        - name: Ubuntu 22.04 arm64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: arm64
-#        - name: Ubuntu 22.04 riscv64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "22.04"
-#          cpu-architecture: riscv64
-#        - name: Windows x86
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: windows
-#          distribution-version: ""
-#          cpu-architecture: x86
-#        - name: Windows x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: windows
-#          distribution-version: ""
-#          cpu-architecture: x86_64
+        - name: Ubuntu 18.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 20.04 x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86
+        - name: Ubuntu 20.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 20.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "20.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 22.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: x86_64
+        - name: Ubuntu 22.04 armhf
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: armhf
+        - name: Ubuntu 22.04 arm64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: arm64
+        - name: Ubuntu 22.04 riscv64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "22.04"
+          cpu-architecture: riscv64
+        - name: Windows x86
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: windows
+          distribution-version: ""
+          cpu-architecture: x86
+        - name: Windows x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          distribution-id: windows
+          distribution-version: ""
+          cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
     steps:
     
@@ -111,9 +111,9 @@ jobs:
       run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
       run: python3 build_artifact.py -m ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
-    - run: cwd=$(pwd) && cd $RUNNER_HOME/actions-runner/externals && mv node20 node20.bak && ln -s node16 node20 && cd $cwd
     - name: Upload artifacts
       # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
+      # Use v4 but uncomment four platforms that failed the run (until fixed) -> 32 bit verions don't work with v4
       uses: actions/upload-artifact@v4
       with:
         name: artifacts_${{ matrix.platform.distribution-id }}${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
