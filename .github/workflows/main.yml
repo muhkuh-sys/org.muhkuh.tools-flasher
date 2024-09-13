@@ -37,11 +37,11 @@ jobs:
           distribution-id: ubuntu
           distribution-version: "18.04"
           cpu-architecture: x86
-#        - name: Ubuntu 18.04 x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "18.04"
-#          cpu-architecture: x86_64
+        - name: Ubuntu 18.04 x86_64
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+          distribution-id: ubuntu
+          distribution-version: "18.04"
+          cpu-architecture: x86_64
 #        - name: Ubuntu 18.04 arm64
 #          image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
 #          distribution-id: ubuntu
