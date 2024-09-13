@@ -980,9 +980,9 @@ end
 --     "Text": "Hello World"
 --     "A": "-1"
 -- return:
---   0: expression returns false
---   1: expression is invalid
---   2: expression returns true
+--   0: expression valid and calculation returned TRUE
+--   1: e.g. expression is invalid
+--   2: expression valid, but calculation returned FALSE
 CALC_RESULT_OK = 0
 CALC_RESULT_ERROR = 1
 CALC_RESULT_FALSE = 2
@@ -1404,9 +1404,9 @@ local tParserCommandCalculate = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  FALSE
-1:  ERROR
-2:  TRUE
+0:  SUCCESSFUL (expression valid and calculation returned TRUE)
+1:  ERROR      (e.g. expression not valid)
+2:  False      (expression valid, but calculation returned FALSE)
                         ]])
 
 addOptionVerbose(tParserCommandCalculate)
