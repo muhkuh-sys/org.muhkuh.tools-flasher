@@ -983,13 +983,16 @@ end
 --   0: expression returns false
 --   1: expression is invalid
 --   2: expression returns true
+CALC_RESULT_OK = 0
+CALC_RESULT_ERROR = 1
+CALC_RESULT_FALSE = 2
 local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands)
     -- Check and parse the list of the known operands and their values
     for strName, strValue in pairs(atOperands) do
         -- Operand is somehow empty: abort (causes trouble at packing)
         if strName == nil or strName == "" or strValue == nil or strValue == "" then
             tLog.error("At least one operand has empty name or no value: %s=%s", strName, strValue)
-            return 1
+            return CALC_RESULT_ERROR
         -- Operand is a bool-keyword
         elseif strValue == "true" or strValue == "false" then
             atOperands[strName] = strValue == "true"
@@ -1005,7 +1008,7 @@ local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands
             -- quotation mark-characters (always returns "sucess, false")
             if string.find(strValue, "\"") or string.find(strValue, "\'") then
                 tLog.error("Quotation Marks in operand: %s=%s", strName, strValue)
-                return 1
+                return CALC_RESULT_ERROR
             end
             -- Leave the value as it is (a string)
             -- Sourrounding quotation marks are omitted to ensure compatibility with old wfp.xml versions
@@ -1058,7 +1061,7 @@ local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands
             if string.find(string.sub(partOfExpr, 2, -2), "\"") or
                string.find(string.sub(partOfExpr, 2, -2), "\'") then
                 tLog.error("%s is invalid: quotation marks in expression", partOfExpr)
-                return 1
+                return CALC_RESULT_ERROR
             end
         -- If one of the regex is matched, it must be a number
         elseif string.match(partOfExpr, "^-?%d+$") or          -- int
@@ -1074,7 +1077,7 @@ local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands
         -- Nothing of the above? --> Invalid expression
         else
             tLog.error("%s is invalid", partOfExpr)
-            return 1
+            return CALC_RESULT_ERROR
         end
     end
 
@@ -1082,13 +1085,13 @@ local function validateAndCalculate(tLog, tWfpControl, strExpression, atOperands
     local isValid, result = pcall(wfp_control.matchCondition, tWfpControl, atOperands, strExpression)
     if isValid == false then
         tLog.error("Error: Sandbox failed")
-        return 1
+        return CALC_RESULT_ERROR
     end
     tLog.info("Result: %s", tostring(result))
     if result then
-        return 2
+        return CALC_RESULT_OK
     else
-        return 0
+        return CALC_RESULT_FALSE
     end
 end
 
@@ -1183,7 +1186,7 @@ local tParserCommandFlash = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 tParserCommandFlash
@@ -1214,7 +1217,7 @@ local tParserCommandVerify = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 tParserCommandVerify:argument('archive', 'The WFP file to process.'):target('strWfpArchiveFile')
@@ -1266,7 +1269,7 @@ local tParserCommandList = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 
@@ -1284,7 +1287,7 @@ local tParserCommandPack = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 tParserCommandPack
@@ -1315,7 +1318,7 @@ local tParserCommandExample = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 tParserCommandExample
@@ -1334,7 +1337,7 @@ local tParserCommandVerifyHelperSig = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
         ]])
 
@@ -1354,7 +1357,7 @@ local tParserCommandSupportedXmlVersion = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
                         ]])
 
@@ -1369,7 +1372,7 @@ local tParserCommandXmlVersion = tParser
 --------------------------------------------------------------------
 Exit codes:
 ===========
-0:  OK
+0:  SUCCESSFUL
 1:  ERROR
                         ]])
 
@@ -1840,7 +1843,7 @@ elseif tArgs.fCommandFlashSelected == true or tArgs.fCommandVerifySelected then
                                         for _, tData in ipairs(tTargetFlash.atData) do
                                             if tData.strCondition ~= "" then
                                                 if validateAndCalculate(tLog, tWfpControl, tData.strCondition,
-                                                        atWfpConditions) == 1 then
+                                                        atWfpConditions) == CALC_RESULT_ERROR then
                                                     tLog.error('Invalid Condition! Expression: %s; Operands: %s', tData.strCondition, atWfpConditions)
                                                     fOk = false
                                                     break
@@ -2056,7 +2059,7 @@ elseif tArgs.fCommandCalculateSelected == true then
     tLog.debug("Expression: %s", tArgs.strExpression)
     local atOperands ={}
     for _, arg in ipairs(tArgs.astrOperands) do
-        operandName, operandValue = string.match(arg, "(.*)=(.*)")
+        local operandName, operandValue = string.match(arg, "(.*)=(.*)")
         -- Throw an error if an element is passed twice
         if(atOperands[operandName] ~= nil) then
             tLog.error("Operand %s has multiple definitions", operandName)
@@ -2066,7 +2069,7 @@ elseif tArgs.fCommandCalculateSelected == true then
         tLog.debug("Operands: %s", arg)
     end
     local result = validateAndCalculate(tLog, tWfpControl, tArgs.strExpression, atOperands)
-    if(result == 1) then
+    if(result == CALC_RESULT_ERROR) then
         tLog.error("invalid expression or operands")
     end
     os.exit(result)
