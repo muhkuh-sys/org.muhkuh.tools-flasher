@@ -94,10 +94,7 @@ jobs:
 #          cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
     steps:
-    - name: workaround
-      run: cd $RUNNER_HOME/actions-runner/externals
-      run: mv node20 node20.bak
-      run: ln -s node16 node20
+    - run: cwd=$(pwd) cd $RUNNER_HOME/actions-runner/externals && mv node20 node20.bak && ln -s node16 node20 && cd $cwd
     - name: Checkout repository
       # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
       uses: actions/checkout@v1
