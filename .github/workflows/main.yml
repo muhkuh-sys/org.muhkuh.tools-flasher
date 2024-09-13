@@ -94,7 +94,7 @@ jobs:
 #          cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
     steps:
-    - run: cwd=$(pwd) cd $RUNNER_HOME/actions-runner/externals && mv node20 node20.bak && ln -s node16 node20 && cd $cwd
+    
     - name: Checkout repository
       # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
       uses: actions/checkout@v1
@@ -111,6 +111,7 @@ jobs:
       run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
     - name: Build flasher
       run: python3 build_artifact.py -m ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+    - run: cwd=$(pwd) && cd $RUNNER_HOME/actions-runner/externals && mv node20 node20.bak && ln -s node16 node20 && cd $cwd
     - name: Upload artifacts
       # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
       uses: actions/upload-artifact@v4
