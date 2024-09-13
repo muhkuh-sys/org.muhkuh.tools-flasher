@@ -415,8 +415,9 @@ Exit codes:
             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
         )
     ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-    tParserCommandSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserCommandSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserCommandSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+
     
 end
 local function addArgparserKek(tParser, strHelpSecP2)   
@@ -486,6 +487,7 @@ Exit codes:
 1:  ERROR
 2:  NOT EQUAL
             ]])
+    tParserVerifyContent:option('-i --input'):count("1"):description("USIP binary file path"):target('strUsipFilePath')
     tParserVerifyContent:option(
         '-V --verbose'
     ):description(
@@ -493,9 +495,9 @@ Exit codes:
             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
         )
     ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-    tParserVerifyContent:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserVerifyContent:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
-    tParserVerifyContent:option('-i --input'):count("1"):description("USIP binary file path"):target('strUsipFilePath')
+    tParserVerifyContent:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+
     -- tParserVerifyContent:flag('--force_console'):description("Force the uart serial console."):target('fForceConsole')
     -- tParserVerifyContent:flag('--extend_exec'):description(
     --     "Use an execute-chunk to activate JTAG."
@@ -529,8 +531,8 @@ Exit codes:
             'Set the verbosity level to LEVEL. Possible values for LEVEL are %s.', table.concat(atLogLevels, ', ')
         )
     ):argname('<LEVEL>'):default('debug'):target('strLogLevel')
-    tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserCheckSIPCookie:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserCheckSIPCookie:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserCheckSIPCookie:option('--sec'):description("Path to signed image directory"):target(
         'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     tParserCheckSIPCookie:flag('--disable_helper_signature_check')
@@ -563,8 +565,8 @@ Exit codes:
     tParserReadSip:argument('output'):description(
         "Set the output directory."
     ):target("strOutputFolder")
-    tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserReadSip:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
+    tParserReadSip:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
     tParserReadSip:option('--sec'):description("Path to signed image directory"):target(
         'strSecureOption'):default(tFlasher.DEFAULT_HBOOT_OPTION)
     tParserReadSip:flag('--read_cal'):description(
