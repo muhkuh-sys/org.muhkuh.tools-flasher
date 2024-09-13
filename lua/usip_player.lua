@@ -36,7 +36,16 @@ local function addArgparserUsip(tParser, strHelpSecP2)
         Load an USIP file to a netX 90, reset the netX , update SecureInfoPage, and continue boot process.
     ]]
 
-    local tParserCommandUsip = tParser:command('usip u', strUsipHelp):target('fCommandUsipSelected')
+    local tParserCommandUsip = tParser
+            :command('usip u', strUsipHelp)
+            :target('fCommandUsipSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     -- todo: make mandatory:
     tParserCommandUsip:option('-i --input'):count("1"):description("USIP image file path (image may only contain USIP chunks)"):target('strUsipFilePath')
     tParserCommandUsip:option(
@@ -87,7 +96,16 @@ local function addArgparserWriteSipPm(tParser)
         Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
         Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
-    local tParserWriteSips = tParser:command('write_sip_pm wsp', strWriteSipPmHelp):target('fCommandWriteSipsSelected')
+    local tParserWriteSips = tParser
+            :command('write_sip_pm wsp', strWriteSipPmHelp)
+            :target('fCommandWriteSipsSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserWriteSips:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserWriteSips:option(
         '-V --verbose'
@@ -126,7 +144,16 @@ local function addArgparserReadSipPm(tParser)
         Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
         Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
-    local tParserReadSipPm = tParser:command('read_sip_pm rsp', strReadSipsPmHelp):target('fCommandReadSipPmSelected')
+    local tParserReadSipPm = tParser
+            :command('read_sip_pm rsp', strReadSipsPmHelp)
+            :target('fCommandReadSipPmSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserReadSipPm:option(
         '-V --verbose'
     ):description(
@@ -141,6 +168,10 @@ local function addArgparserReadSipPm(tParser)
     ):target("strOutputFolder")
     tParserReadSipPm:flag('--read_cal'):description(
         "Additional read out and store the cal secure info page"):target('fReadCal'):default(false)
+    tParserReadSipPm:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 end
 local function addArgparserVerifySipPm(tParser)
     -- NXTFLASHER-906
@@ -149,8 +180,20 @@ local function addArgparserVerifySipPm(tParser)
         Restrictions: netX 90 must be in initial mode (no active SIP protection, secure boot mode)
         Production mode: The data in the SIP is not yet activated and the the netX 90 is in initial mode
     ]]
-    local tParserVerifySipPm = tParser:command(
-        'verify_sip_pm vsp', strVerifySipsPmHelp):target('fCommandVerifySipPmSelected')
+    local tParserVerifySipPm = tParser
+            :command('verify_sip_pm vsp', strVerifySipsPmHelp)
+            :target('fCommandVerifySipPmSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  VERIFICATION OK
+1:  ERROR
+2:  VERIFICATION FALSE
+3:  SIP PROTECTION NOT SET
+4:  KEK NOT SET
+            ]])
+
     tParserVerifySipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserVerifySipPm:option(
         '-V --verbose'
@@ -165,17 +208,50 @@ local function addArgparserVerifySipPm(tParser)
         'strAppSipBinPath'):default(tFlasherHelper.NETX90_DEFAULT_APP_SIP_BIN):hidden(true)
     tParserVerifySipPm:option('-p --plugin_name'):description("plugin name"):target('strPluginName')
     tParserVerifySipPm:option('-t --plugin_type'):description("plugin type"):target("strPluginType")
+    tParserVerifySipPm:mutex(
+        tParserVerifySipPm
+            :flag('--check_kek_is_set')
+            :description("Check if the KEK (Key exchange key) IS set.")
+            :target('fCheckKekTrue')
+            :default(nil),
+        tParserVerifySipPm
+            :flag('--check_kek_is_not_set')
+            :description("Check if the KEK (Key exchange key) IS NOT set.")
+            :target('fCheckKekFalse')
+            :default(nil)
+    )
+    tParserVerifySipPm:mutex(
+        tParserVerifySipPm
+            :flag('--check_sp_is_set')
+            :description("Check if the SIP protection cookie IS set")
+            :target('fCheckSipProtectionTrue')
+            :default(nil),
+        tParserVerifySipPm
+            :flag('--check_sp_is_not_set')
+            :description("Check if the SIP protection cookie is set.")
+            :target('fCheckSipProtectionFalse')
+            :default(nil)
+    )
 
-    tParserVerifySipPm:flag('--check_kek'):description(
-        "Additional read out and store the cal secure info page"):target('fCheckKek')
-    tParserVerifySipPm:flag('--check_sip_protection'):description(
-        "Additional read out and store the cal secure info page"):target('fCheckSipProtection')
+    tParserVerifySipPm:flag('--disable_helper_signature_check')
+    :description('Disable signature checks on helper files.')
+    :target('fDisableHelperSignatureChecks')
+    :default(false)
 end
 local function addArgparserConvert(tParser)
     local strConvertUsipHelp = [[
         Apply data of an usip file to the default values of the secure info pages and export these as binary files
     ]]
-    local tParserConvertUsip = tParser:command('convert_usip cu', strConvertUsipHelp):target('fCommandConvertUsipSelected')
+    local tParserConvertUsip = tParser
+            :command('convert_usip cu', strConvertUsipHelp)
+            :target('fCommandConvertUsipSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserConvertUsip:argument('input_file'):description("USIP image file path"):target('strUsipFilePath')
     tParserConvertUsip:option(
         '-V --verbose'
@@ -191,6 +267,10 @@ local function addArgparserConvert(tParser)
         :description('Set the SIP protection cookie.')
         :target('fSetSipProtectionCookie')
         :default(false)
+    tParserConvertUsip:flag('--disable_helper_signature_check')
+        :description('Disable signature checks on helper files.')
+        :target('fDisableHelperSignatureChecks')
+        :default(false)
 end
 local function addArgparserVim(tParser)
     -- NXTFLASHER-692
@@ -201,8 +281,21 @@ local function addArgparserVim(tParser)
         - SIPs are not hidden
         - CAL SIP rom func mode cookie is set
     ]]
-    local tParserVerifyInitialMode = tParser:command('verify_initial_mode vim', strVerifyInitialModeHelp):target(
-            'fCommandVerifyInitialModeSelected')
+    local tParserVerifyInitialMode = tParser
+            :command('verify_initial_mode vim', strVerifyInitialModeHelp)
+            :target('fCommandVerifyInitialModeSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR UNSPECIFIED
+2:  ERROR SIP PROTECTION SET
+3:  ERROR SECURE BOOT ENABLED
+4:  ERROR SIP HIDDEN
+5:  ERROR ROM FUNC MODE COOKIE NOT SET
+            ]])
+
     tParserVerifyInitialMode:option(
         '-V --verbose'
     ):description(
@@ -242,8 +335,16 @@ local function addArgparserDisableSecurity(tParser)
     
     ]]
     
-    local tParserCommandDisableSecurity = tParser:command('disable_security ds', strDisableSecurityHelp):target(
-        'fCommandDisableSecurity')
+    local tParserCommandDisableSecurity = tParser
+            :command('disable_security ds', strDisableSecurityHelp)
+            :target('fCommandDisableSecurity')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserCommandDisableSecurity:option(
         '-V --verbose'
     ):description(
@@ -297,8 +398,16 @@ local function addArgparserSsp(tParser)
         - update counter will be reset to zero
     ]]
     
-    local tParserCommandSip = tParser:command('set_sip_protection ssp', strSetSipProtectionHelp):target(
-        'fCommandSipSelected')
+    local tParserCommandSip = tParser
+            :command('set_sip_protection ssp', strSetSipProtectionHelp)
+            :target('fCommandSipSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserCommandSip:option(
         '-V --verbose'
     ):description(
@@ -318,7 +427,16 @@ local function addArgparserKek(tParser, strHelpSecP2)
         reset the netX and process \n the usip file to update the SecureInfoPage and
         continue standard boot process.
     ]]
-    local tParserCommandKek = tParser:command('set_kek sk', strSetKekHelp):target('fCommandKekSelected')
+    local tParserCommandKek = tParser
+            :command('set_kek sk', strSetKekHelp)
+            :target('fCommandKekSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserCommandKek:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
     tParserCommandKek:option(
         '-V --verbose'
@@ -357,7 +475,17 @@ local function addArgparserVerify(tParser)
     local strVerifyHelp = [[
         Verify the content of a usip file against the content of a secure info page
     ]]
-    local tParserVerifyContent = tParser:command('verify v', strVerifyHelp):target('fCommandVerifySelected')
+    local tParserVerifyContent = tParser
+            :command('verify v', strVerifyHelp)
+            :target('fCommandVerifySelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  EQUAL
+1:  ERROR
+2:  NOT EQUAL
+            ]])
     tParserVerifyContent:option(
         '-V --verbose'
     ):description(
@@ -383,8 +511,17 @@ local function addArgparserCheckSipProt(tParser)
     local strCheckCookieHelp = [[
         Check if the SIP protection cookie is set
     ]]
-    local tParserCheckSIPCookie = tParser:command('detect_sip_protection dsp', strCheckCookieHelp):target(
-        'fCommandCheckSIPCookie')
+    local tParserCheckSIPCookie = tParser
+            :command('detect_sip_protection dsp', strCheckCookieHelp)
+            :target('fCommandCheckSIPCookie')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SET
+1:  ERROR
+2:  NOT SET
+            ]])
     tParserCheckSIPCookie:option(
         '-V --verbose'
     ):description(
@@ -406,7 +543,16 @@ local function addArgparserReadSip(tParser)
     local strReadHelp = [[
         Read out the sip content and save it into a temporary folder
     ]]
-    local tParserReadSip = tParser:command('read r', strReadHelp):target('fCommandReadSelected')
+    local tParserReadSip = tParser
+            :command('read r', strReadHelp)
+            :target('fCommandReadSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserReadSip:option(
         '-V --verbose'
     ):description(
@@ -435,9 +581,7 @@ local function addArgparserDetectSecure(tParser)
     local strDetectSecureModeHelp = [[
         This command was moved into cli_flash.lua and renamed to 'detect_secure_boot_mode' ('dsbm').
     ]]
-    tParser:command(
-        'detect_secure_mode', strDetectSecureModeHelp
-    ):target('fCommandDetectSelected')
+    tParser:command('detect_secure_mode', strDetectSecureModeHelp):target('fCommandDetectSelected')
 
 end
 local function addArgparserGetUid(tParser)
@@ -447,7 +591,16 @@ local function addArgparserGetUid(tParser)
         Get the unique ID.
     ]]
     
-    local tParserGetUid = tParser:command('get_uid gu', strGetUidHelp):target('fCommandGetUidSelected')
+    local tParserGetUid = tParser
+            :command('get_uid gu', strGetUidHelp)
+            :target('fCommandGetUidSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserGetUid:option(
         '-V --verbose'
     ):description(
@@ -469,8 +622,16 @@ local function addArgparserVerifyHelper(tParser)
     local VerifyHelperDescription = [[
         Verify the signatures of the helper files.
     ]]
-    local tParserCommandVerifyHelperSig = tParser:command('check_helper_signature chs', VerifyHelperDescription):target(
-        'fCommandCheckHelperSignatureSelected')
+    local tParserCommandVerifyHelperSig = tParser
+            :command('check_helper_signature chs', VerifyHelperDescription)
+            :target('fCommandCheckHelperSignatureSelected')
+            :epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+            ]])
     tParserCommandVerifyHelperSig:option(
         '-V --verbose'
     ):description(
@@ -669,6 +830,8 @@ local function main()
                 tLog.error('RESULT:unspecified error occured')
             elseif iVerifyInitialModeResult == tUsipPlayer.WS_RESULT_ERROR_SIP_HIDDEN then
                 tLog.error('RESULT: one or more secure info page is hidden')
+            elseif iVerifyInitialModeResult == tUsipPlayer.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET then
+                tLog.error('RESULT: chip is in test mode')
             end
             tLog.error(strErrorMsg)
             tLog.info('RETURN: '.. iVerifyInitialModeResult)
@@ -757,14 +920,28 @@ local function main()
         tLog.info("######################################")
         tLog.info("# RUNNING VERIFY SIP PM COMMAND      #")
         tLog.info("######################################")
+        local fCheckKek = nil
+        local fCheckSipProtection = nil
 
         tUsipPlayer.fDoReset = false -- production mode does not do resets
+        if tArgs.fCheckKekTrue then
+            fCheckKek = true
+        elseif tArgs.fCheckKekFalse then
+            fCheckKek = false
+        end
+        tUsipPlayer.fDoReset = false -- production mode does not do resets
+            if tArgs.fCheckSipProtectionTrue then
+                fCheckSipProtection = true
+            elseif tArgs.fCheckSipProtectionFalse then
+                fCheckSipProtection = false
+            end
+
         uResultCode, strErrorMsg = tUsipPlayer:commandVerifySipPm(
             tArgs.strUsipFilePath,
             tArgs.strAppSipBinPath,
             tArgs.strComSipBinPath,
-            tArgs.fCheckKek,
-            tArgs.fCheckSipProtection
+            fCheckKek,
+            fCheckSipProtection
         )
         print("uResultCode: " .. uResultCode)
         if uResultCode == tSipper.VERIFY_RESULT_OK then

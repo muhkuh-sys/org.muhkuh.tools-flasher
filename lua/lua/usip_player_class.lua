@@ -2458,20 +2458,28 @@ function UsipPlayer:commandVerifySipPm(
         end
         if fKekSet then
             self.tLog.info("KEK is set.")
+            if fCheckKek == false then
+                tResult = self.tSipper.VERIFY_RESULT_FALSE
+                strErrorMsg = "KEK is set but was not supposed to be set."
+            end
         else
             self.tLog.info("KEK is not set.")
-            if fCheckKek then
-                tResult = self.tSipper.VERIFY_KEK_NOT_SET
-                strErrorMsg = "KEK is not set."
+            if fCheckKek == true then
+                tResult = self.tSipper.VERIFY_RESULT_FALSE
+                strErrorMsg = "KEK is not set but was supposed to be set."
             end
         end
         if fSipProtectionSet then
             self.tLog.info("SIP protection cookie is set.")
+            if fCheckSipProtection == false then
+                tResult = self.tSipper.VERIFY_RESULT_FALSE
+                strErrorMsg = "SIP protection cookie is set but was not supposed to be set."
+            end
         else
             self.tLog.info("SIP protection cookie is not set.")
-            if fCheckSipProtection then
-                tResult = self.tSipper.VERIFY_SIP_PROTECTION_NOT_SET
-                strErrorMsg = "SIP protection cookie is not set."
+            if fCheckSipProtection == true then
+                tResult = self.tSipper.VERIFY_RESULT_FALSE
+                strErrorMsg = "SIP protection cookie is not set but was supposed to be set."
             end
         end
 
@@ -2642,7 +2650,7 @@ function UsipPlayer:verifyInitialMode(
                 self.tLog.info("ERROR: SIP protection cookie is set. End command.")
             elseif not fRomFuncCookieSet then
                 iResult = self.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET
-                self.tLog.info("ERROR: rom func mode cookie not set")
+                self.tLog.info("ERROR: chip is in test mode")
             end
         end
     end
