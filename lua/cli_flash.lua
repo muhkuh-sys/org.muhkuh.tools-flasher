@@ -285,8 +285,16 @@ tParser:flag "--disable_helper_version_check":hidden(true)
 
 
 -- 	flashfCommandFlashSelected
-local tParserCommandFlash = tParser:command('flash f', 'Flash a file to the netX')
-  :target('fCommandFlashSelected')
+local tParserCommandFlash = tParser
+:command('flash f', 'Flash a file to the netX')
+:target('fCommandFlashSelected')
+:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "f"},
 addFilePathArg(tParserCommandFlash)
 addBusOptionArg(tParserCommandFlash)
@@ -301,8 +309,16 @@ addJtagKhzArg(tParserCommandFlash)
 addSecureArgs(tParserCommandFlash)
 
 -- 	read
-local tParserCommandRead = tParser:command('read r', 'Read data from netX to a File')
-  :target('fCommandReadSelected')
+local tParserCommandRead = tParser
+	:command('read r', 'Read data from netX to a File')
+	:target('fCommandReadSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "l", "f"}
 addFilePathArg(tParserCommandRead)
 addBusOptionArg(tParserCommandRead)
@@ -318,8 +334,16 @@ addJtagKhzArg(tParserCommandRead)
 addSecureArgs(tParserCommandRead)
 
 -- erase
-local tParserCommandErase = tParser:command('erase e', 'Erase area inside flash')
-  :target('fCommandEraseSelected')
+local tParserCommandErase = tParser
+	:command('erase e', 'Erase area inside flash')
+	:target('fCommandEraseSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandErase)
 addUnitOptionArg(tParserCommandErase)
@@ -334,7 +358,16 @@ addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
 
 -- smart erase
-local tParserCommandSmartErase = tParser:command('smart_erase se', 'Erase area inside SPI-flash with optimised erase block sizes'):target('fCommandSmartEraseSelected')
+local tParserCommandSmartErase = tParser
+	:command('smart_erase se', 'Erase area inside SPI-flash with optimised erase block sizes')
+	:target('fCommandSmartEraseSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandSmartErase)
 addUnitOptionArg(tParserCommandSmartErase)
@@ -351,8 +384,16 @@ addNoSfdp(tParserCommandSmartErase)
 
 
 -- verify
-local tParserCommandVerify = tParser:command('verify v', 'Verify file data inside flash using raw content. Return 0 if matching else 1')
-  :target('fCommandVerifySelected')
+local tParserCommandVerify = tParser
+	:command('verify v', 'Verify file data inside flash using raw content. Return 0 if matching else 1')
+	:target('fCommandVerifySelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerify)
 addBusOptionArg(tParserCommandVerify)
@@ -367,8 +408,16 @@ addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
-local tParserCommandVerifyHash = tParser:command('verify_hash vh', 'Verify file data inside flash using hash value only. Return 0 if matching else 1')
-  :target('fCommandVerifyHashSelected')
+local tParserCommandVerifyHash = tParser
+	:command('verify_hash vh', 'Verify file data inside flash using hash value only. Return 0 if matching else 1')
+	:target('fCommandVerifyHashSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "f"}
 addFilePathArg(tParserCommandVerifyHash)
 addBusOptionArg(tParserCommandVerifyHash)
@@ -383,8 +432,16 @@ addJtagKhzArg(tParserCommandVerifyHash)
 addSecureArgs(tParserCommandVerifyHash)
 
 -- hash
-local tParserCommandHash = tParser:command('hash h', 'Compute SHA1')
-  :target('fCommandHashSelected')
+local tParserCommandHash = tParser
+	:command('hash h', 'Compute SHA1')
+	:target('fCommandHashSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs", "s", "l"}
 addBusOptionArg(tParserCommandHash)
 addUnitOptionArg(tParserCommandHash)
@@ -399,8 +456,17 @@ addJtagKhzArg(tParserCommandHash)
 addSecureArgs(tParserCommandHash)
 
 -- detect
-local tParserCommandDetect = tParser:command('detect d', 'Check if flash is recognized')
-  :target('fCommandDetectSelected')
+local tParserCommandDetect = tParser
+	:command('detect d', 'Check if flash is recognized')
+	:target('fCommandDetectSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
+
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandDetect)
 addUnitOptionArg(tParserCommandDetect)
@@ -413,8 +479,16 @@ addJtagKhzArg(tParserCommandDetect)
 addSecureArgs(tParserCommandDetect)
 
 -- test
-local tParserCommandTest = tParser:command('test t', 'Test flasher')
-  :target('fCommandTestSelected')
+local tParserCommandTest = tParser
+	:command('test t', 'Test flasher')
+	:target('fCommandTestSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTest)
 addUnitOptionArg(tParserCommandTest)
@@ -427,8 +501,16 @@ addJtagKhzArg(tParserCommandTest)
 addSecureArgs(tParserCommandTest)
 
 -- testcli
-local tParserCommandTestCli = tParser:command('testcli tc', 'Test cli flasher')
-  :target('fCommandTestCliSelected')
+local tParserCommandTestCli = tParser
+	:command('testcli tc', 'Test cli flasher')
+	:target('fCommandTestCliSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- required_args = {"b", "u", "cs"}
 addBusOptionArg(tParserCommandTestCli)
 addUnitOptionArg(tParserCommandTestCli)
@@ -441,8 +523,16 @@ addJtagKhzArg(tParserCommandTestCli)
 addSecureArgs(tParserCommandTestCli)
 
 -- info
-local tParserCommandInfo = tParser:command('info i', 'Show information about the netX')
-  :target('fCommandInfoSelected')
+local tParserCommandInfo = tParser
+	:command('info i', 'Show information about the netX')
+	:target('fCommandInfoSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandInfo)
 addPluginTypeArg(tParserCommandInfo)
@@ -451,8 +541,16 @@ addJtagKhzArg(tParserCommandInfo)
 addSecureArgs(tParserCommandInfo)
 
 -- list_interfaces
-local tParserCommandListInterfaces = tParser:command('list_interfaces li', 'List all connected interfaces')
-  :target('fCommandListInterfacesSelected')
+local tParserCommandListInterfaces = tParser
+	:command('list_interfaces li', 'List all connected interfaces')
+	:target('fCommandListInterfacesSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- optional_args = {"t", "jf", "jr"}
 addPluginTypeArg(tParserCommandListInterfaces)
 addJtagResetArg(tParserCommandListInterfaces)
@@ -460,8 +558,17 @@ addJtagKhzArg(tParserCommandListInterfaces)
 
 
 -- detect_netx
-local tParserCommandDetectNetx = tParser:command('detect_netx dn', 'Detect if an interface is a netX')
-  :target('fCommandDetectNetxSelected')
+local tParserCommandDetectNetx = tParser
+	:command('detect_netx dn', 'Detect if an interface is a netX')
+	:target('fCommandDetectNetxSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+2:  FAILED TO START MI IMAGE
+	]])
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectNetx)
 addPluginTypeArg(tParserCommandDetectNetx)
@@ -470,10 +577,19 @@ addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
 
 -- detect_secure_boot_mode
-local tParserCommandDetectSecureBoot = tParser:command(
-  'detect_secure_boot_mode dsbm',
-  'Detect if secure boot is enabled (netX 90 only)'
-):target('fCommandDetectSecureBootSelected')
+local tParserCommandDetectSecureBoot = tParser
+	:command('detect_secure_boot_mode dsbm', 'Detect if secure boot is enabled (netX 90 only)')
+	:target('fCommandDetectSecureBootSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SECURE BOOT MODE DISABLED
+1:  ERROR
+2:  SECURE BOOT MODE UNKNOWN
+5:  SECURE BOOT MODE ENABLED
+50: SECURE BOOT MODE ONLY APP ENABLED
+	]])
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectSecureBoot)
 addPluginTypeArg(tParserCommandDetectSecureBoot)
@@ -482,10 +598,16 @@ addJtagKhzArg(tParserCommandDetectSecureBoot)
 
 
 -- reset_netx
-local tParserCommandResetNetx = tParser:command(
-  'reset_netx rn',
-  'Reset the netX'
-):target('fCommandResetSelected')
+local tParserCommandResetNetx = tParser
+	:command('reset_netx rn', 'Reset the netX')
+	:target('fCommandResetSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
@@ -494,10 +616,16 @@ addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
 -- identify_netx
-local tParserCommandIdentifyNetx = tParser:command(
-  'identify_netx in',
-  'Blink SYS LED for 5 sec'
-):target('fParserCommandIdentifyNetxSelected')
+local tParserCommandIdentifyNetx = tParser
+	:command('identify_netx in', 'Blink SYS LED for 5 sec')
+	:target('fParserCommandIdentifyNetxSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
@@ -506,17 +634,29 @@ addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
 -- check_helper_version
-local tParserCommandCheckHelperVersion = tParser:command(
-  'check_helper_version chv',
-  'Check that the helper files have the correct versions'
-):target('fCommandCheckHelperVersionSelected')
+local tParserCommandCheckHelperVersion = tParser
+	:command('check_helper_version chv', 'Check that the helper files have the correct versions')
+	:target('fCommandCheckHelperVersionSelected')
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 addSecureArgs(tParserCommandCheckHelperVersion)
 
 -- check_helper_signature
-local tParserCommandCheckHelperSignature = tParser:command(
-  'check_helper_signature chs',
-  'Verify the signatures of the helper files.'
-):target('fCommandCheckHelperSignatureSelected')
+local tParserCommandCheckHelperSignature = tParser
+	:command('check_helper_signature chs', 'Verify the signatures of the helper files.')
+	:target('fCommandCheckHelperSignatureSelected')	
+	:epilog([[
+--------------------------------------------------------------------
+Exit codes:
+===========
+0:  SUCCESSFUL
+1:  ERROR
+	]])
 -- tParserCommandCheckHelperSignature:option(
 --     '-V --verbose'
 -- ):description(
