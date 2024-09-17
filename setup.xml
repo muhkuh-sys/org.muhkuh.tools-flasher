@@ -3,7 +3,7 @@
 
 <muhkuh_buildsystem group="org.muhkuh.tools" module="flasher">
 	<!-- Project version will be automatically overwritten by build_artifact.py-->
-	<project_version>2.1.1</project_version>
+	<project_version>2.1.2</project_version>
 
 	<scons>
 		<group>org.scons</group>
