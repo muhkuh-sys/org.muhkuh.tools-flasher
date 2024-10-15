@@ -190,8 +190,6 @@ Exit codes:
 0:  VERIFICATION OK
 1:  ERROR
 2:  VERIFICATION FALSE
-3:  SIP PROTECTION NOT SET
-4:  KEK NOT SET
             ]])
 
     tParserVerifySipPm:option('-i --input'):description("USIP image file path"):target('strUsipFilePath')
@@ -971,30 +969,6 @@ local function main()
             tLog.error("##  #### ##     ##    ##        ##       ##  ####  ##    ## ##    ## ##      ")
             tLog.error("##   ### ##     ##    ##        ##       ##   ###  ##    ## ##    ## ##      ")
             tLog.error("##    ##  #######     ##        ########  ##### ##  ######  ##    ## ########")
-            tLog.error("")
-            tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
-            tLog.error(strErrorMsg or "Unknown error")
-        elseif uResultCode == tSipper.VERIFY_SIP_PROTECTION_NOT_SET then
-            tLog.error("")
-            tLog.error("##    ##  #######      ######  #### ########     ########  ########   #######  ########     ")
-            tLog.error("###   ## ##     ##    ##    ##  ##  ##     ##    ##     ## ##     ## ##     ##    ##        ")
-            tLog.error("####  ## ##     ##    ##        ##  ##     ##    ##     ## ##     ## ##     ##    ##        ")
-            tLog.error("## ## ## ##     ##     ######   ##  ########     ########  ########  ##     ##    ##        ")
-            tLog.error("##  #### ##     ##          ##  ##  ##           ##        ##   ##   ##     ##    ##        ")
-            tLog.error("##   ### ##     ##    ##    ##  ##  ##           ##        ##    ##  ##     ##    ##    ### ")
-            tLog.error("##    ##  #######      ######  #### ##           ##        ##     ##  #######     ##    ### ")
-            tLog.error("")
-            tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
-            tLog.error(strErrorMsg or "Unknown error")
-        elseif uResultCode == tSipper.VERIFY_KEK_NOT_SET then
-            tLog.error("")
-            tLog.error("##    ##  #######     ##    ## ######## ##    ## ")
-            tLog.error("###   ## ##     ##    ##   ##  ##       ##   ##  ")
-            tLog.error("####  ## ##     ##    ##  ##   ##       ##  ##   ")
-            tLog.error("## ## ## ##     ##    #####    ######   #####    ")
-            tLog.error("##  #### ##     ##    ##  ##   ##       ##  ##   ")
-            tLog.error("##   ### ##     ##    ##   ##  ##       ##   ##  ")
-            tLog.error("##    ##  #######     ##    ## ######## ##    ## ")
             tLog.error("")
             tLog.error("RESULT: The data in the info page(s) differs from the data in the USIP file:")
             tLog.error(strErrorMsg or "Unknown error")
