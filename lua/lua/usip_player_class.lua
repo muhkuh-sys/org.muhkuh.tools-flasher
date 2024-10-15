@@ -173,7 +173,9 @@ function UsipPlayer:commandReadSip(
     if tResult then
         iReadSipResult, strErrorMsg, strCalSipData, strComSipData, strAppSipData =  self:readSip(
             self.strReadSipPath, self.atPluginOptions, self.strExecReturnPath)
-
+        if not fReadCal then
+            strCalSipData = nil
+        end
         if iReadSipResult and fStoreFile then
             tResult, strErrorMsg = self:dumpSipFiles(strOutputFolderPath, strComSipData, strAppSipData, strCalSipData)
         elseif iReadSipResult and fStoreFile == false then
