@@ -2656,7 +2656,7 @@ function UsipPlayer:verifyInitialMode(
                 self.tLog.info("ERROR: SIP protection cookie is set. End command.")
             elseif not fRomFuncCookieSet then
                 iResult = self.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET
-                self.tLog.info("ERROR: chip is in test mode")
+                self.tLog.info("ERROR: The chip is still in test mode and therefore potentially partly untested.")
             end
         end
     end

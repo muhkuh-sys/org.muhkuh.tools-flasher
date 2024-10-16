@@ -831,7 +831,7 @@ local function main()
             elseif iVerifyInitialModeResult == tUsipPlayer.WS_RESULT_ERROR_SIP_HIDDEN then
                 tLog.error('RESULT: one or more secure info page is hidden')
             elseif iVerifyInitialModeResult == tUsipPlayer.WS_RESULT_ROM_FUNC_MODE_COOKIE_NOT_SET then
-                tLog.error('RESULT: chip is in test mode')
+                tLog.error('RESULT: The chip is still in test mode and therefore potentially partly untested')
             end
             tLog.error(strErrorMsg)
             tLog.info('RETURN: '.. iVerifyInitialModeResult)
