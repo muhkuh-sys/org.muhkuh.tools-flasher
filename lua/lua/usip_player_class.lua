@@ -15,7 +15,8 @@ local UsipPlayer = class()
 
 
 function UsipPlayer:_init(tLog, strSecureOption, strSecureOptionPhaseTwo, strPluginName, strPluginType, fDisableHelperSignatureChecks, fDoReset)
-    --tLog.info("initialize UsipPlayer")
+    -- class to handle all usip player functionality
+
     self.tLog = tLog
 
     -- todo check if all of these are requried all the time
@@ -102,6 +103,9 @@ function UsipPlayer:_deinit()
 end
 
 function UsipPlayer:dumpSipFiles(strOutputFolderPath, strComSipData, strAppSipData, strCalSipData)
+    -- write out data of secure info pages
+    -- only write out CAL data if data was handed over
+
     local tResult
     local strErrorMsg = ""
 
@@ -144,7 +148,8 @@ function UsipPlayer:commandReadSip(
     tPlugin,
     fStoreFile
 )
-
+    -- command wrapper for read sip function
+    -- prepare interface and helper files before calling read sip command
     local tResult
     local strErrorMsg
     local astrHelpersTmp = {"verify_sig", "read_sip_m2m"}
@@ -190,6 +195,8 @@ end
 
 
 function UsipPlayer:commandVerifyInitialMode()
+    -- command wrapper for verify initial mode function
+    -- prepare interface and helper files before calling verify initial mode function
     local tResult
     local strErrorMsg
     local aAttr
@@ -228,6 +235,7 @@ function UsipPlayer:commandVerifyInitialMode()
     end
     return tResult, strErrorMsg
 end
+
 function UsipPlayer:commandVerify(strUsipFilePath)
     local uVerifyResult
     local strErrorMsg
@@ -352,6 +360,10 @@ function UsipPlayer:commandSetKek(
     return tResult, strErrorMsg
 end
 
+
+-- prepare the interface for communication with the netX
+-- the result should be a plugin that we are connected to
+-- the plugin can be accessed within the UsipPlayer class via self.tPlugin
 function UsipPlayer:prepareInterface(fConnect, tPlugin)
     local tResult
     local strErrorMsg
@@ -429,6 +441,7 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
                     self.tLog.debug("Detected netX90 rev2")
                 end
             end
+            -- in case of a M2M interface, the major and minor version is important information
             self.ulPluginM2MMajor = self.tPlugin:get_mi_version_maj()
             self.ulPluginM2MMinor = self.tPlugin:get_mi_version_min()
         end
@@ -449,6 +462,10 @@ function UsipPlayer:prepareInterface(fConnect, tPlugin)
     return tResult, strErrorMsg, ulConsoleMode
 end
 
+-- prepare input usip file (.usp)
+--  - analyze the usip data
+--  - (nety90 rev1 only) split USIP files with multple USIP chunks into multpile usip files
+--  - append booswitch image or extend exec (for jtag interface) to end ob USIP images
 function UsipPlayer:prepareUsip(strUsipFilePath, fNoBootswitch)
     local tResult
     local strErrorMsg
@@ -524,6 +541,7 @@ function UsipPlayer:prepareUsip(strUsipFilePath, fNoBootswitch)
     return tResult, strErrorMsg, tUsipDataList, tUsipPathList, tUsipConfigDict
 end
 
+-- set class variables for helper images paths
 function UsipPlayer:setHelperPaths()
     local strMsg
     self.strnetX90HelperPath = path.join(self.strSecureOption, "netx90")
@@ -564,6 +582,11 @@ function UsipPlayer:setHelperPaths()
 
 
 end
+
+-- verification of helper files signatures paths
+--  - gather information if the HTBL chunk in the signed helper images is for a netX90 rev1 or rev2 type
+--  -- refuse rev 2 signed images with a rev1 hardware
+--  - run verify signature command
 function UsipPlayer:verifyHelperSignatures()
     local tResult
     local astrFileData
@@ -632,6 +655,9 @@ function UsipPlayer:verifyHelperSignatures()
     return tResult, strErrorMsg
 end
 
+--  prepare and verify helper files for usip player command
+--  - gather information if the HTBL chunk in the signed helper images is for a netX90 rev1 or rev2 type
+--  -- refuse rev 2 signed images with a rev1 hardware
 function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImages)
     local atResults
     local tResult
@@ -732,13 +758,12 @@ function UsipPlayer:prepareHelperFiles( astrHelpersToCheck, fCheckInterfaceImage
         end
     end
 
-
-
     return tResult, strErrorMsg
 end
 
+-- prepare structure for handlin romlaoder plugins
+-- plugin options are selected based on argument options
 function UsipPlayer:setPluginOptions()
-
     self.atPluginOptions = {
         romloader_jtag = {
             jtag_reset = "Attach", -- HardReset, SoftReset or Attach
@@ -785,7 +810,6 @@ function UsipPlayer:loadDataToIntram(strData, ulLoadAddress)
     return true
 end
 
--- loadLmage(tPlugin, strPath, ulLoadAddress, fnCallbackProgress)
 -- load an image to a dedicated address
 -- returns nothing, in case of a romlaoder error MUHKUH_PLUGIN_ERROR <- ??
 function UsipPlayer:loadImage(strPath, ulLoadAddress)
@@ -813,7 +837,6 @@ function UsipPlayer:loadImage(strPath, ulLoadAddress)
     return fResult
 end
 
--- fResult LoadIntramImage(tPlugin, strPath, ulLoadAddress)
 -- Load an image in the intram to probe it after an reset
 -- intram3 address is 0x20080000
 -- return true if the image was loaded correctly otherwise false
@@ -831,11 +854,11 @@ function UsipPlayer:loadIntramImage(strPath, ulIntramLoadAddress)
     return fResult
 end
 
--- execBinViaIntram(tPlugin, strFilePath, ulIntramLoadAddress)
 -- loads an image into the intram, flushes the data and reset via watchdog
 -- returns
 --    nothing
 function UsipPlayer:execBinViaIntram(strUsipData, ulIntramLoadAddress)
+
     local tResult
     local strErrorMsg
     local ulLoadAddress
@@ -869,9 +892,6 @@ function UsipPlayer:execBinViaIntram(strUsipData, ulIntramLoadAddress)
     return tResult, strErrorMsg
 end
 
--- astrUsipPathList, tUsipGenMultiOutput, tUsipGenMultiResult genMultiUsips(
---    strUsipGenExePath, strTmpPath, strUsipConfigPath
--- )
 -- generates depending on the usip-config json file multiple usip files. The config json file is generated
 -- with the usip generator. Every single generated usip file has the same header and differs just in the body part.
 -- The header is not relevant at this point, because the header of the usip file is just checked once if
@@ -891,8 +911,10 @@ function UsipPlayer:genMultiUsips(tUsipConfigDict)
     return tResult, aDataList, tUsipNames
 end
 
+-- extend bootswitch image data at end of a data string
+-- before extending, cut ending of input image and header of bootswitch image
+-- result variable, be pessimistic
 function UsipPlayer:extendBootswitchData(strUsipData, strBootswitchParam)
-    -- result variable, be pessimistic
     local fResult = false
     local strMsg = ""
     local strBootswitchData
@@ -987,8 +1009,9 @@ function UsipPlayer:extendBootswitch(strUsipPath, strBootswitchParam)
     return fResult, strUsipData, strMsg
 end
 
-
 function UsipPlayer:extendExecReturnData(strUsipData, strExecReturnFilePath, strOutputFileName)
+    -- extend bootswitch image data at end of a data string
+    -- before extending, cut ending of input image and header of bootswitch image
     local fResult = false
     local strMsg
     local strExecReturnData
