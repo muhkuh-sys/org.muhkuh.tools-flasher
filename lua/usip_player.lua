@@ -700,7 +700,7 @@ local function setup_argparser()
 
     -- todo change help string
     local strHelpSecP2 = [[
-        Path to helper files that are used after the last usip was executed.
+Path to helper files that are used after the last usip was executed.
     ]]
 
     addArgparserUsip(tParser, strHelpSecP2)
