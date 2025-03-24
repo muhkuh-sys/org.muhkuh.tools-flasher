@@ -95,7 +95,7 @@ local atHelperFileVersions = {
     {   -- Todo: Turn this into a template to insert version automatically.
         key = "flasher_netx90_hboot",
         filename = "flasher_netx90_hboot.bin",
-        version = "GITv2.1.2",
+        version = "GITv2.2.0",
         version_offset = 0x0410
     },
 
@@ -197,10 +197,11 @@ local function checkHelperFileIntern(strDir, strKey, fCheckversion)
 
             if fCheckversion == true then
                 local fOk
+                local strFileVersion = nil
                 if iOffset ~= nil then
                     local iStartOffset = iOffset+1
                     local iEndOffset = iOffset+strVersion:len()
-                    local strFileVersion = strBin:sub(iStartOffset, iEndOffset)
+                    strFileVersion = strBin:sub(iStartOffset, iEndOffset)
                     fOk = ( strFileVersion == strVersion)
                 else
                     local m = strBin:find(strVersion, 1, true)
@@ -213,9 +214,10 @@ local function checkHelperFileIntern(strDir, strKey, fCheckversion)
                 else
                     strBin = nil
                     strMsg = string.format(
-                      "Helper file '%s' does not have the expected version (%s) - ERROR",
+                      "Helper file '%s' does not have the expected version (expected: %s file version: %s)  - ERROR",
                       strKey,
-                      strVersion
+                      strVersion,
+                      strFileVersion
                     )
                     print(strMsg)
                 end
