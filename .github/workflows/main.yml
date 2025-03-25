@@ -80,29 +80,30 @@ jobs:
           distribution-version: ""
           cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
+
     steps:
+    # Checkout the repository
     - name: Checkout repository
-      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
+        # Checkout all submodules recursively
         submodules: recursive
-    - name: Disable Git safe directory
-      run: git config --system --add safe.directory '*'
-#    - name: Download firmware
-#      # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
-#      uses: actions/download-artifact@v1
-#      with:
-#        name: targets
+
+        # Fetch git tags
+        fetch-tags: true
+
+        # Disable git safe directory
+        set-safe-directory: false
+
     - name: Install pip and get dependencies for build script
       run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
+    
+    # Run the actual build process
     - name: Build flasher
       run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+    
+          # Upload the artifact
     - name: Upload artifacts
-
-      # Upload the artifact
-      # upload-artifact@v4 does not work on 32bit system or ubuntu 18.04.
-      # previously, this was fixed by using upload-artifact@v1. Since v1 is no longer available, v4 is used.
-      # Using any older version will not help.
       uses: actions/upload-artifact@v4
       with:
         # Name of the artifact to upload.
