@@ -1,57 +1,46 @@
 name: CI Build
 
+# Specify when to run the CI Build
 on:
+  # Run when a tag is pushed (set)
   push:
-    branches: [ master, dev_v2.1.2, dev_NXTFLASHER-*]
     tags:
-    - '*'
+      - '*' # Accept any tag name
+
+  # Run when a pull request is opened or reopened
+  pull_request:
+    types: [opened, reopened]
 
 jobs:
-#  netxfirmware:
-#    runs-on: ubuntu-latest
-#    container: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#    steps:
-#    - name: Checkout repository
-#      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
-#      uses: actions/checkout@v1
-#      with:
-#        submodules: recursive
-#    - name: Disable Git safe directory
-#      run: git config --system --add safe.directory '*'
-#    - name: Build netX firmware
-#      run: python3 mbs/mbs
-#    - name: Upload artifacts
-#      uses: actions/upload-artifact@v3
-#      with:
-#        name: targets
-#        path: targets
   build:
-#    needs: netxfirmware
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         platform:
-#        - name: Ubuntu 18.04 x86
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "18.04"
-#          cpu-architecture: x86
-#        - name: Ubuntu 18.04 x86_64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "18.04"
-#          cpu-architecture: x86_64
-#        - name: Ubuntu 18.04 arm64
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "18.04"
-#          cpu-architecture: arm64
-#        - name: Ubuntu 20.04 x86
-#          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
-#          distribution-id: ubuntu
-#          distribution-version: "20.04"
-#          cpu-architecture: x86
+        # Ubuntu 18 seems to lack GLIBC_2.28 which is required for upload-artifact@v4.
+        #- name: Ubuntu 18.04 x86
+        #  image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86:latest
+        #  distribution-id: ubuntu
+        #  distribution-version: "18.04"
+        #  cpu-architecture: x86
+        #- name: Ubuntu 18.04 x86_64
+        #  image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+        #  distribution-id: ubuntu
+        #  distribution-version: "18.04"
+        #  cpu-architecture: x86_64
+        #- name: Ubuntu 18.04 arm64
+        #  image: ghcr.io/muhkuh-sys/mbs_ubuntu_1804_x86_64:latest
+        #  distribution-id: ubuntu
+        #  distribution-version: "18.04"
+        #  cpu-architecture: arm64
+
+        # 32bit linux runners seem to be no longer supported.
+        #- name: Ubuntu 20.04 x86
+        #  image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86:latest
+        #  distribution-id: ubuntu
+        #  distribution-version: "20.04"
+        #  cpu-architecture: x86
         - name: Ubuntu 20.04 x86_64
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
           distribution-id: ubuntu
@@ -93,28 +82,42 @@ jobs:
           distribution-version: ""
           cpu-architecture: x86_64
     container: ${{ matrix.platform.image }}
+
     steps:
-    
+    # Checkout the repository
     - name: Checkout repository
-      # Use the old checkout v1 here. The newer v2 requires git 2.28 which is not available in the standard distribution.
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
+        # Checkout all submodules recursively
         submodules: recursive
+
+        # Fetch the full history for working "git describe"
+        fetch-depth: 0
+
+        # Fetch git tags
+        fetch-tags: true
+
+    # Disable git safe directory
     - name: Disable Git safe directory
       run: git config --system --add safe.directory '*'
-#    - name: Download firmware
-#      # Use the old download-artifact v1 here. The newer v2 does not work with 32bit containers.
-#      uses: actions/download-artifact@v1
-#      with:
-#        name: targets
+
+    # Install pip and use it to install gitpython
     - name: Install pip and get dependencies for build script
-      run: apt update && apt install -y python3-pip && python3 -m pip install gitpython
+      run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
+    
+    # Run the actual build process
     - name: Build flasher
-      run: python3 build_artifact.py -m ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+      run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
+    
+          # Upload the artifact
     - name: Upload artifacts
-      # Use the old upload-artifact v1 here. The newer v2 does not work with 32bit containers.
-      # Use v4 but uncomment four platforms that failed the run (until fixed) -> 32 bit verions don't work with v4
       uses: actions/upload-artifact@v4
       with:
+        # Name of the artifact to upload.
         name: artifacts_${{ matrix.platform.distribution-id }}${{ matrix.platform.distribution-version }}_${{ matrix.platform.cpu-architecture }}
-        path: flasher-environment/build/artifacts
+
+        # What to upload
+        path: flasher-environment/build/artifacts/*
+
+        # Expiration time period in days
+        retention-days: 30
