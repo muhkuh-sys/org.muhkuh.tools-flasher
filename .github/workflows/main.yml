@@ -93,7 +93,7 @@ jobs:
         fetch-tags: true
 
         # Disable git safe directory
-        set-safe-directory: false
+        set-safe-directory: true
 
     - name: Install pip and get dependencies for build script
       run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
