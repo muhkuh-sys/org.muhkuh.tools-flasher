@@ -34,15 +34,24 @@ class gitVersionManager:
     #
     # Detached Head state is tricky. Will return the first found branch the current commit is on.
     def getCurrentBranch(self):
-        # Try to get the current branch, if the head is detached, look for a branch containing the current commit
-        currentCommit = self.repo.head.commit
+        # Chec for a "Detached Head State".
+        # This happens on pull request merge commits in GitHub.
+        # Check if the current commit is a merge commit (more than 1 parent).
         if self.repo.head.is_detached:
-            for branch in self.repo.remotes["origin"].refs:
-                if self.repo.is_ancestor(currentCommit, branch.commit)\
-                    or currentCommit == branch.commit:
-                    return branch
+            currentCommit = self.repo.head.commit
+            if len(currentCommit.parents) > 1:
+                # The first parent is the target branchs last commit.
+                # Since the source branch is relevant, use the second.
+                for branch in self.repo.remotes["origin"].refs:
+                    if currentCommit.parents[1] == branch.commit:
+                        return branch
+
+                # TODO print error message if still no branch was found
+                print("ERROR: Branch could not be detected")
+
         else:
             return self.repo.active_branch
+
 
 
     # Gets the last tag from "git describe"-output
