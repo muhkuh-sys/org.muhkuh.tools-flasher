@@ -5,44 +5,68 @@ try:
 except:
     raise ImportError("gitpython missing, install using \"pip install gitpython\"")
 
-# Class for managing git tags and getting version strings in the flasher and romloader repo
 class gitVersionManager:
+    """Class for managing git tags and getting version strings in the flasher and romloader repository."""
+
+    # Regex for the version formats
     versionFormat = r"v\d+\.\d+\.\d+"
     devBranchFormat = r"^dev_v\d+\.\d+\.\d+$"
     devTagFormat = r"v\d+\.\d+\.\d+-dev\d+"
     releaseTagFormat = versionFormat
 
-
-    # Creates a gitVersionManager Object
-    #
-    # strRepoPath = path the current repo is in (use "/" for dirs, "." for current dir)
     def __init__(self, strRepoPath):
+        """
+        Create a gitVersionManager Object
+
+        :param strRepoPath: path the current repo is in (use "/" for directories, "." for current directory)
+        """
         self.repo = git.Repo(strRepoPath)
 
-
-    # Checks if current branch is a dev branch (matches the pattern "dev_vX.Y.Z", e.g. dev_v2.1.0)
     def onDevBranch(self):
-        return bool(re.match(self.devBranchFormat, self.getCurrentBranch().name))
-
-
-    # Checks if the current branch is the master branch
-    def onMasterBranch(self):
-        return self.getCurrentBranch().name == "master"
-
-
-    # Gets the branch the repository is currently on.
-    #
-    # Detached Head state is tricky. Will return the first found branch the current commit is on.
-    def getCurrentBranch(self):
-        print("Current repository wd: ", self.repo.working_dir)
-        currentCommit = self.repo.head.commit
+        """
+        Check if current branch is a dev branch (matches the pattern "dev_vX.Y.Z", e.g. dev_v2.1.0)
         
+        :return: True if the current branch is a dev branch (e.g. dev_v2.1.0).
+        """
+        branch, _ = self.getCurrentBranch()
+        return bool(re.match(self.devBranchFormat, branch.name))
+
+
+    def onMasterBranch(self):
+        """
+        Check if the current branch is the master branch
+        
+        :return: True if the current branch is the master branch.
+        """
+        branch, _ = self.getCurrentBranch()
+        return branch.name == "master"
+
+    def getCurrentBranch(self):
+        """
+        Get the branch the repository is currently on.
+
+        Detached Head state requires branch detection:
+            1) Search for a branch the current commit is on
+            2) Search for a branch the second parent commit is on
+
+            Finding the branch via the current commit is required when working on submodules.
+            If a submodule is provided as a single commit, it is put in a "detached head state"
+
+            Finding the branch via the second parent commit is required in GitHub CI on Pull Requests.
+            The Pull Request CI run is executed on a merged repository state.
+            The second parent commit is the source commit for merging, the first would be the target.
+
+        :return: The branch object
+        :return: True if currently in a merge request context, otherwise false
+        """
+        currentCommit = self.repo.head.commit
+
         # Check if there is a branch on the current commit. (Common at submodules)
         for branch in self.repo.remotes["origin"].refs:
             if self.repo.is_ancestor(currentCommit, branch.commit)\
                 or currentCommit == branch.commit:
-                print("Found branch via current commit: ", branch)
-                return branch
+                # print("Found branch via current commit: ", branch)
+                return branch, False
 
         # Check for a "Detached Head State".
         # This happens on pull request merge commits in GitHub or in submodules.
@@ -52,10 +76,9 @@ class gitVersionManager:
                 # The first parent is the target branchs last commit.
                 # Since the source branch is relevant, use the second.
                 for branch in self.repo.remotes["origin"].refs:
-                    print("Checking Commit", branch.commit)
                     if currentCommit.parents[1] == branch.commit:
-                        print("Found branch via parent commit: ", branch)
-                        return branch
+                        # print("Found branch via parent commit: ", branch)
+                        return branch, True
 
             # If there is no current branch, throw an Exception with some details.
             errorMsg = "ERROR: Branch could not be detected. "
@@ -64,19 +87,22 @@ class gitVersionManager:
             raise Exception(errorMsg)
 
         # If the head is not detached and there is an active branch, return the active branch
-        return self.repo.active_branch
+        return self.repo.active_branch, False
 
-
-
-    # Gets the last tag from "git describe"-output
-    #
-    # Note that tags will be inherited when merging.
-    # When merging to master, create a release version tag ("vA.B.C")
-    # Only works with:
-    # dev-tags:     "vA.B.C-devD"
-    # release-tags: "vA.B.C"
-    # Aborts if other tag is found or branch-tag combination is invalid.
     def getLastTag(self):
+        """
+        Get the last tag from "git describe"-output
+    
+        Note that tags will be inherited when merging.
+        When merging to master, create a release version tag ("vA.B.C")
+
+        Only works with:
+        dev-tags:     "vA.B.C-devD"
+        release-tags: "vA.B.C"
+        Will abort if other tag is found or branch-tag combination is invalid.
+        
+        :return: The last git tag object in the current commits history.
+        """
         # Get the git describe output, gitpython has no good way of providing the tag
         description = self.repo.git.describe() # e.g. 'v2.1.0-dev13-15-gb39e454' or 'v2.1.0' when directly on tag
         if re.match(self.devTagFormat, description):
@@ -92,34 +118,43 @@ class gitVersionManager:
         for tag in self.repo.tags:
             if tag.name == tagName:
                 return tag
-        sys.exit("Unable to find git tag that matches describe output")
+        raise Exception("Unable to find git tag that matches describe output")
 
-
-    # Gets the dev tag number, e.G. v2.1.0-dev13 will result in 13
-    #
-    # tag: tag the number should be parsed of
     def getDevTagNumber(self, tag):
+        """
+        Get the dev tag number, e.G. v2.1.0-dev13 will result in 13
+    
+        :param tag: Tag the number should be parsed of
+        :return: The dev tag number parsed from the dev tag.
+        """
         assert re.match(self.devTagFormat, tag.name)
         return int(re.findall(r'\d+', tag.name)[-1])
 
-
-    # Gets the number of commits since the tag was set
-    #
-    # tag: the tag to start counting from
     def getCommitsSinceLastTag(self):
+        """
+        Get the number of commits since the last tag was set.
+
+        The format of the tag is specified by getLastTag().
+    
+        :param tag: the tag to start counting from.
+        :return: The number of commits since the last tag.
+        """
         lastTagCommitHash = self.getLastTag()._get_commit().hexsha
         currentCommitHash = self.repo.head.commit.hexsha
         return int(self.repo.git.rev_list('--count', f'{lastTagCommitHash}..{currentCommitHash}'))
 
-
-    # Creates a new dev tag with a new number
-    # 
-    # Will abort when not on a dev branch (name must be "dev_vA.B.C").
-    # Will only set a dev tag if there is not already one set on the current commit.
-    # Requires presence of "dev0"-tag on first dev branch commit (create it manually!).
-    # The dev tag number is the previous dev tag number increased by the number of commits
-    # since the last dev tag was set.
     def createDevTag(self):
+        """
+        Create a new dev tag with a new number in the local repository.
+    
+        Will abort when not on a dev branch (name must be "dev_vA.B.C").
+        Will only set a dev tag if there is not already one set on the current commit.
+        Requires presence of "dev0"-tag on first dev branch commit (create it manually!).
+        The dev tag number is the previous dev tag number increased by the number of commits
+        since the last dev tag was set.
+        
+        :return: The new tag as an object. No need to use it.
+        """
         if not self.onDevBranch():
             sys.exit("Trying to create dev tag outside of dev branch, abort")
         else:
@@ -135,28 +170,35 @@ class gitVersionManager:
                 latestDevTagVersion = re.search(self.versionFormat, lastTag.name).group()
                 newDevTagName = latestDevTagVersion + "-dev" + str(lastDevTagNumber + self.getCommitsSinceLastTag())
                 try:
-                    newTag = git.Tag.create(self.repo, newDevTagName, self.repo.head.commit, "Tag created automatically by flasher build process")
+                    newTag = git.Tag.create(self.repo, newDevTagName, self.repo.head.commit,
+                                            "Tag created automatically by flasher build process")
                 except:
                     sys.exit(f'Could not create tag \"{newDevTagName}\" on commit \"{currentCommitHash}\"')
             return newTag
 
-
-    # Get the version number of the previous tag (e.g. "v2.1.0")
-    #
-    # Aborts if the version can not be parsed.
     def getVersionNumber(self):
+        """"
+        Get the version number of the previous tag (e.g. "v2.1.0")
+    
+        Aborts if the version can not be parsed.
+
+        :return: The version number of the last git tag.
+        """
         assert re.match(self.versionFormat, self.getLastTag().name), "Invalid format of last git tag"
         return re.search(self.versionFormat, self.getLastTag().name).group()
 
-
-    # Get the dev ending including commits since the last tag and the "repo-dirty"-"+".
-    #
-    # Will omit "-devA" when on master branch (release)
-    # "-devA-B+"
-    # A = dev version from tag
-    # B = commits since last tag
-    # + : optional - will appear when the repo is dirty
     def getDevEnding(self):
+        """
+        Get the dev ending including commits since the last tag and the "repo-dirty"-"+".
+    
+        Will omit "-devA" when on master branch (release)
+        "-devA-B+"
+        A = dev version from tag
+        B = commits since last tag
+        + : optional - will appear when the repo is dirty
+
+        :return: The dev ending depending on the current branch.
+        """
         if self.onMasterBranch():
             ending = ""
         else:
@@ -165,16 +207,19 @@ class gitVersionManager:
         ending += "+" if self.repo.is_dirty() else ""
         return ending
 
-
-    # Get the full Version string, format:
-    #
-    # vA.B.C-devD+-E-gHASH
-    # A.B.C = flasher version
-    # D = dev tag version
-    # E = commits since last tag
-    # + : optional - will appear when the repo is dirty
-    # HASH = shortened git hash of the current commit
     def getFullVersionString(self):
+        """
+        Get the full Version string, format:
+    
+        vA.B.C-devD+-E-gHASH
+        A.B.C = flasher version
+        D = dev tag version
+        E = commits since last tag
+        + : optional - will appear when the repo is dirty
+        HASH = shortened git hash of the current commit
+
+        :return: The full version string consisting out of version number, dev Ending and the last 7 commit hash chars.
+        """
         name = self.getVersionNumber()
         name += self.getDevEnding()
         name += "g" + str(self.repo.head.commit.hexsha)[:7]

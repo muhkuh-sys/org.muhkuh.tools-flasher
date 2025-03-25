@@ -88,14 +88,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        # Checkout all submodules recursively
-        submodules: recursive
-
-        # Fetch the full history for working "git describe"
-        fetch-depth: 0
-
-        # Fetch git tags
-        fetch-tags: true
+        
+        submodules: recursive # Checkout all submodules recursively
+        fetch-depth: 0        # Fetch the full history for working "git describe"
+        fetch-tags: true      # Fetch git tags
 
     # Disable git safe directory
     - name: Disable Git safe directory
@@ -104,22 +100,12 @@ jobs:
     # Install pip and use it to install gitpython
     - name: Install pip and get dependencies for build script
       run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
-
-    # TEST: Get info about the current repository state
-    - name: git status
-      run: git status
-    - name: git graph
-      run: git log --all --decorate --oneline --graph
-    - name: git describe
-      run: git describe
-    - name: git describe always
-      run: git describe --always
     
     # Run the actual build process
     - name: Build flasher
       run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     
-          # Upload the artifact
+    # Upload the artifact
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -129,5 +115,5 @@ jobs:
         # What to upload
         path: flasher-environment/build/artifacts/*
 
-        # Expiration time period in days
-        retention-days: 30
+        # Expiration time period in days (90 is maximum)
+        retention-days: 90
