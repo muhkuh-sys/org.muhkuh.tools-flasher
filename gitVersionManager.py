@@ -43,6 +43,8 @@ class gitVersionManager:
                 # The first parent is the target branchs last commit.
                 # Since the source branch is relevant, use the second.
                 print("Current commit:", currentCommit)
+                print("Current commit parent 0: ", currentCommit.parents[0])
+                print("Current commit parent 1: ", currentCommit.parents[1])
                 for branch in self.repo.remotes["origin"].refs:
                     print("Checking Commit", branch.commit)
                     if currentCommit.parents[1] == branch.commit:
