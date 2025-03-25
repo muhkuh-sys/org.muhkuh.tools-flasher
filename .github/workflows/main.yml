@@ -1,15 +1,13 @@
 name: CI Build
 
 # Specify when to run the CI Build
+# Note: Running on pull requests does not work since pull request pipelines run in detached-head-state.
 on:
-  # Run when a tag is pushed (set)
   push:
     tags:
-      - '*' # Accept any tag name
-
-  # Run when a pull request is opened or reopened
-  pull_request:
-    types: [opened, reopened]
+      - '*' # Any tag is pushed
+    branches:
+      - "dev_v*.*.*" # Any dev branch
 
 jobs:
   build:
