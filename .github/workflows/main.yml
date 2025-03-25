@@ -104,6 +104,16 @@ jobs:
     # Install pip and use it to install gitpython
     - name: Install pip and get dependencies for build script
       run:  apt update && apt install -y python3-pip && python3 -m pip install gitpython
+
+    # TEST: Get info about the current repository state
+    - name: git status
+      run: git status
+    - name: git graph
+      run: git log --all --decorate --oneline --graph
+    - name: git describe
+      run: git describe
+    - name: git describe always
+      run: git describe --always
     
     # Run the actual build process
     - name: Build flasher
