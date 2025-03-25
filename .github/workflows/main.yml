@@ -1,13 +1,15 @@
 name: CI Build
 
+# Specify when to run the CI Build
 on:
+  # Run when a tag is pushed (set)
   push:
-    branches: [ NXTFLASHER-912-patch ]
     tags:
-    - '*'
-  pull_request:
-    branches: [ dev_v2.1.0 ]
+      - '*' # Accept any tag name
 
+  # Run when a pull request is opened or reopened
+  pull_request:
+    types: [opened, reopened]
 
 jobs:
   build:
