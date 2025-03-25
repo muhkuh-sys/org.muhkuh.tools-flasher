@@ -7,9 +7,9 @@ on:
     tags:
       - '*' # Accept any tag name
 
-  # Run when a pull request is opened or reopened
+  # Run when a pull request is opened, reopened or a new change is added to it
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 jobs:
   build:
