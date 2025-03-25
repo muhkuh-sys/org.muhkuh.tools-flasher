@@ -34,20 +34,34 @@ class gitVersionManager:
     #
     # Detached Head state is tricky. Will return the first found branch the current commit is on.
     def getCurrentBranch(self):
+        print("Current repository wd: ", self.repo.working_dir)
+        currentCommit = self.repo.head.commit
+
         # Check for a "Detached Head State".
-        # This happens on pull request merge commits in GitHub.
-        # Check if the current commit is a merge commit (more than 1 parent).
+        # This happens on pull request merge commits in GitHub or in submodules.
+        
+
+        # Check if there is a branch on the current commit. (Common at submodules)
+        for branch in self.repo.remotes["origin"].refs:
+            if self.repo.is_ancestor(currentCommit, branch.commit)\
+                or currentCommit == branch.commit:
+                print("Found branch with current commit: ", branch)
+                return branch
+
+        # Otherwise check if the current commit is a merge commit (more than 1 parent).
+        # (Common in GitHub pull request merge commits)
         if self.repo.head.is_detached or self.repo.active_branch is None:
-            currentCommit = self.repo.head.commit
             if len(currentCommit.parents) > 1:
                 # The first parent is the target branchs last commit.
                 # Since the source branch is relevant, use the second.
                 print("Current commit:", currentCommit)
                 print("Current commit parent 0: ", currentCommit.parents[0])
                 print("Current commit parent 1: ", currentCommit.parents[1])
+                print("Current repository wd: ", self.repo.working_dir)
                 for branch in self.repo.remotes["origin"].refs:
                     print("Checking Commit", branch.commit)
                     if currentCommit.parents[1] == branch.commit:
+                        print("Found branch with parent commit: ", branch)
                         return branch
 
                 # TODO print error message if still no branch was found
