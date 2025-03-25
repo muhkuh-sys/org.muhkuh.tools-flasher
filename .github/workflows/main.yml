@@ -89,6 +89,9 @@ jobs:
         # Checkout all submodules recursively
         submodules: recursive
 
+        # Fetch the full history for working "git describe"
+        fetch-depth: 0
+
         # Fetch git tags
         fetch-tags: true
 
