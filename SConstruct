@@ -257,11 +257,9 @@ strBuildTime = tBuildTime.strftime("%Y-%B-%d-T%H:%M")
 tDict = {'BUILD_TIME': strBuildTime} 
 
 # Set the dev ending
-# dev-branch:      "devX"
-# release-branch:  ""
-# everything else: branch name
+# dev-branch: "devX" or master-branch ""
 repoManager = gitVersionManager(".")
-if repoManager.onDevBranch() or repoManager.onReleaseBranch():
+if repoManager.onDevBranch() or repoManager.onMasterBranch():
     tDict['BUILD_TYPE'] = repoManager.getDevEnding()
 else:
     tDict['BUILD_TYPE'] = "-" + repoManager.getCurrentBranchName()
