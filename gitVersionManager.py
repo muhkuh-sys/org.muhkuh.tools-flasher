@@ -216,11 +216,14 @@ class gitVersionManager:
         D = dev tag version
         E = commits since last tag
         + : optional - will appear when the repo is dirty
-        HASH = shortened git hash of the current commit
+        HASH = shortened git hash of the current commit (optional when on dev branch or in detached head state)
 
         :return: The full version string consisting out of version number, dev Ending and the last 7 commit hash chars.
         """
         name = self.getVersionNumber()
         name += self.getDevEnding()
-        name += "g" + str(self.repo.head.commit.hexsha)[:7]
+        
+        # If not on master or dev branch, also append the commit hash
+        if not self.onMasterBranch() and not self.onDevBranch():
+            name += "g" + str(self.repo.head.commit.hexsha)[:7]
         return name
