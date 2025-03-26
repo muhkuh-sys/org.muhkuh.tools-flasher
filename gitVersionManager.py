@@ -28,8 +28,7 @@ class gitVersionManager:
         
         :return: True if the current branch is a dev branch (e.g. dev_v2.1.0).
         """
-        branch, _ = self.getCurrentBranch()
-        return bool(re.match(self.devBranchFormat, branch.name))
+        return bool(re.match(self.devBranchFormat, self.getCurrentBranchName()))
 
 
     def onMasterBranch(self):
@@ -38,8 +37,50 @@ class gitVersionManager:
         
         :return: True if the current branch is the master branch.
         """
-        branch, _ = self.getCurrentBranch()
-        return branch.name == "master"
+        return self.getCurrentBranchName() == "master"
+    
+    def findNearestBranch(self):
+        """
+        Search for the nearest branch in the history (looks forward in time)
+
+        :return: The branch object of the nearest branch.
+        """
+        currentCommit = self.repo.head.commit
+
+        # Get the branch that is ahead the closest
+        for branch in self.repo.remotes["origin"].refs:
+            nearest = 0
+            nearestBranch = None
+
+            # Avoid "origin/HEAD"
+            if branch.name == "origin/HEAD":
+                continue
+
+            # Check if the branch is ahead of the current commit
+            if self.repo.is_ancestor(currentCommit, branch.commit):
+                # Count the number of commits the branch is ahead
+                checkCommit = branch.commit
+                numAhead = 0
+                while checkCommit != currentCommit:
+                    numAhead += 1
+
+                    # Get the right parent commit
+                    for parentCommit in checkCommit.parents:
+                        # If the current commit is an ancestor of the parent, they belong to one branch.
+                        # Otherwise, the parent comes from a merge. Do not go that way.
+                        if self.repo.is_ancestor(currentCommit, parentCommit):
+                            checkCommit = parentCommit
+                            break
+
+                print(f"DEBUG: Branch {branch} is {numAhead} Commits ahead of commit {currentCommit.hexsha}")
+
+                # Check if the branch is closer than the last nearest branch
+                if nearestBranch == None or nearest > numAhead:
+                    nearest = numAhead
+                    nearestBranch = branch
+
+        # After checking all branches, return the nearest
+        return nearestBranch
 
     def getCurrentBranch(self):
         """
@@ -47,7 +88,8 @@ class gitVersionManager:
 
         Detached Head state requires branch detection:
             1) Search for a branch the current commit is on
-            2) Search for a branch the second parent commit is on
+            2) Search for the nearest branch that is a descendant of the current commit.
+            3) Search for a branch the second parent commit is on
 
             Finding the branch via the current commit is required when working on submodules.
             If a submodule is provided as a single commit, it is put in a "detached head state"
@@ -63,12 +105,18 @@ class gitVersionManager:
 
         # Check if there is a branch on the current commit. (Common at submodules)
         for branch in self.repo.remotes["origin"].refs:
-            if self.repo.is_ancestor(currentCommit, branch.commit)\
-                or currentCommit == branch.commit:
+            if currentCommit == branch.commit:
                 # print("Found branch via current commit: ", branch)
-                return branch, False
+                if branch.name != "origin/HEAD":
+                    return branch, False
+                
+        # Check if there is an ahead branch which is an descendant of the current commit.
+        # This is required if a commit which has descendants is used.
+        nearestBranch = self.findNearestBranch()
+        if nearestBranch is not None:
+            return branch, False
 
-        # Check for a "Detached Head State".
+        # Check for a Detached Head State with no known branch.
         # This happens on pull request merge commits in GitHub or in submodules.
         # Otherwise check if the current commit is a merge commit (more than 1 parent).
         if self.repo.head.is_detached or self.repo.active_branch is None:
@@ -88,6 +136,18 @@ class gitVersionManager:
 
         # If the head is not detached and there is an active branch, return the active branch
         return self.repo.active_branch, False
+
+    def getCurrentBranchName(self):
+        """
+        Get the name of the current branch
+        
+        :return: name of the current branch.
+        """
+        branch, _ = self.getCurrentBranch()
+        # Remove "origin/" if present
+        if "/" in branch.name:
+            return str.split(branch.name, "/")[-1]
+        return branch.name
 
     def getLastTag(self):
         """
