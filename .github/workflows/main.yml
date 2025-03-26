@@ -1,13 +1,15 @@
 name: CI Build
 
 # Specify when to run the CI Build
-# Note: Running on pull requests does not work since pull request pipelines run in detached-head-state.
 on:
+  # Run when a tag is pushed (set)
   push:
     tags:
-      - '*' # Any tag is pushed
-    branches:
-      - "dev_v*.*.*" # Any dev branch
+      - '*' # Accept any tag name
+
+  # Run when a pull request is opened, reopened or a new change is added to it
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   build:
@@ -86,14 +88,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        # Checkout all submodules recursively
-        submodules: recursive
-
-        # Fetch the full history for working "git describe"
-        fetch-depth: 0
-
-        # Fetch git tags
-        fetch-tags: true
+        
+        submodules: recursive # Checkout all submodules recursively
+        fetch-depth: 0        # Fetch the full history for working "git describe"
+        fetch-tags: true      # Fetch git tags
 
     # Disable git safe directory
     - name: Disable Git safe directory
@@ -107,7 +105,7 @@ jobs:
     - name: Build flasher
       run: python3 build_artifact.py ${{ matrix.platform.distribution-id }} ${{ matrix.platform.distribution-version }} ${{ matrix.platform.cpu-architecture }}
     
-          # Upload the artifact
+    # Upload the artifact
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -117,5 +115,5 @@ jobs:
         # What to upload
         path: flasher-environment/build/artifacts/*
 
-        # Expiration time period in days
-        retention-days: 30
+        # Expiration time period in days (90 is maximum)
+        retention-days: 90

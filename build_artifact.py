@@ -324,19 +324,18 @@ for strPath in astrFolders:
 #
 
 # Get the flasher repo and the current branch name
-repoManager = gitVersionManager(strCfg_projectFolder, "flasher")
+repoManager = gitVersionManager(strCfg_projectFolder)
 if flags["gitTagRequested"]:
     repoManager.createDevTag()
 
 # Set the artifact name
 strMbsProjectVersion = repoManager.getFullVersionString()
-
+ 
 # Create the name of the platform following the hilscher naming conventions
 translator = dict(x86="x86", x86_64="x64", windows="Windows", ubuntu="Ubuntu", arm64="arm64", armhf="armhf",
                   riscv64="riscv64")
 strPlatform = tPlatform["distribution_version"] or ""
-strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[
-    tPlatform["cpu_architecture"]]
+strArtifactPlatform = translator[tPlatform["distribution_id"]] + strPlatform + "-" + translator[tPlatform["cpu_architecture"]]
 
 # Write the flasher version to the xml file (XML parser would delete comments in file)
 with open(os.path.join(strCfg_projectFolder, 'setup.xml'), "r+") as tSetupXmlFile:
@@ -370,7 +369,7 @@ subprocess.check_call(
 # Generate the output folder name out of the romloader git tags
 print("load romloader files")
 strRomloaderFolder = os.path.join(strCfg_projectFolder, "flasher-environment", "org.muhkuh.lua-romloader")
-romloaderRepoManager = gitVersionManager(strRomloaderFolder, "romloader")
+romloaderRepoManager = gitVersionManager(strRomloaderFolder)
 romloaderArtifactName = "montest_" + romloaderRepoManager.getFullVersionString()
 print(f"romloader artifact: {romloaderArtifactName}")
 
