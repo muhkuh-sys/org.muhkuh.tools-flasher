@@ -48,10 +48,9 @@ class gitVersionManager:
         currentCommit = self.repo.head.commit
 
         # Get the branch that is ahead the closest
+        nearest = 0
+        nearestBranch = None
         for branch in self.repo.remotes["origin"].refs:
-            nearest = 0
-            nearestBranch = None
-
             # Avoid "origin/HEAD"
             if branch.name == "origin/HEAD":
                 continue
@@ -103,39 +102,37 @@ class gitVersionManager:
         """
         currentCommit = self.repo.head.commit
 
-        # Check if there is a branch on the current commit. (Common at submodules)
-        for branch in self.repo.remotes["origin"].refs:
-            if currentCommit == branch.commit:
-                # print("Found branch via current commit: ", branch)
-                if branch.name != "origin/HEAD":
-                    return branch, False
-                
+        # TODO REMOVE
+        print("DETACHED: ", self.repo.head.is_detached)
+
+        # If the head is not detached, return the active branch
+        if not self.repo.head.is_detached:
+            print("Use current branch: ", self.repo.active_branch)
+            return self.repo.active_branch, False
+
         # Check if there is an ahead branch which is an descendant of the current commit.
         # This is required if a commit which has descendants is used.
         nearestBranch = self.findNearestBranch()
         if nearestBranch is not None:
-            return branch, False
+            print("Found closest branch: ", nearestBranch.name)
+            return nearestBranch, False
 
-        # Check for a Detached Head State with no known branch.
-        # This happens on pull request merge commits in GitHub or in submodules.
+        # If no branch was found yet, check the past.
+        # This is required on pull request merge commits in GitHub or in submodules.
         # Otherwise check if the current commit is a merge commit (more than 1 parent).
-        if self.repo.head.is_detached or self.repo.active_branch is None:
-            if len(currentCommit.parents) > 1:
-                # The first parent is the target branchs last commit.
-                # Since the source branch is relevant, use the second.
-                for branch in self.repo.remotes["origin"].refs:
-                    if currentCommit.parents[1] == branch.commit:
-                        # print("Found branch via parent commit: ", branch)
-                        return branch, True
+        if len(currentCommit.parents) > 1:
+            # The first parent is the target branchs last commit.
+            # Since the source branch is relevant, use the second.
+            for branch in self.repo.remotes["origin"].refs:
+                if currentCommit.parents[1] == branch.commit:
+                    print("Found branch via parent commit: ", branch)
+                    return branch, True
 
-            # If there is no current branch, throw an Exception with some details.
-            errorMsg = "ERROR: Branch could not be detected. "
-            errorMsg += f"Repository: {self.repo.working_dir}; "
-            errorMsg += f"Commit: {currentCommit}"
-            raise Exception(errorMsg)
-
-        # If the head is not detached and there is an active branch, return the active branch
-        return self.repo.active_branch, False
+        # If no branch was detected, throw an Exception with some details.
+        errorMsg = "ERROR: Branch could not be detected. "
+        errorMsg += f"Repository: {self.repo.working_dir}; "
+        errorMsg += f"Commit: {currentCommit}"
+        raise Exception(errorMsg)
 
     def getCurrentBranchName(self):
         """
