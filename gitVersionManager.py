@@ -39,6 +39,26 @@ class gitVersionManager:
         """
         return self.getCurrentBranchName() == "master"
     
+    def getAllBranches(self):
+        """
+        Get all avalilable branches.
+
+        Combine local and remote branch lists avoiding duplicates.
+
+        :return: List with all available branch objects.
+        """
+        # Get all local branches
+        branches = list(self.repo.branches)
+
+        # Get all remote branches
+        for ref in self.repo.remotes["origin"].refs:
+            if ref.name.startswith("origin/"):
+                # Avoid duplicates (local and remote)
+                remoteBranchName = ref.name.replace("origin/", "")
+                if all(knownBranch.name != remoteBranchName for knownBranch in branches):
+                    branches.append(ref)
+        return branches
+    
     def findNearestBranch(self):
         """
         Search for the nearest branch in the history (looks forward in time)
@@ -50,7 +70,7 @@ class gitVersionManager:
         # Get the branch that is ahead the closest
         nearest = 0
         nearestBranch = None
-        for branch in self.repo.remotes["origin"].refs:
+        for branch in self.getAllBranches():
             # Avoid "origin/HEAD"
             if branch.name == "origin/HEAD":
                 continue
@@ -70,8 +90,6 @@ class gitVersionManager:
                         if self.repo.is_ancestor(currentCommit, parentCommit):
                             checkCommit = parentCommit
                             break
-
-                print(f"DEBUG: Branch {branch} is {numAhead} Commits ahead of commit {currentCommit.hexsha}")
 
                 # Check if the branch is closer than the last nearest branch
                 if nearestBranch == None or nearest > numAhead:
@@ -102,9 +120,6 @@ class gitVersionManager:
         """
         currentCommit = self.repo.head.commit
 
-        # TODO REMOVE
-        print("DETACHED: ", self.repo.head.is_detached)
-
         # If the head is not detached, return the active branch
         if not self.repo.head.is_detached:
             print("Use current branch: ", self.repo.active_branch)
@@ -123,7 +138,7 @@ class gitVersionManager:
         if len(currentCommit.parents) > 1:
             # The first parent is the target branchs last commit.
             # Since the source branch is relevant, use the second.
-            for branch in self.repo.remotes["origin"].refs:
+            for branch in self.getAllBranches():
                 if currentCommit.parents[1] == branch.commit:
                     print("Found branch via parent commit: ", branch)
                     return branch, True
@@ -141,6 +156,7 @@ class gitVersionManager:
         :return: name of the current branch.
         """
         branch, _ = self.getCurrentBranch()
+
         # Remove "origin/" if present
         if "/" in branch.name:
             return str.split(branch.name, "/")[-1]
@@ -260,7 +276,13 @@ class gitVersionManager:
             ending = ""
         else:
             ending = "-dev" + str(self.getDevTagNumber(self.getLastTag()))
-        ending += "-" + str(self.getCommitsSinceLastTag()) 
+
+        # Append the number of commits since the last tag if nonzero
+        commitsSinceLastTag = self.getCommitsSinceLastTag()
+        if commitsSinceLastTag > 0:
+            ending += "-" + str(commitsSinceLastTag) 
+
+        # Add a "+" character if the repository is dirty
         ending += "+" if self.repo.is_dirty() else ""
         return ending
 
@@ -271,7 +293,7 @@ class gitVersionManager:
         vA.B.C-devD+-E-gHASH
         A.B.C = flasher version
         D = dev tag version
-        E = commits since last tag
+        E = optional - when greater than 0: commits since last tag
         + : optional - will appear when the repo is dirty
         HASH = shortened git hash of the current commit (optional when on dev branch or in detached head state)
 
