@@ -93,7 +93,11 @@ SET(TARGET_LUA TARGET_lua54)
 SET(INSTALL_DIR_LUA_MODULES ${FLASHER_PACKAGE_DIR}/lua_plugins)
 ADD_SUBDIRECTORY(org.muhkuh.lua-romloader/plugins)
 
+# Copy hboot_start_mi_netx90_com_intram.bin to the archive
+INSTALL(FILES org.muhkuh.lua-romloader/targets/plugins/romloader/machine_interface/start_mi/hboot_start_mi_netx90_com_intram.bin
+    DESTINATION ${FLASHER_PACKAGE_DIR}/netx/hboot/unsigned/netx90)
 
+	
 #----------------------------------------------------------------------------
 #
 # Build a package for the selected platform.
