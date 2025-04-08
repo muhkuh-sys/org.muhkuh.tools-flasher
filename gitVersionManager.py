@@ -1,5 +1,6 @@
+import os
 import re
-import sys
+
 try:
     import git
 except:
@@ -119,17 +120,18 @@ class gitVersionManager:
         :return: True if currently in a merge request context, otherwise false
         """
         currentCommit = self.repo.head.commit
+        repoName = f"{os.path.basename(self.repo.working_dir)} on commit {currentCommit.hexsha}"
 
         # If the head is not detached, return the active branch
         if not self.repo.head.is_detached:
-            print("Use current branch: ", self.repo.active_branch)
+            print(f"{repoName}: Use current branch: {self.repo.active_branch}")
             return self.repo.active_branch, False
 
         # Check if there is an ahead branch which is an descendant of the current commit.
         # This is required if a commit which has descendants is used.
         nearestBranch = self.findNearestBranch()
         if nearestBranch is not None:
-            print("Found closest branch: ", nearestBranch.name)
+            print(f"{repoName}: Found closest branch: {nearestBranch.name}")
             return nearestBranch, False
 
         # If no branch was found yet, check the past.
@@ -140,7 +142,7 @@ class gitVersionManager:
             # Since the source branch is relevant, use the second.
             for branch in self.getAllBranches():
                 if currentCommit.parents[1] == branch.commit:
-                    print("Found branch via parent commit: ", branch)
+                    print(f"{repoName}: Found branch via parent commit: {branch}")
                     return branch, True
 
         # If no branch was detected, throw an Exception with some details.
