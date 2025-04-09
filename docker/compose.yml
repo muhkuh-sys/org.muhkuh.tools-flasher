@@ -1,0 +1,13 @@
+services:
+  build:
+    build:
+      context: .
+      args:
+        USER: ${USER}
+        UID: ${UID}
+    command: sh
+    stdin_open: true 
+    tty: true
+    working_dir: ${PWD}/..
+    volumes:
+      - "../:${PWD}/.."
