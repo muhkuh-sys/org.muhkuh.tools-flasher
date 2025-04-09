@@ -214,6 +214,29 @@ local function addSecureArgs(tParserCommand)
 
 end
 
+local function addJtagInterfaceArg(tParserCommand)
+	local atJtagInterfaces = {
+        "NXJTAG-USB", "J-Link", "Amontec_JTAGkey", "Olimex_ARM_USB_TINY_H",
+        "NXHX_500/50/51/10", "NXHX_90-JTAG", "NXHX_90-MC", "NXEB_90-SPE",
+        "NSHIELD_90", "NRPEB_H90-RE", "NXJTAG-4000-USB" }
+    local tOption = tParserCommand:option(
+      '--jtag_interface',
+      string.format('Select JTAG interface. Possible value are: %s', table.concat(atJtagInterfaces, ', '))
+    ):target('strJtagInterface')
+    tOption.choices = atJtagInterfaces
+end
+
+local function addJtagTargetArg(tParserCommand)
+	local atJtagTargets = {
+        "netX_ARM966", "netX_ARM926", "netX4000_R7",
+        "netX90_MPW_COM", "netX90_COM", "netIOL" }
+    local tOption = tParserCommand:option(
+      '--jtag_target',
+      string.format('Select JTAG target. Possible values are: %s', table.concat(atJtagTargets, ', '))
+    ):target('strJtagTarget')
+    tOption.choices = atJtagTargets
+end
+
 local function addJtagKhzArg(tParserCommand)
     tParserCommand:option('--jtag_khz', 'JTAG clock in kHz')
       :target('iJtagKhz')
@@ -304,6 +327,8 @@ addStartOffsetArg(tParserCommandFlash)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandFlash)
 addPluginTypeArg(tParserCommandFlash)
+addJtagInterfaceArg(tParserCommandFlash)
+addJtagTargetArg(tParserCommandFlash)
 addJtagResetArg(tParserCommandFlash)
 addJtagKhzArg(tParserCommandFlash)
 addSecureArgs(tParserCommandFlash)
@@ -329,6 +354,8 @@ addLengthArg(tParserCommandRead)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandRead)
 addPluginTypeArg(tParserCommandRead)
+addJtagInterfaceArg(tParserCommandRead)
+addJtagTargetArg(tParserCommandRead)
 addJtagResetArg(tParserCommandRead)
 addJtagKhzArg(tParserCommandRead)
 addSecureArgs(tParserCommandRead)
@@ -353,6 +380,8 @@ addLengthArg(tParserCommandErase)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandErase)
 addPluginTypeArg(tParserCommandErase)
+addJtagInterfaceArg(tParserCommandErase)
+addJtagTargetArg(tParserCommandErase)
 addJtagResetArg(tParserCommandErase)
 addJtagKhzArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
@@ -377,6 +406,8 @@ addLengthArg(tParserCommandSmartErase)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandSmartErase)
 addPluginTypeArg(tParserCommandSmartErase)
+addJtagInterfaceArg(tParserCommandSmartErase)
+addJtagTargetArg(tParserCommandSmartErase)
 addJtagResetArg(tParserCommandSmartErase)
 addJtagKhzArg(tParserCommandSmartErase)
 addSecureArgs(tParserCommandSmartErase)
@@ -403,6 +434,8 @@ addStartOffsetArg(tParserCommandVerify)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandVerify)
 addPluginTypeArg(tParserCommandVerify)
+addJtagInterfaceArg(tParserCommandVerify)
+addJtagTargetArg(tParserCommandVerify)
 addJtagResetArg(tParserCommandVerify)
 addJtagKhzArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
@@ -427,6 +460,8 @@ addStartOffsetArg(tParserCommandVerifyHash)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandVerifyHash)
 addPluginTypeArg(tParserCommandVerifyHash)
+addJtagInterfaceArg(tParserCommandVerifyHash)
+addJtagTargetArg(tParserCommandVerifyHash)
 addJtagResetArg(tParserCommandVerifyHash)
 addJtagKhzArg(tParserCommandVerifyHash)
 addSecureArgs(tParserCommandVerifyHash)
@@ -451,6 +486,8 @@ addLengthArg(tParserCommandHash)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandHash)
 addPluginTypeArg(tParserCommandHash)
+addJtagInterfaceArg(tParserCommandHash)
+addJtagTargetArg(tParserCommandHash)
 addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
 addSecureArgs(tParserCommandHash)
@@ -474,6 +511,8 @@ addChipSelectOptionArg(tParserCommandDetect)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetect)
 addPluginTypeArg(tParserCommandDetect)
+addJtagInterfaceArg(tParserCommandDetect)
+addJtagTargetArg(tParserCommandDetect)
 addJtagResetArg(tParserCommandDetect)
 addJtagKhzArg(tParserCommandDetect)
 addSecureArgs(tParserCommandDetect)
@@ -496,6 +535,8 @@ addChipSelectOptionArg(tParserCommandTest)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandTest)
 addPluginTypeArg(tParserCommandTest)
+addJtagInterfaceArg(tParserCommandTest)
+addJtagTargetArg(tParserCommandTest)
 addJtagResetArg(tParserCommandTest)
 addJtagKhzArg(tParserCommandTest)
 addSecureArgs(tParserCommandTest)
@@ -518,6 +559,8 @@ addChipSelectOptionArg(tParserCommandTestCli)
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandTestCli)
 addPluginTypeArg(tParserCommandTestCli)
+addJtagInterfaceArg(tParserCommandTestCli)
+addJtagTargetArg(tParserCommandTestCli)
 addJtagResetArg(tParserCommandTestCli)
 addJtagKhzArg(tParserCommandTestCli)
 addSecureArgs(tParserCommandTestCli)
@@ -536,6 +579,8 @@ Exit codes:
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandInfo)
 addPluginTypeArg(tParserCommandInfo)
+addJtagInterfaceArg(tParserCommandInfo)
+addJtagTargetArg(tParserCommandInfo)
 addJtagResetArg(tParserCommandInfo)
 addJtagKhzArg(tParserCommandInfo)
 addSecureArgs(tParserCommandInfo)
@@ -553,6 +598,8 @@ Exit codes:
 	]])
 -- optional_args = {"t", "jf", "jr"}
 addPluginTypeArg(tParserCommandListInterfaces)
+addJtagInterfaceArg(tParserCommandListInterfaces)
+addJtagTargetArg(tParserCommandListInterfaces)
 addJtagResetArg(tParserCommandListInterfaces)
 addJtagKhzArg(tParserCommandListInterfaces)
 
@@ -572,6 +619,8 @@ Exit codes:
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectNetx)
 addPluginTypeArg(tParserCommandDetectNetx)
+addJtagInterfaceArg(tParserCommandDetectNetx)
+addJtagTargetArg(tParserCommandDetectNetx)
 addJtagResetArg(tParserCommandDetectNetx)
 addJtagKhzArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
@@ -593,6 +642,8 @@ Exit codes:
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandDetectSecureBoot)
 addPluginTypeArg(tParserCommandDetectSecureBoot)
+addJtagInterfaceArg(tParserCommandDetectSecureBoot)
+addJtagTargetArg(tParserCommandDetectSecureBoot)
 addJtagResetArg(tParserCommandDetectSecureBoot)
 addJtagKhzArg(tParserCommandDetectSecureBoot)
 
@@ -611,6 +662,8 @@ Exit codes:
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
+addJtagInterfaceArg(tParserCommandResetNetx)
+addJtagTargetArg(tParserCommandResetNetx)
 addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
@@ -629,6 +682,8 @@ Exit codes:
 -- optional_args = {"p", "t", "jf", "jr"}
 addPluginNameArg(tParserCommandIdentifyNetx)
 addPluginTypeArg(tParserCommandIdentifyNetx)
+addJtagInterfaceArg(tParserCommandIdentifyNetx)
+addJtagTargetArg(tParserCommandIdentifyNetx)
 addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
@@ -1286,6 +1341,8 @@ local function main()
 	-- construct the option list for DetectInterfaces
 	aArgs.atPluginOptions = {
 		romloader_jtag = {
+			jtag_interface = aArgs.strJtagInterface,
+			jtag_target = aArgs.strJtagTarget,
 			jtag_reset = aJtagResetOptions[aArgs.strJtagReset],
 			jtag_frequency_khz = aArgs.iJtagKhz
 		},
