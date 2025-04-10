@@ -1,3 +1,4 @@
+name: flasher
 services:
   build:
     build:
