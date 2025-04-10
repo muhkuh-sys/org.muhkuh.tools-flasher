@@ -251,6 +251,12 @@ local function addJtagResetArg(tParserCommand)
     tOption.choices = {"hard", "soft", "attach" }
 end
 
+local function addJtagDisableDccOutputArg(tParserCommand)
+    tParserCommand:flag('--jtag_disable_dcc_output')
+            :description('Disable JTAG DCC output messages.')
+            :target('fJtagDisableDccOutput'):default(false)
+end
+
 -- #Todo choose a better name
 local function addNoSfdp(tParserCommand)
     tParserCommand:flag('--no_sfdp')
@@ -331,6 +337,7 @@ addJtagInterfaceArg(tParserCommandFlash)
 addJtagTargetArg(tParserCommandFlash)
 addJtagResetArg(tParserCommandFlash)
 addJtagKhzArg(tParserCommandFlash)
+addJtagDisableDccOutputArg(tParserCommandFlash)
 addSecureArgs(tParserCommandFlash)
 
 -- 	read
@@ -358,6 +365,7 @@ addJtagInterfaceArg(tParserCommandRead)
 addJtagTargetArg(tParserCommandRead)
 addJtagResetArg(tParserCommandRead)
 addJtagKhzArg(tParserCommandRead)
+addJtagDisableDccOutputArg(tParserCommandRead)
 addSecureArgs(tParserCommandRead)
 
 -- erase
@@ -384,6 +392,7 @@ addJtagInterfaceArg(tParserCommandErase)
 addJtagTargetArg(tParserCommandErase)
 addJtagResetArg(tParserCommandErase)
 addJtagKhzArg(tParserCommandErase)
+addJtagDisableDccOutputArg(tParserCommandErase)
 addSecureArgs(tParserCommandErase)
 
 -- smart erase
@@ -410,6 +419,7 @@ addJtagInterfaceArg(tParserCommandSmartErase)
 addJtagTargetArg(tParserCommandSmartErase)
 addJtagResetArg(tParserCommandSmartErase)
 addJtagKhzArg(tParserCommandSmartErase)
+addJtagDisableDccOutputArg(tParserCommandSmartErase)
 addSecureArgs(tParserCommandSmartErase)
 addNoSfdp(tParserCommandSmartErase)
 
@@ -438,6 +448,7 @@ addJtagInterfaceArg(tParserCommandVerify)
 addJtagTargetArg(tParserCommandVerify)
 addJtagResetArg(tParserCommandVerify)
 addJtagKhzArg(tParserCommandVerify)
+addJtagDisableDccOutputArg(tParserCommandVerify)
 addSecureArgs(tParserCommandVerify)
 
 -- verify_hash
@@ -464,6 +475,7 @@ addJtagInterfaceArg(tParserCommandVerifyHash)
 addJtagTargetArg(tParserCommandVerifyHash)
 addJtagResetArg(tParserCommandVerifyHash)
 addJtagKhzArg(tParserCommandVerifyHash)
+addJtagDisableDccOutputArg(tParserCommandVerifyHash)
 addSecureArgs(tParserCommandVerifyHash)
 
 -- hash
@@ -490,6 +502,7 @@ addJtagInterfaceArg(tParserCommandHash)
 addJtagTargetArg(tParserCommandHash)
 addJtagResetArg(tParserCommandHash)
 addJtagKhzArg(tParserCommandHash)
+addJtagDisableDccOutputArg(tParserCommandHash)
 addSecureArgs(tParserCommandHash)
 
 -- detect
@@ -515,6 +528,7 @@ addJtagInterfaceArg(tParserCommandDetect)
 addJtagTargetArg(tParserCommandDetect)
 addJtagResetArg(tParserCommandDetect)
 addJtagKhzArg(tParserCommandDetect)
+addJtagDisableDccOutputArg(tParserCommandDetect)
 addSecureArgs(tParserCommandDetect)
 
 -- test
@@ -539,6 +553,7 @@ addJtagInterfaceArg(tParserCommandTest)
 addJtagTargetArg(tParserCommandTest)
 addJtagResetArg(tParserCommandTest)
 addJtagKhzArg(tParserCommandTest)
+addJtagDisableDccOutputArg(tParserCommandTest)
 addSecureArgs(tParserCommandTest)
 
 -- testcli
@@ -563,6 +578,7 @@ addJtagInterfaceArg(tParserCommandTestCli)
 addJtagTargetArg(tParserCommandTestCli)
 addJtagResetArg(tParserCommandTestCli)
 addJtagKhzArg(tParserCommandTestCli)
+addJtagDisableDccOutputArg(tParserCommandTestCli)
 addSecureArgs(tParserCommandTestCli)
 
 -- info
@@ -583,6 +599,7 @@ addJtagInterfaceArg(tParserCommandInfo)
 addJtagTargetArg(tParserCommandInfo)
 addJtagResetArg(tParserCommandInfo)
 addJtagKhzArg(tParserCommandInfo)
+addJtagDisableDccOutputArg(tParserCommandInfo)
 addSecureArgs(tParserCommandInfo)
 
 -- list_interfaces
@@ -602,6 +619,7 @@ addJtagInterfaceArg(tParserCommandListInterfaces)
 addJtagTargetArg(tParserCommandListInterfaces)
 addJtagResetArg(tParserCommandListInterfaces)
 addJtagKhzArg(tParserCommandListInterfaces)
+addJtagDisableDccOutputArg(tParserCommandListInterfaces)
 
 
 -- detect_netx
@@ -623,6 +641,7 @@ addJtagInterfaceArg(tParserCommandDetectNetx)
 addJtagTargetArg(tParserCommandDetectNetx)
 addJtagResetArg(tParserCommandDetectNetx)
 addJtagKhzArg(tParserCommandDetectNetx)
+addJtagDisableDccOutputArg(tParserCommandDetectNetx)
 addSecureArgs(tParserCommandDetectNetx)
 
 -- detect_secure_boot_mode
@@ -645,6 +664,7 @@ addPluginTypeArg(tParserCommandDetectSecureBoot)
 addJtagInterfaceArg(tParserCommandDetectSecureBoot)
 addJtagTargetArg(tParserCommandDetectSecureBoot)
 addJtagResetArg(tParserCommandDetectSecureBoot)
+addJtagDisableDccOutputArg(tParserCommandDetectSecureBoot)
 addJtagKhzArg(tParserCommandDetectSecureBoot)
 
 
@@ -666,6 +686,7 @@ addJtagInterfaceArg(tParserCommandResetNetx)
 addJtagTargetArg(tParserCommandResetNetx)
 addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
+addJtagDisableDccOutputArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
 
 -- identify_netx
@@ -686,6 +707,7 @@ addJtagInterfaceArg(tParserCommandIdentifyNetx)
 addJtagTargetArg(tParserCommandIdentifyNetx)
 addJtagResetArg(tParserCommandIdentifyNetx)
 addJtagKhzArg(tParserCommandIdentifyNetx)
+addJtagDisableDccOutputArg(tParserCommandIdentifyNetx)
 addSecureArgs(tParserCommandIdentifyNetx)
 
 -- check_helper_version
@@ -1344,7 +1366,8 @@ local function main()
 			jtag_interface = aArgs.strJtagInterface,
 			jtag_target = aArgs.strJtagTarget,
 			jtag_reset = aJtagResetOptions[aArgs.strJtagReset],
-			jtag_frequency_khz = aArgs.iJtagKhz
+			jtag_frequency_khz = aArgs.iJtagKhz,
+			jtag_dcc_output_enabled = not aArgs.fJtagDisableDccOutput
 		},
 		romloader_uart = {
 			netx90_m2m_image = strnetX90M2MImageBin
