@@ -265,12 +265,12 @@ class gitVersionManager:
     def getDevEnding(self):
         """
         Get the dev ending including commits since the last tag and the "repo-dirty"-"+".
-    
-        Will omit "-devA" when on master branch (release)
-        "-devA-B+"
+        
+        Layout: "-devA-B"
         A = dev version from tag
         B = commits since last tag
-        + : optional - will appear when the repo is dirty
+        
+        Will omit "-devA" when on master branch (release)
 
         :return: The dev ending depending on the current branch.
         """
@@ -283,9 +283,6 @@ class gitVersionManager:
         commitsSinceLastTag = self.getCommitsSinceLastTag()
         if commitsSinceLastTag > 0:
             ending += "-" + str(commitsSinceLastTag) 
-
-        # Add a "+" character if the repository is dirty
-        ending += "+" if self.repo.is_dirty() else ""
         return ending
 
     def getFullVersionString(self):
@@ -307,4 +304,7 @@ class gitVersionManager:
         # If not on master or dev branch, also append the commit hash
         if not self.onMasterBranch() and not self.onDevBranch():
             name += "g" + str(self.repo.head.commit.hexsha)[:7]
+
+        # Add a "+" character if the repository is dirty
+        name += "+" if self.repo.is_dirty() else ""
         return name
