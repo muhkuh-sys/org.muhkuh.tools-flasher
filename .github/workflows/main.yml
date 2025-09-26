@@ -6,6 +6,8 @@ on:
   push:
     tags:
       - '*' # Accept any tag name
+    branches:
+      - '*' # Run on every push (always)
 
   # Run when a pull request is opened, reopened or a new change is added to it
   pull_request:
@@ -35,12 +37,6 @@ jobs:
         #  distribution-version: "18.04"
         #  cpu-architecture: arm64
 
-        # 32bit linux runners seem to be no longer supported.
-        #- name: Ubuntu 20.04 x86
-        #  image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86:latest
-        #  distribution-id: ubuntu
-        #  distribution-version: "20.04"
-        #  cpu-architecture: x86
         - name: Ubuntu 20.04 x86_64
           image: ghcr.io/muhkuh-sys/mbs_ubuntu_2004_x86_64:latest
           distribution-id: ubuntu
@@ -62,12 +58,12 @@ jobs:
           distribution-version: "22.04"
           cpu-architecture: armhf
         - name: Ubuntu 22.04 arm64
-          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_arm64:latest
           distribution-id: ubuntu
           distribution-version: "22.04"
           cpu-architecture: arm64
         - name: Ubuntu 22.04 riscv64
-          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_x86_64:latest
+          image: ghcr.io/muhkuh-sys/mbs_ubuntu_2204_riscv64:latest
           distribution-id: ubuntu
           distribution-version: "22.04"
           cpu-architecture: riscv64
