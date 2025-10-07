@@ -41,21 +41,21 @@ local strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
 
 Mode        Parameters
-flash       [p][t][o] dev [offset]      file   Write file to flash
-read        [p][t][o] dev [offset] size file   Read flash and write to file
-erase       [p][t][o] dev [offset] size        Erase area or whole flash
-verify      [p][t][o] dev [offset]      file   Byte-by-byte compare
-verify_hash [p][t][o] dev [offset]      file   Quick compare using checksums
-hash        [p][t][o] dev [offset] size        Compute SHA1
-info        [p][t][o]                          Show busses/units/chip selects
-detect      [p][t][o] dev                      Check if flash is recognized
-test        [p][t][o] dev                      Test flasher
-testcli     [p][t][o] dev                      Test cli flasher
-list_interfaces[t][o]                          List all usable interfaces
-detect_netx [p][t][o]                          Detect the netx chip type
-reset_netx  [p][t][o]                          Reset the netx 90
--h                                             Show this help
--version                                       Show flasher version
+flash       [p][t][o]    dev [offset]      file   Write file to flash
+read        [p][t][o]    dev [offset] size file   Read flash and write to file
+erase       [p][t][o]    dev [offset] size        Erase area or whole flash
+verify      [p][t][o]    dev [offset]      file   Byte-by-byte compare
+verify_hash [p][t][o]    dev [offset]      file   Quick compare using checksums
+hash        [p][t][o]    dev [offset] size        Compute SHA1
+info        [p][t][o]                             Show busses/units/chip selects
+detect      [p][t][o]    dev                      Check if flash is recognized
+test        [p][t][o]    dev                      Test flasher
+testcli     [p][t][o]    dev                      Test cli flasher
+list_interfaces[t][o]                             List all usable interfaces
+detect_netx [p][t][o]                             Detect the netx chip type
+reset_netx  [p][t][o][c]                          Reset (netX 90)
+-h                                                Show this help
+-version                                          Show flasher version
 
 p:    -p plugin_name
       select plugin
@@ -68,6 +68,9 @@ t:    -t plugin_type
 o:    [-jtag_khz frequency] [-jtag_reset mode]
       -jtag_khz: override JTAG frequency
       -jtag_reset: hard(default)/soft/attach
+
+c:    -c [-console_uart console interface]
+      -console_uart: open up uart console after reset
 
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
@@ -194,6 +197,11 @@ end
 local function addPluginTypeArg(tParserCommand)
     tParserCommand:option('-t --plugin_type', 'plugin type')
       :target('strPluginType')
+end
+
+local function addBootswitchArg(tParserCommand)
+	tParserCommand:option('-c --console_uart', 'uart console')
+      :target('strBootswitchInterface')
 end
 
 local function addSecureArgs(tParserCommand)
@@ -608,12 +616,14 @@ Exit codes:
 0:  SUCCESSFUL
 1:  ERROR
 	]])
--- optional_args = {"p", "t", "jf", "jr"}
+-- optional_args = {"p", "t", "jf", "jr", "c"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
 addJtagResetArg(tParserCommandResetNetx)
 addJtagKhzArg(tParserCommandResetNetx)
 addSecureArgs(tParserCommandResetNetx)
+addBootswitchArg(tParserCommandResetNetx)
+
 
 -- identify_netx
 local tParserCommandIdentifyNetx = tParser
@@ -965,7 +975,7 @@ local function exec(aArgs)
         end
 
 		if aArgs.fCommandResetSelected then
-			fOk = flasher.reset(tPlugin, aAttr)
+			fOk = flasher.reset(tPlugin, aAttr, nil, nil, aArgs.strBootswitchInterface, aArgs.strSecureOption)
 		end
 
 		tPlugin:Disconnect()
@@ -1223,6 +1233,8 @@ local function main()
 
 	elseif aArgs.fCommandCheckHelperSignatureSelected then -- check_helper_signature
 		astrHelpersToCheck = {"start_mi", "verify_sig"}
+	elseif aArgs.fCommandResetSelected then                -- reset_netx
+		astrHelpersToCheck = {"bootswitch"}
 	end
 
     -- Catch internal chipselects.

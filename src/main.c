@@ -870,12 +870,63 @@ static NETX_CONSOLEAPP_RESULT_T opMode_identify(void)
 
 
 /* ------------------------------------- */
-static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
+static NETX_CONSOLEAPP_RESULT_T opMode_reset(tFlasherInputParameter *ptAppParams)
 {
-	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
+	#if ASIC_TYP==ASIC_TYP_NETX90
+		// Bootswitch = Get a specified interface to open after resetting.
+		BOOTSWITCH_INTERFACE_T interface;
+		interface = ptAppParams->uParameter.tReset.enBootswitchInterface;
+
+		// No bootswitch functionality requested. Do nothing.
+		if(interface == BOOTSWITCH_INTERFACE_NONE){
+		}
+
+		// UART interface requested. Copy Bootswitch-image and set ONLY_PORN register.
+		else if(interface == BOOTSWITCH_INTERFACE_UART){
+			// Second half of INTRAM2 was chosen because the linker file states that it is free.
+			// TODO INTRAM3 is used as Ethernet buffer. To avoid collisions, disable ETH.
+			uint8_t *const bootswitch_image_src = (uint8_t*)(BOOTSWITCH_BINARY_DOWNLOAD_ADDR);
+			uint8_t *const bootswitch_image_dest = (uint8_t*)(BOOTSWITCH_BINARY_DESTINATION_ADDR);
+			size_t bootswitch_image_size = BOOTSWITCH_BINARY_SIZE;
+
+			// Check if a bootswitch image is present in INTRAM2.
+			// The image is detected by its signature ("MOOH").
+			if(memcmp((char*) bootswitch_image_src + 24, "MOOH", 4) != 0){
+				uprintf("! Bootswitch image missing in memory.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Copy bootswitch image from INTRAM2 to INTRAM3.
+			// TODO this does not work. Find out why.
+			memcpy(bootswitch_image_src, bootswitch_image_dest, bootswitch_image_size);
+
+			// Check if a bootswitch image was copied in INTRAM3.
+			// The image is detected by its signature ("MOOH").
+			if(memcmp((char*) bootswitch_image_dest + 24, "MOOH", 4) != 0){
+				uprintf("! Bootswitch image missing in INTRAM3.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Delete previous values, enable console start and specify the interface to open the console on.
+			uint32_t only_porn_value = *(uint32_t*)(Adr_NX90_only_porn);
+			only_porn_value = only_porn_value & 0xFFFFFF00U;
+			only_porn_value = only_porn_value | 0x14U; // UART + Console Mode
+
+			// Read and write back the value of the ACCESS_KEY register to gain write access to ONLY_PORN.
+			*(uint32_t*)(Adr_NX90_asic_ctrl_access_key) = *(uint32_t*)(Adr_NX90_asic_ctrl_access_key);
+			*(uint32_t*)(Adr_NX90_only_porn) = only_porn_value;
+		}
+
+		// Invalid interface specified, abort.
+		else{
+			uprintf("! Invalid or unsupported bootswitch interface specified: \"0x(%08x)\"\n", interface);
+			return NETX_CONSOLEAPP_RESULT_ERROR;
+		}
+	#endif
+
+	// Use the watchdog to reset.
 	uprintf("Activating watchdog\n");
-	retVal = resetNetX();
-	return retVal;
+	return resetNetX();
 }
 
 /* ------------------------------------- */
@@ -885,6 +936,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
 #define FLAG_SIZE 4
 #define FLAG_BUFFERADR 8
 #define FLAG_DEVICE 16
+#define FLAG_BOOTSWITCH 32
 
 #if 1
 static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
@@ -1018,7 +1070,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		break;
 
 	case OPERATION_MODE_Reset:
-		ulPars = 0;
+		ulPars = FLAG_BOOTSWITCH;
 		uprintf(". Mode: Reset netX from binary\n");
 		break;
 
@@ -1064,7 +1116,6 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
 					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
 			}
-
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1082,6 +1133,15 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 			if ((ulPars & FLAG_SIZE) && ulDataByteSize > ulFlashSize)
 			{
 				uprintf("! Data size exceeds flash size.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Bootswitch is only available on NetX90
+			if ((ulPars & FLAG_BOOTSWITCH) 
+				&& ptAppParams->uParameter.tReset.enBootswitchInterface != BOOTSWITCH_INTERFACE_NONE
+				&& ASIC_TYP != ASIC_TYP_NETX90)
+			{
+				uprintf("! bootswitch not supported by this chip model.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
 		}
@@ -1404,7 +1464,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				break;
 
 			case OPERATION_MODE_Reset:
-				tResult = opMode_reset();
+				tResult = opMode_reset(ptAppParams);
 				break;
 
 			case OPERATION_MODE_SmartErase:
