@@ -897,8 +897,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_reset(tFlasherInputParameter *ptAppParams
 			}
 
 			// Copy bootswitch image from INTRAM2 to INTRAM3.
-			// TODO this does not work. Find out why.
-			memcpy(bootswitch_image_src, bootswitch_image_dest, bootswitch_image_size);
+			memcpy(bootswitch_image_dest, bootswitch_image_src, bootswitch_image_size);
 
 			// Check if a bootswitch image was copied in INTRAM3.
 			// The image is detected by its signature ("MOOH").
