@@ -200,7 +200,7 @@ local function addPluginTypeArg(tParserCommand)
 end
 
 local function addBootswitchArg(tParserCommand)
-	tParserCommand:option('-c --console_uart', 'uart console')
+	tParserCommand:option('--bootswitch', 'behaviour on reboot')
       :target('strBootswitchInterface')
 end
 

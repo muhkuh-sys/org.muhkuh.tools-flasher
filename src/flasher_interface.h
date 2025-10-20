@@ -181,7 +181,6 @@ typedef struct CMD_PARAMETER_GETBOARDINFO_STRUCT
 // Reset command parameters
 #define BOOTSWITCH_BINARY_DOWNLOAD_ADDR 0x00070000
 #define BOOTSWITCH_BINARY_DESTINATION_ADDR 0x20080000
-#define BOOTSWITCH_BINARY_SIZE 2048
 typedef enum {BOOTSWITCH_INTERFACE_NONE = 0,
 			  BOOTSWITCH_INTERFACE_UART = 1
 			} BOOTSWITCH_INTERFACE_T;
@@ -189,6 +188,7 @@ typedef struct CMD_PARAMETER_RESET_STRUCT
 {
 	// Interface to open after reset
 	BOOTSWITCH_INTERFACE_T enBootswitchInterface;
+	unsigned long ulBootswitchBinarySize;
 } CMD_PARAMETER_RESET_T;
 
 

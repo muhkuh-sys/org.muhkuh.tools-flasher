@@ -887,7 +887,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_reset(tFlasherInputParameter *ptAppParams
 			// TODO INTRAM3 is used as Ethernet buffer. To avoid collisions, disable ETH.
 			uint8_t *const bootswitch_image_src = (uint8_t*)(BOOTSWITCH_BINARY_DOWNLOAD_ADDR);
 			uint8_t *const bootswitch_image_dest = (uint8_t*)(BOOTSWITCH_BINARY_DESTINATION_ADDR);
-			size_t bootswitch_image_size = BOOTSWITCH_BINARY_SIZE;
+			size_t bootswitch_image_size =  ptAppParams->uParameter.tReset.ulBootswitchBinarySize;
 
 			// Check if a bootswitch image is present in INTRAM2.
 			// The image is detected by its signature ("MOOH").
@@ -1403,6 +1403,22 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			uprintf(". Init parameter:  0x%08x\n", (unsigned long)ptTestParam->pvInitParams);
 			uprintf("\n");
 		}
+
+		// NetX90: Print the result of the previous bootswitch
+		#if ASIC_TYP==ASIC_TYP_NETX90
+			uint32_t only_porn_value = *(uint32_t*)(Adr_NX90_only_porn);
+			uint8_t bootswitchStatus = (only_porn_value >> 9) & 0b111U;
+			if(bootswitchStatus == 0b000U){
+				uprintf("no bootswitch executed\n");
+			} else if(bootswitchStatus == 0b001U){
+				uprintf("bootswitch successfully executed\n");
+			} else if(bootswitchStatus == 0b010U){
+				uprintf("! bootswitch failed\n");
+			} else{
+				uprintf("! invalid bootswitch status: %d", bootswitchStatus);
+			}
+		#endif // ASIC_TYP==ASIC_TYP_NETX90
+
 		tResult = check_params(ptTestParam);
 		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{

@@ -1727,6 +1727,7 @@ function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage, strBoots
 	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
 	if M.targetIsNetX90(tPlugin) then
 		local bootswitchInterfaceID;
+		local bootSwitchBinaryLength = 0;
 
 		-- Reset normally if no bootswitch interface is provided.
 		if strBootswitchInterface == nil or RESET_NETX_ENABLE_ALL then
@@ -1746,6 +1747,7 @@ function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage, strBoots
 				strnetX90HelperPath = path.join(M.DEFAULT_HBOOT_OPTION, "netx90")
 			end
 			local strBootswitchBinary, strMsg = tHelperFiles.getHelperFile(strnetX90HelperPath, "bootswitch")
+			bootSwitchBinaryLength = strBootswitchBinary:len();
 
 			-- Copy the loaded bootswitch helper binary to INTRAM3
 			M.write_image(tPlugin, M.BOOTSWITCH_BINARY_DOWNLOAD_ADDR, strBootswitchBinary, fnCallbackProgress)
@@ -1761,6 +1763,7 @@ function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage, strBoots
 		{
 			OPERATION_MODE_Reset,                          -- operation mode: reset
 			bootswitchInterfaceID,                         -- Interface ID (see enum in flasher interface)
+			bootSwitchBinaryLength,                        -- size of the bootswitch binary
 		}
 		local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 		return ulValue == 0
