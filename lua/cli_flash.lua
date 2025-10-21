@@ -41,21 +41,21 @@ local strUsage = [==[
 Usage: lua cli_flash.lua mode parameters
 
 Mode        Parameters
-flash       [p][t][o]    dev [offset]      file   Write file to flash
-read        [p][t][o]    dev [offset] size file   Read flash and write to file
-erase       [p][t][o]    dev [offset] size        Erase area or whole flash
-verify      [p][t][o]    dev [offset]      file   Byte-by-byte compare
-verify_hash [p][t][o]    dev [offset]      file   Quick compare using checksums
-hash        [p][t][o]    dev [offset] size        Compute SHA1
-info        [p][t][o]                             Show busses/units/chip selects
-detect      [p][t][o]    dev                      Check if flash is recognized
-test        [p][t][o]    dev                      Test flasher
-testcli     [p][t][o]    dev                      Test cli flasher
-list_interfaces[t][o]                             List all usable interfaces
-detect_netx [p][t][o]                             Detect the netx chip type
-reset_netx  [p][t][o][c]                          Reset (netX 90)
--h                                                Show this help
--version                                          Show flasher version
+flash       [p][t][o] dev [offset]      file               Write file to flash
+read        [p][t][o] dev [offset] size file               Read flash and write to file
+erase       [p][t][o] dev [offset] size                    Erase area or whole flash
+verify      [p][t][o] dev [offset]      file               Byte-by-byte compare
+verify_hash [p][t][o] dev [offset]      file               Quick compare using checksums
+hash        [p][t][o] dev [offset] size                    Compute SHA1
+info        [p][t][o]                                      Show busses/units/chip selects
+detect      [p][t][o] dev                                  Check if flash is recognized
+test        [p][t][o] dev                                  Test flasher
+testcli     [p][t][o] dev                                  Test cli flasher
+list_interfaces[t][o]                                      List all usable interfaces
+detect_netx [p][t][o]                                      Detect the netx chip type
+reset_netx  [p][t][o]                        [bootswitch]  Reset (netX 90)
+-h                                                         Show this help
+-version                                                   Show flasher version
 
 p:    -p plugin_name
       select plugin
@@ -69,9 +69,6 @@ o:    [-jtag_khz frequency] [-jtag_reset mode]
       -jtag_khz: override JTAG frequency
       -jtag_reset: hard(default)/soft/attach
 
-c:    -c [-console_uart console interface]
-      -console_uart: open up uart console after reset
-
 dev:  -b bus [-u unit -cs chip_select]
       select flash device
       default: -u 0 -cs 0
@@ -82,6 +79,11 @@ off:  -s device_start_offset
 size: -l length
       number of bytes to read/erase/hash
       read/erase: 0xffffffff = from offset to end of chip
+
+bootswitch: [--bootswitch action]
+      optional bootswitch action to perform after reset
+      uart: open uart console
+      mfw:  start MFW after reboot
 
 
 Limitations:
@@ -200,8 +202,10 @@ local function addPluginTypeArg(tParserCommand)
 end
 
 local function addBootswitchArg(tParserCommand)
-	tParserCommand:option('--bootswitch', 'behaviour on reboot')
-      :target('strBootswitchInterface')
+	tParserCommand:option('--bootswitch')
+	:description("Behaviour on reboot. Possible values are: UART, MFW")
+	:target('strBootswitchInterface')
+	:default(nil)
 end
 
 local function addSecureArgs(tParserCommand)
@@ -616,7 +620,7 @@ Exit codes:
 0:  SUCCESSFUL
 1:  ERROR
 	]])
--- optional_args = {"p", "t", "jf", "jr", "c"}
+-- optional_args = {"p", "t", "jf", "jr", "bootswitch"}
 addPluginNameArg(tParserCommandResetNetx)
 addPluginTypeArg(tParserCommandResetNetx)
 addJtagResetArg(tParserCommandResetNetx)
