@@ -913,75 +913,74 @@ end
 
 -- extend bootswitch image data at end of a data string
 -- before extending, cut ending of input image and header of bootswitch image
--- result variable, be pessimistic
 function UsipPlayer:extendBootswitchData(strUsipData, strBootswitchParam)
     local fResult = false
-    local strMsg = ""
-    local strBootswitchData
-    local strBootSwitchOnlyPornParam
-    local strCombinedUsipPath
-    local strUsipData = strUsipData
 
-    -- read the bootswitch content
-    -- print("Appending Bootswitch ... ")
-    -- strBootswitchData, strMsg = tFlasherHelper.loadBin(strBootswitchFilePath)
-    strBootswitchData, strMsg = self.tHelperFiles.getHelperFile(self.strnetX90HelperPath, "bootswitch")
+    -- read the bootswitch content (helper file), abort if not possible
+    local strBootswitchData, strMsg = self.tHelperFiles.getHelperFile(self.strnetX90HelperPath, "bootswitch")
     if strBootswitchData == nil then
-        self.tLog.info(strMsg or "Error: Failed to load bootswitch (unknown error)")
+        self.tLog.info(strMsg or "Error: Failed to load bootswitch helper file (unknown error)")
         os.exit(1)
     end
-    -- note: the case that bootswitch cannot be found/loaded is not handled.
-    if strBootswitchData then
-        -- set the bootswitch parameter
-        if strBootswitchParam == "ETH" then
-            -- open eth console after reset
-            strBootSwitchOnlyPornParam = string.char(0x04, 0x00, 0x00, 0x00)
-        elseif strBootswitchParam == "UART" then
-            -- open uart console after reset
-            strBootSwitchOnlyPornParam = string.char(0x14, 0x00, 0x00, 0x00)
-        else
-            -- start MFW after reset
-            strBootSwitchOnlyPornParam = string.char(0x03, 0x00, 0x00, 0x00)
-        end
-    end
-    -- cut the usip image ending and the bootswitch header and extend the bootswitch content
-    -- this is necessary to have a regular image.
-    -- The bootswitch and the usip needs their regular header/ending because they have to be executed
-    -- individually. The bootswitch is an optional extension
-    strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strBootswitchData, 65 )
-    -- fill the image, so the bootswitch parameter are always at the same offset
-    if string.len( strUsipData ) < 0x8000 then
-        -- calculate the length of the fill up data
-        local ulFillUpLength = 0x8000 - string.len(strUsipData)
-        -- generate the fill up data
-        local strFillUpData = string.rep(string.char(255), ulFillUpLength)
-        -- extend the content with the fillup data - lenght of bootswitch parameter (-4)
-        -- the bootswitch have a hard-coded offset where he looks for the only-porn-parameters
-        -- to place the parameters at this offset the image must be extended to this predefined length
-        -- extend the bootswitch only porn data
-        strUsipData = strUsipData .. string.sub(strFillUpData, 1, -17) .. strBootSwitchOnlyPornParam
-        -- extend with zeros to flush the image
-        strUsipData = strUsipData .. string.char(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    -- Generate the bootswitch parameter for the ONLY_PORN register depending on the desired interface.
+    -- If the specified interface is not valid, starting the maintenance firmware is done instead.
+    local strBootSwitchOnlyPornParam
+    if strBootswitchParam == "ETH" then
+        -- open eth console after reset
+        strBootSwitchOnlyPornParam = string.char(0x04, 0x00, 0x00, 0x00)
+    elseif strBootswitchParam == "UART" then
+        -- open uart console after reset
+        strBootSwitchOnlyPornParam = string.char(0x14, 0x00, 0x00, 0x00)
+    else
+        -- start MFW after reset
+        strBootSwitchOnlyPornParam = string.char(0x03, 0x00, 0x00, 0x00)
     end
 
+    -- remove zero flushing of existing usip image and remove header of bootswitch content.
+    -- (they have these because they can be used standalone in other use cases)
+    strUsipData = string.sub( strUsipData, 1, -5 ) .. string.sub( strBootswitchData, 65 )
+
+    -- pad the image and then add the bootswitch parameter to the the predefined offset.
+    -- calculate the length of padding. Leave space for bootswitch parameter (4) and zero flushing (12).
+    local ulFillUpLength = 0x8000 - string.len(strUsipData) - 4 - 12
+    local strFillUpData = ""
+
+    -- image would exceed maximum size of 32kB, abort and inform the user.
+    if ulFillUpLength < 0 then
+        fResult = false
+        strUsipData = nil
+        strMsg = "Adding bootswitch to the image would result in size bigger than 32kB. Choose a smaller USIP file!"
+        return fResult, strUsipData, strMsg
+    end
+
+    -- generate padding data (0xFF) (length of 0 is also acceptable)
+    strFillUpData = string.rep(string.char(255), ulFillUpLength)
+
+    -- append padding data, ONLY_PORN parameter and zero flushing
+    strUsipData = strUsipData .. strFillUpData .. strBootSwitchOnlyPornParam .. string.rep(string.char(0), 12)
+
+    -- Check that the image size is correct TODO seems unnecessary, it is corrected above!
     if string.len( strUsipData ) == 0x8000 then
-        -- set combined file path
+        -- if storing of temporary files is enabled, update the usip binary file
         if self.tFlasherHelper.getStoreTempFiles() then
-            -- only store temporary file when it is enabled
-            strCombinedUsipPath = path.join( self.tempFolderConfPath, "combined.usp")
-            -- write the data back to the usip binary file
-            local tFile
-            tFile = io.open(strCombinedUsipPath, "wb")
+            local tFile = io.open(path.join( self.tempFolderConfPath, "combined.usp"), "wb")
+            if tFile == nil then
+                self.tLog.info(strMsg or "Error: Failed to save temporary usip binary file after appending bootswitch (unknown error)")
+                os.exit(1)
+            end
             tFile:write(strUsipData)
             tFile:close()
         end
         fResult = true
-        strMsg = "Extended bootswitch."
+        strMsg = "Successfully extended bootswitch."
     else
+        -- TODO remove this?
+        fResult = false
         strUsipData = nil
-        strMsg = "The combined image exceeds the size of 32kB. Choose a smaller USIP file!"
+        strMsg = "Bootswitch: Wrong image size after padding!"
+        return fResult, strUsipData, strMsg
     end
-
 
     return fResult, strUsipData, strMsg
 end
