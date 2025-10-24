@@ -870,12 +870,64 @@ static NETX_CONSOLEAPP_RESULT_T opMode_identify(void)
 
 
 /* ------------------------------------- */
-static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
+static NETX_CONSOLEAPP_RESULT_T opMode_reset(tFlasherInputParameter *ptAppParams)
 {
-	NETX_CONSOLEAPP_RESULT_T retVal = NETX_CONSOLEAPP_RESULT_ERROR;
+	#if ASIC_TYP==ASIC_TYP_NETX90
+		// Bootswitch = Deviate from usual boot sequency in specified manner.
+		BOOTSWITCH_COMMAND_T command;
+		command = ptAppParams->uParameter.tReset.enBootswitchCommand;
+		
+		// Bootswitch feature requested. Copy bootswitch image and set ONLY_PORN register.
+		if(command != BOOTSWITCH_COMMAND_NONE){
+			// Second half of INTRAM2 was chosen because the linker file states that it is free.
+			// TODO INTRAM3 is also used as Ethernet buffer. To avoid collisions, disable ETH.
+			// As long there is no ETH disabling, this command is limited to being invoked from non-ETH interfaces.
+			uint8_t *const bootswitch_image_src = (uint8_t*)(BOOTSWITCH_BINARY_DOWNLOAD_ADDR);
+			uint8_t *const bootswitch_image_dest = (uint8_t*)(BOOTSWITCH_BINARY_DESTINATION_ADDR);
+			size_t bootswitch_image_size =  ptAppParams->uParameter.tReset.ulBootswitchBinarySize;
+
+			// Check if a bootswitch image is present in INTRAM2.
+			// The image is detected by its signature ("MOOH").
+			if(memcmp((char*) bootswitch_image_src + 24, "MOOH", 4) != 0){
+				uprintf("! Bootswitch image missing in memory.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Copy bootswitch image from INTRAM2 to INTRAM3.
+			memcpy(bootswitch_image_dest, bootswitch_image_src, bootswitch_image_size);
+
+			// Check if the bootswitch image was copied in INTRAM3.
+			// The image is detected by its signature ("MOOH").
+			if(memcmp((char*) bootswitch_image_dest + 24, "MOOH", 4) != 0){
+				uprintf("! Bootswitch image missing in INTRAM3.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Delete previous values from the ONLY_PORN registers relevant fields.
+			uint32_t only_porn_value = *(uint32_t*)(Adr_NX90_only_porn);
+			only_porn_value = only_porn_value & 0xFFFFFF00U;
+
+			// Set the ONLY_PORN "reset mode" and "reset parameter" fields.
+			if (command == BOOTSWITCH_COMMAND_CONSOLE_UART){
+				only_porn_value = only_porn_value | 0x14U; // UART (1) + Console Mode (4)
+			} else if (command == BOOTSWITCH_COMMAND_START_MFW){
+				only_porn_value = only_porn_value | 0x03U; // 0 (dont care) + ALT SW / MFW (3)
+			} else {
+				uprintf("! Invalid or unsupported bootswitch command specified: \"0x(%08x)\"\n", command);
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Read and write back the value of the ACCESS_KEY register to gain write access to ONLY_PORN.
+			*(uint32_t*)(Adr_NX90_asic_ctrl_access_key) = *(uint32_t*)(Adr_NX90_asic_ctrl_access_key);
+			*(uint32_t*)(Adr_NX90_only_porn) = only_porn_value;
+		}
+	#else
+		(void)ptAppParams; // avoid compiler warnings in non-netX90-builds
+	#endif
+
+	// Use the watchdog to reset.
 	uprintf("Activating watchdog\n");
-	retVal = resetNetX();
-	return retVal;
+	return resetNetX();
 }
 
 /* ------------------------------------- */
@@ -885,6 +937,7 @@ static NETX_CONSOLEAPP_RESULT_T opMode_reset(void)
 #define FLAG_SIZE 4
 #define FLAG_BUFFERADR 8
 #define FLAG_DEVICE 16
+#define FLAG_BOOTSWITCH 32
 
 #if 1
 static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptConsoleParams)
@@ -1018,7 +1071,7 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 		break;
 
 	case OPERATION_MODE_Reset:
-		ulPars = 0;
+		ulPars = FLAG_BOOTSWITCH;
 		uprintf(". Mode: Reset netX from binary\n");
 		break;
 
@@ -1064,7 +1117,6 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 					(unsigned long)(getActualFlashSize(ptDeviceDescription) >> 32U),
 					(unsigned long)(getActualFlashSize(ptDeviceDescription) & 0xFFFFFFFFU));
 			}
-
 			
 			if ((ulPars & FLAG_STARTADR) && ulStartAdr >= ulFlashSize)
 			{
@@ -1082,6 +1134,15 @@ static NETX_CONSOLEAPP_RESULT_T check_params(NETX_CONSOLEAPP_PARAMETER_T *ptCons
 			if ((ulPars & FLAG_SIZE) && ulDataByteSize > ulFlashSize)
 			{
 				uprintf("! Data size exceeds flash size.\n");
+				return NETX_CONSOLEAPP_RESULT_ERROR;
+			}
+
+			// Bootswitch is only available on NetX90
+			if ((ulPars & FLAG_BOOTSWITCH) 
+				&& ptAppParams->uParameter.tReset.enBootswitchCommand != BOOTSWITCH_COMMAND_NONE
+				&& ASIC_TYP != ASIC_TYP_NETX90)
+			{
+				uprintf("! bootswitch not supported by this chip model.\n");
 				return NETX_CONSOLEAPP_RESULT_ERROR;
 			}
 		}
@@ -1344,6 +1405,22 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 			uprintf(". Init parameter:  0x%08x\n", (unsigned long)ptTestParam->pvInitParams);
 			uprintf("\n");
 		}
+
+		// NetX90: Print the result of the previous bootswitch
+		#if ASIC_TYP==ASIC_TYP_NETX90
+			uint32_t only_porn_value = *(uint32_t*)(Adr_NX90_only_porn);
+			uint8_t bootswitchStatus = (only_porn_value >> 9) & 0x07U;
+			if(bootswitchStatus == 0x00U){
+				uprintf("no bootswitch executed\n");
+			} else if(bootswitchStatus == 0x01U){
+				uprintf("bootswitch successfully executed\n");
+			} else if(bootswitchStatus == 0x02U){
+				uprintf("! bootswitch failed\n");
+			} else{
+				uprintf("! invalid bootswitch status: %d", bootswitchStatus);
+			}
+		#endif // ASIC_TYP==ASIC_TYP_NETX90
+
 		tResult = check_params(ptTestParam);
 		if (tResult == NETX_CONSOLEAPP_RESULT_OK)
 		{
@@ -1404,7 +1481,7 @@ NETX_CONSOLEAPP_RESULT_T netx_consoleapp_main(NETX_CONSOLEAPP_PARAMETER_T *ptTes
 				break;
 
 			case OPERATION_MODE_Reset:
-				tResult = opMode_reset();
+				tResult = opMode_reset(ptAppParams);
 				break;
 
 			case OPERATION_MODE_SmartErase:

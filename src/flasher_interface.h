@@ -177,6 +177,21 @@ typedef struct CMD_PARAMETER_GETBOARDINFO_STRUCT
 	size_t sizBuffer;
 } CMD_PARAMETER_GETBOARDINFO_T;
 
+
+// Reset command parameters
+#define BOOTSWITCH_BINARY_DOWNLOAD_ADDR 0x00070000
+#define BOOTSWITCH_BINARY_DESTINATION_ADDR 0x20080000
+typedef enum {BOOTSWITCH_COMMAND_NONE = 0,
+			  BOOTSWITCH_COMMAND_CONSOLE_UART = 1,
+			  BOOTSWITCH_COMMAND_START_MFW = 2
+			} BOOTSWITCH_COMMAND_T;
+typedef struct CMD_PARAMETER_RESET_STRUCT
+{
+	BOOTSWITCH_COMMAND_T enBootswitchCommand;
+	unsigned long ulBootswitchBinarySize;
+} CMD_PARAMETER_RESET_T;
+
+
 typedef struct CMD_PARAMETER_GETFLASHSIZE_STRUCT
 {
 	const DEVICE_DESCRIPTION_T *ptDeviceDescription;
@@ -203,6 +218,7 @@ typedef struct tFlasherInputParameter_STRUCT
 		CMD_PARAMETER_GETERASEAREA_T tGetEraseArea;
 		CMD_PARAMETER_GETBOARDINFO_T tGetBoardInfo;
 		CMD_PARAMETER_SPIMACROPLAYER_T tSpiMacroPlayer;
+		CMD_PARAMETER_RESET_T tReset;
 		CMD_PARAMETER_GETFLASHSIZE_T tGetFlashSize;
 	} uParameter;
 } tFlasherInputParameter;

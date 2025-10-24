@@ -79,6 +79,13 @@ M.SMC_RECEIVE_DATA                 = ${SMC_RECEIVE_DATA}
 M.SMC_SEND_IDLE_BYTES              = ${SMC_SEND_IDLE_BYTES}
 
 
+-- Reset Command Interface Constants
+M.BOOTSWITCH_COMMAND_NONE          = ${BOOTSWITCH_COMMAND_NONE}
+M.BOOTSWITCH_COMMAND_CONSOLE_UART  = ${BOOTSWITCH_COMMAND_CONSOLE_UART}
+M.BOOTSWITCH_COMMAND_START_MFW     = ${BOOTSWITCH_COMMAND_START_MFW}
+M.BOOTSWITCH_BINARY_DOWNLOAD_ADDR  = ${BOOTSWITCH_BINARY_DOWNLOAD_ADDR}
+
+
 local FLASHER_INTERFACE_VERSION        = ${FLASHER_INTERFACE_VERSION}
 
 
@@ -1693,31 +1700,88 @@ function M.identify(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
 	return ulValue == 0
 end
 
-
 --------------------------------------------------------------------------
--- Function to reset a netX through the flasher binary by
--- triggering a watchdog reset
+--- Check if the target device is a NetX90.
 --------------------------------------------------------------------------
-function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage)
-	local iChipType = tPlugin:GetChiptyp()
-	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
-
-	-- Only netX90s are officially supported. All other chips require activating the RESET_NETX_ENABLE_ALL bool
-	-- List of netX types in romloader repo -> romloader_def.h
-	if iChipType == romloader.ROMLOADER_CHIPTYP_NETX90
+function M.targetIsNetX90(tPlugin)
+	iChipType = tPlugin:GetChiptyp()
+	return iChipType == romloader.ROMLOADER_CHIPTYP_NETX90
 	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90_MPW
 	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90B
 	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90C
 	or iChipType == romloader.ROMLOADER_CHIPTYP_NETX90D
-	or RESET_NETX_ENABLE_ALL
-	then
-		print("Resetting On-Chip")
+end
+
+
+--------------------------------------------------------------------------
+-- Reset a netX through the flasher binary by triggering a watchdog reset.
+-- The optional bootswitch parameter can be used to select a bootswitch
+-- "mode" that the chip is supposed boot to.
+--
+-- strBootswitchParameter: Optional string defining the desired bootswitch interface (nil, "uart" or "mfw").
+--                         If not provided, a normal reset without any bootswitch is performed.
+-- strSecureOption:        Optional string defining a directory to get signed helper files from.
+--                         If no directory with signed images is provided, the builtin unsigned files are used.
+--------------------------------------------------------------------------
+function M.reset(tPlugin, aAttr, fnCallbackProgress, fnCallbackMessage, strBootswitchParameter, strSecureOption)
+	-- Only netX90s are officially supported. All other chips require activating the RESET_NETX_ENABLE_ALL bool.
+	local RESET_NETX_ENABLE_ALL = false  -- Allows use of reset_netx with all chip types
+	if M.targetIsNetX90(tPlugin) then
+		local ulBootswitchCommandID = M.BOOTSWITCH_COMMAND_NONE;
+		local ulBootSwitchBinaryLength = 0;
+		local bUseBootSwitchBinary = false;
+
+		-- Reset normally if no bootswitch interface is provided.
+		-- Bootswitch is netX90 exclusive. RESET_NETX_ENABLE_ALL will always lead to a normal reset.
+		if strBootswitchParameter == nil or RESET_NETX_ENABLE_ALL then
+			print("Resetting On-Chip")
+			ulBootswitchCommandID = M.BOOTSWITCH_COMMAND_NONE;
+			bUseBootSwitchBinary = false;
+		
+		-- UART console request
+		elseif strBootswitchParameter == "uart" then
+			print("Resetting On-Chip, UART console will be opened")
+			ulBootswitchCommandID = M.BOOTSWITCH_COMMAND_CONSOLE_UART;
+			bUseBootSwitchBinary = true;
+
+		-- MFW start request
+		elseif strBootswitchParameter == "mfw" then
+			print("Resetting On-Chip, MFW will be started")
+			ulBootswitchCommandID = M.BOOTSWITCH_COMMAND_START_MFW;
+			bUseBootSwitchBinary = true;
+
+		-- Unsupported bootswitch command: abort.
+		else
+			print("Error: Unsupported bootswitch parameter \"" .. strBootswitchParameter .. "\"")
+			return false
+		end
+
+		-- Load the bootswitch helper binary from file system. If a signed helper directory is provided, use it.
+		if bUseBootSwitchBinary then
+			local strNetX90HelperPath;
+			if strSecureOption ~= nil then
+				strNetX90HelperPath = path.join(strSecureOption, "netx90")
+			else
+				strNetX90HelperPath = path.join(M.DEFAULT_HBOOT_OPTION, "netx90")
+			end
+			local strBootswitchBinary, strMsg = tHelperFiles.getHelperFile(strNetX90HelperPath, "bootswitch")
+			ulBootSwitchBinaryLength = strBootswitchBinary:len();
+	
+			-- Copy the loaded bootswitch helper binary to INTRAM2.
+			M.write_image(tPlugin, M.BOOTSWITCH_BINARY_DOWNLOAD_ADDR, strBootswitchBinary, fnCallbackProgress)
+		end
+		
+		-- Invoke the reset command on the chip.
 		local aulParameter =
 		{
-			OPERATION_MODE_Reset,                          -- operation mode: reset
+			OPERATION_MODE_Reset,        -- operation mode: reset
+			ulBootswitchCommandID,     -- Interface ID (see enum in flasher interface)
+			ulBootSwitchBinaryLength,    -- size of the bootswitch binary
 		}
 		local ulValue = callFlasher(tPlugin, aAttr, aulParameter, fnCallbackMessage, fnCallbackProgress)
 		return ulValue == 0
+	
+	-- Fail if the current netX does not support the reset command.
 	else
 		print("Error: This netX type does not support the reset_netx command")
 		return false
