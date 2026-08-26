@@ -87,6 +87,7 @@ int Drv_SpiWriteFlashPages        (const FLASHER_SPI_FLASH_T *ptFlash, unsigned 
 int Drv_SpiReadFlash              (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, unsigned char       *pucData, size_t sizData);
 int Drv_SpiEraseAndWritePage      (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char *pucData, size_t sizData);
 int Drv_SpiWritePage              (const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char *pucData, size_t sizData);
+size_t Drv_SpiCmdSetAddr          (const FLASHER_SPI_FLASH_T *ptFlash, unsigned char* pabCmd, unsigned long ulDeviceAddress);
 
 const char *spi_flash_get_adr_mode_name(SPIFLASH_ADR_T tAdrMode);
 
