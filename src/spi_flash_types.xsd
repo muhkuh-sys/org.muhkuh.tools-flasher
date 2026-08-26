@@ -50,6 +50,7 @@
 										<xs:restriction base="xs:string">
 											<xs:enumeration value="linear"/>
 											<xs:enumeration value="pagesize bitshift"/>
+											<xs:enumeration value="linear_32bit"/>
 										</xs:restriction>
 									</xs:simpleType>
 								</xs:attribute>

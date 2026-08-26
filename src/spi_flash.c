@@ -137,6 +137,7 @@ static unsigned long getDeviceAddress(const FLASHER_SPI_FLASH_T *ptFlash, unsign
 	switch(ptFlash->tAttributes.tAdrMode)
 	{
 	case SPIFLASH_ADR_LINEAR:
+	case SPIFLASH_ADR_LINEAR_32BIT:
 		/* linear addressing */
 		ulDeviceAddress = ulLinearAddress;
 		break;
@@ -834,6 +835,7 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 					{
 					case SPIFLASH_ADR_LINEAR:
 					case SPIFLASH_ADR_PAGESIZE_BITSHIFT:
+					case SPIFLASH_ADR_LINEAR_32BIT:
 						/* all valid settings */
 						break;
 
@@ -853,6 +855,37 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 	return iResult;
 }
 
+/*! Drv_SpiCmdSetAddr
+*   Set the address in an SPI command. 
+*   If the device size is 16 MByte or less, put a 24 bit address, 
+*   if it's larger, put a 32 bit address.
+*   This should be probably be selected by a flag in the flash description.
+*   
+*   \param ptFlash         pointer to flash description structure 
+*   \param pabCmd          command buffer, must be at least 5 bytes long
+*   \param ulDeviceAddress the address to put in the command buffer
+*   
+*   \return the number of bytes used for the address (3 or 4)
+*/
+size_t Drv_SpiCmdSetAddr(const FLASHER_SPI_FLASH_T *ptFlash, unsigned char* pabCmd, unsigned long ulDeviceAddress)
+{
+	if (ptFlash->tAttributes.tAdrMode == SPIFLASH_ADR_LINEAR_32BIT)
+	{
+		pabCmd[1] = (unsigned char)((ulDeviceAddress>>24)&0xff);
+		pabCmd[2] = (unsigned char)((ulDeviceAddress>>16)&0xff);
+		pabCmd[3] = (unsigned char)((ulDeviceAddress>>8 )&0xff);
+		pabCmd[4] = (unsigned char)( ulDeviceAddress     &0xff);
+		return 4;
+	}
+	else 
+	{
+		pabCmd[1] = (unsigned char)((ulDeviceAddress>>16)&0xff);
+		pabCmd[2] = (unsigned char)((ulDeviceAddress>>8 )&0xff);
+		pabCmd[3] = (unsigned char)( ulDeviceAddress     &0xff);
+		return 3;
+	}
+}
+
 
 /*! Drv_SpiEraseFlashPage
 *   Erases a Page in the specified serial FLASH
@@ -865,7 +898,7 @@ int Drv_SpiInitializeFlash(const FLASHER_SPI_CONFIGURATION_T *ptSpiCfg, FLASHER_
 int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress)
 {
 	int iResult;
-	unsigned char abCmd[4];
+	unsigned char abCmd[5];
 	unsigned long ulDeviceAddress;
 
 
@@ -911,13 +944,11 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 
 			/* set the page erase opcode */
 			abCmd[0] = ptFlash->tAttributes.ucErasePageOpcode;
-			/*  byte 1-3 is the page address */
-			abCmd[1] = (unsigned char)((ulDeviceAddress>>16)&0xff);
-			abCmd[2] = (unsigned char)((ulDeviceAddress>>8 )&0xff);
-			abCmd[3] = (unsigned char)( ulDeviceAddress     &0xff);
+			/* add the address */
+			size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, abCmd, ulDeviceAddress);
 
 			/* send command */
-			iResult = send_simple_cmd(ptFlash, abCmd, 4);
+			iResult = send_simple_cmd(ptFlash, abCmd, sizCmdLen);
 			if( iResult!=0 )
 			{
 				//uprintf("ERROR: Drv_SpiEraseFlashPage: send_simple_cmd failed with %d.\n", iResult);
@@ -954,7 +985,7 @@ int Drv_SpiEraseFlashPage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress, const unsigned char eraseOpcode)
 {
 	int iResult;
-	unsigned char abCmd[4];
+	unsigned char abCmd[5];
 	unsigned long ulDeviceAddress;
 
 	DEBUGMSG(ZONE_FUNCTION, ("+Drv_SpiEraseFlashSector(): ptFlash=0x%08x, ulLinearAddress=0x%08x\n", ptFlash, ulLinearAddress));
@@ -983,13 +1014,11 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 
 		/* set the sector erase opcode */
 		abCmd[0] = eraseOpcode;
-		/* byte 1-3 is the sector address */
-		abCmd[1] = (unsigned char) ((ulDeviceAddress >> 16) & 0xff);
-		abCmd[2] = (unsigned char) ((ulDeviceAddress >> 8) & 0xff);
-		abCmd[3] = (unsigned char) (ulDeviceAddress & 0xff);
+		/* add the address */
+		size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, abCmd, ulDeviceAddress);
 
 		/* send command */
-		iResult = send_simple_cmd(ptFlash, abCmd, 4);
+		iResult = send_simple_cmd(ptFlash, abCmd, sizCmdLen);
 		if (iResult != 0)
 		{
 			DBG_CALL_FAILED_VAL("send_simple_cmd", iResult)
@@ -1025,7 +1054,7 @@ int Drv_SpiEraseFlashArea(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLi
 int Drv_SpiEraseFlashSector(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearAddress)
 {
 	int iResult;
-	unsigned char abCmd[4];
+	unsigned char abCmd[5];
 	unsigned long ulDeviceAddress;
 
 
@@ -1054,13 +1083,11 @@ int Drv_SpiEraseFlashSector(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ul
 
 			/* set the sector erase opcode */
 			abCmd[0] = ptFlash->tAttributes.ucEraseSectorOpcode;
-			/* byte 1-3 is the sector address */
-			abCmd[1] = (unsigned char)((ulDeviceAddress>>16)&0xff);
-			abCmd[2] = (unsigned char)((ulDeviceAddress>>8 )&0xff);
-			abCmd[3] = (unsigned char)( ulDeviceAddress     &0xff);
+			/* add the address */
+			size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, abCmd, ulDeviceAddress);
 
 			/* send command */
-			iResult = send_simple_cmd(ptFlash, abCmd, 4);
+			iResult = send_simple_cmd(ptFlash, abCmd, sizCmdLen);
 			if( iResult!=0 )
 			{
 				//uprintf("ERROR: Drv_SpiEraseFlashPage: send_simple_cmd failed with %d.\n", iResult);
@@ -1284,7 +1311,7 @@ int Drv_SpiReadFlash(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearA
 {
 	int           iResult;
 	unsigned long ulDeviceAddress;
-	unsigned char abCmd[4];
+	unsigned char abCmd[5];
 	const FLASHER_SPI_CFG_T *ptSpiDev;
 
 
@@ -1313,13 +1340,11 @@ int Drv_SpiReadFlash(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ulLinearA
 
 		/*  first byte of the command is the read bOpcode */
 		abCmd[0] = ptFlash->tAttributes.ucReadOpcode;
-		/*  byte 1-3 is the address */
-		abCmd[1] = (unsigned char)((ulDeviceAddress>>16U)&0xffU);
-		abCmd[2] = (unsigned char)((ulDeviceAddress>> 8U)&0xffU);
-		abCmd[3] = (unsigned char)( ulDeviceAddress      &0xffU);
+		/* add the address */
+		size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, abCmd, ulDeviceAddress);
 
 		/* send data and receive response */
-		iResult = ptSpiDev->pfnSendData(ptSpiDev, abCmd, 4);
+		iResult = ptSpiDev->pfnSendData(ptSpiDev, abCmd, sizCmdLen);
 		if( iResult!=0 )
 		{
 			//uprintf("ERROR: Drv_SpiReadFlash: HalSPI_BlockIo failed with %d.\n", iResult);
@@ -1381,7 +1406,7 @@ int Drv_SpiEraseAndWritePage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long u
 	int             iResult;
 	size_t sizPage;
 	unsigned long   ulDeviceAddress;
-	unsigned char   aucCmd[4];
+	unsigned char   aucCmd[5];
 	unsigned char   ucCmd;
 	const FLASHER_SPI_CFG_T *ptSpiDev;
 
@@ -1455,12 +1480,10 @@ int Drv_SpiEraseAndWritePage(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long u
 
 					/*  first byte of the command is the write bOpcode */
 					aucCmd[0] = ptFlash->tAttributes.ucEraseAndPageProgOpcode;
-					/*  byte 1-3 is the address */
-					aucCmd[1] = (unsigned char)((ulDeviceAddress>>16U)&0xffU);
-					aucCmd[2] = (unsigned char)((ulDeviceAddress>> 8U)&0xffU);
-					aucCmd[3] = (unsigned char)( ulDeviceAddress      &0xffU);
+					/* add the address */
+					size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, aucCmd, ulDeviceAddress);
 
-					iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, 4);
+					iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, sizCmdLen);
 					if( iResult!=0 )
 					{
 						//uprintf("ERROR: Drv_SpiEraseAndWritePage: HalSPI_BlockIo failed with %d.\n", iResult);
@@ -1514,7 +1537,7 @@ static int write_single_opcode(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long
 {
 	int             iResult;
 	unsigned long   ulDeviceAddress;
-	unsigned char   aucCmd[4];
+	unsigned char   aucCmd[5];
 	const FLASHER_SPI_CFG_T *ptSpiDev;
 
 
@@ -1547,12 +1570,10 @@ static int write_single_opcode(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long
 
 			/*  first byte of the command is the write bOpcode */
 			aucCmd[0] = ptFlash->tAttributes.ucPageProgOpcode;
-			/*  byte 1-3 is the address */
-			aucCmd[1] = (unsigned char)((ulDeviceAddress>>16U)&0xffU);
-			aucCmd[2] = (unsigned char)((ulDeviceAddress>> 8U)&0xffU);
-			aucCmd[3] = (unsigned char)( ulDeviceAddress      &0xffU);
+			/* add the address */
+			size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, aucCmd, ulDeviceAddress);
 
-			iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, 4);
+			iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, sizCmdLen);
 			if( iResult!=0 )
 			{
 				//uprintf("ERROR: write_single_opcode: HalSPI_BlockIo failed with %d.\n", iResult);
@@ -1605,7 +1626,7 @@ static int write_via_buffer(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ul
 {
 	int             iResult;
 	unsigned long   ulDeviceAddress;
-	unsigned char   aucCmd[4];
+	unsigned char   aucCmd[5];
 	const FLASHER_SPI_CFG_T *ptSpiDev;
 
 
@@ -1618,7 +1639,6 @@ static int write_via_buffer(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ul
 	ptSpiDev->pfnSelect(ptSpiDev, 1);
 
 	/* send command */
-
 	/* first byte of the command is the write Opcode */
 	aucCmd[0] = ptFlash->tAttributes.ucBufferFill;
 	/* byte 1-3 is the byte offset in the buffer */
@@ -1680,12 +1700,10 @@ static int write_via_buffer(const FLASHER_SPI_FLASH_T *ptFlash, unsigned long ul
 
 					/* first byte of the command is the write bOpcode */
 					aucCmd[0] = ptFlash->tAttributes.ucBufferWriteOpcode;
-					/* byte 1-3 is the address */
-					aucCmd[1] = (unsigned char)((ulDeviceAddress>>16U)&0xffU);
-					aucCmd[2] = (unsigned char)((ulDeviceAddress>> 8U)&0xffU);
-					aucCmd[3] = (unsigned char)( ulDeviceAddress      &0xffU);
+					/* add the address */
+					size_t sizCmdLen = 1+Drv_SpiCmdSetAddr(ptFlash, aucCmd, ulDeviceAddress);
 
-					iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, 4);
+					iResult = ptSpiDev->pfnSendData(ptSpiDev, aucCmd, sizCmdLen);
 					if( iResult!=0 )
 					{
 						//uprintf("ERROR: write_via_buffer: HalSPI_BlockIo failed with %d.\n", iResult);
@@ -1783,10 +1801,11 @@ typedef struct ADR_MODE_NAME_STRUCT
 } ADR_MODE_NAME_T;
 
 
-static const ADR_MODE_NAME_T atAdrModeName[2] =
+static const ADR_MODE_NAME_T atAdrModeName[3] =
 {
 	{ SPIFLASH_ADR_LINEAR,              "linear" },
-	{ SPIFLASH_ADR_PAGESIZE_BITSHIFT,   "pagesize bitshift" }
+	{ SPIFLASH_ADR_PAGESIZE_BITSHIFT,   "pagesize bitshift" },
+	{ SPIFLASH_ADR_LINEAR_32BIT,        "linear 32 bit" }
 };
 
 

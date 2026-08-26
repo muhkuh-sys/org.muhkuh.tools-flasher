@@ -119,7 +119,8 @@ strHeaderTemplate = """
 typedef enum SPIFLASH_ADR_Ttag
 {
 	SPIFLASH_ADR_LINEAR,              /* linear addressing */
-	SPIFLASH_ADR_PAGESIZE_BITSHIFT    /* bitshift derived from the pagesize */
+	SPIFLASH_ADR_PAGESIZE_BITSHIFT,   /* bitshift derived from the pagesize */
+	SPIFLASH_ADR_LINEAR_32BIT         /* linear addressing using 32 bit addressing */
 } SPIFLASH_ADR_T;
 
 
@@ -390,7 +391,8 @@ def spiflashes_action(target, source, env):
 		# Convert the layout mode to the enum.
 		aLayoutMode = dict({
 			'linear': 'SPIFLASH_ADR_LINEAR',
-			'pagesize bitshift': 'SPIFLASH_ADR_PAGESIZE_BITSHIFT'
+			'pagesize bitshift': 'SPIFLASH_ADR_PAGESIZE_BITSHIFT',
+			'linear_32bit': 'SPIFLASH_ADR_LINEAR_32BIT'
 		})
 		strMode = aEntry['Layout@mode']
 		if not strMode in aLayoutMode:

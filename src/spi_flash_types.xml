@@ -736,6 +736,21 @@
 		    magic="0x00, 0xc2, 0x20, 0x17" />
 	</SerialFlash>
 
+	<SerialFlash name="MX25L25673G" size="33554432" clock="50000">
+		<Description>Macronix MX25L25673G</Description>
+		<Note></Note>
+		<Layout pageSize="256" sectorPages="16" mode="linear_32bit"/>
+		<Read readArrayCommand="0x13" ignoreBytes="0" />
+		<Write writeEnableCommand="0x06" pageProgramCommand="0x12" bufferFillCommand="" bufferWriteCommand="" eraseAndPageProgramCommand="" />
+		<Erase erasePageCommand="" eraseSectorCommand="0x21" eraseChipCommand="0xc7" />
+		<Status readStatusCommand="0x05" statusReadyMask="0x01" statusReadyValue="0x00" />
+		<Init0 command="" />
+		<Init1 command="" />
+		<Id send="0x9f, 0x00, 0x00, 0x00"
+		    mask="0x00, 0xff, 0xff, 0xff"
+		    magic="0x00, 0xc2, 0x20, 0x19" />
+	</SerialFlash>
+
 	<SerialFlash name="W25X32" size="4194304" clock="75000">
 		<Description>Winbond W25X32</Description>
 		<Note></Note>
